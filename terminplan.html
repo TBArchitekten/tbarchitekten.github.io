@@ -835,11 +835,12 @@ body.read-only .editor-only{display:none!important}
       return;
     }
 
-    lastSavedSignature=JSON.stringify(data);
-    remoteReady=true;
+    remoteReady=false;
     applyReadOnlyMode();
     applyUIState();
     render();
+    lastSavedSignature=JSON.stringify(data);
+    remoteReady=true;
   }
 
   function loadUIState(){
@@ -1069,7 +1070,12 @@ body.read-only .editor-only{display:none!important}
       if(committed)return;
       committed=true;
       const days=Math.max(1,Math.round(Number(input.value)||current));
-      task.end=endFromWorkdays(task.start,days);
+      const candidate=endFromWorkdays(task.start,days);
+      if(task.protectedDate&&candidate>task.protectedDate&&
+         !confirm('Der geschützte Abgabetermin '+task.protectedDate+' wird überschritten. Trotzdem ändern?')){
+        renderLeft();return;
+      }
+      task.end=candidate;
       render();
       toast(`Dauer auf ${days} Arbeitstage gesetzt.`);
     };
@@ -1252,9 +1258,18 @@ body.read-only .editor-only{display:none!important}
     document.body.classList.remove('dragging');
 
     const wasMoved=drag.moved;
+    const modified=data.tasks.find(t=>t.id===drag.id);
+    if(wasMoved&&modified?.protectedDate&&modified.end>modified.protectedDate){
+      if(!confirm('Geschützter Abgabetermin '+modified.protectedDate+' wird überschritten. Trotzdem ändern?')){
+        modified.start=drag.origStart;
+        modified.end=drag.origEnd;
+        drag.moved=false;
+      }
+    }
+    const committed=drag.moved;
     drag=null;
     render();
-    if(wasMoved)toast('Termin aktualisiert.');
+    if(committed)toast('Termin aktualisiert.');
   }
 
 
@@ -1497,6 +1512,8 @@ body.read-only .editor-only{display:none!important}
     };
     if(!obj.name||!obj.start||!obj.end){toast('Name und Termine sind erforderlich.');return}
     if(obj.end<obj.start){toast('Der Endtermin liegt vor dem Anfangstermin.');return}
+    if(obj.protectedDate&&obj.end>obj.protectedDate&&
+       !confirm('Geschützter Abgabetermin '+obj.protectedDate+' wird überschritten. Trotzdem speichern?'))return;
     const idx=data.tasks.findIndex(t=>t.id===id);if(idx>=0)data.tasks[idx]=obj;else data.tasks.push(obj);
     taskDialog.close();render();toast('Vorgang gespeichert.');
   }
@@ -2007,6 +2024,9 @@ body.read-only .editor-only{display:none!important}
       proposedShift=null;renderAssistant();toast('Plan wurde verändert. Vorschau erneut prüfen.');return;
     }
     const next=proposedShift.state;
+    const item=next.tasks.find(t=>t.id===proposedShift.taskId);
+    if(item?.protectedDate&&item.end>item.protectedDate&&
+       !confirm('Geschützter Abgabetermin '+item.protectedDate+' wird überschritten. Änderung trotzdem übernehmen?'))return;
     proposedShift=null;
     data=next;
     render();
