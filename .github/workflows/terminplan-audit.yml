@@ -1,0 +1,28 @@
+name: Verify Terminplan dependency audit
+on:
+  pull_request:
+    paths:
+      - "terminplan-engine.js"
+      - "terminplan.html"
+      - "tests/**"
+      - ".github/workflows/terminplan-audit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "terminplan-engine.js"
+      - "terminplan.html"
+      - "tests/**"
+      - ".github/workflows/terminplan-audit.yml"
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test dependency rules
+        run: node --test tests/terminplan-engine.test.cjs
+      - name: Parse Terminplan browser script
+        run: |
+          node --check terminplan-engine.js
+          node -e 'const fs=require("fs");const s=fs.readFileSync("terminplan.html","utf8");const m=[...s.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)];for(const x of m)new Function(x[1]);if(!s.includes("terminplan-engine.js"))process.exit(1);console.log("Browser scripts parse: PASS")'
