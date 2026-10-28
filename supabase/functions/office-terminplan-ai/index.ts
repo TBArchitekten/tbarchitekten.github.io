@@ -68,6 +68,10 @@ Deno.serve(async req=>{
   let context;
   try{context=toContext(plan.state,plan.phase,input.selected_task_id||null)}
   catch{return respond(422,{error:"plan_context_unavailable"})}
+  // Atomic per-user quota must be consumed before any paid model call.
+  const {data:allowed,error:quotaError}=await sb.rpc("office_ai_consume_request",{p_plan_id:planId});
+  if(quotaError)return respond(503,{error:"office_ai_quota_unavailable"});
+  if(allowed!==true)return respond(429,{error:"daily_ai_limit_reached"});
   const prompt=JSON.stringify({
     selected_task_id:context.selected_task_id,
     user_message:input.message.trim(),
