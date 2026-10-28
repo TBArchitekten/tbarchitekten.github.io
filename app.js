@@ -11,8 +11,11 @@
   const loginForm=$('#loginForm');
   const createDialog=$('#createDialog');
   const createForm=$('#createForm');
-  const recoveryForm=$('#recoveryForm');
-  let recoveryMode=false;
+  const OFFICE_USER_EMAILS=Object.freeze({
+    edgar:'edgar.office@access.invalid',
+    titus:'titus.office@access.invalid',
+    natalia:'natalia.office@access.invalid'
+  });
   let creating=false;
   let member=null;
   let user=null;
@@ -199,12 +202,18 @@
   loginForm.addEventListener('submit',async e=>{
     e.preventDefault();
     $('#loginMessage').textContent='';
+    const username=$('#username').value;
+    const email=OFFICE_USER_EMAILS[username];
+    if(!email){
+      $('#loginMessage').textContent='Bitte einen Benutzernamen wählen.';
+      return;
+    }
     const {data,error}=await sb.auth.signInWithPassword({
-      email:$('#email').value.trim(),
+      email,
       password:$('#password').value
     });
     if(error){
-      $('#loginMessage').textContent='Anmeldung fehlgeschlagen. Bitte das Passwort Ihres persönlichen TBA-Kontos prüfen (nicht das Bernried-Projektpasswort).';
+      $('#loginMessage').textContent='Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort prüfen.';
       return;
     }
     try{await boot(data.session)}
@@ -265,67 +274,11 @@
     }
   });
 
-  $('#resetPasswordBtn').addEventListener('click',async()=>{
-    const email=$('#email').value.trim();
-    if(!email||!$('#email').checkValidity()){
-      $('#loginMessage').textContent='Bitte zuerst Ihre persönliche TBA-E-Mail-Adresse eingeben.';
-      $('#email').focus();
-      return;
-    }
-    const button=$('#resetPasswordBtn');
-    button.disabled=true;
-    $('#loginMessage').textContent='';
-    try{
-      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-      if(error)throw error;
-      $('#loginMessage').textContent='Wenn das Konto existiert, erhalten Sie eine E-Mail zum Zurücksetzen des Passworts. Bitte auch den Spam-Ordner prüfen.';
-    }catch(error){
-      console.error(error);
-      $('#loginMessage').textContent='Passwort-E-Mail konnte nicht angefordert werden. Bitte die Office-Administration kontaktieren.';
-    }finally{
-      button.disabled=false;
-    }
-  });
-
-  recoveryForm.addEventListener('submit',async event=>{
-    event.preventDefault();
-    const password=$('#newPassword').value;
-    if(password!==$('#confirmPassword').value){
-      $('#recoveryMessage').textContent='Die Passwörter stimmen nicht überein.';
-      return;
-    }
-    const button=recoveryForm.querySelector('button[type="submit"]');
-    button.disabled=true;
-    $('#recoveryMessage').textContent='';
-    const {error}=await sb.auth.updateUser({password});
-    if(error){
-      console.error(error);
-      $('#recoveryMessage').textContent='Passwort konnte nicht gespeichert werden. Bitte den Link erneut öffnen.';
-      button.disabled=false;
-      return;
-    }
-    recoveryMode=false;
-    await sb.auth.signOut();
-    location.replace(location.origin+location.pathname);
-  });
-
-  sb.auth.onAuthStateChange((event,session)=>{
-    if(event==='PASSWORD_RECOVERY'){
-      recoveryMode=true;
-      authView.hidden=false;
-      appView.hidden=true;
-      loginForm.hidden=true;
-      recoveryForm.hidden=false;
-      return;
-    }
-    if(recoveryMode)return;
-    setTimeout(()=>boot(session).catch(err=>{
+  sb.auth.onAuthStateChange((_event,session)=>setTimeout(()=>boot(session).catch(err=>{
     console.error(err);
-    authView.hidden=false;appView.hidden=true;
-  }),0);
-  });
+    authView.hidden=false;
+    appView.hidden=true;
+  }),0));
 
-  sb.auth.getSession().then(({data})=>{
-    if(!recoveryMode)boot(data.session).catch(console.error);
-  }).catch(console.error);
+  sb.auth.getSession().then(({data})=>boot(data.session)).catch(console.error);
 })();
