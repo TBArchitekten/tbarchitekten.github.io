@@ -10,11 +10,11 @@ The read-only Muster remains read-only. No database migration, new Supabase perm
 ## Deterministic contract
 Input: existing project JSON \`{project,groups,tasks}\`. Each task currently supports zero or one \`pred\` and one \`rel\`; this is a limitation of the source model, not a universal construction scheduling rule.
 
-- EA / finish-to-start: successor **start** may not be before the *next working day* after predecessor **end**.
+- EA / finish-to-start: successor **start** may not be before predecessor **end**. Same-day handover is allowed.
 - AA / start-to-start: successor **start** may not be before predecessor **start**.
 - EE / finish-to-finish: successor **end** may not be before predecessor **end**.
-- AE / start-to-finish: successor **end** may not be before the *next working day* after predecessor **start**.
-- All date comparisons use strict ISO calendar dates, UTC calendar arithmetic and a Monday–Friday calendar. No holidays, regional calendars, buffers, lags or partial days.
+- AE / start-to-finish: successor **end** may not be before predecessor **start**. Same-day boundary is allowed.
+- All date comparisons use strict ISO calendar dates, UTC calendar arithmetic and a Monday–Friday calendar for explicit workday shifts. Boundary comparisons permit equality for all four relations because active Office Muster use same-day handovers. No holidays, regional calendars, buffers, lags or partial days.
 - Further diagnostics: nonexistent predecessor IDs, cycles, duplicate IDs, unsupported relation types, invalid dates, invalid task intervals, multiday milestones and tasks beyond the project horizon.
 - Dependency transitive closure describes potential impact, **not a proven contractual requirement**. Unrecorded dependencies and cross-disciplinary semantics remain unknown.
 - Preview uses a deep-cloned state and reports the affected chain and new rule violations. It does not propagate, extend the project horizon or persist until confirmed. Preview is invalidated when local plan content changes.
