@@ -26,7 +26,7 @@
   html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:var(--bg)}
   button,input,select{font:inherit}
   button{cursor:pointer}
-  .app{height:100%;display:flex;flex-direction:column;min-width:1150px}
+  .app{height:calc(100% - 50px);display:flex;flex-direction:column;min-width:1150px}
   .topbar{
     min-height:64px;background:#fff;color:var(--text);display:flex;align-items:center;justify-content:space-between;
     gap:24px;padding:0 14px;border-bottom:1px solid var(--line);z-index:20
@@ -385,6 +385,34 @@
 .office-plan-head .right{display:flex;align-items:center;gap:14px;color:var(--muted)}
 body.read-only .editor-only{display:none!important}
 @media print{.office-plan-head{display:none!important}}
+
+  /* Assistant v0.1: verification only, no LLM or silent changes. */
+  .assistant-panel{flex:none;border-top:1px solid var(--line-strong);background:#fff;z-index:12;font-size:12px}
+  .assistant-head{min-height:43px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px 18px}
+  .assistant-toggle{border:0;background:transparent;color:#18231d;padding:5px;text-align:left;font-weight:650;cursor:pointer}
+  .assistant-toggle:hover{text-decoration:underline}
+  .assistant-summary{font-weight:400;color:#686b69;margin-left:14px}
+  .assistant-caption{color:#6b6b6b}
+  .assistant-body{max-height:min(330px,40vh);overflow-y:auto;border-top:1px solid var(--line);padding:14px 22px 18px}
+  .assistant-body[hidden]{display:none}
+  .assistant-caveat{color:#686b69;margin:0 0 12px;line-height:1.5}
+  .assistant-columns{display:grid;grid-template-columns:1.4fr 1fr;gap:26px}
+  .assistant-columns h3{font-weight:650;font-size:12px;margin:0 0 9px}
+  .assistant-notices{display:grid;gap:6px}
+  .assistant-issue{background:#faf8f4;border:1px solid #e5dfd6;border-left:3px solid #bb9252;display:block;width:100%;padding:8px 11px;text-align:left;font-size:12px;line-height:1.4}
+  .assistant-issue:disabled{opacity:1;cursor:default}
+  .assistant-issue:not(:disabled):hover{background:#f8efdf}
+  .assistant-empty{margin:4px 0;color:#4a6254;line-height:1.5}
+  .assistant-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .assistant-controls label{display:flex;align-items:center;gap:8px}
+  .assistant-controls input{width:65px;padding:7px;border:1px solid var(--line-strong)}
+  .assistant-controls button,.assistant-apply{border:1px solid var(--line-strong);background:#fff;padding:8px 12px}
+  .assistant-controls button:disabled{opacity:.4;cursor:not-allowed}
+  .assistant-apply{background:#18231d;color:#fff;border-color:#18231d;margin-top:8px}
+  .assistant-draft{margin-top:10px;color:#444;line-height:1.5}
+  .row.audit-affected{box-shadow:inset 3px 0 #bb9252;background:#fff8ec}
+  .bar.audit-affected,.milestone.audit-affected{outline:2px solid #bb9252;outline-offset:2px}
+  @media (max-width:900px){.assistant-columns{grid-template-columns:1fr}.assistant-body{max-height:44vh}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -447,6 +475,31 @@ body.read-only .editor-only{display:none!important}
       </div>
     </section>
   </main>
+  <aside class="assistant-panel" id="assistantPanel" aria-label="Terminplan Assistent">
+    <div class="assistant-head">
+      <button type="button" id="assistantToggle" class="assistant-toggle" aria-expanded="false" aria-controls="assistantBody">▸ Terminplan Assistent <span id="assistantSummary" class="assistant-summary">Regelprüfung wird geladen …</span></button>
+      <span class="assistant-caption">Regelprüfung v0.1 · keine KI · keine automatischen Terminänderungen</span>
+    </div>
+    <div id="assistantBody" class="assistant-body" hidden>
+      <p class="assistant-caveat">Geprüft werden ausschließlich eingetragene Vorgängerbeziehungen (EA / AA / EE / AE) mit Montag–Freitag als Arbeitstagen, ohne Feiertage oder Pufferzeiten. Nicht eingetragene fachliche Abhängigkeiten können nicht erkannt werden.</p>
+      <div class="assistant-columns">
+        <div>
+          <h3>Abhängigkeiten und Hinweise</h3>
+          <div id="assistantFindings" class="assistant-notices" aria-live="polite"></div>
+        </div>
+        <div>
+          <h3>Änderung prüfen · Vorschau</h3>
+          <p id="assistantSelection" class="assistant-caveat">Vorgang im Terminplan auswählen.</p>
+          <div class="assistant-controls">
+            <label>Verschiebung (AT) <input id="assistantShift" type="number" min="-260" max="260" step="1" value="5"></label>
+            <button type="button" id="assistantPreview">Vorschau prüfen</button>
+          </div>
+          <div id="assistantDraft" class="assistant-draft" aria-live="polite"></div>
+          <button class="assistant-apply" type="button" id="assistantApply" hidden>Änderung übernehmen</button>
+        </div>
+      </div>
+    </div>
+  </aside>
 </div>
 
 <section id="printSheet" aria-hidden="true">
@@ -557,6 +610,7 @@ body.read-only .editor-only{display:none!important}
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="./terminplan-engine.js"></script>
 <script>
 (function(){
   'use strict';
@@ -582,6 +636,13 @@ body.read-only .editor-only{display:none!important}
   const UI_KEY = 'tba_office_terminplan_ui_v1';
   let uiState = loadUIState();
   let currentPlan=null;
+  const auditEngine=window.TBATerminplanEngine||null;
+  let lastAuditedState=null;
+  let auditReport=null;
+  let auditChange=null;
+  let auditHighlightIds=new Set();
+  let assistantExpanded=false;
+  let proposedShift=null;
 
   const $ = s => document.querySelector(s);
   const leftScroll = $('#leftScroll');
@@ -838,10 +899,12 @@ body.read-only .editor-only{display:none!important}
     cellWidth=zoom==='day'?46:zoom==='week'?28:18;
     document.documentElement.style.setProperty('--cell-w',cellWidth+'px');
     rebuildRows();
+    auditPlan();
     renderHeader();
     renderLeft();
     renderTimeline();
     renderStats();
+    renderAssistant();
     saveData();
   }
 
@@ -882,7 +945,7 @@ body.read-only .editor-only{display:none!important}
   function renderLeft(){
     leftScroll.innerHTML='';
     rows.forEach(r=>{
-      const el=document.createElement('div');el.className='row '+r.kind+(selectedId===r.id?' selected':'');
+      const el=document.createElement('div');el.className='row '+r.kind+(selectedId===r.id?' selected':'')+(r.kind==='task'&&auditHighlightIds.has(r.id)?' audit-affected':'');
       if(r.kind==='group'){
         const gr=computeGroupRange(r.id);
         el.innerHTML=`
@@ -905,7 +968,7 @@ body.read-only .editor-only{display:none!important}
             ? '0 AT'
             : `<button class="duration-edit" data-duration-id="${r.id}" title="Arbeitstage direkt bearbeiten">${workDuration(r.start,r.end)} AT</button>`}</div>
           <div class="cell progress-cell"><div class="mini-progress"><span style="width:${r.progress||0}%"></span></div>${r.progress||0}%</div>`;
-        el.onclick=()=>{selectedId=r.id;renderLeft()};
+        el.onclick=()=>{selectedId=r.id;proposedShift=null;renderLeft();renderAssistant()};
         el.ondblclick=()=>openTask(r.id);
         el.oncontextmenu=e=>showContext(e,r.id);
       }
@@ -999,12 +1062,12 @@ body.read-only .editor-only{display:none!important}
     const startIdx=nearestVisibleIndex(t.start), endIdx=nearestVisibleIndex(t.end);
     const left=startIdx*cellWidth+3, width=Math.max(cellWidth-6,(endIdx-startIdx+1)*cellWidth-6);
     if(t.type==='milestone'&&!isSummary){
-      const m=document.createElement('div');m.className='milestone'+(t.critical?' critical':'');m.style.left=(left+cellWidth/2-9)+'px';m.style.top=(rowIndex*38+10)+'px';m.style.background=categoryColor(t.category);m.dataset.id=t.id;m.title=t.name;
+      const m=document.createElement('div');m.className='milestone'+(t.critical?' critical':'')+(auditHighlightIds.has(t.id)?' audit-affected':'');m.style.left=(left+cellWidth/2-9)+'px';m.style.top=(rowIndex*38+10)+'px';m.style.background=categoryColor(t.category);m.dataset.id=t.id;m.title=t.name;
       const lab=document.createElement('div');lab.className='milestone-label';lab.style.left=(left+cellWidth/2+14)+'px';lab.style.top=(rowIndex*38+10)+'px';lab.textContent=t.name;lab.title=t.name;
       m.ondblclick=()=>openTask(t.id);m.oncontextmenu=e=>showContext(e,t.id);m.onpointerdown=e=>startDrag(e,t,'move');
       timelineBody.append(m,lab);return;
     }
-    const bar=document.createElement('div');bar.className='bar'+(isSummary?' summary':'')+(t.critical&&!isSummary?' critical':'');
+    const bar=document.createElement('div');bar.className='bar'+(isSummary?' summary':'')+(t.critical&&!isSummary?' critical':'')+(!isSummary&&auditHighlightIds.has(t.id)?' audit-affected':'');
     bar.style.left=left+'px';bar.style.width=width+'px';bar.style.top=(rowIndex*38+(isSummary?13:7))+'px';bar.style.background=categoryColor(t.category);bar.dataset.id=t.id;bar.title=t.name;
     bar.innerHTML=`<div class="bar-progress" style="width:${t.progress||0}%"></div><span class="bar-label">${esc(t.name)}</span>${isSummary?'':'<i class="handle left"></i><i class="handle right"></i>'}`;
     if(!isSummary){
@@ -1129,6 +1192,123 @@ body.read-only .editor-only{display:none!important}
     drag=null;
     render();
     if(wasMoved)toast('Termin aktualisiert.');
+  }
+
+
+  function auditPlan(){
+    if(!auditEngine)return;
+    const next=auditEngine.analyze(data);
+    if(lastAuditedState){
+      const change=auditEngine.compare(lastAuditedState,data);
+      if(change.changedIds.length){
+        auditChange=change;
+        proposedShift=null;
+        auditHighlightIds=new Set([...change.changedIds,...change.downstreamIds]);
+        if(change.newIssues.length)assistantExpanded=true;
+      }
+    }else{
+      auditHighlightIds=new Set(next.issues.map(i=>i.taskId).filter(Boolean));
+    }
+    auditReport=next;
+    lastAuditedState=clone(data);
+  }
+  function auditMessage(item){
+    const task=data.tasks.find(t=>t.id===item.taskId);
+    const pred=data.tasks.find(t=>t.id===item.predecessorId);
+    const name=task?.name||item.taskId||'Unbekannter Vorgang';
+    const predName=pred?.name||item.predecessorId||'unbekannt';
+    if(item.code==='dependency_violation'){
+      const side=item.targetSide==='start'?'Beginn':'Ende';
+      return name+' · '+item.relation+' zu '+predName+': '+side+' frühestens '+item.minimum+', aktuell '+item.actual+'.';
+    }
+    if(item.code==='missing_predecessor')return name+': Vorgänger '+predName+' ist nicht mehr vorhanden.';
+    if(item.code==='cycle')return 'Zirkuläre Abhängigkeit: '+(item.taskIds||[]).map(id=>data.tasks.find(t=>t.id===id)?.name||id).join(' ↔ ')+'.';
+    if(item.code==='unsupported_relation')return name+': nicht unterstützte Beziehung zum Vorgänger.';
+    if(item.code==='invalid_date')return name+': ungültiges Datum.';
+    if(item.code==='invalid_range')return name+': Ende vor Beginn.';
+    if(item.code==='milestone_span')return name+': Meilenstein umfasst mehrere Tage.';
+    if(item.code==='duplicate_id')return 'Mehrere Vorgänge verwenden dieselbe technische ID.';
+    if(item.code==='project_horizon')return name+': endet nach dem derzeitigen Projektzeitraum ('+item.minimum+').';
+    return name+': ungültige Planungsdaten ('+item.code+').';
+  }
+  function selectAuditTask(id){
+    const task=data.tasks.find(t=>t.id===id);
+    if(!task)return;
+    const group=data.groups.find(g=>g.id===task.group);
+    if(group)group.collapsed=false;
+    $('#searchInput').value='';
+    selectedId=id;
+    proposedShift=null;
+    render();
+    const el=leftScroll.querySelector('.row.selected');
+    if(el)el.scrollIntoView({block:'nearest'});
+  }
+  function renderAssistant(){
+    const summary=$('#assistantSummary');
+    const count=auditReport?.count||0;
+    summary.textContent=!auditEngine?'Prüfmodul nicht verfügbar':count?(count+' Prüfhinweis'+(count===1?'':'e')):'Keine bekannten Regelkonflikte';
+    $('#assistantBody').hidden=!assistantExpanded;
+    $('#assistantToggle').setAttribute('aria-expanded',String(assistantExpanded));
+    $('#assistantToggle').firstChild.textContent=(assistantExpanded?'▾ ':'▸ ')+'Terminplan Assistent ';
+    if(!assistantExpanded)return;
+    const host=$('#assistantFindings');
+    host.replaceChildren();
+    if(!auditEngine){
+      const p=document.createElement('p');p.textContent='Prüfmodul konnte nicht geladen werden. Der Plan wurde nicht automatisch geändert.';host.append(p);
+    }else if(!count){
+      const p=document.createElement('p');p.className='assistant-empty';p.textContent='Keine Regelverletzung in den eingetragenen Abhängigkeiten gefunden.';host.append(p);
+    }else{
+      for(const item of auditReport.issues.slice(0,8)){
+        const button=document.createElement('button');
+        button.type='button';button.className='assistant-issue';
+        button.textContent=auditMessage(item);
+        const selectable=!!data.tasks.find(t=>t.id===item.taskId);
+        button.disabled=!selectable;
+        if(selectable)button.onclick=()=>selectAuditTask(item.taskId);
+        host.append(button);
+      }
+      if(count>8){
+        const p=document.createElement('p');p.textContent='Weitere Hinweise: '+(count-8)+'.';host.append(p);
+      }
+    }
+    if(auditChange?.changedIds.length){
+      const p=document.createElement('p');
+      p.className='assistant-caveat';
+      p.textContent='Letzte Terminänderung: '+auditChange.changedIds.length+' Vorgang/Vorgänge geändert · '+auditChange.downstreamIds.length+' nachgelagerte Vorgänge. Nachgelagert bedeutet nicht automatisch verschoben.';
+      host.prepend(p);
+    }
+    const selected=data.tasks.find(t=>t.id===selectedId);
+    $('#assistantSelection').textContent=selected?'Ausgewählt: '+selected.name:'Vorgang im Gantt oder in der Tabelle auswählen.';
+    $('#assistantPreview').disabled=!selected||!canEdit||!auditEngine;
+    const draft=$('#assistantDraft'),apply=$('#assistantApply');
+    apply.hidden=true;
+    draft.textContent='';
+    if(proposedShift){
+      const p=proposedShift;
+      const newCount=p.newIssues.length;
+      draft.textContent='Vorschau: '+p.before.start+' – '+p.before.end+' → '+p.after.start+' – '+p.after.end+'. '+p.affectedIds.length+' nachgelagerte Vorgänge, '+newCount+' zusätzliche Regelhinweise. Keine Folgeaufgabe wurde automatisch verschoben.';
+      if(newCount)draft.textContent+=' Erster neuer Hinweis: '+auditMessage(p.newIssues[0]);
+      apply.hidden=false;
+    }
+  }
+  function requestShiftPreview(){
+    if(!auditEngine||!canEdit)return;
+    const value=Number($('#assistantShift').value);
+    if(!Number.isInteger(value)||value===0||Math.abs(value)>260){
+      proposedShift=null;
+      $('#assistantDraft').textContent='Bitte eine ganze Zahl zwischen -260 und 260 eingeben (ohne 0).';
+      $('#assistantApply').hidden=true;
+      return;
+    }
+    try{
+      proposedShift=auditEngine.previewShift(data,selectedId,value);
+      proposedShift.baseSignature=JSON.stringify(data);
+      renderAssistant();
+    }catch(error){
+      proposedShift=null;
+      $('#assistantApply').hidden=true;
+      $('#assistantDraft').textContent='Vorschau nicht möglich: '+error.message;
+    }
   }
 
   function renderStats(){
@@ -1659,6 +1839,20 @@ body.read-only .editor-only{display:none!important}
   $('#exportCsvBtn').onclick=exportCsv;
   $('#importJsonBtn').onclick=()=>$('#jsonFile').click();
   $('#jsonFile').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);
+  $('#assistantToggle').onclick=()=>{assistantExpanded=!assistantExpanded;renderAssistant()};
+  $('#assistantPreview').onclick=requestShiftPreview;
+  $('#assistantShift').oninput=()=>{proposedShift=null;renderAssistant()};
+  $('#assistantApply').onclick=()=>{
+    if(!proposedShift||!canEdit||!auditEngine)return;
+    if(JSON.stringify(data)!==proposedShift.baseSignature){
+      proposedShift=null;renderAssistant();toast('Plan wurde verändert. Vorschau erneut prüfen.');return;
+    }
+    const next=proposedShift.state;
+    proposedShift=null;
+    data=next;
+    render();
+    toast('Bestätigte Verschiebung übernommen. Folgen bleiben unverändert.');
+  };
   $('#printBtn').onclick=()=>{
     buildPrintSheet();
     window.focus();
