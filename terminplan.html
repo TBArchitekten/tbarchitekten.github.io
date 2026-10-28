@@ -386,6 +386,26 @@
 body.read-only .editor-only{display:none!important}
 @media print{.office-plan-head{display:none!important}}
 
+  /* Office Assistant: rule-backed conversational surface, no provider/model connection. */
+  .assistant-body{max-height: min(570px,64vh)}
+  .dialogue-section{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
+  .dialogue-label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+  .dialogue-label strong{font-size:13px;font-weight:650}
+  .dialogue-label small{color:var(--muted)}
+  .dialogue-stream{max-height:210px;min-height:85px;overflow-y:auto;border:1px solid var(--line);background:#fbfbfa;padding:12px;display:grid;gap:8px;align-content:start}
+  .dialogue-message{white-space:pre-wrap;font-size:12px;line-height:1.5;max-width:min(92%,750px);padding:8px 11px;border:1px solid var(--line);background:#fff;justify-self:start}
+  .dialogue-message.user{background:#eaf0ec;border-color:#d9e3dc;justify-self:end}
+  .dialogue-message.receipt{background:#f5f6f4;color:#3b5044}
+  .dialogue-input{display:flex;align-items:flex-end;gap:8px;margin-top:9px}
+  .dialogue-input textarea{flex:1;resize:vertical;min-height:48px;max-height:100px;border:1px solid var(--line-strong);padding:10px;font:inherit}
+  .dialogue-input button{background:#18231d;color:#fff;border:0;padding:12px 16px;cursor:pointer}
+  .dialogue-input button:disabled,.dialogue-action button:disabled{opacity:.5;cursor:not-allowed}
+  .dialogue-action{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid #e5dfd6;background:#faf8f4;padding:9px;margin-top:8px}
+  .dialogue-action button{padding:8px 11px;border:1px solid #18231d;background:#18231d;color:#fff}
+  .dialogue-action button.secondary{background:#fff;color:#18231d;border-color:var(--line-strong)}
+  .dialogue-action[hidden]{display:none}
+  .assistant-caption{white-space:nowrap}
+  @media(max-width:900px){.dialogue-label{align-items:start;flex-direction:column}.dialogue-input{align-items:stretch}}
   /* Assistant v0.1: verification only, no LLM or silent changes. */
   .assistant-panel{flex:none;border-top:1px solid var(--line-strong);background:#fff;z-index:12;font-size:12px}
   .assistant-head{min-height:43px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px 18px}
@@ -500,7 +520,7 @@ body.read-only .editor-only{display:none!important}
   <aside class="assistant-panel" id="assistantPanel" aria-label="Terminplan Assistent">
     <div class="assistant-head">
       <button type="button" id="assistantToggle" class="assistant-toggle" aria-expanded="false" aria-controls="assistantBody">▸ Terminplan Assistent <span id="assistantSummary" class="assistant-summary">Regelprüfung wird geladen …</span></button>
-      <span class="assistant-caption">Regelprüfung v0.1 · keine KI · keine automatischen Terminänderungen</span>
+      <span class="assistant-caption">Dialog v0.3 · regelbasiert · keine externe KI · Änderungen nur nach Freigabe</span>
     </div>
     <div id="assistantBody" class="assistant-body" hidden>
       <p class="assistant-caveat">Geprüft werden ausschließlich eingetragene Vorgängerbeziehungen (EA / AA / EE / AE) mit Montag–Freitag als Arbeitstagen, ohne Feiertage oder Pufferzeiten. Nicht eingetragene fachliche Abhängigkeiten können nicht erkannt werden.</p>
@@ -526,6 +546,22 @@ body.read-only .editor-only{display:none!important}
           </div>
         </div>
       </div>
+      <section class="dialogue-section" aria-label="Terminplan Gespräch">
+        <div class="dialogue-label">
+          <strong>Terminplan Gespräch</strong>
+          <small>Nur dieser Terminplan · persönliche Verlaufsspeicherung · keine Daten aus MINDS</small>
+        </div>
+        <div id="dialogueStream" class="dialogue-stream" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <div id="dialogueProposal" class="dialogue-action" hidden>
+          <span id="dialogueProposalText">Änderungsvorschlag – noch nicht übernommen.</span>
+          <button id="dialogueApprove" type="button">Prüfen und übernehmen</button>
+          <button id="dialogueReject" type="button" class="secondary">Verwerfen</button>
+        </div>
+        <form id="dialogueForm" class="dialogue-input">
+          <textarea id="dialogueInput" maxlength="1500" rows="2" placeholder="z. B. Verschiebe den ausgewählten Vorgang um 5 Arbeitstage" aria-label="Nachricht an Terminplan Assistent"></textarea>
+          <button type="submit" id="dialogueSend">Senden</button>
+        </form>
+      </section>
     </div>
   </aside>
 </div>
@@ -645,6 +681,7 @@ body.read-only .editor-only{display:none!important}
 <div class="toast" id="toast"></div>
 
 <script src="./terminplan-engine.js"></script>
+<script src="./terminplan-dialogue.js"></script>
 <script>
 (function(){
   'use strict';
@@ -671,6 +708,12 @@ body.read-only .editor-only{display:none!important}
   let uiState = loadUIState();
   let currentPlan=null;
   const auditEngine=window.TBATerminplanEngine||null;
+  const dialogueEngine=window.TBATerminplanDialogue||null;
+  let dialogueUserId=null;
+  let dialogueEvents=[];
+  let dialogueProposal=null;
+  let dialogueWriting=false;
+  let dialogueApproved=null;
   let lastAuditedState=null;
   let auditReport=null;
   let auditChange=null;
@@ -772,9 +815,38 @@ body.read-only .editor-only{display:none!important}
       serverRevision=updated[0].server_revision;
       lastSavedSignature=batch.signature;
       saveFailed=false;
+      if(dialogueApproved){
+        const approved=dialogueApproved;
+        // A later local edit or a concurrent server write cannot yield a success receipt.
+        if(batch.signature!==approved.signature||serverRevision!==approved.baseRevision+1){
+          dialogueApproved=null;
+          addDialogue('system_receipt','Nicht verifiziert: Der freigegebene Vorschlag wurde durch einen anderen lokalen Stand ersetzt.','warning',approved.requestId);
+        }else{
+          const {data:observed,error:readError}=await sb.from('office_terminplan_instances')
+            .select('server_revision,state').eq('id',PLAN_ID).single();
+          if(readError||!observed)throw new Error('Post-write verification read failed');
+          const receipt=dialogueEngine.receipt({
+            requestId:approved.requestId,planId:PLAN_ID,baseRevision:approved.baseRevision,
+            verifiedRevision:observed.server_revision,
+            expectedState:approved.expectedState,observedState:observed.state
+          });
+          dialogueApproved=null;
+          if(receipt.status!=='verified'){
+            addDialogue('system_receipt','NICHT VERIFIZIERT: Der gespeicherte Stand stimmt nicht mit der Freigabe überein. Bitte JSON sichern und neu laden.','warning',approved.requestId);
+            throw new Error('Unverified post-write receipt');
+          }
+          addDialogue('system_receipt','Verifiziert: Änderung in Projektterminplan '+PLAN_ID+
+            ' gespeichert und mit Serverrevision '+receipt.verified_revision+
+            ' erneut gelesen. Beleg: '+receipt.receipt_id,'receipt',approved.requestId);
+        }
+      }
       if(!pendingSave)setSaveStatus('gespeichert · Revision '+serverRevision);
     }catch(error){
       console.error('Office Terminplan conditional save failed',error);
+      if(dialogueApproved){
+        addDialogue('system_receipt','Speicherung nicht verifiziert. Keine Erfolgsmeldung: bitte lokalen JSON-Stand sichern.','warning',dialogueApproved.requestId);
+        dialogueApproved=null;
+      }
       if(!pendingSave)pendingSave={signature:JSON.stringify(data),state:clone(data)};
       raiseSaveConflict('Der Stand auf dem Server kann neuer sein oder die Speicherung ist unklar. Ihre Änderungen bleiben im Browser. Sichern Sie zuerst die lokale JSON-Datei und laden Sie danach neu.');
     }finally{
@@ -797,6 +869,7 @@ body.read-only .editor-only{display:none!important}
       return;
     }
     const userId=sessionData.session.user.id;
+    dialogueUserId=userId;
     const {data:member,error:memberError}=await sb.from('office_members')
       .select('role,display_name,is_active')
       .eq('user_id',userId)
@@ -841,6 +914,7 @@ body.read-only .editor-only{display:none!important}
     render();
     lastSavedSignature=JSON.stringify(data);
     remoteReady=true;
+    await loadDialogue();
   }
 
   function loadUIState(){
@@ -1326,6 +1400,143 @@ body.read-only .editor-only{display:none!important}
     const el=leftScroll.querySelector('.row.selected');
     if(el)el.scrollIntoView({block:'nearest'});
   }
+
+  // Personal Office-only display history. Stored messages do not carry action authority.
+  function renderDialogue(){
+    const host=$('#dialogueStream');
+    host.replaceChildren();
+    if(!dialogueEvents.length){
+      const intro=document.createElement('div');
+      intro.className='dialogue-message';
+      intro.textContent='Frag mich nach dokumentierten Abhängigkeiten, Konflikten oder schlage eine Verschiebung in Arbeitstagen vor. Ich ändere niemals etwas ohne deine Bestätigung.';
+      host.append(intro);
+    }
+    for(const entry of dialogueEvents.slice(-60)){
+      const el=document.createElement('div');
+      el.className='dialogue-message '+(entry.role==='user'?'user':entry.role==='system_receipt'?'receipt':'assistant');
+      el.textContent=entry.body;
+      host.append(el);
+    }
+    host.scrollTop=host.scrollHeight;
+    const action=$('#dialogueProposal');
+    const valid=!!dialogueProposal&&!!dialogueEngine&&
+      dialogueEngine.review(dialogueProposal,data,auditEngine,serverRevision).ok;
+    action.hidden=!dialogueProposal;
+    $('#dialogueProposalText').textContent=!dialogueProposal?'':!valid?
+      'Vorschlag ist nicht mehr aktuell. Bitte erneut anfragen.':
+      'Vorschlag für '+(data.tasks.find(t=>t.id===dialogueProposal.task_id)?.name||dialogueProposal.task_id)+
+      ': '+dialogueProposal.before.start+' → '+dialogueProposal.after.start+
+      ' · '+dialogueProposal.affected_ids.length+' verknüpfte Nachfolger. Erst nach Freigabe wird gespeichert.';
+    $('#dialogueApprove').disabled=!valid||!canEdit||!!TEMPLATE_ID||saveConflict||!!dialogueApproved||dialogueWriting;
+    $('#dialogueReject').disabled=dialogueWriting;
+    $('#dialogueSend').disabled=dialogueWriting;
+  }
+  async function storeDialogue(entry){
+    if(!PLAN_ID||!dialogueUserId)return;
+    const {error}=await sb.from('office_terminplan_dialogue_messages').insert({
+      plan_id:PLAN_ID,user_id:dialogueUserId,role:entry.role,
+      body:String(entry.body||'').slice(0,4000),event_kind:entry.kind||'answer',
+      request_id:entry.requestId||null,
+      event_data:{source:'office_rule_dialogue_v03',client_display_only:true}
+    });
+    if(error)console.warn('Office chat history could not be saved',error.message);
+  }
+  function addDialogue(role,body,kind='answer',requestId=null){
+    const entry={role,body:String(body).slice(0,4000),kind,requestId};
+    dialogueEvents.push(entry);
+    if(dialogueEvents.length>60)dialogueEvents=dialogueEvents.slice(-60);
+    renderDialogue();
+    void storeDialogue(entry);
+  }
+  async function loadDialogue(){
+    if(!PLAN_ID||!dialogueUserId){renderDialogue();return;}
+    const {data:history,error}=await sb.from('office_terminplan_dialogue_messages')
+      .select('role,body,event_kind,request_id,created_at').eq('plan_id',PLAN_ID)
+      .eq('user_id',dialogueUserId).order('created_at',{ascending:false}).limit(60);
+    if(error){console.warn('Office chat history read failed',error.message);renderDialogue();return;}
+    dialogueEvents=(history||[]).reverse().map(x=>({role:x.role,body:x.body,kind:x.event_kind,requestId:x.request_id}));
+    renderDialogue();
+  }
+  async function sendDialogue(event){
+    event.preventDefault();
+    if(dialogueWriting)return;
+    const input=$('#dialogueInput'),message=input.value.trim();
+    if(!message)return;
+    input.value='';
+    dialogueProposal=null;
+    const requestId=crypto.randomUUID();
+    addDialogue('user',message,'question',requestId);
+    if(!dialogueEngine||!auditEngine){
+      addDialogue('assistant','Regel- oder Dialogmodul ist nicht verfügbar; keine Änderung.', 'warning',requestId);
+      return;
+    }
+    const result=dialogueEngine.answer({
+      message,state:clone(data),engine:auditEngine,selectedTaskId:selectedId,
+      revision:serverRevision,requestId
+    });
+    if(result.kind==='proposal')dialogueProposal=result.proposal;
+    addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId);
+    assistantExpanded=true;
+    renderAssistant();
+    renderDialogue();
+  }
+  async function approveDialogue(){
+    if(!canEdit||!PLAN_ID||!dialogueProposal||!dialogueEngine||!auditEngine||
+      saveConflict||dialogueWriting||dialogueApproved)return;
+    const proposal=dialogueProposal;
+    const review=dialogueEngine.review(proposal,data,auditEngine,serverRevision);
+    if(!review.ok){
+      dialogueProposal=null;
+      addDialogue('assistant','Vorschlag veraltet: '+review.reason+'. Bitte erneut anfragen.','warning',proposal.request_id);
+      return;
+    }
+    if(pendingSave||inFlightSave||JSON.stringify(data)!==lastSavedSignature){
+      addDialogue('assistant','Bitte zunächst alle manuellen Änderungen erfolgreich speichern und den Vorschlag erneut anfordern.','warning',proposal.request_id);
+      dialogueProposal=null;return;
+    }
+    const task=review.state.tasks.find(t=>t.id===proposal.task_id);
+    if(task?.protectedDate&&task.end>task.protectedDate&&
+       !confirm('Geschützter Abgabetermin '+task.protectedDate+' wird überschritten. Trotzdem übernehmen?'))return;
+    dialogueWriting=true;
+    renderDialogue();
+    try{
+      // Recheck against live server, not only a client-supplied revision.
+      const {data:remote,error}=await sb.from('office_terminplan_instances')
+        .select('server_revision,state').eq('id',PLAN_ID).single();
+      if(error||!remote||remote.server_revision!==serverRevision||
+        dialogueEngine.stable(remote.state)!==dialogueEngine.stable(data)){
+        raiseSaveConflict('Serverstand weicht ab. Lokale Daten als JSON sichern und neu laden.');
+        dialogueProposal=null;
+        addDialogue('assistant','Nicht ausgeführt: Serverstand geändert oder nicht lesbar.','warning',proposal.request_id);
+        return;
+      }
+      dialogueProposal=null;
+      dialogueApproved={
+        requestId:proposal.request_id,
+        expectedState:clone(review.state),
+        signature:JSON.stringify(review.state),
+        baseRevision:serverRevision
+      };
+      data=clone(review.state);
+      addDialogue('assistant','Freigabe erhalten. Änderung wird serverseitig gespeichert und anschließend durch erneutes Lesen verifiziert.','approval',proposal.request_id);
+      render();
+      clearTimeout(saveTimer);
+      await flushSave();
+    }catch(error){
+      console.error('Approval check failed',error);
+      addDialogue('assistant','Vorschlag nicht übernommen: der Server konnte nicht sicher geprüft werden.','warning',proposal.request_id);
+    }finally{
+      dialogueWriting=false;
+      renderDialogue();
+    }
+  }
+  function rejectDialogue(){
+    if(!dialogueProposal||dialogueWriting)return;
+    const requestId=dialogueProposal.request_id;
+    dialogueProposal=null;
+    addDialogue('assistant','Vorschlag verworfen. Keine Änderung vorgenommen.','answer',requestId);
+  }
+
   function renderAssistant(){
     const summary=$('#assistantSummary');
     const count=auditReport?.count||0;
@@ -1334,6 +1545,7 @@ body.read-only .editor-only{display:none!important}
     $('#assistantToggle').setAttribute('aria-expanded',String(assistantExpanded));
     $('#assistantToggle').firstChild.textContent=(assistantExpanded?'▾ ':'▸ ')+'Terminplan Assistent ';
     if(!assistantExpanded)return;
+    renderDialogue();
     const host=$('#assistantFindings');
     host.replaceChildren();
     if(!auditEngine){
@@ -2004,6 +2216,12 @@ body.read-only .editor-only{display:none!important}
   $('#importJsonBtn').onclick=()=>$('#jsonFile').click();
   $('#jsonFile').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);
   $('#assistantToggle').onclick=()=>{assistantExpanded=!assistantExpanded;renderAssistant()};
+  $('#dialogueForm').onsubmit=sendDialogue;
+  $('#dialogueApprove').onclick=()=>{void approveDialogue()};
+  $('#dialogueReject').onclick=rejectDialogue;
+  $('#dialogueInput').onkeydown=e=>{
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#dialogueForm').requestSubmit();}
+  };
   $('#assistantPreview').onclick=requestShiftPreview;
   $('#assistantShift').oninput=()=>{proposedShift=null;renderAssistant()};
   $('#assistantSaveCalendar').onclick=()=>{
