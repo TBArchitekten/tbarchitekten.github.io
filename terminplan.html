@@ -815,9 +815,38 @@ body.read-only .editor-only{display:none!important}
       serverRevision=updated[0].server_revision;
       lastSavedSignature=batch.signature;
       saveFailed=false;
+      if(dialogueApproved){
+        const approved=dialogueApproved;
+        // A later local edit or a concurrent server write cannot yield a success receipt.
+        if(batch.signature!==approved.signature||serverRevision!==approved.baseRevision+1){
+          dialogueApproved=null;
+          addDialogue('system_receipt','Nicht verifiziert: Der freigegebene Vorschlag wurde durch einen anderen lokalen Stand ersetzt.','warning',approved.requestId);
+        }else{
+          const {data:observed,error:readError}=await sb.from('office_terminplan_instances')
+            .select('server_revision,state').eq('id',PLAN_ID).single();
+          if(readError||!observed)throw new Error('Post-write verification read failed');
+          const receipt=dialogueEngine.receipt({
+            requestId:approved.requestId,planId:PLAN_ID,baseRevision:approved.baseRevision,
+            verifiedRevision:observed.server_revision,
+            expectedState:approved.expectedState,observedState:observed.state
+          });
+          dialogueApproved=null;
+          if(receipt.status!=='verified'){
+            addDialogue('system_receipt','NICHT VERIFIZIERT: Der gespeicherte Stand stimmt nicht mit der Freigabe überein. Bitte JSON sichern und neu laden.','warning',approved.requestId);
+            throw new Error('Unverified post-write receipt');
+          }
+          addDialogue('system_receipt','Verifiziert: Änderung in Projektterminplan '+PLAN_ID+
+            ' gespeichert und mit Serverrevision '+receipt.verified_revision+
+            ' erneut gelesen. Beleg: '+receipt.receipt_id,'receipt',approved.requestId);
+        }
+      }
       if(!pendingSave)setSaveStatus('gespeichert · Revision '+serverRevision);
     }catch(error){
       console.error('Office Terminplan conditional save failed',error);
+      if(dialogueApproved){
+        addDialogue('system_receipt','Speicherung nicht verifiziert. Keine Erfolgsmeldung: bitte lokalen JSON-Stand sichern.','warning',dialogueApproved.requestId);
+        dialogueApproved=null;
+      }
       if(!pendingSave)pendingSave={signature:JSON.stringify(data),state:clone(data)};
       raiseSaveConflict('Der Stand auf dem Server kann neuer sein oder die Speicherung ist unklar. Ihre Änderungen bleiben im Browser. Sichern Sie zuerst die lokale JSON-Datei und laden Sie danach neu.');
     }finally{
