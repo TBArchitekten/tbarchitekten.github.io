@@ -401,6 +401,10 @@ body.read-only .editor-only{display:none!important}
   .assistant-notices{display:grid;gap:6px}
   .assistant-issue{background:#faf8f4;border:1px solid #e5dfd6;border-left:3px solid #bb9252;display:block;width:100%;padding:8px 11px;text-align:left;font-size:12px;line-height:1.4}
   .assistant-issue:disabled{opacity:1;cursor:default}
+  .save-conflict{padding:10px 18px;background:#fff1dc;border-bottom:1px solid #ddb879;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12px}
+  .save-conflict strong{font-weight:700}
+  .save-conflict button{padding:6px 10px;border:1px solid #be965d;background:#fff}
+  .save-conflict[hidden]{display:none!important}
   .assistant-issue:not(:disabled):hover{background:#f8efdf}
   .assistant-empty{margin:4px 0;color:#4a6254;line-height:1.5}
   .assistant-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -423,6 +427,12 @@ body.read-only .editor-only{display:none!important}
   <div class="right"><span id="officeMode"></span><span id="saveState"></span></div>
 </header>
 <div class="app">
+  <div class="save-conflict" id="conflictBanner" hidden role="alert">
+    <strong>Speicherkonflikt:</strong>
+    <span id="conflictMessage">Ein anderer Stand liegt vor. Ihre Änderungen sind noch lokal vorhanden.</span>
+    <button type="button" id="conflictExport">Lokale Änderungen als JSON sichern</button>
+    <button type="button" id="conflictReload">Serverstand neu laden</button>
+  </div>
   <div class="toolbar">
     <button class="btn primary" id="addTaskBtn">＋ Aufgabe</button>
     <button class="btn" id="addMilestoneBtn">◆ Meilenstein</button>
@@ -665,6 +675,9 @@ body.read-only .editor-only{display:none!important}
   let pendingSave=null;
   let inFlightSave=null;
   let saveFailed=false;
+  let serverRevision=null;
+  let saveConflict=false;
+  let permitUnload=false;
 
   function loadData(){return clone(initialData)}
 
@@ -686,6 +699,7 @@ body.read-only .editor-only{display:none!important}
   }
   function saveData(){
     if(!remoteReady||!canEdit||!PLAN_ID)return;
+    if(saveConflict){setSaveStatus('Konflikt · JSON sichern / neu laden');return;}
     const signature=JSON.stringify(data);
     if(signature===lastSavedSignature&&!pendingSave&&!inFlightSave)return;
     if(signature===pendingSave?.signature)return;
@@ -696,8 +710,20 @@ body.read-only .editor-only{display:none!important}
     setSaveStatus('Änderungen ungespeichert');
     saveTimer=setTimeout(()=>{void flushSave();},450);
   }
+  function raiseSaveConflict(message){
+    saveConflict=true;
+    saveFailed=true;
+    clearTimeout(saveTimer);
+    $('#conflictMessage').textContent=message;
+    $('#conflictBanner').hidden=false;
+    setSaveStatus('Speicherkonflikt · kein weiterer Schreibzugriff');
+  }
   async function flushSave(){
-    if(inFlightSave||!pendingSave||!canEdit||!PLAN_ID)return;
+    if(inFlightSave||!pendingSave||!canEdit||!PLAN_ID||saveConflict)return;
+    if(!Number.isSafeInteger(serverRevision)||serverRevision<1){
+      raiseSaveConflict('Keine gültige Serverrevision. Bitte Daten als JSON sichern und neu laden.');
+      return;
+    }
     clearTimeout(saveTimer);
     saveTimer=null;
     const batch=pendingSave;
@@ -710,22 +736,26 @@ body.read-only .editor-only{display:none!important}
     setSaveStatus('wird gespeichert …');
     try{
       const {data:updated,error}=await sb.from('office_terminplan_instances').update({
-        state:batch.state,
-        updated_at:new Date().toISOString()
-      }).eq('id',PLAN_ID).select('id');
+        state:batch.state,updated_at:new Date().toISOString()
+      }).eq('id',PLAN_ID).eq('server_revision',serverRevision)
+        .select('id,server_revision');
       if(error)throw error;
-      if(!updated?.length)throw new Error('Update did not affect a Terminplan row');
+      if(!updated||updated.length!==1){
+        throw Object.assign(new Error('Revision mismatch or permission changed'),{code:'REVISION_MISMATCH'});
+      }
+      if(!Number.isSafeInteger(updated[0].server_revision)||updated[0].server_revision!==serverRevision+1)
+        throw new Error('Unexpected server revision acknowledgement');
+      serverRevision=updated[0].server_revision;
       lastSavedSignature=batch.signature;
       saveFailed=false;
-      if(!pendingSave)setSaveStatus('gespeichert · '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}));
+      if(!pendingSave)setSaveStatus('gespeichert · Revision '+serverRevision);
     }catch(error){
-      console.error('Office Terminplan autosave failed',error);
+      console.error('Office Terminplan conditional save failed',error);
       if(!pendingSave)pendingSave={signature:JSON.stringify(data),state:clone(data)};
-      saveFailed=true;
-      setSaveStatus('Speichern fehlgeschlagen · erneut versuchen');
+      raiseSaveConflict('Der Stand auf dem Server kann neuer sein oder die Speicherung ist unklar. Ihre Änderungen bleiben im Browser. Sichern Sie zuerst die lokale JSON-Datei und laden Sie danach neu.');
     }finally{
       inFlightSave=null;
-      if(pendingSave&&!saveFailed)setTimeout(()=>{void flushSave();},0);
+      if(pendingSave&&!saveFailed&&!saveConflict)setTimeout(()=>{void flushSave();},0);
     }
   }
 
@@ -766,12 +796,14 @@ body.read-only .editor-only{display:none!important}
       setPlanChrome(row);
     }else if(PLAN_ID){
       const {data:row,error}=await sb.from('office_terminplan_instances')
-        .select('id,owner_id,project_number,project_name,phase,template_version,state,updated_at')
+        .select('id,owner_id,project_number,project_name,phase,template_version,state,updated_at,server_revision')
         .eq('id',PLAN_ID)
         .single();
       if(error)throw error;
       currentPlan=row;
       data=row.state||loadData();
+      serverRevision=Number(row.server_revision);
+      if(!Number.isSafeInteger(serverRevision)||serverRevision<1)throw new Error('Missing server revision');
       canEdit=member.role==='admin'||row.owner_id===userId;
       setPlanChrome(row);
     }else{
@@ -1864,7 +1896,7 @@ body.read-only .editor-only{display:none!important}
   };
   window.addEventListener('beforeprint',buildPrintSheet);
   $('#saveNowBtn').onclick=()=>{
-    if(!canEdit)return;
+    if(!canEdit||saveConflict)return;
     const signature=JSON.stringify(data);
     if(signature!==lastSavedSignature&&signature!==pendingSave?.signature){
       pendingSave={signature,state:clone(data)};
@@ -1873,8 +1905,14 @@ body.read-only .editor-only{display:none!important}
     saveFailed=false;
     void flushSave();
   };
+  $('#conflictExport').onclick=exportJson;
+  $('#conflictReload').onclick=()=>{
+    if(!confirm('Lokale Änderungen wurden als JSON gesichert? Ungespeicherte Änderungen gehen beim Neuladen verloren.'))return;
+    permitUnload=true;
+    location.reload();
+  };
   window.addEventListener('beforeunload',event=>{
-    if(remoteReady&&canEdit&&(pendingSave||inFlightSave||JSON.stringify(data)!==lastSavedSignature)){
+    if(!permitUnload&&remoteReady&&canEdit&&(saveConflict||pendingSave||inFlightSave||JSON.stringify(data)!==lastSavedSignature)){
       event.preventDefault();
       event.returnValue='';
     }
