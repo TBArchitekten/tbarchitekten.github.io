@@ -3,7 +3,7 @@
 create table if not exists public.office_terminplan_dialogue_messages (
   id uuid primary key default gen_random_uuid(),
   plan_id uuid not null references public.office_terminplan_instances(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade default (select auth.uid()),
+  user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
   role text not null check (role in ('user','assistant','system_receipt')),
   body text not null check (char_length(body) between 1 and 4000),
   event_kind text not null default 'answer' check (event_kind in ('question','answer','proposal','approval','receipt','warning')),
