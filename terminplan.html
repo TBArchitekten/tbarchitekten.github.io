@@ -405,6 +405,12 @@ body.read-only .editor-only{display:none!important}
   .save-conflict strong{font-weight:700}
   .save-conflict button{padding:6px 10px;border:1px solid #be965d;background:#fff}
   .save-conflict[hidden]{display:none!important}
+.assistant-calendar{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .assistant-calendar textarea{width:100%;min-height:48px;padding:9px;border:1px solid var(--line-strong);font:inherit}
+  .assistant-calendar button{margin-top:7px;border:1px solid var(--line-strong);background:#fff;padding:8px}
+  body.read-only .assistant-calendar{display:none}
+  .grid-day.nonwork{background:rgba(180,180,180,.20)}
+  .print-day-cell.nonwork{background:#e8e8e8!important}
   .dep-extra{display:grid;grid-template-columns:minmax(180px,1fr) 112px 88px auto;gap:7px;margin:6px 0;align-items:center}
   .dep-extra select,.dep-extra input{min-width:0;width:100%;padding:8px;border:1px solid var(--line-strong);background:#fff}
   .dep-extra button{border:1px solid var(--line-strong);background:#fff;padding:7px 10px}
@@ -512,6 +518,12 @@ body.read-only .editor-only{display:none!important}
           </div>
           <div id="assistantDraft" class="assistant-draft" aria-live="polite"></div>
           <button class="assistant-apply" type="button" id="assistantApply" hidden>Änderung übernehmen</button>
+          <div class="assistant-calendar">
+            <h3>Projektkalender · zusätzliche arbeitsfreie Tage</h3>
+            <p class="dep-note">Nur ausdrücklich eingetragene Ausnahmen; keine automatisch angenommenen Feiertage.</p>
+            <textarea id="assistantNonWorkingDates" placeholder="YYYY-MM-DD, YYYY-MM-DD" rows="2" aria-label="Arbeitsfreie Kalendertage"></textarea>
+            <button type="button" id="assistantSaveCalendar">Kalender übernehmen</button>
+          </div>
         </div>
       </div>
     </div>
@@ -867,9 +879,13 @@ body.read-only .editor-only{display:none!important}
   function addDays(s,n){const d=parseDate(s);d.setUTCDate(d.getUTCDate()+n);return iso(d)}
   function dayDiff(a,b){return Math.round((parseDate(b)-parseDate(a))/DAY_MS)}
   function isWeekend(s){const d=parseDate(s).getUTCDay();return d===0||d===6}
+  function isProjectWorkday(date){
+    const blocked=data.project?.calendar?.nonWorkingDates||[];
+    return !isWeekend(date)&&!blocked.includes(date);
+  }
   function workDuration(a,b){
     let n=0,d=parseDate(a),end=parseDate(b);
-    while(d<=end){const wd=d.getUTCDay();if(wd!==0&&wd!==6)n++;d.setUTCDate(d.getUTCDate()+1)}
+    while(d<=end){if(isProjectWorkday(iso(d)))n++;d.setUTCDate(d.getUTCDate()+1)}
     return n;
   }
 
@@ -881,13 +897,12 @@ body.read-only .editor-only{display:none!important}
 
     /* Liegt der Anfang ausnahmsweise am Wochenende, beginnt die Zählung
        am nächsten Montag. */
-    while(d.getUTCDay()===0||d.getUTCDay()===6)d.setUTCDate(d.getUTCDate()+1);
+    while(!isProjectWorkday(iso(d)))d.setUTCDate(d.getUTCDate()+1);
 
     let remaining=count-1;
     while(remaining>0){
       d.setUTCDate(d.getUTCDate()+1);
-      const wd=d.getUTCDay();
-      if(wd!==0&&wd!==6)remaining--;
+      if(isProjectWorkday(iso(d)))remaining--;
     }
     return iso(d);
   }
@@ -1084,7 +1099,7 @@ body.read-only .editor-only{display:none!important}
     rows.forEach((r,rowIndex)=>{
       const row=document.createElement('div');row.className='grid-row '+r.kind;row.style.top=(rowIndex*38)+'px';
       visibleDates.forEach((s,i)=>{
-        const gd=document.createElement('div');gd.className='grid-day'+(isWeekend(s)?' weekend':'');gd.style.left=(i*cellWidth)+'px';gd.style.width=cellWidth+'px';row.appendChild(gd);
+        const gd=document.createElement('div');gd.className='grid-day'+(isWeekend(s)?' weekend':'')+(!isProjectWorkday(s)?' nonwork':'');gd.style.left=(i*cellWidth)+'px';gd.style.width=cellWidth+'px';row.appendChild(gd);
       });
       timelineBody.appendChild(row);
       if(r.kind==='group'){
@@ -1333,6 +1348,12 @@ body.read-only .editor-only{display:none!important}
     const selected=data.tasks.find(t=>t.id===selectedId);
     $('#assistantSelection').textContent=selected?'Ausgewählt: '+selected.name:'Vorgang im Gantt oder in der Tabelle auswählen.';
     $('#assistantPreview').disabled=!selected||!canEdit||!auditEngine;
+    const exceptionDates=(data.project?.calendar?.nonWorkingDates||[]).join(', ');
+    if($('#assistantNonWorkingDates').dataset.calendarSignature!==exceptionDates){
+      $('#assistantNonWorkingDates').value=exceptionDates;
+      $('#assistantNonWorkingDates').dataset.calendarSignature=exceptionDates;
+    }
+    $('#assistantSaveCalendar').disabled=!canEdit||saveConflict;
     const draft=$('#assistantDraft'),apply=$('#assistantApply');
     apply.hidden=true;
     draft.textContent='';
@@ -1881,7 +1902,7 @@ body.read-only .editor-only{display:none!important}
     printDates.forEach((date,index)=>{
       const d=parseDate(date);
       const cell=document.createElement('div');
-      cell.className='print-head-cell print-day-cell'+(isWeekend(date)?' weekend':'');
+      cell.className='print-head-cell print-day-cell'+(isWeekend(date)?' weekend':'')+(!isProjectWorkday(date)?' nonwork':'');
       cell.style.gridColumn=`${index+1} / span 1`;
       cell.innerHTML=
         `<span>${d.toLocaleDateString('de-DE',{weekday:'short',timeZone:'UTC'}).replace('.','')}</span>`+
@@ -1968,6 +1989,18 @@ body.read-only .editor-only{display:none!important}
   $('#assistantToggle').onclick=()=>{assistantExpanded=!assistantExpanded;renderAssistant()};
   $('#assistantPreview').onclick=requestShiftPreview;
   $('#assistantShift').oninput=()=>{proposedShift=null;renderAssistant()};
+  $('#assistantSaveCalendar').onclick=()=>{
+    if(!canEdit||saveConflict||!auditEngine)return;
+    const raw=$('#assistantNonWorkingDates').value.trim();
+    const entries=raw?raw.split(/[\s,;]+/).filter(Boolean):[];
+    if(entries.length>366||entries.some(x=>!auditEngine.validDate(x))){
+      toast('Bitte gültige Daten YYYY-MM-DD eingeben (maximal 366).');return;
+    }
+    data.project.calendar={...(data.project.calendar||{}),nonWorkingDates:[...new Set(entries)].sort()};
+    proposedShift=null;
+    render();
+    toast('Projektkalender aktualisiert. Weitere Feiertage werden nicht angenommen.');
+  };
   $('#assistantApply').onclick=()=>{
     if(!proposedShift||!canEdit||!auditEngine)return;
     if(JSON.stringify(data)!==proposedShift.baseSignature){
