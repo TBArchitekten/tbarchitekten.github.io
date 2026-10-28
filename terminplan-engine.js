@@ -2,7 +2,7 @@
  * TBA Office · Terminplan dependency audit v0.1
  * Pure, deterministic, read-only computation. No network, DOM or mutations.
  * Calendar: Monday–Friday, no holidays. Intervals include their end day.
- * EA / AE require the next working day; AA / EE allow the same date.
+ * All relationships accept same-day boundaries. The Office Muster uses same-day handover milestones.
  * The existing schema has exactly one optional predecessor (task.pred).
  */
 (function (root, factory) {
@@ -35,7 +35,6 @@
     }
     return d.toISOString().slice(0, 10);
   }
-  function nextWorkday(date) { return shiftWorkdays(date, 1); }
   function issue(code, taskId, predecessorId, extra) {
     return Object.assign({ code, taskId: String(taskId || ""), predecessorId: String(predecessorId || ""), severity: "warning", key: code + ":" + String(taskId || "") + ":" + String(predecessorId || "") }, extra || {});
   }
@@ -44,7 +43,7 @@
     if (!RELATIONS.has(rel)) return null;
     const targetSide = rel === "EA" || rel === "AA" ? "start" : "end";
     const predDate = rel === "EA" || rel === "EE" ? pred.end : pred.start;
-    const minimum = rel === "EA" || rel === "AE" ? nextWorkday(predDate) : predDate;
+    const minimum = predDate;
     return { relation: rel, targetSide, minimum, actual: child[targetSide] };
   }
   function analyze(state) {
