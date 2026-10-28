@@ -405,6 +405,12 @@ body.read-only .editor-only{display:none!important}
   .save-conflict strong{font-weight:700}
   .save-conflict button{padding:6px 10px;border:1px solid #be965d;background:#fff}
   .save-conflict[hidden]{display:none!important}
+  .dep-extra{display:grid;grid-template-columns:minmax(180px,1fr) 112px 88px auto;gap:7px;margin:6px 0;align-items:center}
+  .dep-extra select,.dep-extra input{min-width:0;width:100%;padding:8px;border:1px solid var(--line-strong);background:#fff}
+  .dep-extra button{border:1px solid var(--line-strong);background:#fff;padding:7px 10px}
+  .dep-note{font-size:11px;line-height:1.5;color:var(--muted);margin:5px 0}
+  #addDepBtn{border:1px solid var(--line-strong);background:#fff;padding:8px 12px;justify-self:start}
+
   .assistant-issue:not(:disabled):hover{background:#f8efdf}
   .assistant-empty{margin:4px 0;color:#4a6254;line-height:1.5}
   .assistant-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -581,6 +587,12 @@ body.read-only .editor-only{display:none!important}
         <option value="EE">EE · Ende–Ende</option>
         <option value="AE">AE · Anfang–Ende</option>
       </select></div>
+      <div class="field"><label>Abstand zum ersten Vorgänger (AT)</label><input type="number" id="taskLag" value="0" min="-260" max="260" step="1"></div>
+      <div class="field"><label>Geschützter Abgabetermin (optional)</label><input type="date" id="taskProtectedDate"></div>
+      <div class="field full"><label>Weitere Vorgänger</label><div id="extraDepRows"></div>
+        <button type="button" id="addDepBtn">＋ Vorgänger hinzufügen</button>
+        <p class="dep-note">EA / AA / EE / AE · Abstand in Arbeitstagen. 0 = Übergabe am selben Tag. Feiertage nur, wenn im Projektkalender ausdrücklich hinterlegt.</p>
+      </div>
       <div class="field"><label>Status</label>
         <select id="taskStatus"><option>Nicht begonnen</option><option>In Bearbeitung</option><option>Wartet auf Rückmeldung</option><option>Abgeschlossen</option></select>
       </div>
@@ -1129,10 +1141,10 @@ body.read-only .editor-only{display:none!important}
 
   function drawDependencies(svg){
     const taskRows=new Map();rows.forEach((r,i)=>{if(r.kind==='task')taskRows.set(r.id,i)});
-    data.tasks.forEach(t=>{
-      if(!t.pred||!taskRows.has(t.id)||!taskRows.has(t.pred))return;
-      const p=data.tasks.find(x=>x.id===t.pred);if(!p)return;
-      const [predSide,targetSide]=dependencySides(t.rel);
+    data.tasks.forEach(t=>taskDependencies(t).forEach(dep=>{
+      if(!dep.pred||!taskRows.has(t.id)||!taskRows.has(dep.pred))return;
+      const p=data.tasks.find(x=>x.id===dep.pred);if(!p)return;
+      const [predSide,targetSide]=dependencySides(dep.rel);
       const x1=dependencyX(p,predSide);
       const x2=dependencyX(t,targetSide);
       const y1=taskRows.get(p.id)*38+19,y2=taskRows.get(t.id)*38+19;
@@ -1149,7 +1161,7 @@ body.read-only .editor-only{display:none!important}
         ?`M ${tipX-6} ${y2-4} L ${tipX} ${y2} L ${tipX-6} ${y2+4} Z`
         :`M ${tipX+6} ${y2-4} L ${tipX} ${y2} L ${tipX+6} ${y2+4} Z`);
       svg.append(path,arrow);
-    });
+    }));
   }
 
   function startDrag(e,t,mode){
@@ -1257,6 +1269,11 @@ body.read-only .editor-only{display:none!important}
       const side=item.targetSide==='start'?'Beginn':'Ende';
       return name+' · '+item.relation+' zu '+predName+': '+side+' frühestens '+item.minimum+', aktuell '+item.actual+'.';
     }
+    if(item.code==='protected_deadline')return name+': geschützter Abgabetermin '+item.minimum+' überschritten (Ende '+item.actual+').';
+    if(item.code==='invalid_protected_date')return name+': geschützter Termin ist kein gültiges Datum.';
+    if(item.code==='invalid_lag')return name+': Abstand zur Beziehung '+predName+' ist ungültig.';
+    if(item.code==='invalid_calendar')return 'Projektkalender enthält ein ungültiges Datum.';
+    if(item.code==='duplicate_dependency')return name+': doppelte Beziehung zu '+predName+'.';
     if(item.code==='missing_predecessor')return name+': Vorgänger '+predName+' ist nicht mehr vorhanden.';
     if(item.code==='cycle')return 'Zirkuläre Abhängigkeit: '+(item.taskIds||[]).map(id=>data.tasks.find(t=>t.id===id)?.name||id).join(' ↔ ')+'.';
     if(item.code==='unsupported_relation')return name+': nicht unterstützte Beziehung zum Vorgänger.';
@@ -1355,6 +1372,59 @@ body.read-only .editor-only{display:none!important}
     $('#milestoneCount').textContent=data.tasks.filter(t=>t.type==='milestone').length;
   }
 
+  function taskDependencies(task){
+    if(auditEngine)return auditEngine.dependencies(task);
+    if(Array.isArray(task?.dependencies))return task.dependencies;
+    return task?.pred?[{pred:task.pred,rel:task.rel||'EA',lagDays:0}]:[];
+  }
+  function predecessorOptions(currentId,selected=''){
+    const options=data.tasks.filter(t=>t.id!==currentId)
+      .sort((a,b)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name));
+    const result=options.map(t=>({value:t.id,label:t.name}));
+    if(selected&&!result.some(t=>t.value===selected))result.push({value:selected,label:'Fehlender Vorgänger: '+selected});
+    return result;
+  }
+  function appendExtraDep(dep={pred:'',rel:'EA',lagDays:0},currentId=$('#taskId').value){
+    const row=document.createElement('div');row.className='dep-extra';
+    const pred=document.createElement('select');pred.className='dep-pred';
+    pred.add(new Option('— Vorgänger wählen —',''));
+    predecessorOptions(currentId,dep.pred).forEach(o=>pred.add(new Option(o.label,o.value)));
+    pred.value=dep.pred||'';
+    const rel=document.createElement('select');rel.className='dep-rel';
+    [['EA','EA · Ende–Anfang'],['AA','AA · Anfang–Anfang'],['EE','EE · Ende–Ende'],['AE','AE · Anfang–Ende']]
+      .forEach(([key,value])=>rel.add(new Option(value,key)));
+    rel.value=dep.rel||'EA';
+    const lag=document.createElement('input');lag.className='dep-lag';lag.type='number';lag.min='-260';lag.max='260';lag.step='1';lag.value=dep.lagDays??0;lag.title='Arbeitstage Abstand';
+    const remove=document.createElement('button');remove.type='button';remove.textContent='Entfernen';
+    remove.onclick=()=>row.remove();
+    row.append(pred,rel,lag,remove);
+    $('#extraDepRows').append(row);
+  }
+  function formDependencies(id){
+    const links=[];
+    const primary=$('#taskPred').value;
+    if(primary)links.push({pred:primary,rel:$('#taskRel').value,lagDays:Number($('#taskLag').value)});
+    for(const row of $('#extraDepRows').querySelectorAll('.dep-extra')){
+      const pred=row.querySelector('.dep-pred').value;
+      if(!pred)throw new Error('Bitte alle zusätzlichen Vorgänger auswählen.');
+      links.push({pred,rel:row.querySelector('.dep-rel').value,lagDays:Number(row.querySelector('.dep-lag').value)});
+    }
+    const fingerprints=new Set();
+    for(const dep of links){
+      if(dep.pred===id)throw new Error('Ein Vorgang darf nicht sein eigener Vorgänger sein.');
+      if(!Number.isInteger(dep.lagDays)||Math.abs(dep.lagDays)>260)
+        throw new Error('Abstand muss zwischen -260 und 260 ganzen Arbeitstagen liegen.');
+      const key=dep.pred+':'+dep.rel;
+      if(fingerprints.has(key))throw new Error('Doppelte Beziehung zum selben Vorgänger.');
+      fingerprints.add(key);
+    }
+    return links;
+  }
+  function syncLegacyDependency(task){
+    const first=taskDependencies(task)[0];
+    task.pred=first?.pred||'';
+    task.rel=first?.rel||'EA';
+  }
   function openTask(id=null,type='task'){
     if(!canEdit)return;
     const t=id?data.tasks.find(x=>x.id===id):null;
@@ -1368,8 +1438,14 @@ body.read-only .editor-only{display:none!important}
     $('#taskOwner').value=t?.owner||'';
     $('#taskProgress').value=t?.progress||0;
     $('#taskCategory').value=t?.category||'arch';
-    populatePreds(t?.pred,id);
-    $('#taskRel').value=t?.rel||'EA';
+    const links=taskDependencies(t);
+    const first=links[0];
+    populatePreds(first?.pred,id);
+    $('#taskRel').value=first?.rel||'EA';
+    $('#taskLag').value=first?.lagDays??0;
+    $('#taskProtectedDate').value=t?.protectedDate||'';
+    $('#extraDepRows').replaceChildren();
+    links.slice(1).forEach(dep=>appendExtraDep(dep,id));
     $('#taskStatus').value=t?.status||'Nicht begonnen';
     $('#taskCritical').checked=!!t?.critical;
     $('#taskNote').value=t?.note||'';
@@ -1382,17 +1458,21 @@ body.read-only .editor-only{display:none!important}
   }
   function populatePreds(selected,currentId){
     const sel=$('#taskPred');sel.innerHTML='<option value="">— keiner —</option>';
-    data.tasks.filter(t=>t.id!==currentId).sort((a,b)=>a.start.localeCompare(b.start)).forEach(t=>{const o=new Option(t.name,t.id);if(t.id===selected)o.selected=true;sel.add(o)});
+    predecessorOptions(currentId,selected).forEach(t=>{const o=new Option(t.label,t.value);if(t.value===selected)o.selected=true;sel.add(o)});
   }
   function saveTask(){
     if(!canEdit)return;
     const id=$('#taskId').value||uid('t');
     const type=$('#taskType').value;
+    let links;
+    try{links=formDependencies(id)}catch(error){toast(error.message);return;}
     const obj={
       id,group:$('#taskGroup').value,name:$('#taskName').value.trim(),type,
       start:$('#taskStart').value,end:type==='milestone'?$('#taskStart').value:$('#taskEnd').value,
       owner:$('#taskOwner').value.trim(),progress:Number($('#taskProgress').value)||0,category:$('#taskCategory').value,
-      pred:$('#taskPred').value,rel:$('#taskPred').value?$('#taskRel').value:'EA',status:$('#taskStatus').value,critical:$('#taskCritical').checked,note:$('#taskNote').value.trim()
+      pred:links[0]?.pred||'',rel:links[0]?.rel||'EA',dependencies:links,
+      protectedDate:$('#taskProtectedDate').value||'',
+      status:$('#taskStatus').value,critical:$('#taskCritical').checked,note:$('#taskNote').value.trim()
     };
     if(!obj.name||!obj.start||!obj.end){toast('Name und Termine sind erforderlich.');return}
     if(obj.end<obj.start){toast('Der Endtermin liegt vor dem Anfangstermin.');return}
@@ -1404,13 +1484,19 @@ body.read-only .editor-only{display:none!important}
     if(!id)return;
     const t=data.tasks.find(x=>x.id===id);if(!t)return;
     if(!confirm(`„${t.name}“ wirklich löschen?`))return;
-    data.tasks=data.tasks.filter(x=>x.id!==id);data.tasks.forEach(x=>{if(x.pred===id){x.pred='';x.rel='EA'}});
+    data.tasks=data.tasks.filter(x=>x.id!==id);
+    data.tasks.forEach(x=>{
+      if(Array.isArray(x.dependencies)){
+        x.dependencies=x.dependencies.filter(dep=>dep.pred!==id);
+        syncLegacyDependency(x);
+      }else if(x.pred===id){x.pred='';x.rel='EA'}
+    });
     taskDialog.close();hideContext();render();toast('Vorgang gelöscht.');
   }
   function duplicateTask(id){
     if(!canEdit)return;
     const t=data.tasks.find(x=>x.id===id);if(!t)return;
-    const c=clone(t);c.id=uid('t');c.name=t.name+' · Kopie';c.start=addDays(t.start,1);c.end=addDays(t.end,1);c.pred='';c.rel='EA';
+    const c=clone(t);c.id=uid('t');c.name=t.name+' · Kopie';c.start=addDays(t.start,1);c.end=addDays(t.end,1);c.pred='';c.rel='EA';c.dependencies=[];
     data.tasks.push(c);render();toast('Vorgang dupliziert.');
   }
 
@@ -1593,12 +1679,12 @@ body.read-only .editor-only{display:none!important}
       return 0;
     };
 
-    data.tasks.forEach(task=>{
-      if(!task.pred||!rowByTask.has(task.id)||!rowByTask.has(task.pred))return;
-      const predecessor=data.tasks.find(item=>item.id===task.pred);
+    data.tasks.forEach(task=>taskDependencies(task).forEach(dep=>{
+      if(!dep.pred||!rowByTask.has(task.id)||!rowByTask.has(dep.pred))return;
+      const predecessor=data.tasks.find(item=>item.id===dep.pred);
       if(!predecessor)return;
 
-      const relation=task.rel||'EA';
+      const relation=dep.rel||'EA';
       const [predSide,targetSide]=dependencySides(relation);
       const predDate=predSide==='start'?predecessor.start:predecessor.end;
       const taskDate=targetSide==='start'?task.start:task.end;
@@ -1621,7 +1707,7 @@ body.read-only .editor-only{display:none!important}
         'stroke-width':1,
         'marker-end':'url(#printArrow)'
       });
-    });
+    }));
 
     printRows.forEach((row,rowIndex)=>{
       const y=rowIndex*rowHeight;
@@ -1813,7 +1899,10 @@ body.read-only .editor-only{display:none!important}
     const lines=[header];
     data.groups.forEach(g=>{
       data.tasks.filter(t=>t.group===g.id).sort((a,b)=>a.start.localeCompare(b.start)).forEach((t,i)=>{
-        const pred=data.tasks.find(x=>x.id===t.pred)?.name||'';
+        const pred=taskDependencies(t).map(dep=>{
+          const name=data.tasks.find(x=>x.id===dep.pred)?.name||dep.pred;
+          return name+' ('+(dep.rel||'EA')+', '+(dep.lagDays??0)+' AT)';
+        }).join(' | ');
         lines.push([g.wbs+'.'+String(i+1).padStart(2,'0'),t.name,t.type||'task',g.name,t.owner,t.start,t.end,t.type==='milestone'?0:workDuration(t.start,t.end),t.progress,t.status,pred,t.critical?'Ja':'Nein',t.note]);
       });
     });
@@ -1839,6 +1928,7 @@ body.read-only .editor-only{display:none!important}
   $('#addMilestoneBtn').onclick=()=>openTask(null,'milestone');
   $('#addGroupBtn').onclick=()=>openGroup();
   $('#saveTaskBtn').onclick=saveTask;
+  $('#addDepBtn').onclick=()=>appendExtraDep();
   $('#deleteTaskBtn').onclick=()=>deleteTask();
   $('#saveGroupBtn').onclick=saveGroup;
   $('#searchInput').oninput=render;
