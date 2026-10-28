@@ -94,5 +94,38 @@
     plan_id:planId,status:ok?"verified":"unverified",base_revision:baseRevision,
     verified_revision:ok?verifiedRevision:null,verification:"server_readback",source:"office_only"};
  }
- return Object.freeze({VERSION,stable,target,quantity,answer,review,receipt});
+
+ function fromModelIntent({serverResponse,state,engine,revision,requestId}){
+   if(!serverResponse||serverResponse.version!=="office-ai-v0.4"||
+      serverResponse.base_revision!==revision||
+      serverResponse.source!=="office_ai_interpretation_only")
+      return {kind:"answer",text:"KI-Ergebnis nicht mehr gültig. Keine Änderung vorgenommen."};
+   const intent=serverResponse.result;
+   if(!intent||!["shift","answer","clarify"].includes(intent.kind)||typeof intent.text!=="string")
+     return {kind:"answer",text:"KI-Ergebnis konnte nicht überprüft werden. Keine Änderung."};
+   if(intent.kind!=="shift")return {kind:"answer",text:intent.text.slice(0,1200)};
+   const target=state?.tasks?.find(t=>t.id===intent.task_id);
+   const offset=intent.offset_workdays;
+   if(!target||!Number.isInteger(offset)||offset===0||Math.abs(offset)>130||!engine)
+     return {kind:"answer",text:"KI-Vorschlag enthält keinen gültigen Vorgang oder Abstand. Keine Änderung."};
+   try{
+     const p=engine.previewShift(state,target.id,offset);
+     const proposal={request_id:requestId,kind:"shift_task_workdays",status:"proposed",
+       source:"office_ai_interpretation_engine_calculated",
+       task_id:target.id,offset_workdays:offset,
+       base_revision:revision,base_fingerprint:stable(state),
+       candidate_fingerprint:stable(p.state),before:p.before,after:p.after,
+       affected_ids:p.affectedIds,new_issue_codes:p.newIssues.map(i=>i.code),
+       requires_confirmation:true};
+     const text="KI-Interpretation: "+intent.text.trim().slice(0,800)+"\n"+
+       "Berechnete Vorschau für „"+target.name+"“: "+p.before.start+" – "+p.before.end+
+       " → "+p.after.start+" – "+p.after.end+". "+p.affectedIds.length+
+       " nachgelagerte Vorgänge und "+p.newIssues.length+
+       " zusätzliche Regelhinweise. Noch nichts geändert. Es wird nur dieser Vorgang verschoben.";
+     return {kind:"proposal",text,proposal,preview:p};
+   }catch(error){
+     return {kind:"answer",text:"KI-Vorschlag im Planungsmodell nicht ausführbar: "+String(error.message||"ungültig")};
+   }
+ }
+ return Object.freeze({VERSION,stable,target,quantity,answer,review,receipt,fromModelIntent});
 });
