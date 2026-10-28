@@ -404,6 +404,11 @@ body.read-only .editor-only{display:none!important}
   .dialogue-action button{padding:8px 11px;border:1px solid #18231d;background:#18231d;color:#fff}
   .dialogue-action button.secondary{background:#fff;color:#18231d;border-color:var(--line-strong)}
   .dialogue-action[hidden]{display:none}
+  .ai-mode{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+  .ai-mode input{accent-color:#18231d}
+  .ai-mode .ai-warning{font-weight:500;color:#6d6048}
+  .ai-mode small{color:var(--muted)}
+
   .assistant-caption{white-space:nowrap}
   @media(max-width:900px){.dialogue-label{align-items:start;flex-direction:column}.dialogue-input{align-items:stretch}}
   /* Assistant v0.1: verification only, no LLM or silent changes. */
@@ -550,6 +555,11 @@ body.read-only .editor-only{display:none!important}
         <div class="dialogue-label">
           <strong>Terminplan Gespräch</strong>
           <small>Nur dieser Terminplan · persönliche Verlaufsspeicherung · keine Daten aus MINDS</small>
+          <div class="ai-mode">
+            <label><input type="checkbox" id="dialogueAI" disabled> KI-Modus</label>
+            <span id="dialogueAIStatus">Prüfe Verfügbarkeit …</span>
+            <small class="ai-warning">Bei Aktivierung werden ausschließlich Terminplandaten an einen externen KI-Anbieter übermittelt.</small>
+          </div>
         </div>
         <div id="dialogueStream" class="dialogue-stream" role="log" aria-live="polite" aria-relevant="additions"></div>
         <div id="dialogueProposal" class="dialogue-action" hidden>
@@ -713,6 +723,7 @@ body.read-only .editor-only{display:none!important}
   let dialogueEvents=[];
   let dialogueProposal=null;
   let dialogueWriting=false;
+  let dialogueAIReady=false;
   let dialogueApproved=null;
   let lastAuditedState=null;
   let auditReport=null;
@@ -915,6 +926,7 @@ body.read-only .editor-only{display:none!important}
     lastSavedSignature=JSON.stringify(data);
     remoteReady=true;
     await loadDialogue();
+    await checkAIStatus();
   }
 
   function loadUIState(){
@@ -1430,6 +1442,7 @@ body.read-only .editor-only{display:none!important}
     $('#dialogueApprove').disabled=!valid||!canEdit||!!TEMPLATE_ID||saveConflict||!!dialogueApproved||dialogueWriting;
     $('#dialogueReject').disabled=dialogueWriting;
     $('#dialogueSend').disabled=dialogueWriting;
+    $('#dialogueAI').disabled=!dialogueAIReady||dialogueWriting;
   }
   async function storeDialogue(entry){
     if(!PLAN_ID||!dialogueUserId)return;
@@ -1437,7 +1450,7 @@ body.read-only .editor-only{display:none!important}
       plan_id:PLAN_ID,user_id:dialogueUserId,role:entry.role,
       body:String(entry.body||'').slice(0,4000),event_kind:entry.kind||'answer',
       request_id:entry.requestId||null,
-      event_data:{source:'office_rule_dialogue_v03',client_display_only:true}
+      event_data:{source:'office_dialogue_v04',client_display_only:true}
     });
     if(error)console.warn('Office chat history could not be saved',error.message);
   }
@@ -1457,6 +1470,33 @@ body.read-only .editor-only{display:none!important}
     dialogueEvents=(history||[]).reverse().map(x=>({role:x.role,body:x.body,kind:x.event_kind,requestId:x.request_id}));
     renderDialogue();
   }
+
+  async function checkAIStatus(){
+    const label=$('#dialogueAIStatus');
+    dialogueAIReady=false;
+    $('#dialogueAI').checked=false;
+    if(!PLAN_ID){
+      label.textContent='Muster: KI deaktiviert (nur Ansicht).';
+      renderDialogue();
+      return;
+    }
+    try{
+      const {data:status,error}=await sb.functions.invoke('office-terminplan-ai',{
+        body:{action:'status',plan_id:PLAN_ID}
+      });
+      if(error||!status||status.version!=='office-ai-v0.4'||!status.ready){
+        label.textContent='Keine eigene Office-KI konfiguriert · Regelmodus verfügbar.';
+      }else{
+        dialogueAIReady=true;
+        label.textContent='KI verfügbar · zum Verwenden aktivieren.';
+      }
+    }catch(error){
+      console.warn('Office AI availability check',String(error?.message||error));
+      label.textContent='KI nicht erreichbar · Regelmodus verfügbar.';
+    }
+    renderDialogue();
+  }
+
   async function sendDialogue(event){
     event.preventDefault();
     if(dialogueWriting)return;
@@ -1470,15 +1510,43 @@ body.read-only .editor-only{display:none!important}
       addDialogue('assistant','Regel- oder Dialogmodul ist nicht verfügbar; keine Änderung.', 'warning',requestId);
       return;
     }
-    const result=dialogueEngine.answer({
-      message,state:clone(data),engine:auditEngine,selectedTaskId:selectedId,
-      revision:serverRevision,requestId
-    });
-    if(result.kind==='proposal')dialogueProposal=result.proposal;
-    addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId);
-    assistantExpanded=true;
-    renderAssistant();
+    dialogueWriting=true;
     renderDialogue();
+    try{
+      let result;
+      if(dialogueAIReady&&$('#dialogueAI').checked&&PLAN_ID){
+        // Authenticated server independently reloads the plan and validates the JWT + RLS.
+        const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
+          body:{action:'interpret',plan_id:PLAN_ID,message,
+            selected_task_id:selectedId,expected_revision:serverRevision}
+        });
+        if(error||!remote||remote.error){
+          const code=remote?.error||'ai_unavailable';
+          addDialogue('assistant','KI-Anfrage nicht abgeschlossen ('+code+
+            '). Keine Änderung. Der Regelmodus bleibt verfügbar.','warning',requestId);
+          return;
+        }
+        result=dialogueEngine.fromModelIntent({
+          serverResponse:remote,state:clone(data),engine:auditEngine,
+          revision:serverRevision,requestId
+        });
+      }else{
+        result=dialogueEngine.answer({
+          message,state:clone(data),engine:auditEngine,selectedTaskId:selectedId,
+          revision:serverRevision,requestId
+        });
+      }
+      if(result.kind==='proposal')dialogueProposal=result.proposal;
+      addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId);
+      assistantExpanded=true;
+      renderAssistant();
+    }catch(error){
+      console.error('Office dialogue error',error);
+      addDialogue('assistant','Die Anfrage konnte nicht sicher abgeschlossen werden. Keine Änderung vorgenommen.','warning',requestId);
+    }finally{
+      dialogueWriting=false;
+      renderDialogue();
+    }
   }
   async function approveDialogue(){
     if(!canEdit||!PLAN_ID||!dialogueProposal||!dialogueEngine||!auditEngine||
@@ -2217,6 +2285,12 @@ body.read-only .editor-only{display:none!important}
   $('#jsonFile').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);
   $('#assistantToggle').onclick=()=>{assistantExpanded=!assistantExpanded;renderAssistant()};
   $('#dialogueForm').onsubmit=sendDialogue;
+  $('#dialogueAI').onchange=()=>{
+    dialogueProposal=null;
+    const mode=$('#dialogueAI').checked?'KI-Modus eingeschaltet. Projekt- und Vorgangsdaten werden zur Interpretation übertragen.':'Regelmodus eingeschaltet. Keine externe KI-Anfrage.';
+    $('#dialogueAIStatus').textContent=mode;
+    renderDialogue();
+  };
   $('#dialogueApprove').onclick=()=>{void approveDialogue()};
   $('#dialogueReject').onclick=rejectDialogue;
   $('#dialogueInput').onkeydown=e=>{
