@@ -1124,6 +1124,10 @@ body.read-only .editor-only{display:none!important}
     if(!canEdit)return;
     e.preventDefault();e.stopPropagation();
     const task=data.tasks.find(x=>x.id===t.id);if(!task)return;
+    selectedId=task.id;
+    proposedShift=null;
+    renderLeft();
+    renderAssistant();
 
     drag={
       id:t.id,
