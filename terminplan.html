@@ -401,6 +401,22 @@ body.read-only .editor-only{display:none!important}
   .assistant-notices{display:grid;gap:6px}
   .assistant-issue{background:#faf8f4;border:1px solid #e5dfd6;border-left:3px solid #bb9252;display:block;width:100%;padding:8px 11px;text-align:left;font-size:12px;line-height:1.4}
   .assistant-issue:disabled{opacity:1;cursor:default}
+  .save-conflict{padding:10px 18px;background:#fff1dc;border-bottom:1px solid #ddb879;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12px}
+  .save-conflict strong{font-weight:700}
+  .save-conflict button{padding:6px 10px;border:1px solid #be965d;background:#fff}
+  .save-conflict[hidden]{display:none!important}
+.assistant-calendar{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .assistant-calendar textarea{width:100%;min-height:48px;padding:9px;border:1px solid var(--line-strong);font:inherit}
+  .assistant-calendar button{margin-top:7px;border:1px solid var(--line-strong);background:#fff;padding:8px}
+  body.read-only .assistant-calendar{display:none}
+  .grid-day.nonwork{background:rgba(180,180,180,.20)}
+  .print-day-cell.nonwork{background:#e8e8e8!important}
+  .dep-extra{display:grid;grid-template-columns:minmax(180px,1fr) 112px 88px auto;gap:7px;margin:6px 0;align-items:center}
+  .dep-extra select,.dep-extra input{min-width:0;width:100%;padding:8px;border:1px solid var(--line-strong);background:#fff}
+  .dep-extra button{border:1px solid var(--line-strong);background:#fff;padding:7px 10px}
+  .dep-note{font-size:11px;line-height:1.5;color:var(--muted);margin:5px 0}
+  #addDepBtn{border:1px solid var(--line-strong);background:#fff;padding:8px 12px;justify-self:start}
+
   .assistant-issue:not(:disabled):hover{background:#f8efdf}
   .assistant-empty{margin:4px 0;color:#4a6254;line-height:1.5}
   .assistant-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -423,6 +439,12 @@ body.read-only .editor-only{display:none!important}
   <div class="right"><span id="officeMode"></span><span id="saveState"></span></div>
 </header>
 <div class="app">
+  <div class="save-conflict" id="conflictBanner" hidden role="alert">
+    <strong>Speicherkonflikt:</strong>
+    <span id="conflictMessage">Ein anderer Stand liegt vor. Ihre Änderungen sind noch lokal vorhanden.</span>
+    <button type="button" id="conflictExport">Lokale Änderungen als JSON sichern</button>
+    <button type="button" id="conflictReload">Serverstand neu laden</button>
+  </div>
   <div class="toolbar">
     <button class="btn primary" id="addTaskBtn">＋ Aufgabe</button>
     <button class="btn" id="addMilestoneBtn">◆ Meilenstein</button>
@@ -496,6 +518,12 @@ body.read-only .editor-only{display:none!important}
           </div>
           <div id="assistantDraft" class="assistant-draft" aria-live="polite"></div>
           <button class="assistant-apply" type="button" id="assistantApply" hidden>Änderung übernehmen</button>
+          <div class="assistant-calendar">
+            <h3>Projektkalender · zusätzliche arbeitsfreie Tage</h3>
+            <p class="dep-note">Nur ausdrücklich eingetragene Ausnahmen; keine automatisch angenommenen Feiertage.</p>
+            <textarea id="assistantNonWorkingDates" placeholder="YYYY-MM-DD, YYYY-MM-DD" rows="2" aria-label="Arbeitsfreie Kalendertage"></textarea>
+            <button type="button" id="assistantSaveCalendar">Kalender übernehmen</button>
+          </div>
         </div>
       </div>
     </div>
@@ -571,6 +599,12 @@ body.read-only .editor-only{display:none!important}
         <option value="EE">EE · Ende–Ende</option>
         <option value="AE">AE · Anfang–Ende</option>
       </select></div>
+      <div class="field"><label>Abstand zum ersten Vorgänger (AT)</label><input type="number" id="taskLag" value="0" min="-260" max="260" step="1"></div>
+      <div class="field"><label>Geschützter Abgabetermin (optional)</label><input type="date" id="taskProtectedDate"></div>
+      <div class="field full"><label>Weitere Vorgänger</label><div id="extraDepRows"></div>
+        <button type="button" id="addDepBtn">＋ Vorgänger hinzufügen</button>
+        <p class="dep-note">EA / AA / EE / AE · Abstand in Arbeitstagen. 0 = Übergabe am selben Tag. Feiertage nur, wenn im Projektkalender ausdrücklich hinterlegt.</p>
+      </div>
       <div class="field"><label>Status</label>
         <select id="taskStatus"><option>Nicht begonnen</option><option>In Bearbeitung</option><option>Wartet auf Rückmeldung</option><option>Abgeschlossen</option></select>
       </div>
@@ -665,6 +699,9 @@ body.read-only .editor-only{display:none!important}
   let pendingSave=null;
   let inFlightSave=null;
   let saveFailed=false;
+  let serverRevision=null;
+  let saveConflict=false;
+  let permitUnload=false;
 
   function loadData(){return clone(initialData)}
 
@@ -686,6 +723,7 @@ body.read-only .editor-only{display:none!important}
   }
   function saveData(){
     if(!remoteReady||!canEdit||!PLAN_ID)return;
+    if(saveConflict){setSaveStatus('Konflikt · JSON sichern / neu laden');return;}
     const signature=JSON.stringify(data);
     if(signature===lastSavedSignature&&!pendingSave&&!inFlightSave)return;
     if(signature===pendingSave?.signature)return;
@@ -696,8 +734,20 @@ body.read-only .editor-only{display:none!important}
     setSaveStatus('Änderungen ungespeichert');
     saveTimer=setTimeout(()=>{void flushSave();},450);
   }
+  function raiseSaveConflict(message){
+    saveConflict=true;
+    saveFailed=true;
+    clearTimeout(saveTimer);
+    $('#conflictMessage').textContent=message;
+    $('#conflictBanner').hidden=false;
+    setSaveStatus('Speicherkonflikt · kein weiterer Schreibzugriff');
+  }
   async function flushSave(){
-    if(inFlightSave||!pendingSave||!canEdit||!PLAN_ID)return;
+    if(inFlightSave||!pendingSave||!canEdit||!PLAN_ID||saveConflict)return;
+    if(!Number.isSafeInteger(serverRevision)||serverRevision<1){
+      raiseSaveConflict('Keine gültige Serverrevision. Bitte Daten als JSON sichern und neu laden.');
+      return;
+    }
     clearTimeout(saveTimer);
     saveTimer=null;
     const batch=pendingSave;
@@ -710,22 +760,26 @@ body.read-only .editor-only{display:none!important}
     setSaveStatus('wird gespeichert …');
     try{
       const {data:updated,error}=await sb.from('office_terminplan_instances').update({
-        state:batch.state,
-        updated_at:new Date().toISOString()
-      }).eq('id',PLAN_ID).select('id');
+        state:batch.state,updated_at:new Date().toISOString()
+      }).eq('id',PLAN_ID).eq('server_revision',serverRevision)
+        .select('id,server_revision');
       if(error)throw error;
-      if(!updated?.length)throw new Error('Update did not affect a Terminplan row');
+      if(!updated||updated.length!==1){
+        throw Object.assign(new Error('Revision mismatch or permission changed'),{code:'REVISION_MISMATCH'});
+      }
+      if(!Number.isSafeInteger(updated[0].server_revision)||updated[0].server_revision!==serverRevision+1)
+        throw new Error('Unexpected server revision acknowledgement');
+      serverRevision=updated[0].server_revision;
       lastSavedSignature=batch.signature;
       saveFailed=false;
-      if(!pendingSave)setSaveStatus('gespeichert · '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}));
+      if(!pendingSave)setSaveStatus('gespeichert · Revision '+serverRevision);
     }catch(error){
-      console.error('Office Terminplan autosave failed',error);
+      console.error('Office Terminplan conditional save failed',error);
       if(!pendingSave)pendingSave={signature:JSON.stringify(data),state:clone(data)};
-      saveFailed=true;
-      setSaveStatus('Speichern fehlgeschlagen · erneut versuchen');
+      raiseSaveConflict('Der Stand auf dem Server kann neuer sein oder die Speicherung ist unklar. Ihre Änderungen bleiben im Browser. Sichern Sie zuerst die lokale JSON-Datei und laden Sie danach neu.');
     }finally{
       inFlightSave=null;
-      if(pendingSave&&!saveFailed)setTimeout(()=>{void flushSave();},0);
+      if(pendingSave&&!saveFailed&&!saveConflict)setTimeout(()=>{void flushSave();},0);
     }
   }
 
@@ -766,12 +820,14 @@ body.read-only .editor-only{display:none!important}
       setPlanChrome(row);
     }else if(PLAN_ID){
       const {data:row,error}=await sb.from('office_terminplan_instances')
-        .select('id,owner_id,project_number,project_name,phase,template_version,state,updated_at')
+        .select('id,owner_id,project_number,project_name,phase,template_version,state,updated_at,server_revision')
         .eq('id',PLAN_ID)
         .single();
       if(error)throw error;
       currentPlan=row;
       data=row.state||loadData();
+      serverRevision=Number(row.server_revision);
+      if(!Number.isSafeInteger(serverRevision)||serverRevision<1)throw new Error('Missing server revision');
       canEdit=member.role==='admin'||row.owner_id===userId;
       setPlanChrome(row);
     }else{
@@ -779,11 +835,12 @@ body.read-only .editor-only{display:none!important}
       return;
     }
 
-    lastSavedSignature=JSON.stringify(data);
-    remoteReady=true;
+    remoteReady=false;
     applyReadOnlyMode();
     applyUIState();
     render();
+    lastSavedSignature=JSON.stringify(data);
+    remoteReady=true;
   }
 
   function loadUIState(){
@@ -823,9 +880,13 @@ body.read-only .editor-only{display:none!important}
   function addDays(s,n){const d=parseDate(s);d.setUTCDate(d.getUTCDate()+n);return iso(d)}
   function dayDiff(a,b){return Math.round((parseDate(b)-parseDate(a))/DAY_MS)}
   function isWeekend(s){const d=parseDate(s).getUTCDay();return d===0||d===6}
+  function isProjectWorkday(date){
+    const blocked=data.project?.calendar?.nonWorkingDates||[];
+    return !isWeekend(date)&&!blocked.includes(date);
+  }
   function workDuration(a,b){
     let n=0,d=parseDate(a),end=parseDate(b);
-    while(d<=end){const wd=d.getUTCDay();if(wd!==0&&wd!==6)n++;d.setUTCDate(d.getUTCDate()+1)}
+    while(d<=end){if(isProjectWorkday(iso(d)))n++;d.setUTCDate(d.getUTCDate()+1)}
     return n;
   }
 
@@ -837,13 +898,12 @@ body.read-only .editor-only{display:none!important}
 
     /* Liegt der Anfang ausnahmsweise am Wochenende, beginnt die Zählung
        am nächsten Montag. */
-    while(d.getUTCDay()===0||d.getUTCDay()===6)d.setUTCDate(d.getUTCDate()+1);
+    while(!isProjectWorkday(iso(d)))d.setUTCDate(d.getUTCDate()+1);
 
     let remaining=count-1;
     while(remaining>0){
       d.setUTCDate(d.getUTCDate()+1);
-      const wd=d.getUTCDay();
-      if(wd!==0&&wd!==6)remaining--;
+      if(isProjectWorkday(iso(d)))remaining--;
     }
     return iso(d);
   }
@@ -1010,7 +1070,12 @@ body.read-only .editor-only{display:none!important}
       if(committed)return;
       committed=true;
       const days=Math.max(1,Math.round(Number(input.value)||current));
-      task.end=endFromWorkdays(task.start,days);
+      const candidate=endFromWorkdays(task.start,days);
+      if(task.protectedDate&&candidate>task.protectedDate&&
+         !confirm('Der geschützte Abgabetermin '+task.protectedDate+' wird überschritten. Trotzdem ändern?')){
+        renderLeft();return;
+      }
+      task.end=candidate;
       render();
       toast(`Dauer auf ${days} Arbeitstage gesetzt.`);
     };
@@ -1040,7 +1105,7 @@ body.read-only .editor-only{display:none!important}
     rows.forEach((r,rowIndex)=>{
       const row=document.createElement('div');row.className='grid-row '+r.kind;row.style.top=(rowIndex*38)+'px';
       visibleDates.forEach((s,i)=>{
-        const gd=document.createElement('div');gd.className='grid-day'+(isWeekend(s)?' weekend':'');gd.style.left=(i*cellWidth)+'px';gd.style.width=cellWidth+'px';row.appendChild(gd);
+        const gd=document.createElement('div');gd.className='grid-day'+(isWeekend(s)?' weekend':'')+(!isProjectWorkday(s)?' nonwork':'');gd.style.left=(i*cellWidth)+'px';gd.style.width=cellWidth+'px';row.appendChild(gd);
       });
       timelineBody.appendChild(row);
       if(r.kind==='group'){
@@ -1097,10 +1162,10 @@ body.read-only .editor-only{display:none!important}
 
   function drawDependencies(svg){
     const taskRows=new Map();rows.forEach((r,i)=>{if(r.kind==='task')taskRows.set(r.id,i)});
-    data.tasks.forEach(t=>{
-      if(!t.pred||!taskRows.has(t.id)||!taskRows.has(t.pred))return;
-      const p=data.tasks.find(x=>x.id===t.pred);if(!p)return;
-      const [predSide,targetSide]=dependencySides(t.rel);
+    data.tasks.forEach(t=>taskDependencies(t).forEach(dep=>{
+      if(!dep.pred||!taskRows.has(t.id)||!taskRows.has(dep.pred))return;
+      const p=data.tasks.find(x=>x.id===dep.pred);if(!p)return;
+      const [predSide,targetSide]=dependencySides(dep.rel);
       const x1=dependencyX(p,predSide);
       const x2=dependencyX(t,targetSide);
       const y1=taskRows.get(p.id)*38+19,y2=taskRows.get(t.id)*38+19;
@@ -1117,7 +1182,7 @@ body.read-only .editor-only{display:none!important}
         ?`M ${tipX-6} ${y2-4} L ${tipX} ${y2} L ${tipX-6} ${y2+4} Z`
         :`M ${tipX+6} ${y2-4} L ${tipX} ${y2} L ${tipX+6} ${y2+4} Z`);
       svg.append(path,arrow);
-    });
+    }));
   }
 
   function startDrag(e,t,mode){
@@ -1193,9 +1258,18 @@ body.read-only .editor-only{display:none!important}
     document.body.classList.remove('dragging');
 
     const wasMoved=drag.moved;
+    const modified=data.tasks.find(t=>t.id===drag.id);
+    if(wasMoved&&modified?.protectedDate&&modified.end>modified.protectedDate){
+      if(!confirm('Geschützter Abgabetermin '+modified.protectedDate+' wird überschritten. Trotzdem ändern?')){
+        modified.start=drag.origStart;
+        modified.end=drag.origEnd;
+        drag.moved=false;
+      }
+    }
+    const committed=drag.moved;
     drag=null;
     render();
-    if(wasMoved)toast('Termin aktualisiert.');
+    if(committed)toast('Termin aktualisiert.');
   }
 
 
@@ -1225,6 +1299,11 @@ body.read-only .editor-only{display:none!important}
       const side=item.targetSide==='start'?'Beginn':'Ende';
       return name+' · '+item.relation+' zu '+predName+': '+side+' frühestens '+item.minimum+', aktuell '+item.actual+'.';
     }
+    if(item.code==='protected_deadline')return name+': geschützter Abgabetermin '+item.minimum+' überschritten (Ende '+item.actual+').';
+    if(item.code==='invalid_protected_date')return name+': geschützter Termin ist kein gültiges Datum.';
+    if(item.code==='invalid_lag')return name+': Abstand zur Beziehung '+predName+' ist ungültig.';
+    if(item.code==='invalid_calendar')return 'Projektkalender enthält ein ungültiges Datum.';
+    if(item.code==='duplicate_dependency')return name+': doppelte Beziehung zu '+predName+'.';
     if(item.code==='missing_predecessor')return name+': Vorgänger '+predName+' ist nicht mehr vorhanden.';
     if(item.code==='cycle')return 'Zirkuläre Abhängigkeit: '+(item.taskIds||[]).map(id=>data.tasks.find(t=>t.id===id)?.name||id).join(' ↔ ')+'.';
     if(item.code==='unsupported_relation')return name+': nicht unterstützte Beziehung zum Vorgänger.';
@@ -1284,6 +1363,12 @@ body.read-only .editor-only{display:none!important}
     const selected=data.tasks.find(t=>t.id===selectedId);
     $('#assistantSelection').textContent=selected?'Ausgewählt: '+selected.name:'Vorgang im Gantt oder in der Tabelle auswählen.';
     $('#assistantPreview').disabled=!selected||!canEdit||!auditEngine;
+    const exceptionDates=(data.project?.calendar?.nonWorkingDates||[]).join(', ');
+    if($('#assistantNonWorkingDates').dataset.calendarSignature!==exceptionDates){
+      $('#assistantNonWorkingDates').value=exceptionDates;
+      $('#assistantNonWorkingDates').dataset.calendarSignature=exceptionDates;
+    }
+    $('#assistantSaveCalendar').disabled=!canEdit||saveConflict;
     const draft=$('#assistantDraft'),apply=$('#assistantApply');
     apply.hidden=true;
     draft.textContent='';
@@ -1323,6 +1408,59 @@ body.read-only .editor-only{display:none!important}
     $('#milestoneCount').textContent=data.tasks.filter(t=>t.type==='milestone').length;
   }
 
+  function taskDependencies(task){
+    if(auditEngine)return auditEngine.dependencies(task);
+    if(Array.isArray(task?.dependencies))return task.dependencies;
+    return task?.pred?[{pred:task.pred,rel:task.rel||'EA',lagDays:0}]:[];
+  }
+  function predecessorOptions(currentId,selected=''){
+    const options=data.tasks.filter(t=>t.id!==currentId)
+      .sort((a,b)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name));
+    const result=options.map(t=>({value:t.id,label:t.name}));
+    if(selected&&!result.some(t=>t.value===selected))result.push({value:selected,label:'Fehlender Vorgänger: '+selected});
+    return result;
+  }
+  function appendExtraDep(dep={pred:'',rel:'EA',lagDays:0},currentId=$('#taskId').value){
+    const row=document.createElement('div');row.className='dep-extra';
+    const pred=document.createElement('select');pred.className='dep-pred';
+    pred.add(new Option('— Vorgänger wählen —',''));
+    predecessorOptions(currentId,dep.pred).forEach(o=>pred.add(new Option(o.label,o.value)));
+    pred.value=dep.pred||'';
+    const rel=document.createElement('select');rel.className='dep-rel';
+    [['EA','EA · Ende–Anfang'],['AA','AA · Anfang–Anfang'],['EE','EE · Ende–Ende'],['AE','AE · Anfang–Ende']]
+      .forEach(([key,value])=>rel.add(new Option(value,key)));
+    rel.value=dep.rel||'EA';
+    const lag=document.createElement('input');lag.className='dep-lag';lag.type='number';lag.min='-260';lag.max='260';lag.step='1';lag.value=dep.lagDays??0;lag.title='Arbeitstage Abstand';
+    const remove=document.createElement('button');remove.type='button';remove.textContent='Entfernen';
+    remove.onclick=()=>row.remove();
+    row.append(pred,rel,lag,remove);
+    $('#extraDepRows').append(row);
+  }
+  function formDependencies(id){
+    const links=[];
+    const primary=$('#taskPred').value;
+    if(primary)links.push({pred:primary,rel:$('#taskRel').value,lagDays:Number($('#taskLag').value)});
+    for(const row of $('#extraDepRows').querySelectorAll('.dep-extra')){
+      const pred=row.querySelector('.dep-pred').value;
+      if(!pred)throw new Error('Bitte alle zusätzlichen Vorgänger auswählen.');
+      links.push({pred,rel:row.querySelector('.dep-rel').value,lagDays:Number(row.querySelector('.dep-lag').value)});
+    }
+    const fingerprints=new Set();
+    for(const dep of links){
+      if(dep.pred===id)throw new Error('Ein Vorgang darf nicht sein eigener Vorgänger sein.');
+      if(!Number.isInteger(dep.lagDays)||Math.abs(dep.lagDays)>260)
+        throw new Error('Abstand muss zwischen -260 und 260 ganzen Arbeitstagen liegen.');
+      const key=dep.pred+':'+dep.rel;
+      if(fingerprints.has(key))throw new Error('Doppelte Beziehung zum selben Vorgänger.');
+      fingerprints.add(key);
+    }
+    return links;
+  }
+  function syncLegacyDependency(task){
+    const first=taskDependencies(task)[0];
+    task.pred=first?.pred||'';
+    task.rel=first?.rel||'EA';
+  }
   function openTask(id=null,type='task'){
     if(!canEdit)return;
     const t=id?data.tasks.find(x=>x.id===id):null;
@@ -1336,8 +1474,14 @@ body.read-only .editor-only{display:none!important}
     $('#taskOwner').value=t?.owner||'';
     $('#taskProgress').value=t?.progress||0;
     $('#taskCategory').value=t?.category||'arch';
-    populatePreds(t?.pred,id);
-    $('#taskRel').value=t?.rel||'EA';
+    const links=taskDependencies(t);
+    const first=links[0];
+    populatePreds(first?.pred,id);
+    $('#taskRel').value=first?.rel||'EA';
+    $('#taskLag').value=first?.lagDays??0;
+    $('#taskProtectedDate').value=t?.protectedDate||'';
+    $('#extraDepRows').replaceChildren();
+    links.slice(1).forEach(dep=>appendExtraDep(dep,id));
     $('#taskStatus').value=t?.status||'Nicht begonnen';
     $('#taskCritical').checked=!!t?.critical;
     $('#taskNote').value=t?.note||'';
@@ -1350,20 +1494,26 @@ body.read-only .editor-only{display:none!important}
   }
   function populatePreds(selected,currentId){
     const sel=$('#taskPred');sel.innerHTML='<option value="">— keiner —</option>';
-    data.tasks.filter(t=>t.id!==currentId).sort((a,b)=>a.start.localeCompare(b.start)).forEach(t=>{const o=new Option(t.name,t.id);if(t.id===selected)o.selected=true;sel.add(o)});
+    predecessorOptions(currentId,selected).forEach(t=>{const o=new Option(t.label,t.value);if(t.value===selected)o.selected=true;sel.add(o)});
   }
   function saveTask(){
     if(!canEdit)return;
     const id=$('#taskId').value||uid('t');
     const type=$('#taskType').value;
+    let links;
+    try{links=formDependencies(id)}catch(error){toast(error.message);return;}
     const obj={
       id,group:$('#taskGroup').value,name:$('#taskName').value.trim(),type,
       start:$('#taskStart').value,end:type==='milestone'?$('#taskStart').value:$('#taskEnd').value,
       owner:$('#taskOwner').value.trim(),progress:Number($('#taskProgress').value)||0,category:$('#taskCategory').value,
-      pred:$('#taskPred').value,rel:$('#taskPred').value?$('#taskRel').value:'EA',status:$('#taskStatus').value,critical:$('#taskCritical').checked,note:$('#taskNote').value.trim()
+      pred:links[0]?.pred||'',rel:links[0]?.rel||'EA',dependencies:links,
+      protectedDate:$('#taskProtectedDate').value||'',
+      status:$('#taskStatus').value,critical:$('#taskCritical').checked,note:$('#taskNote').value.trim()
     };
     if(!obj.name||!obj.start||!obj.end){toast('Name und Termine sind erforderlich.');return}
     if(obj.end<obj.start){toast('Der Endtermin liegt vor dem Anfangstermin.');return}
+    if(obj.protectedDate&&obj.end>obj.protectedDate&&
+       !confirm('Geschützter Abgabetermin '+obj.protectedDate+' wird überschritten. Trotzdem speichern?'))return;
     const idx=data.tasks.findIndex(t=>t.id===id);if(idx>=0)data.tasks[idx]=obj;else data.tasks.push(obj);
     taskDialog.close();render();toast('Vorgang gespeichert.');
   }
@@ -1372,13 +1522,19 @@ body.read-only .editor-only{display:none!important}
     if(!id)return;
     const t=data.tasks.find(x=>x.id===id);if(!t)return;
     if(!confirm(`„${t.name}“ wirklich löschen?`))return;
-    data.tasks=data.tasks.filter(x=>x.id!==id);data.tasks.forEach(x=>{if(x.pred===id){x.pred='';x.rel='EA'}});
+    data.tasks=data.tasks.filter(x=>x.id!==id);
+    data.tasks.forEach(x=>{
+      if(Array.isArray(x.dependencies)){
+        x.dependencies=x.dependencies.filter(dep=>dep.pred!==id);
+        syncLegacyDependency(x);
+      }else if(x.pred===id){x.pred='';x.rel='EA'}
+    });
     taskDialog.close();hideContext();render();toast('Vorgang gelöscht.');
   }
   function duplicateTask(id){
     if(!canEdit)return;
     const t=data.tasks.find(x=>x.id===id);if(!t)return;
-    const c=clone(t);c.id=uid('t');c.name=t.name+' · Kopie';c.start=addDays(t.start,1);c.end=addDays(t.end,1);c.pred='';c.rel='EA';
+    const c=clone(t);c.id=uid('t');c.name=t.name+' · Kopie';c.start=addDays(t.start,1);c.end=addDays(t.end,1);c.pred='';c.rel='EA';c.dependencies=[];
     data.tasks.push(c);render();toast('Vorgang dupliziert.');
   }
 
@@ -1561,12 +1717,12 @@ body.read-only .editor-only{display:none!important}
       return 0;
     };
 
-    data.tasks.forEach(task=>{
-      if(!task.pred||!rowByTask.has(task.id)||!rowByTask.has(task.pred))return;
-      const predecessor=data.tasks.find(item=>item.id===task.pred);
+    data.tasks.forEach(task=>taskDependencies(task).forEach(dep=>{
+      if(!dep.pred||!rowByTask.has(task.id)||!rowByTask.has(dep.pred))return;
+      const predecessor=data.tasks.find(item=>item.id===dep.pred);
       if(!predecessor)return;
 
-      const relation=task.rel||'EA';
+      const relation=dep.rel||'EA';
       const [predSide,targetSide]=dependencySides(relation);
       const predDate=predSide==='start'?predecessor.start:predecessor.end;
       const taskDate=targetSide==='start'?task.start:task.end;
@@ -1589,7 +1745,7 @@ body.read-only .editor-only{display:none!important}
         'stroke-width':1,
         'marker-end':'url(#printArrow)'
       });
-    });
+    }));
 
     printRows.forEach((row,rowIndex)=>{
       const y=rowIndex*rowHeight;
@@ -1763,7 +1919,7 @@ body.read-only .editor-only{display:none!important}
     printDates.forEach((date,index)=>{
       const d=parseDate(date);
       const cell=document.createElement('div');
-      cell.className='print-head-cell print-day-cell'+(isWeekend(date)?' weekend':'');
+      cell.className='print-head-cell print-day-cell'+(isWeekend(date)?' weekend':'')+(!isProjectWorkday(date)?' nonwork':'');
       cell.style.gridColumn=`${index+1} / span 1`;
       cell.innerHTML=
         `<span>${d.toLocaleDateString('de-DE',{weekday:'short',timeZone:'UTC'}).replace('.','')}</span>`+
@@ -1781,7 +1937,10 @@ body.read-only .editor-only{display:none!important}
     const lines=[header];
     data.groups.forEach(g=>{
       data.tasks.filter(t=>t.group===g.id).sort((a,b)=>a.start.localeCompare(b.start)).forEach((t,i)=>{
-        const pred=data.tasks.find(x=>x.id===t.pred)?.name||'';
+        const pred=taskDependencies(t).map(dep=>{
+          const name=data.tasks.find(x=>x.id===dep.pred)?.name||dep.pred;
+          return name+' ('+(dep.rel||'EA')+', '+(dep.lagDays??0)+' AT)';
+        }).join(' | ');
         lines.push([g.wbs+'.'+String(i+1).padStart(2,'0'),t.name,t.type||'task',g.name,t.owner,t.start,t.end,t.type==='milestone'?0:workDuration(t.start,t.end),t.progress,t.status,pred,t.critical?'Ja':'Nein',t.note]);
       });
     });
@@ -1807,6 +1966,7 @@ body.read-only .editor-only{display:none!important}
   $('#addMilestoneBtn').onclick=()=>openTask(null,'milestone');
   $('#addGroupBtn').onclick=()=>openGroup();
   $('#saveTaskBtn').onclick=saveTask;
+  $('#addDepBtn').onclick=()=>appendExtraDep();
   $('#deleteTaskBtn').onclick=()=>deleteTask();
   $('#saveGroupBtn').onclick=saveGroup;
   $('#searchInput').oninput=render;
@@ -1846,12 +2006,27 @@ body.read-only .editor-only{display:none!important}
   $('#assistantToggle').onclick=()=>{assistantExpanded=!assistantExpanded;renderAssistant()};
   $('#assistantPreview').onclick=requestShiftPreview;
   $('#assistantShift').oninput=()=>{proposedShift=null;renderAssistant()};
+  $('#assistantSaveCalendar').onclick=()=>{
+    if(!canEdit||saveConflict||!auditEngine)return;
+    const raw=$('#assistantNonWorkingDates').value.trim();
+    const entries=raw?raw.split(/[\s,;]+/).filter(Boolean):[];
+    if(entries.length>366||entries.some(x=>!auditEngine.validDate(x))){
+      toast('Bitte gültige Daten YYYY-MM-DD eingeben (maximal 366).');return;
+    }
+    data.project.calendar={...(data.project.calendar||{}),nonWorkingDates:[...new Set(entries)].sort()};
+    proposedShift=null;
+    render();
+    toast('Projektkalender aktualisiert. Weitere Feiertage werden nicht angenommen.');
+  };
   $('#assistantApply').onclick=()=>{
     if(!proposedShift||!canEdit||!auditEngine)return;
     if(JSON.stringify(data)!==proposedShift.baseSignature){
       proposedShift=null;renderAssistant();toast('Plan wurde verändert. Vorschau erneut prüfen.');return;
     }
     const next=proposedShift.state;
+    const item=next.tasks.find(t=>t.id===proposedShift.taskId);
+    if(item?.protectedDate&&item.end>item.protectedDate&&
+       !confirm('Geschützter Abgabetermin '+item.protectedDate+' wird überschritten. Änderung trotzdem übernehmen?'))return;
     proposedShift=null;
     data=next;
     render();
@@ -1864,7 +2039,7 @@ body.read-only .editor-only{display:none!important}
   };
   window.addEventListener('beforeprint',buildPrintSheet);
   $('#saveNowBtn').onclick=()=>{
-    if(!canEdit)return;
+    if(!canEdit||saveConflict)return;
     const signature=JSON.stringify(data);
     if(signature!==lastSavedSignature&&signature!==pendingSave?.signature){
       pendingSave={signature,state:clone(data)};
@@ -1873,8 +2048,14 @@ body.read-only .editor-only{display:none!important}
     saveFailed=false;
     void flushSave();
   };
+  $('#conflictExport').onclick=exportJson;
+  $('#conflictReload').onclick=()=>{
+    if(!confirm('Lokale Änderungen wurden als JSON gesichert? Ungespeicherte Änderungen gehen beim Neuladen verloren.'))return;
+    permitUnload=true;
+    location.reload();
+  };
   window.addEventListener('beforeunload',event=>{
-    if(remoteReady&&canEdit&&(pendingSave||inFlightSave||JSON.stringify(data)!==lastSavedSignature)){
+    if(!permitUnload&&remoteReady&&canEdit&&(saveConflict||pendingSave||inFlightSave||JSON.stringify(data)!==lastSavedSignature)){
       event.preventDefault();
       event.returnValue='';
     }
