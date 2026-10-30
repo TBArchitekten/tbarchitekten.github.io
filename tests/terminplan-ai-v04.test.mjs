@@ -72,7 +72,7 @@ test("browser exposes active, opt-in mode, preserving rules fallback",()=>{
  for(const m of html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g))new Function(m[1]);
  assert.match(html,/id="dialogueAI"/);
  assert.match(html,/office-terminplan-ai/);
- assert.match(html,/fromModelIntent/);
+ assert.match(html,/fromDiscussion/);
  assert.match(html,/if\(dialogueAIReady&&/);
  assert.match(html,/#dialogueAI/);
  assert.match(html,/dialogueEngine\.review\(proposal,data,auditEngine,serverRevision\)/);
