@@ -170,8 +170,8 @@ export function validateDiscussion(raw,ctx,canEdit){
    const seen=new Set();
    for(const x of raw.draft_edits){
      const old=ctx.tasks.find(t=>t.id===x?.task_id);
-     if(!old||seen.has(x.task_id)||!/^d{4}-d{2}-d{2}$/.test(x.start)||
-       !/^d{4}-d{2}-d{2}$/.test(x.end)||x.end<x.start||
+     if(!old||seen.has(x.task_id)||!/^\d{4}-\d{2}-\d{2}$/.test(x.start)||
+       !/^\d{4}-\d{2}-\d{2}$/.test(x.end)||x.end<x.start||
        (old.type==="milestone"&&x.start!==x.end)||
        typeof x.owner!=="string"||x.owner.length>100||
        !Array.isArray(x.predecessors)||x.predecessors.length>10||
