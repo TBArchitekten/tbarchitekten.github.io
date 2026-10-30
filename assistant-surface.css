@@ -116,4 +116,12 @@
  .ai-mode{margin-left:0}
 }
 @media(prefers-reduced-motion:reduce){.assistant-panel{transition:none!important}}
+
+.dialogue-message.typing{background:transparent!important;border-color:transparent!important;
+ color:#797d86!important;font-size:12px!important;padding-left:4px!important}
+.dialogue-message.typing::after{content:" · · ·";letter-spacing:3px;
+ animation:assistant-thinking 1.5s ease-in-out infinite}
+@keyframes assistant-thinking{0%,100%{opacity:.3}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.dialogue-message.typing::after{animation:none}}
+
 @media print{.assistant-panel{display:none!important}}
