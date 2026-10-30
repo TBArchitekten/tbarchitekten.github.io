@@ -127,5 +127,107 @@
      return {kind:"answer",text:"KI-Vorschlag im Planungsmodell nicht ausführbar: "+String(error.message||"ungültig")};
    }
  }
- return Object.freeze({VERSION,stable,target,quantity,answer,review,receipt,fromModelIntent});
+
+ function draftTasks(state,items,engine,requestId){
+   if(!engine||!Array.isArray(items)||items.length<1||items.length>8)throw Error("invalid_draft");
+   const groupIds=new Set((state.groups||[]).map(g=>g.id));
+   const taskIds=new Set((state.tasks||[]).map(t=>t.id));
+   const copy=JSON.parse(JSON.stringify(state));
+   const names=new Set();
+   const idPrefix="t-ai-"+String(requestId).replace(/[^a-zA-Z0-9]/g,"").slice(0,25);
+   const created=[];
+   for(let i=0;i<items.length;i++){
+     const x=items[i],id=idPrefix+"-"+i;
+     if(!x||!groupIds.has(x.group_id)||taskIds.has(id)||!engine.validDate(x.start)||
+       !engine.validDate(x.end)||x.end<x.start||!["task","milestone"].includes(x.type)||
+       (x.type==="milestone"&&x.end!==x.start)||typeof x.name!=="string"||
+       x.name.trim().length<4||x.name.length>160||names.has(x.name.toLowerCase().trim())||
+       typeof x.owner!=="string"||!x.owner.trim()||
+       !["arch","fach","qa","cost","ag"].includes(x.category)||
+       !Array.isArray(x.predecessors)||x.predecessors.length>10)throw Error("invalid_task");
+     names.add(x.name.toLowerCase().trim());
+     const dependencies=x.predecessors.map(dep=>{
+       if(!taskIds.has(dep.task_id)||!["EA","AA","EE","AE"].includes(dep.relation)||
+         !Number.isInteger(dep.lag_workdays)||Math.abs(dep.lag_workdays)>130)
+         throw Error("invalid_predecessor");
+       return {pred:dep.task_id,rel:dep.relation,lagDays:dep.lag_workdays};
+     });
+     const task={
+       id,group:x.group_id,name:x.name.trim(),type:x.type,start:x.start,end:x.end,
+       owner:x.owner.trim(),category:x.category,
+       pred:dependencies[0]?.pred||"",rel:dependencies[0]?.rel||"EA",
+       dependencies,progress:0,status:"Nicht begonnen",critical:false,note:""
+     };
+     copy.tasks.push(task);
+     created.push(task);
+     taskIds.add(id);
+   }
+   const before=engine.analyze(state),after=engine.analyze(copy);
+   const oldIssues=new Set(before.issues.map(i=>i.key));
+   return {state:copy,created,allIssues:after.issues,
+     newIssues:after.issues.filter(i=>!oldIssues.has(i.key))};
+ }
+ function fromDiscussion({serverResponse,state,engine,revision,requestId}){
+   if(!serverResponse||serverResponse.version!=="office-ai-v0.5"||
+     serverResponse.source!=="office_ai_discussion_only"||
+     serverResponse.base_revision!==revision)
+     return {kind:"answer",text:"Der Planstand hat sich geändert. Bitte Anfrage wiederholen."};
+   const intent=serverResponse.result;
+   if(!intent||!["discuss","clarify","shift","add_tasks"].includes(intent.kind)||
+      typeof intent.text!=="string")
+     return {kind:"answer",text:"Unklare KI-Antwort. Keine Änderung."};
+   if(intent.kind==="shift"){
+     return fromModelIntent({
+       serverResponse:{version:"office-ai-v0.4",source:"office_ai_interpretation_only",
+         base_revision:revision,result:intent},
+       state,engine,revision,requestId
+     });
+   }
+   if(intent.kind!=="add_tasks")return {kind:"answer",text:intent.text};
+   try{
+     const preview=draftTasks(state,intent.draft_tasks,engine,requestId);
+     const proposal={
+       request_id:requestId,kind:"add_tasks",status:"proposed",
+       source:"office_ai_discussion_deterministic_draft",
+       base_revision:revision,base_fingerprint:stable(state),
+       candidate_fingerprint:stable(preview.state),
+       created_ids:preview.created.map(t=>t.id),
+       created_tasks:preview.created.map(t=>({
+         name:t.name,start:t.start,end:t.end,owner:t.owner,
+         group:t.group,category:t.category,type:t.type,dependencies:t.dependencies
+       })),
+       new_issue_codes:preview.newIssues.map(i=>i.code),
+       requires_confirmation:true
+     };
+     const details=preview.created.map(t=>"• "+t.name+" · "+t.start+" – "+t.end+
+       " · "+t.owner+" · "+(state.groups||[]).find(g=>g.id===t.group)?.name).join("\n");
+     return {kind:"proposal",proposal,preview,
+       text:intent.text+"\n\nVorschau zur Freigabe ("+preview.created.length+
+         " neue Vorgänge, "+preview.newIssues.length+" zusätzliche Regelhinweise):\n"+
+         details+"\n\nBestehende Vorgänge bleiben unverändert. Noch nicht gespeichert."};
+   }catch(error){
+     return {kind:"answer",text:"Der Aufgabenentwurf konnte nicht geprüft werden ("+
+       String(error?.message||"ungültige Daten")+"). Bitte die Details weiter besprechen."};
+   }
+ }
+
+ // Review never trusts an old model response: all candidate state is recalculated locally.
+ const reviewBase=review;
+ function reviewAny(proposal,state,engine,revision){
+   if(proposal?.kind!=="add_tasks")return reviewBase(proposal,state,engine,revision);
+   if(proposal.status!=="proposed"||proposal.base_revision!==revision||
+      stable(state)!==proposal.base_fingerprint)return {ok:false,reason:"stale_plan"};
+   try{
+     const items=proposal.created_tasks.map(t=>({
+       name:t.name,start:t.start,end:t.end,owner:t.owner,group_id:t.group,
+       category:t.category,type:t.type,
+       predecessors:t.dependencies.map(d=>({task_id:d.pred,relation:d.rel,lag_workdays:d.lagDays}))
+     }));
+     const draft=draftTasks(state,items,engine,proposal.request_id);
+     if(stable(draft.state)!==proposal.candidate_fingerprint)
+       return {ok:false,reason:"candidate_changed"};
+     return {ok:true,state:draft.state,preview:draft};
+   }catch{return {ok:false,reason:"invalid_candidate"}}
+ }
+ return Object.freeze({VERSION,stable,target,quantity,answer,review:reviewAny,receipt,fromModelIntent,fromDiscussion,draftTasks});
 });

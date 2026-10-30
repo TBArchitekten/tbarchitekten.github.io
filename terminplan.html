@@ -387,12 +387,12 @@ body.read-only .editor-only{display:none!important}
 @media print{.office-plan-head{display:none!important}}
 
   /* Office Assistant: rule-backed conversational surface, no provider/model connection. */
-  .assistant-body{max-height: min(570px,64vh)}
+  .assistant-body{max-height: min(720px,76vh)}
   .dialogue-section{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
   .dialogue-label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
   .dialogue-label strong{font-size:13px;font-weight:650}
   .dialogue-label small{color:var(--muted)}
-  .dialogue-stream{max-height:210px;min-height:85px;overflow-y:auto;border:1px solid var(--line);background:#fbfbfa;padding:12px;display:grid;gap:8px;align-content:start}
+  .dialogue-stream{max-height:340px;min-height:170px;overflow-y:auto;border:1px solid var(--line);background:#fbfbfa;padding:12px;display:grid;gap:8px;align-content:start}
   .dialogue-message{white-space:pre-wrap;font-size:12px;line-height:1.5;max-width:min(92%,750px);padding:8px 11px;border:1px solid var(--line);background:#fff;justify-self:start}
   .dialogue-message.user{background:#eaf0ec;border-color:#d9e3dc;justify-self:end}
   .dialogue-message.receipt{background:#f5f6f4;color:#3b5044}
@@ -421,6 +421,10 @@ body.read-only .editor-only{display:none!important}
   .assistant-body{max-height:min(330px,40vh);overflow-y:auto;border-top:1px solid var(--line);padding:14px 22px 18px}
   .assistant-body[hidden]{display:none}
   .assistant-caveat{color:#686b69;margin:0 0 12px;line-height:1.5}
+  .assistant-audit-appendix{border-top:1px solid var(--line);margin-top:18px;padding-top:12px}
+  .assistant-audit-appendix>summary{cursor:pointer;font-weight:600;padding:8px;color:#49554b}
+  .assistant-audit-appendix[open]>summary{margin-bottom:12px}
+  .dialogue-section{border-top:0;margin-top:0;padding-top:0}
   .assistant-columns{display:grid;grid-template-columns:1.4fr 1fr;gap:26px}
   .assistant-columns h3{font-weight:650;font-size:12px;margin:0 0 9px}
   .assistant-notices{display:grid;gap:6px}
@@ -525,7 +529,7 @@ body.read-only .editor-only{display:none!important}
   <aside class="assistant-panel" id="assistantPanel" aria-label="Terminplan Assistent">
     <div class="assistant-head">
       <button type="button" id="assistantToggle" class="assistant-toggle" aria-expanded="false" aria-controls="assistantBody">▸ Terminplan Assistent <span id="assistantSummary" class="assistant-summary">Regelprüfung wird geladen …</span></button>
-      <span class="assistant-caption">Dialog v0.3 · regelbasiert · keine externe KI · Änderungen nur nach Freigabe</span>
+      <span class="assistant-caption">Gespräch v0.5 · Terminplanung gemeinsam entwickeln · Änderungen nur nach Freigabe</span>
     </div>
     <div id="assistantBody" class="assistant-body" hidden>
       <p class="assistant-caveat">Geprüft werden ausschließlich eingetragene Vorgängerbeziehungen (EA / AA / EE / AE) mit Montag–Freitag als Arbeitstagen, ohne Feiertage oder Pufferzeiten. Nicht eingetragene fachliche Abhängigkeiten können nicht erkannt werden.</p>
@@ -568,7 +572,7 @@ body.read-only .editor-only{display:none!important}
           <button id="dialogueReject" type="button" class="secondary">Verwerfen</button>
         </div>
         <form id="dialogueForm" class="dialogue-input">
-          <textarea id="dialogueInput" maxlength="1500" rows="2" placeholder="z. B. Verschiebe den ausgewählten Vorgang um 5 Arbeitstage" aria-label="Nachricht an Terminplan Assistent"></textarea>
+          <textarea id="dialogueInput" maxlength="1500" rows="2" placeholder="Was möchtest du am Terminplan verändern? Wir können es zuerst gemeinsam besprechen …" aria-label="Nachricht an Terminplan Assistent"></textarea>
           <button type="submit" id="dialogueSend">Senden</button>
         </form>
       </section>
@@ -737,6 +741,16 @@ body.read-only .editor-only{display:none!important}
   const timelineWrap = $('#timelineWrap');
   const timelineBody = $('#timelineBody');
   const timelineContent = $('#timelineContent');
+  // Prioritize the conversation. Rule diagnostics remain available as an expandable appendix.
+  const assistantBody=$('#assistantBody');
+  const conversation=assistantBody.querySelector('.dialogue-section');
+  const auditAppendix=document.createElement('details');
+  auditAppendix.className='assistant-audit-appendix';
+  const auditSummary=document.createElement('summary');
+  auditSummary.textContent='Technische Terminprüfung und Kalender';
+  auditAppendix.append(auditSummary);
+  for(const part of [...assistantBody.children].filter(x=>x!==conversation))auditAppendix.append(part);
+  assistantBody.replaceChildren(conversation,auditAppendix);
   const taskDialog = $('#taskDialog');
   const groupDialog = $('#groupDialog');
 
@@ -1420,7 +1434,7 @@ body.read-only .editor-only{display:none!important}
     if(!dialogueEvents.length){
       const intro=document.createElement('div');
       intro.className='dialogue-message';
-      intro.textContent='Frag mich nach dokumentierten Abhängigkeiten, Konflikten oder schlage eine Verschiebung in Arbeitstagen vor. Ich ändere niemals etwas ohne deine Bestätigung.';
+      intro.textContent='Wir können den Terminplan gemeinsam entwickeln: Fachplanung aufteilen, Abgaben und Abhängigkeiten besprechen oder Termine prüfen. Für die freie Unterhaltung bitte KI-Modus einschalten. Ich ändere nichts ohne eine von dir geprüfte Freigabe.';
       host.append(intro);
     }
     for(const entry of dialogueEvents.slice(-60)){
@@ -1436,9 +1450,12 @@ body.read-only .editor-only{display:none!important}
     action.hidden=!dialogueProposal;
     $('#dialogueProposalText').textContent=!dialogueProposal?'':!valid?
       'Vorschlag ist nicht mehr aktuell. Bitte erneut anfragen.':
-      'Vorschlag für '+(data.tasks.find(t=>t.id===dialogueProposal.task_id)?.name||dialogueProposal.task_id)+
-      ': '+dialogueProposal.before.start+' → '+dialogueProposal.after.start+
-      ' · '+dialogueProposal.affected_ids.length+' verknüpfte Nachfolger. Erst nach Freigabe wird gespeichert.';
+      dialogueProposal.kind==='add_tasks'
+        ? 'Vorschlag: '+dialogueProposal.created_tasks.length+' neue Aufgaben. '+dialogueProposal.created_tasks.map(t=>t.name).join(' · ')+
+          '. '+dialogueProposal.new_issue_codes.length+' zusätzliche Regelhinweise. Erst nach Freigabe gespeichert.'
+        : 'Vorschlag für '+(data.tasks.find(t=>t.id===dialogueProposal.task_id)?.name||dialogueProposal.task_id)+
+          ': '+dialogueProposal.before.start+' → '+dialogueProposal.after.start+
+          ' · '+dialogueProposal.affected_ids.length+' verknüpfte Nachfolger. Erst nach Freigabe wird gespeichert.';
     $('#dialogueApprove').disabled=!valid||!canEdit||!!TEMPLATE_ID||saveConflict||!!dialogueApproved||dialogueWriting;
     $('#dialogueReject').disabled=dialogueWriting;
     $('#dialogueSend').disabled=dialogueWriting;
@@ -1488,7 +1505,7 @@ body.read-only .editor-only{display:none!important}
         label.textContent='Keine eigene Office-KI konfiguriert · Regelmodus verfügbar.';
       }else{
         dialogueAIReady=true;
-        label.textContent='KI verfügbar · zum Verwenden aktivieren.';
+        label.textContent='KI bereit · aktivieren für ein gemeinsames Planungsgespräch.';
       }
     }catch(error){
       console.warn('Office AI availability check',String(error?.message||error));
@@ -1517,7 +1534,7 @@ body.read-only .editor-only{display:none!important}
       if(dialogueAIReady&&$('#dialogueAI').checked&&PLAN_ID){
         // Authenticated server independently reloads the plan and validates the JWT + RLS.
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
-          body:{action:'interpret',plan_id:PLAN_ID,message,
+          body:{action:'discuss',plan_id:PLAN_ID,message,
             selected_task_id:selectedId,expected_revision:serverRevision}
         });
         if(error||!remote||remote.error){
@@ -1526,7 +1543,7 @@ body.read-only .editor-only{display:none!important}
             '). Keine Änderung. Der Regelmodus bleibt verfügbar.','warning',requestId);
           return;
         }
-        result=dialogueEngine.fromModelIntent({
+        result=dialogueEngine.fromDiscussion({
           serverResponse:remote,state:clone(data),engine:auditEngine,
           revision:serverRevision,requestId
         });
@@ -1535,6 +1552,8 @@ body.read-only .editor-only{display:none!important}
           message,state:clone(data),engine:auditEngine,selectedTaskId:selectedId,
           revision:serverRevision,requestId
         });
+        if(result.kind==='answer'&&result.text.startsWith('Diese Anfrage kann ich noch nicht'))
+          result.text='Du bist derzeit im Regelmodus. Für eine gemeinsame Besprechung von Aufgaben, Fachplanern und Abhängigkeiten aktiviere bitte KI-Modus oberhalb des Gesprächs. Im Regelmodus sind nur einzelne vordefinierte Aktionen verfügbar.';
       }
       if(result.kind==='proposal')dialogueProposal=result.proposal;
       addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId);
@@ -1565,6 +1584,12 @@ body.read-only .editor-only{display:none!important}
     const task=review.state.tasks.find(t=>t.id===proposal.task_id);
     if(task?.protectedDate&&task.end>task.protectedDate&&
        !confirm('Geschützter Abgabetermin '+task.protectedDate+' wird überschritten. Trotzdem übernehmen?'))return;
+    if(proposal.kind==='add_tasks'){
+      const summary=proposal.created_tasks.map(t=>t.name+' ('+t.start+' – '+t.end+')').join('\n');
+      const warning=proposal.new_issue_codes.length?'\nAchtung: '+proposal.new_issue_codes.length+' neue Regelhinweise.':'';
+      if(!confirm('Neue Vorgänge erstellen?\n\n'+summary+warning+
+        '\n\nBestehende Vorgänge werden nicht verändert.'))return;
+    }
     dialogueWriting=true;
     renderDialogue();
     try{
@@ -2287,7 +2312,7 @@ body.read-only .editor-only{display:none!important}
   $('#dialogueForm').onsubmit=sendDialogue;
   $('#dialogueAI').onchange=()=>{
     dialogueProposal=null;
-    const mode=$('#dialogueAI').checked?'KI-Modus eingeschaltet. Projekt- und Vorgangsdaten werden zur Interpretation übertragen.':'Regelmodus eingeschaltet. Keine externe KI-Anfrage.';
+    const mode=$('#dialogueAI').checked?'KI-Gespräch aktiv: Wir können Entscheidungen gemeinsam entwickeln. Ein Vorschlag benötigt anschließend deine Freigabe.':'Regelmodus: Nur einfache Befehle. Für das gemeinsame Planungsgespräch KI-Modus einschalten.';
     $('#dialogueAIStatus').textContent=mode;
     renderDialogue();
   };

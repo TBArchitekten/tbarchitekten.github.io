@@ -1,5 +1,5 @@
 import {createClient} from "npm:@supabase/supabase-js@2.57.0";
-import {INTENT_SCHEMA,MODEL,validId,validMessage,validRevision,toContext,validateIntent,modelInstructions} from "./core.mjs";
+import {INTENT_SCHEMA,MODEL,validId,validMessage,validRevision,toContext,validateIntent,modelInstructions,DISCUSSION_SCHEMA,discussionInstructions,validateDiscussion} from "./core.mjs";
 
 const ORIGIN="https://tbarchitekten.github.io";
 const headers={
@@ -45,7 +45,7 @@ Deno.serve(async req=>{
     input=JSON.parse(raw);
   }catch{return respond(400,{error:"invalid_json"})}
   const planId=input?.plan_id,action=input?.action;
-  if(!validId(planId)||!["status","interpret"].includes(action))return respond(400,{error:"invalid_request"});
+  if(!validId(planId)||!["status","interpret","discuss"].includes(action))return respond(400,{error:"invalid_request"});
   const {data:member,error:memberError}=await sb.from("office_members")
     .select("role,is_active").eq("user_id",auth.user.id).eq("is_active",true).maybeSingle();
   if(memberError||!member)return respond(403,{error:"not_an_office_member"});
@@ -72,8 +72,26 @@ Deno.serve(async req=>{
   const {data:allowed,error:quotaError}=await sb.rpc("office_ai_consume_request",{p_plan_id:planId});
   if(quotaError)return respond(503,{error:"office_ai_quota_unavailable"});
   if(allowed!==true)return respond(429,{error:"daily_ai_limit_reached"});
+  // History is explicitly scoped to this authorized user and plan under RLS.
+  // Prior messages are non-authoritative conversation data, never tool outputs.
+  let history=[];
+  if(action==="discuss"){
+    const {data:previous,error:historyError}=await sb.from("office_terminplan_dialogue_messages")
+      .select("role,body,event_kind,created_at").eq("user_id",auth.user.id).eq("plan_id",planId)
+      .in("role",["user","assistant"]).in("event_kind",["question","answer","proposal"])
+      .order("created_at",{ascending:false}).limit(16);
+    if(historyError)return respond(503,{error:"conversation_unavailable"});
+    history=(previous||[]).reverse().map(row=>({
+      speaker:row.role==="user"?"architect":"office_assistant",
+      message:String(row.body||"").slice(0,750)
+    }));
+    // Client may have persisted the submitted message before our read.
+    if(history.length&&history[history.length-1].speaker==="architect"&&
+       history[history.length-1].message===input.message.trim().slice(0,750))history.pop();
+  }
   const prompt=JSON.stringify({
     selected_task_id:context.selected_task_id,
+    conversation_history:history,
     user_message:input.message.trim(),
     project:context
   });
@@ -86,10 +104,10 @@ Deno.serve(async req=>{
       headers:{"Authorization":"Bearer "+secret,"Content-Type":"application/json"},
       body:JSON.stringify({
         model:Deno.env.get("TBA_OFFICE_OPENAI_MODEL")||MODEL,
-        store:false,max_output_tokens:700,
-        instructions:modelInstructions(),
+        store:false,max_output_tokens:action==="discuss"?2400:700,
+        instructions:action==="discuss"?discussionInstructions():modelInstructions(),
         input:[{role:"user",content:prompt}],
-        text:{format:{type:"json_schema",name:"office_terminplan_intent_v1",strict:true,schema:INTENT_SCHEMA}}
+        text:{format:{type:"json_schema",name:action==="discuss"?"office_terminplan_dialogue_v05":"office_terminplan_intent_v1",strict:true,schema:action==="discuss"?DISCUSSION_SCHEMA:INTENT_SCHEMA}}
       })
     });
     if(!response.ok){
@@ -105,11 +123,11 @@ Deno.serve(async req=>{
   const text=outputText(provider);
   if(!text)return respond(502,{error:"ai_incomplete"});
   let result;
-  try{result=validateIntent(JSON.parse(text),context,canEdit)}
+  try{result=action==="discuss"?validateDiscussion(JSON.parse(text),context,canEdit):validateIntent(JSON.parse(text),context,canEdit)}
   catch{return respond(502,{error:"ai_invalid_response"})}
   return respond(200,{
-    version:"office-ai-v0.4",
-    source:"office_ai_interpretation_only",authority:"none",
+    version:action==="discuss"?"office-ai-v0.5":"office-ai-v0.4",
+    source:action==="discuss"?"office_ai_discussion_only":"office_ai_interpretation_only",authority:"none",
     base_revision:plan.server_revision,
     result
   });
