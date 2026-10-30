@@ -156,7 +156,7 @@
        id,group:x.group_id,name:x.name.trim(),type:x.type,start:x.start,end:x.end,
        owner:x.owner.trim(),category:x.category,
        pred:dependencies[0]?.pred||"",rel:dependencies[0]?.rel||"EA",
-       dependencies,progress:0,status:"open",critical:false,note:""
+       dependencies,progress:0,status:"Nicht begonnen",critical:false,note:""
      };
      copy.tasks.push(task);
      created.push(task);
