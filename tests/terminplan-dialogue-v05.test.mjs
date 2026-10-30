@@ -15,7 +15,7 @@ const draft=(name,owner)=>({name,owner,group_id:"g02",start:"2026-11-02",end:"20
  category:"fach",type:"task",predecessors:[{task_id:"a",relation:"AA",lag_workdays:0}]});
 test("discussion contract has exact typed fields and no write tool",()=>{
  assert.equal(DISCUSSION_SCHEMA.additionalProperties,false);
- assert.deepEqual(DISCUSSION_SCHEMA.required,["kind","reply","task_id","offset_workdays","evidence_task_ids","draft_tasks"]);
+ assert.deepEqual(DISCUSSION_SCHEMA.required,["kind","reply","task_id","offset_workdays","evidence_task_ids","draft_tasks","draft_edits"]);
  assert.match(discussionInstructions(),/professional architectural office|architectural office|architect/i);
  assert.match(discussionInstructions(),/discuss first/);
 });
