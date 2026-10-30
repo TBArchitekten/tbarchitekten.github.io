@@ -1472,6 +1472,13 @@ body.read-only .editor-only{display:none!important}
       }
       host.append(el);
     }
+    if(dialogueWriting){
+      const indicator=document.createElement('div');
+      indicator.className='dialogue-message typing';
+      indicator.setAttribute('role','status');
+      indicator.textContent='Analysiere den Terminplan …';
+      host.append(indicator);
+    }
     host.scrollTop=host.scrollHeight;
     const action=$('#dialogueProposal');
     const valid=!!dialogueProposal&&!!dialogueEngine&&
@@ -1655,6 +1662,11 @@ body.read-only .editor-only{display:none!important}
         '\n\nBestehende Vorgänge werden nicht verändert.'))return;
     }
     if(proposal.kind==='edit_tasks'){
+      const protectedOverruns=review.state.tasks.filter(t=>
+        proposal.edited_tasks.some(e=>e.id===t.id)&&t.protectedDate&&t.end>t.protectedDate);
+      if(protectedOverruns.length&&!confirm('Geschützte Abgabetermine würden überschritten:\n'+
+        protectedOverruns.map(t=>t.name+': '+t.protectedDate+' → '+t.end).join('\n')+
+        '\n\nTrotzdem fortfahren?'))return;
       const summary=proposal.edited_tasks.map(t=>t.name+' ('+t.start+' – '+t.end+', '+t.owner+
         ', '+t.dependencies.length+' Vorgänger)').join('\n');
       const warning=proposal.new_issue_codes.length?'\nAchtung: '+proposal.new_issue_codes.length+' neue Regelhinweise.':'';
