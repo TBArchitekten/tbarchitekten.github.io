@@ -459,6 +459,7 @@ body.read-only .editor-only{display:none!important}
   .bar.audit-affected,.milestone.audit-affected{outline:2px solid #bb9252;outline-offset:2px}
   @media (max-width:900px){.assistant-columns{grid-template-columns:1fr}.assistant-body{max-height:44vh}}
 </style>
+<link rel="stylesheet" href="./assistant-surface.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -526,10 +527,12 @@ body.read-only .editor-only{display:none!important}
       </div>
     </section>
   </main>
-  <aside class="assistant-panel" id="assistantPanel" aria-label="Terminplan Assistent">
+  <aside class="assistant-panel" id="assistantPanel" aria-label="Terminplan Assistent" role="complementary">
     <div class="assistant-head">
       <button type="button" id="assistantToggle" class="assistant-toggle" aria-expanded="false" aria-controls="assistantBody">▸ Terminplan Assistent <span id="assistantSummary" class="assistant-summary">Regelprüfung wird geladen …</span></button>
-      <span class="assistant-caption">Gespräch v0.5 · Terminplanung gemeinsam entwickeln · Änderungen nur nach Freigabe</span>
+      <span class="assistant-caption">Office · Planung</span>
+      <button class="assistant-window-action" id="assistantWide" type="button" aria-label="Fenster vergrößern" title="Fenster vergrößern">⤢</button>
+      <button class="assistant-window-action" id="assistantClose" type="button" aria-label="Assistent schließen" title="Schließen">×</button>
     </div>
     <div id="assistantBody" class="assistant-body" hidden>
       <p class="assistant-caveat">Geprüft werden ausschließlich eingetragene Vorgängerbeziehungen (EA / AA / EE / AE) mit Montag–Freitag als Arbeitstagen, ohne Feiertage oder Pufferzeiten. Nicht eingetragene fachliche Abhängigkeiten können nicht erkannt werden.</p>
@@ -734,6 +737,10 @@ body.read-only .editor-only{display:none!important}
   let auditChange=null;
   let auditHighlightIds=new Set();
   let assistantExpanded=false;
+  let assistantWide=false;
+  let pendingProactiveIds=[];
+  let proactiveInFlight=false;
+  let lastProactiveAt=0;
   let proposedShift=null;
 
   const $ = s => document.querySelector(s);
@@ -840,6 +847,7 @@ body.read-only .editor-only{display:none!important}
       serverRevision=updated[0].server_revision;
       lastSavedSignature=batch.signature;
       saveFailed=false;
+      const manualChange=!dialogueApproved;
       if(dialogueApproved){
         const approved=dialogueApproved;
         // A later local edit or a concurrent server write cannot yield a success receipt.
@@ -866,6 +874,11 @@ body.read-only .editor-only{display:none!important}
         }
       }
       if(!pendingSave)setSaveStatus('gespeichert · Revision '+serverRevision);
+      if(manualChange&&pendingProactiveIds.length){
+        const changed=pendingProactiveIds.slice();
+        pendingProactiveIds=[];
+        void requestProactiveReview(changed);
+      }
     }catch(error){
       console.error('Office Terminplan conditional save failed',error);
       if(dialogueApproved){
@@ -1380,6 +1393,7 @@ body.read-only .editor-only{display:none!important}
       const change=auditEngine.compare(lastAuditedState,data);
       if(change.changedIds.length){
         auditChange=change;
+        pendingProactiveIds=change.changedIds.slice(0,20);
         proposedShift=null;
         auditHighlightIds=new Set([...change.changedIds,...change.downstreamIds]);
         if(change.newIssues.length)assistantExpanded=true;
@@ -1440,8 +1454,30 @@ body.read-only .editor-only{display:none!important}
     for(const entry of dialogueEvents.slice(-60)){
       const el=document.createElement('div');
       el.className='dialogue-message '+(entry.role==='user'?'user':entry.role==='system_receipt'?'receipt':'assistant');
-      el.textContent=entry.body;
+      const content=document.createElement('div');
+      content.textContent=entry.body;
+      el.append(content);
+      const sources=Array.isArray(entry.sources)?entry.sources.slice(0,6):[];
+      if(sources.length){
+        const list=document.createElement('div');list.className='dialogue-sources';
+        for(const item of sources){
+          try{
+            const url=new URL(item.url);
+            if(url.protocol!=='https:')continue;
+            const a=document.createElement('a');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';
+            a.textContent=String(item.title||url.hostname).slice(0,90);list.append(a);
+          }catch{/* ignore invalid source */}
+        }
+        if(list.childNodes.length)el.append(list);
+      }
       host.append(el);
+    }
+    if(dialogueWriting){
+      const indicator=document.createElement('div');
+      indicator.className='dialogue-message typing';
+      indicator.setAttribute('role','status');
+      indicator.textContent='Analysiere den Terminplan …';
+      host.append(indicator);
     }
     host.scrollTop=host.scrollHeight;
     const action=$('#dialogueProposal');
@@ -1453,6 +1489,10 @@ body.read-only .editor-only{display:none!important}
       dialogueProposal.kind==='add_tasks'
         ? 'Vorschlag: '+dialogueProposal.created_tasks.length+' neue Aufgaben. '+dialogueProposal.created_tasks.map(t=>t.name).join(' · ')+
           '. '+dialogueProposal.new_issue_codes.length+' zusätzliche Regelhinweise. Erst nach Freigabe gespeichert.'
+        : dialogueProposal.kind==='edit_tasks'
+        ? 'Änderungsvorschlag für '+dialogueProposal.edited_tasks.length+' Vorgänge: '+
+           dialogueProposal.edited_tasks.map(t=>t.name).join(' · ')+
+           '. '+dialogueProposal.new_issue_codes.length+' zusätzliche Regelhinweise. Noch nicht gespeichert.'
         : 'Vorschlag für '+(data.tasks.find(t=>t.id===dialogueProposal.task_id)?.name||dialogueProposal.task_id)+
           ': '+dialogueProposal.before.start+' → '+dialogueProposal.after.start+
           ' · '+dialogueProposal.affected_ids.length+' verknüpfte Nachfolger. Erst nach Freigabe wird gespeichert.';
@@ -1467,12 +1507,13 @@ body.read-only .editor-only{display:none!important}
       plan_id:PLAN_ID,user_id:dialogueUserId,role:entry.role,
       body:String(entry.body||'').slice(0,4000),event_kind:entry.kind||'answer',
       request_id:entry.requestId||null,
-      event_data:{source:'office_dialogue_v04',client_display_only:true}
+      event_data:{source:'office_dialogue_v06',client_display_only:true,
+        cited_sources:(entry.sources||[]).slice(0,6)}
     });
     if(error)console.warn('Office chat history could not be saved',error.message);
   }
-  function addDialogue(role,body,kind='answer',requestId=null){
-    const entry={role,body:String(body).slice(0,4000),kind,requestId};
+  function addDialogue(role,body,kind='answer',requestId=null,sources=[]){
+    const entry={role,body:String(body).slice(0,4000),kind,requestId,sources};
     dialogueEvents.push(entry);
     if(dialogueEvents.length>60)dialogueEvents=dialogueEvents.slice(-60);
     renderDialogue();
@@ -1481,10 +1522,13 @@ body.read-only .editor-only{display:none!important}
   async function loadDialogue(){
     if(!PLAN_ID||!dialogueUserId){renderDialogue();return;}
     const {data:history,error}=await sb.from('office_terminplan_dialogue_messages')
-      .select('role,body,event_kind,request_id,created_at').eq('plan_id',PLAN_ID)
+      .select('role,body,event_kind,request_id,event_data,created_at').eq('plan_id',PLAN_ID)
       .eq('user_id',dialogueUserId).order('created_at',{ascending:false}).limit(60);
     if(error){console.warn('Office chat history read failed',error.message);renderDialogue();return;}
-    dialogueEvents=(history||[]).reverse().map(x=>({role:x.role,body:x.body,kind:x.event_kind,requestId:x.request_id}));
+    dialogueEvents=(history||[]).reverse().map(x=>({
+      role:x.role,body:x.body,kind:x.event_kind,requestId:x.request_id,
+      sources:Array.isArray(x.event_data?.cited_sources)?x.event_data.cited_sources:[]
+    }));
     renderDialogue();
   }
 
@@ -1505,13 +1549,38 @@ body.read-only .editor-only{display:none!important}
         label.textContent='Keine eigene Office-KI konfiguriert · Regelmodus verfügbar.';
       }else{
         dialogueAIReady=true;
-        label.textContent='KI bereit · aktivieren für ein gemeinsames Planungsgespräch.';
+        label.textContent='Expertenmodus · '+String(status.model||'GPT-5.4'); 
+        $('#dialogueAI').checked=localStorage.getItem('tba_office_ai_optin_'+dialogueUserId)==='yes';
       }
     }catch(error){
       console.warn('Office AI availability check',String(error?.message||error));
       label.textContent='KI nicht erreichbar · Regelmodus verfügbar.';
     }
     renderDialogue();
+  }
+
+
+  // Only after an explicitly enabled AI mode and a successful human edit save.
+  // An advisory has no tool/write authority. Throttle repeated costly provider calls.
+  async function requestProactiveReview(ids){
+    if(proactiveInFlight||dialogueWriting||dialogueProposal||saveConflict||
+       !dialogueAIReady||!$('#dialogueAI').checked||!PLAN_ID||!ids.length)return;
+    if(Date.now()-lastProactiveAt<120000)return;
+    lastProactiveAt=Date.now();proactiveInFlight=true;
+    try{
+      const {data:response,error}=await sb.functions.invoke('office-terminplan-ai',{
+        body:{action:'review',plan_id:PLAN_ID,
+          message:'Prüfe diese gespeicherten Terminänderungen und ihre möglichen Auswirkungen.',
+          changed_task_ids:ids,selected_task_id:selectedId,expected_revision:serverRevision}
+      });
+      if(error||!response||response.error||response.base_revision!==serverRevision)return;
+      const item=response.result;
+      if(!item||!['discuss','clarify'].includes(item.kind)||!item.text)return;
+      addDialogue('assistant','Hinweis nach Terminänderung:\n'+item.text,'answer',
+        crypto.randomUUID(),Array.isArray(response.sources)?response.sources:[]);
+      assistantExpanded=true;renderAssistant();
+    }catch(error){console.warn('Office proactive review unavailable',String(error?.message||error))}
+    finally{proactiveInFlight=false}
   }
 
   async function sendDialogue(event){
@@ -1531,6 +1600,7 @@ body.read-only .editor-only{display:none!important}
     renderDialogue();
     try{
       let result;
+      let remoteSources=[];
       if(dialogueAIReady&&$('#dialogueAI').checked&&PLAN_ID){
         // Authenticated server independently reloads the plan and validates the JWT + RLS.
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
@@ -1547,6 +1617,7 @@ body.read-only .editor-only{display:none!important}
           serverResponse:remote,state:clone(data),engine:auditEngine,
           revision:serverRevision,requestId
         });
+        remoteSources=Array.isArray(remote.sources)?remote.sources:[];
       }else{
         result=dialogueEngine.answer({
           message,state:clone(data),engine:auditEngine,selectedTaskId:selectedId,
@@ -1556,7 +1627,7 @@ body.read-only .editor-only{display:none!important}
           result.text='Du bist derzeit im Regelmodus. Für eine gemeinsame Besprechung von Aufgaben, Fachplanern und Abhängigkeiten aktiviere bitte KI-Modus oberhalb des Gesprächs. Im Regelmodus sind nur einzelne vordefinierte Aktionen verfügbar.';
       }
       if(result.kind==='proposal')dialogueProposal=result.proposal;
-      addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId);
+      addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId,remoteSources);
       assistantExpanded=true;
       renderAssistant();
     }catch(error){
@@ -1589,6 +1660,18 @@ body.read-only .editor-only{display:none!important}
       const warning=proposal.new_issue_codes.length?'\nAchtung: '+proposal.new_issue_codes.length+' neue Regelhinweise.':'';
       if(!confirm('Neue Vorgänge erstellen?\n\n'+summary+warning+
         '\n\nBestehende Vorgänge werden nicht verändert.'))return;
+    }
+    if(proposal.kind==='edit_tasks'){
+      const protectedOverruns=review.state.tasks.filter(t=>
+        proposal.edited_tasks.some(e=>e.id===t.id)&&t.protectedDate&&t.end>t.protectedDate);
+      if(protectedOverruns.length&&!confirm('Geschützte Abgabetermine würden überschritten:\n'+
+        protectedOverruns.map(t=>t.name+': '+t.protectedDate+' → '+t.end).join('\n')+
+        '\n\nTrotzdem fortfahren?'))return;
+      const summary=proposal.edited_tasks.map(t=>t.name+' ('+t.start+' – '+t.end+', '+t.owner+
+        ', '+t.dependencies.length+' Vorgänger)').join('\n');
+      const warning=proposal.new_issue_codes.length?'\nAchtung: '+proposal.new_issue_codes.length+' neue Regelhinweise.':'';
+      if(!confirm('Bestehende Vorgänge aktualisieren?\n\n'+summary+warning+
+        '\n\nDie Änderungen werden ausschließlich nach dieser Freigabe gespeichert.'))return;
     }
     dialogueWriting=true;
     renderDialogue();
@@ -1631,6 +1714,10 @@ body.read-only .editor-only{display:none!important}
   }
 
   function renderAssistant(){
+    $('#assistantPanel').classList.toggle('is-open',assistantExpanded);
+    $('#assistantPanel').classList.toggle('is-wide',assistantExpanded&&assistantWide);
+    $('#assistantWide').textContent=assistantWide?'⤡':'⤢';
+    $('#assistantWide').setAttribute('aria-label',assistantWide?'Fenster verkleinern':'Fenster vergrößern');
     const summary=$('#assistantSummary');
     const count=auditReport?.count||0;
     summary.textContent=!auditEngine?'Prüfmodul nicht verfügbar':count?(count+' Prüfhinweis'+(count===1?'':'e')):'Keine bekannten Regelkonflikte';
@@ -2309,10 +2396,18 @@ body.read-only .editor-only{display:none!important}
   $('#importJsonBtn').onclick=()=>$('#jsonFile').click();
   $('#jsonFile').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);
   $('#assistantToggle').onclick=()=>{assistantExpanded=!assistantExpanded;renderAssistant()};
+  $('#assistantClose').onclick=()=>{assistantExpanded=false;renderAssistant()};
+  $('#assistantWide').onclick=()=>{assistantWide=!assistantWide;renderAssistant()};
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&assistantExpanded&&!taskDialog.open&&!groupDialog.open){
+      assistantExpanded=false;renderAssistant();
+    }
+  });
   $('#dialogueForm').onsubmit=sendDialogue;
   $('#dialogueAI').onchange=()=>{
     dialogueProposal=null;
-    const mode=$('#dialogueAI').checked?'KI-Gespräch aktiv: Wir können Entscheidungen gemeinsam entwickeln. Ein Vorschlag benötigt anschließend deine Freigabe.':'Regelmodus: Nur einfache Befehle. Für das gemeinsame Planungsgespräch KI-Modus einschalten.';
+    localStorage.setItem('tba_office_ai_optin_'+dialogueUserId,$('#dialogueAI').checked?'yes':'no');
+    const mode=$('#dialogueAI').checked?'Expertenmodus aktiv · Online-Recherche bei Bedarf.':'Regelmodus aktiv · keine externen KI-Anfragen.';
     $('#dialogueAIStatus').textContent=mode;
     renderDialogue();
   };

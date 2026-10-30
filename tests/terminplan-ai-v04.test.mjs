@@ -14,7 +14,7 @@ const context=toContext(state,"LPH5","a");
 test("strict intent schema never grants tool execution",()=>{
  assert.deepEqual(INTENT_SCHEMA.required,["kind","reply","task_id","offset_workdays","evidence_task_ids"]);
  assert.equal(INTENT_SCHEMA.additionalProperties,false);
- assert.equal(MODEL,"gpt-4.1-mini");
+ assert.equal(MODEL,"gpt-5.4");
  assert.match(modelInstructions(),/Never claim you changed anything/);
 });
 test("context excludes notes and unrelated project data while retaining plan responsibility",()=>{

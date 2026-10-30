@@ -9,7 +9,7 @@ export const INTENT_SCHEMA={
     evidence_task_ids:{type:"array",items:{type:"string"}}
   }
 };
-export const MODEL="gpt-4.1-mini";
+export const MODEL="gpt-5.4";
 export function validId(id){return typeof id==="string"&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)}
 export function validMessage(message){return typeof message==="string"&&message.trim().length>=2&&message.length<=1200}
 export function validRevision(v){return Number.isSafeInteger(v)&&v>0}
@@ -82,9 +82,9 @@ export function modelInstructions(){
 // An explicit, typed draft is still only a proposal; the model cannot mutate a plan.
 export const DISCUSSION_SCHEMA={
  type:"object",additionalProperties:false,
- required:["kind","reply","task_id","offset_workdays","evidence_task_ids","draft_tasks"],
+ required:["kind","reply","task_id","offset_workdays","evidence_task_ids","draft_tasks","draft_edits"],
  properties:{
-  kind:{type:"string",enum:["discuss","clarify","shift","add_tasks"]},
+  kind:{type:"string",enum:["discuss","clarify","shift","add_tasks","edit_tasks"]},
   reply:{type:"string"},
   task_id:{type:["string","null"]},
   offset_workdays:{type:["integer","null"]},
@@ -108,6 +108,23 @@ export const DISCUSSION_SCHEMA={
       }
     }}
    }
+  }},
+  draft_edits:{type:"array",items:{
+    type:"object",additionalProperties:false,
+    required:["task_id","start","end","owner","predecessors"],
+    properties:{
+      task_id:{type:"string"},start:{type:"string"},end:{type:"string"},
+      owner:{type:"string"},
+      predecessors:{type:"array",items:{
+        type:"object",additionalProperties:false,
+        required:["task_id","relation","lag_workdays"],
+        properties:{
+          task_id:{type:"string"},
+          relation:{type:"string",enum:["EA","AA","EE","AE"]},
+          lag_workdays:{type:"integer"}
+        }
+      }}
+    }
   }}
  }
 };
@@ -120,20 +137,22 @@ export function discussionInstructions(){
   "Never presume dates, durations, legally protected milestones or contractual commitments that are not explicit. You may suggest alternatives and ask for confirmation.",
   "Use kind=discuss or clarify for ordinary conversation. Output reply is natural prose in the user's language, not robotic command text.",
   "After users explicitly agree to creating or dividing tasks and all names, work group, start/end dates and owners are resolved, you MAY output kind=add_tasks with a draft of at most 8 new tasks.",
-  "Never delete, replace or alter existing tasks when creating new ones; use the selected existing group_id. Do not silently split or delete a generic Fachplanung task.",
+  "For agreed re-coordination, you MAY propose kind=edit_tasks with draft_edits (max 8 EXISTING tasks) to change start/end/owner/predecessors. Each record represents the COMPLETE target values, including unchanged fields carried from the current task. List all predecessors intended to remain. Never infer that unspecified links should be removed.",
+  "When the user requests several linked changes or iterations, discuss desired results first; offer an explicit reviewed multi-task edit only after the user agrees dates, relationships and owners.",
+  "Creating new activities leaves existing tasks untouched. Editing existing ones is a separate edit_tasks proposal; never silently remove generic Fachplanung activities, delete tasks or invent predecessor links.",
   "Only use group_id from provided groups and predecessor task_id from provided tasks. No dependency between proposed new tasks in this first phase.",
   "Only suggest dates with explicit agreement in the conversation, for instance 'use the same start/end as the existing Fachplanung activity'. If dates are ambiguous, ask first.",
   "For a single explicit unambiguous workday shift you may output kind=shift. For broad instructions about multiple shifts or project restructuring, discuss first.",
   "All changes are just previews requiring human review and a separate confirmation. Never claim a change was already saved.",
   "Discuss dependency impacts as possibly affected unless deterministic checks confirm a violation. There are no implicit dependencies between professions.",
-  "For discuss or clarify set task_id/offset_workdays null and draft_tasks empty. For shift set draft_tasks empty. For add_tasks set task_id/offset_workdays null.",
+  "For discuss or clarify set task_id/offset_workdays null and both arrays empty. For shift set both arrays empty. For add_tasks use draft_tasks and empty draft_edits. For edit_tasks use draft_edits and empty draft_tasks; all non-shift kinds have task_id and offset_workdays null.",
   "evidence_task_ids may only contain current task IDs. No MINDS, Isabella, personal profiles, account info or project secrets.",
   "Aim for concise useful replies with context, not a rigid generic disclaimer."
  ].join("\n");
 }
 export function validateDiscussion(raw,ctx,canEdit){
  const safe=(text)=>typeof text==="string"&&text.length>0&&text.length<=2500;
- if(!raw||typeof raw!=="object"||!safe(raw.reply)||!["discuss","clarify","shift","add_tasks"].includes(raw.kind))
+ if(!raw||typeof raw!=="object"||!safe(raw.reply)||!["discuss","clarify","shift","add_tasks","edit_tasks"].includes(raw.kind))
   return {kind:"clarify",text:"Die KI-Antwort ist nicht ausreichend strukturiert. Keine Änderung vorgenommen."};
  const evidence=Array.isArray(raw.evidence_task_ids)?raw.evidence_task_ids:[];
  const taskIds=new Set(ctx.tasks.map(t=>t.id)),groupIds=new Set(ctx.groups.map(g=>g.id));
@@ -144,6 +163,26 @@ export function validateDiscussion(raw,ctx,canEdit){
   kind:"shift",reply:text.slice(0,1200),task_id:raw.task_id,
   offset_workdays:raw.offset_workdays,evidence_task_ids:evidence
  },ctx,canEdit);
+ if(raw.kind==="edit_tasks"){
+   if(!canEdit)return {kind:"clarify",text:"Dieser Projektterminplan ist nur lesbar."};
+   if(!Array.isArray(raw.draft_edits)||raw.draft_edits.length<1||raw.draft_edits.length>8)
+     return {kind:"clarify",text:"Bitte zuerst maximal acht konkrete Änderungswünsche vereinbaren."};
+   const seen=new Set();
+   for(const x of raw.draft_edits){
+     const old=ctx.tasks.find(t=>t.id===x?.task_id);
+     if(!old||seen.has(x.task_id)||!/^\d{4}-\d{2}-\d{2}$/.test(x.start)||
+       !/^\d{4}-\d{2}-\d{2}$/.test(x.end)||x.end<x.start||
+       (old.type==="milestone"&&x.start!==x.end)||
+       typeof x.owner!=="string"||x.owner.length>100||
+       !Array.isArray(x.predecessors)||x.predecessors.length>10||
+       x.predecessors.some(d=>!taskIds.has(d.task_id)||d.task_id===x.task_id||
+         !["EA","AA","EE","AE"].includes(d.relation)||
+         !Number.isInteger(d.lag_workdays)||Math.abs(d.lag_workdays)>130))
+       return {kind:"clarify",text:"Ein Vorgang oder seine Abhängigkeiten sind unklar. Bitte zuerst die gewünschten Änderungen abstimmen."};
+     seen.add(x.task_id);
+   }
+   return {kind:"edit_tasks",text:text.slice(0,2400),draft_edits:raw.draft_edits,evidence_task_ids:evidence};
+ }
  if(raw.kind!=="add_tasks")return {kind:raw.kind,text:text.slice(0,2400),evidence_task_ids:evidence};
  if(!canEdit)return {kind:"clarify",text:"Keine Änderungsberechtigung. Wir können den Vorschlag besprechen, aber nicht anwenden."};
  const items=raw.draft_tasks;

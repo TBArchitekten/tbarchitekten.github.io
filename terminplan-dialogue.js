@@ -167,13 +167,48 @@
    return {state:copy,created,allIssues:after.issues,
      newIssues:after.issues.filter(i=>!oldIssues.has(i.key))};
  }
+
+ function previewTaskEdits(state,items,engine){
+   if(!engine||!Array.isArray(items)||items.length<1||items.length>8)throw Error("invalid_edit_batch");
+   const copy=JSON.parse(JSON.stringify(state)),allIds=new Set(copy.tasks.map(t=>t.id));
+   const seen=new Set(),changed=[];
+   for(const x of items){
+     const task=copy.tasks.find(t=>t.id===x?.task_id);
+     if(!task||seen.has(task.id)||!engine.validDate(x.start)||!engine.validDate(x.end)||
+       x.end<x.start||(task.type==="milestone"&&x.start!==x.end)||
+       typeof x.owner!=="string"||x.owner.length>100||
+       !Array.isArray(x.predecessors)||x.predecessors.length>10)throw Error("invalid_edit");
+     seen.add(task.id);
+     const links=x.predecessors.map(d=>{
+       if(!allIds.has(d.task_id)||d.task_id===task.id||
+         !["EA","AA","EE","AE"].includes(d.relation)||
+         !Number.isInteger(d.lag_workdays)||Math.abs(d.lag_workdays)>130)
+         throw Error("invalid_dependency");
+       return {pred:d.task_id,rel:d.relation,lagDays:d.lag_workdays};
+     });
+     const before={start:task.start,end:task.end,owner:task.owner||"",
+       dependencies:engine.dependencies(task)};
+     task.start=x.start;task.end=x.end;task.owner=x.owner;
+     task.dependencies=links;
+     task.pred=links[0]?.pred||"";
+     task.rel=links[0]?.rel||"EA";
+     changed.push({id:task.id,name:task.name,before,after:{
+       start:task.start,end:task.end,owner:task.owner,dependencies:links
+     }});
+   }
+   const original=engine.analyze(state),now=engine.analyze(copy);
+   const prior=new Set(original.issues.map(i=>i.key));
+   return {state:copy,edited:changed,newIssues:now.issues.filter(i=>!prior.has(i.key)),
+     downstreamIds:engine.downstream(copy,changed.map(x=>x.id))};
+ }
+
  function fromDiscussion({serverResponse,state,engine,revision,requestId}){
    if(!serverResponse||serverResponse.version!=="office-ai-v0.5"||
      serverResponse.source!=="office_ai_discussion_only"||
      serverResponse.base_revision!==revision)
      return {kind:"answer",text:"Der Planstand hat sich geändert. Bitte Anfrage wiederholen."};
    const intent=serverResponse.result;
-   if(!intent||!["discuss","clarify","shift","add_tasks"].includes(intent.kind)||
+   if(!intent||!["discuss","clarify","shift","add_tasks","edit_tasks"].includes(intent.kind)||
       typeof intent.text!=="string")
      return {kind:"answer",text:"Unklare KI-Antwort. Keine Änderung."};
    if(intent.kind==="shift"){
@@ -182,6 +217,30 @@
          base_revision:revision,result:intent},
        state,engine,revision,requestId
      });
+   }
+   if(intent.kind==="edit_tasks"){
+     try{
+       const preview=previewTaskEdits(state,intent.draft_edits,engine);
+       const proposal={
+         request_id:requestId,kind:"edit_tasks",status:"proposed",
+         source:"office_ai_discussion_deterministic_edits",
+         base_revision:revision,base_fingerprint:stable(state),
+         candidate_fingerprint:stable(preview.state),
+         edited_tasks:preview.edited.map(e=>({id:e.id,name:e.name,
+           start:e.after.start,end:e.after.end,owner:e.after.owner,dependencies:e.after.dependencies})),
+         new_issue_codes:preview.newIssues.map(i=>i.code),
+         requires_confirmation:true
+       };
+       const details=preview.edited.map(e=>e.name+
+         ": "+e.before.start+" – "+e.before.end+" → "+e.after.start+" – "+e.after.end+
+         " · "+e.before.owner+" → "+e.after.owner+
+         " · Vorgänger "+e.before.dependencies.length+" → "+e.after.dependencies.length).join("\n");
+       return {kind:"proposal",proposal,preview,
+         text:intent.text+"\n\nPrüfvorschau für "+preview.edited.length+
+         " Vorgänge:\n"+details+"\n\n"+preview.newIssues.length+
+         " neue Regelhinweise; "+preview.downstreamIds.length+
+         " nachgelagerte Vorgänge potenziell betroffen. Noch nichts gespeichert."};
+     }catch(error){return {kind:"answer",text:"Entwurf nicht prüfbar: "+String(error.message||"ungültig")+". Bitte weiter abstimmen."}}
    }
    if(intent.kind!=="add_tasks")return {kind:"answer",text:intent.text};
    try{
@@ -214,10 +273,20 @@
  // Review never trusts an old model response: all candidate state is recalculated locally.
  const reviewBase=review;
  function reviewAny(proposal,state,engine,revision){
-   if(proposal?.kind!=="add_tasks")return reviewBase(proposal,state,engine,revision);
+   if(proposal?.kind!=="add_tasks"&&proposal?.kind!=="edit_tasks")return reviewBase(proposal,state,engine,revision);
    if(proposal.status!=="proposed"||proposal.base_revision!==revision||
       stable(state)!==proposal.base_fingerprint)return {ok:false,reason:"stale_plan"};
    try{
+     if(proposal.kind==="edit_tasks"){
+       const items=proposal.edited_tasks.map(t=>({
+         task_id:t.id,start:t.start,end:t.end,owner:t.owner,
+         predecessors:t.dependencies.map(d=>({task_id:d.pred,relation:d.rel,lag_workdays:d.lagDays}))
+       }));
+       const draft=previewTaskEdits(state,items,engine);
+       if(stable(draft.state)!==proposal.candidate_fingerprint)
+         return {ok:false,reason:"candidate_changed"};
+       return {ok:true,state:draft.state,preview:draft};
+     }
      const items=proposal.created_tasks.map(t=>({
        name:t.name,start:t.start,end:t.end,owner:t.owner,group_id:t.group,
        category:t.category,type:t.type,
@@ -229,5 +298,5 @@
      return {ok:true,state:draft.state,preview:draft};
    }catch{return {ok:false,reason:"invalid_candidate"}}
  }
- return Object.freeze({VERSION,stable,target,quantity,answer,review:reviewAny,receipt,fromModelIntent,fromDiscussion,draftTasks});
+ return Object.freeze({VERSION,stable,target,quantity,answer,review:reviewAny,receipt,fromModelIntent,fromDiscussion,draftTasks,previewTaskEdits});
 });
