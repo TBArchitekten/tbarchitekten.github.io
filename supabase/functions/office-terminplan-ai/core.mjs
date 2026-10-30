@@ -9,7 +9,7 @@ export const INTENT_SCHEMA={
     evidence_task_ids:{type:"array",items:{type:"string"}}
   }
 };
-export const MODEL="gpt-4.1-mini";
+export const MODEL="gpt-5.4";
 export function validId(id){return typeof id==="string"&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)}
 export function validMessage(message){return typeof message==="string"&&message.trim().length>=2&&message.length<=1200}
 export function validRevision(v){return Number.isSafeInteger(v)&&v>0}
