@@ -1482,6 +1482,10 @@ body.read-only .editor-only{display:none!important}
       dialogueProposal.kind==='add_tasks'
         ? 'Vorschlag: '+dialogueProposal.created_tasks.length+' neue Aufgaben. '+dialogueProposal.created_tasks.map(t=>t.name).join(' · ')+
           '. '+dialogueProposal.new_issue_codes.length+' zusätzliche Regelhinweise. Erst nach Freigabe gespeichert.'
+        : dialogueProposal.kind==='edit_tasks'
+        ? 'Änderungsvorschlag für '+dialogueProposal.edited_tasks.length+' Vorgänge: '+
+           dialogueProposal.edited_tasks.map(t=>t.name).join(' · ')+
+           '. '+dialogueProposal.new_issue_codes.length+' zusätzliche Regelhinweise. Noch nicht gespeichert.'
         : 'Vorschlag für '+(data.tasks.find(t=>t.id===dialogueProposal.task_id)?.name||dialogueProposal.task_id)+
           ': '+dialogueProposal.before.start+' → '+dialogueProposal.after.start+
           ' · '+dialogueProposal.affected_ids.length+' verknüpfte Nachfolger. Erst nach Freigabe wird gespeichert.';
@@ -1649,6 +1653,13 @@ body.read-only .editor-only{display:none!important}
       const warning=proposal.new_issue_codes.length?'\nAchtung: '+proposal.new_issue_codes.length+' neue Regelhinweise.':'';
       if(!confirm('Neue Vorgänge erstellen?\n\n'+summary+warning+
         '\n\nBestehende Vorgänge werden nicht verändert.'))return;
+    }
+    if(proposal.kind==='edit_tasks'){
+      const summary=proposal.edited_tasks.map(t=>t.name+' ('+t.start+' – '+t.end+', '+t.owner+
+        ', '+t.dependencies.length+' Vorgänger)').join('\n');
+      const warning=proposal.new_issue_codes.length?'\nAchtung: '+proposal.new_issue_codes.length+' neue Regelhinweise.':'';
+      if(!confirm('Bestehende Vorgänge aktualisieren?\n\n'+summary+warning+
+        '\n\nDie Änderungen werden ausschließlich nach dieser Freigabe gespeichert.'))return;
     }
     dialogueWriting=true;
     renderDialogue();
