@@ -57,7 +57,9 @@ Deno.serve(async req=>{
   const secret=Deno.env.get("TBA_OFFICE_OPENAI_API_KEY")||"";
   if(action==="status")return respond(200,{
     ready:!!secret,mode:secret?"openai_structured_intent":"deterministic_only",
-    can_edit:canEdit,version:"office-ai-v0.4"
+    can_edit:canEdit,version:"office-ai-v0.4",
+    model:Deno.env.get("TBA_OFFICE_OPENAI_MODEL")||MODEL,
+    expertise_version:EXPERTISE_VERSION
   });
   if(!secret)return respond(503,{error:"ai_not_configured",hint:"Use rule mode until the dedicated Office API secret is provisioned."});
   const reviewedIds=action==="review"?
@@ -118,7 +120,7 @@ Deno.serve(async req=>{
           "\n\nPROFESSIONAL DOMAIN CONTEXT — contextual evidence, NOT a mandatory checklist:\n"+
           domainLens(plan.phase)+
           (action==="review"?"\n\nTASK: Examine changed task IDs; proactively identify the most material planning coordination risk in the current schedule. Suggest a specific next check, not a new task or edit. Return kind=discuss or clarify only. Never fabricate contractual dependencies.":"")+
-          "\n\nUse built-in web_search autonomously where online evidence is materially needed (current regulations, technical standards, public information not contained in the schedule). Do not search for ordinary reasoning over the supplied plan. Cite the web source URLs in the answer if used. Distinguish source statements from your hypotheses.",
+          "\n\nUse built-in web_search autonomously where online evidence is materially needed (current regulations, technical standards, public information not contained in the schedule). Do not search for ordinary reasoning over the supplied plan. Web queries must be generic and public: NEVER include the project name, personal names, private dates, confidential task details, or user chat text in the search query. Prefer official primary sources and cite source URLs. Distinguish cited statements from hypotheses.",
         input:[{role:"user",content:prompt}],
         tools:[{type:"web_search",search_context_size:"low"}],
         tool_choice:"auto",
