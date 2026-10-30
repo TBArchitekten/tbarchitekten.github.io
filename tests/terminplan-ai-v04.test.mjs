@@ -17,12 +17,13 @@ test("strict intent schema never grants tool execution",()=>{
  assert.equal(MODEL,"gpt-4.1-mini");
  assert.match(modelInstructions(),/Never claim you changed anything/);
 });
-test("context is minimized and excludes notes, user profiles, and secrets",()=>{
+test("context excludes notes and unrelated project data while retaining plan responsibility",()=>{
  const source=structuredClone(state);
  source.tasks[0].note="TOP SECRET NOTE";source.tasks[0].owner="Personal person";source.project.projectName="CLIENT SECRET";
  const c=toContext(source,"LPH5","a");
  const encoded=JSON.stringify(c);
- for(const sensitive of ["TOP SECRET","Personal person","CLIENT SECRET"])assert.ok(!encoded.includes(sensitive));
+ for(const sensitive of ["TOP SECRET","CLIENT SECRET"])assert.ok(!encoded.includes(sensitive));
+ assert.equal(c.tasks[0].owner,"Personal person");
  assert.deepEqual(c.tasks[1].predecessors,[{task_id:"a",relation:"EA",lag_workdays:0}]);
  assert.equal(c.selected_task_id,"a");
 });
