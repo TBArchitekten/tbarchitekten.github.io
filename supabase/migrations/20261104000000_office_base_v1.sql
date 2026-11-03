@@ -1,4 +1,4 @@
--- TBA Office · base schema for its own Supabase project "TBA Office" (EU, eu-west-1).
+-- TBA Office · base schema for its own Supabase project "TBA Office" (Frankfurt, eu-central-1).
 -- Consolidates the Office tables that lived in the Bernried Project Hub (2026-10-28 migrations)
 -- and adds what every future tool hangs off: members with roles and Office projects.
 -- No Bernried, MINDS or Isabella tables, keys or identities.
