@@ -4,11 +4,10 @@
 // the Kalender holds one's own tasks plus those assigned to one, client_key is unique per table,
 // and there is no memory, feed or conversation to sync (the assistant comes later).
 const sb=window.MINDS_SUPABASE;
-const APP_SCOPE='isabella';
 const app=window.ISABELLA_APP;
 const $=s=>document.querySelector(s);
 const authButton=$('#authButton'),status=$('#syncStatus');
-let user=null,syncing=false,timer=null,hydrating=false,queuedSync=null,realtimeChannel=null,realtimeTimer=null;
+let user=null,syncing=false,timer=null,hydrating=false,queuedSync=null;
 let queuedSyncWaiters=[];
 const pendingEntityMutations=new Set();
 const setStatus=t=>{if(status)status.textContent=t};
@@ -24,26 +23,6 @@ function canonicalFeedPreferences(value={}){
   return {mode:'situational_personal',instructions:String(p.instructions||'').trim(),weatherLocation:String(p.weatherLocation||'').trim(),topics:[],customTopics:[],following:[],followGraph:[]};
 }
 function apiError(e){return e?.message||String(e||'Error desconocido')}
-function stopRealtime(){
-  if(realtimeTimer){clearTimeout(realtimeTimer);realtimeTimer=null}
-  if(realtimeChannel){try{sb.removeChannel(realtimeChannel)}catch{}realtimeChannel=null}
-}
-function startRealtime(){
-  stopRealtime();
-  // No conversation stream in the office yet.
-  return;
-  if(!user||!sb?.channel)return;
-  realtimeChannel=sb.channel('isabella-mission-'+user.id)
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'conversation_messages',filter:'user_id=eq.'+user.id},payload=>{
-      const row=payload?.new||{},source=String(row?.metadata?.source||'');
-      const runtimeAssistant=row.role==='assistant'&&['mission_runtime','attention_runtime'].includes(source);
-      const sharedSurface=source==='presence';
-      if(!runtimeAssistant&&!sharedSurface)return;
-      clearTimeout(realtimeTimer);
-      realtimeTimer=setTimeout(()=>syncNow({pullOnly:true}),120);
-    })
-    .subscribe();
-}
 async function init(){
   if(!sb||!app){setStatus('Nur lokal · Office nicht erreichbar');if(authButton)authButton.textContent='Nur lokal';return}
   const {data,error}=await sb.auth.getSession();
@@ -178,63 +157,6 @@ async function pushState(state,maps){
   }
   // Memory, feed preferences and the conversation are not part of the office (yet).
 }
-async function conversationId(){
-  const {data,error}=await sb.from('conversations').select('id,metadata').eq('user_id',user.id).eq('app_scope',APP_SCOPE).order('updated_at',{ascending:false}).limit(1);
-  if(error)throw error;
-  if(data?.[0]?.id)return data[0].id;
-  const {data:created,error:ie}=await sb.from('conversations').insert({user_id:user.id,app_scope:APP_SCOPE,origin_kind:'global',origin_anchor:{type:'assistant',id:'isabella',label:'Isabella'},title:'Isabella',mode:'memory',metadata:{app:APP_SCOPE}}).select('id').single();
-  if(ie)throw ie;return created.id;
-}
-/* A client-side chat message is not eligible for the canonical scoped
- * conversation ledger until the server has resolved its exposure scope.
- * Keep pending turns locally; do NOT insert them as permanent legacy rows.
- * Existing legacy history stays untouched and is never silently promoted.
- */
-function scopedTurnReady(message){
-  const s=message?.metadata?.exposure_scope;
-  if(!s||s.version!==1||typeof s.kind!=='string'||
-    typeof s.key!=='string'||!s.key.trim()||s.key==='legacy')return false;
-  if(s.kind==='global'&&s.key!=='global')return false;
-  if(s.kind!=='global'&&(!s.ref||!String(s.ref).trim()))return false;
-  return ['user','assistant'].includes(message.role)&&
-    typeof message.text==='string'&&!!message.text.trim();
-}
-async function pushConversation(messages){
-  const approved=(messages||[]).filter(scopedTurnReady);
-  if(!approved.length)return; // no provisional, scope-unknown rows in Supabase
-  const cid=await conversationId(),now=new Date().toISOString();
-  const rows=approved.map((m,i)=>{
-    const scope=m?.metadata?.exposure_scope&&typeof m.metadata.exposure_scope==='object'?m.metadata.exposure_scope:null;
-    return {
-      user_id:user.id,conversation_id:cid,client_key:m.id||String(i).padStart(6,'0'),
-      role:['assistant','system'].includes(m.role)?m.role:'user',content:m.text||'',provisional:false,citations:[],
-      exposure_scope_version:1,
-      exposure_scope_kind:scope.kind,
-      exposure_scope_ref:scope.ref?String(scope.ref):null,
-      exposure_scope_key:scope.key,
-      metadata:{...(m.metadata&&typeof m.metadata==='object'?m.metadata:{}),app:APP_SCOPE,reaction:m.reaction||null,reply_to:m.replyTo?.id?{id:String(m.replyTo.id),role:m.replyTo.role==='assistant'?'assistant':'user',text:String(m.replyTo.text||'')}:null,sources:Array.isArray(m.sources)?m.sources.slice(0,8):[],attachments:Array.isArray(m.attachments)?m.attachments.slice(0,3):[],artifacts:Array.isArray(m.artifacts)?m.artifacts.slice(0,8):[]},
-      created_at:m.at||now
-    };
-  });
-  // Browser owner turns are canonical server records. A later client echo must
-  // never overwrite server-owned metadata such as pending clarification receipts.
-  const ownerRows=rows.filter(r=>r.role==='user');
-  const assistantRows=rows.filter(r=>r.role!=='user');
-  if(ownerRows.length){
-    const {error}=await sb.from('conversation_messages')
-      .upsert(ownerRows,{onConflict:'user_id,conversation_id,client_key',ignoreDuplicates:true});
-    if(error)throw error;
-  }
-  if(assistantRows.length){
-    const {error}=await sb.from('conversation_messages')
-      .upsert(assistantRows,{onConflict:'user_id,conversation_id,client_key'});
-    if(error)throw error;
-  }
-  await sb.from('conversations').update({updated_at:now}).eq('id',cid).eq('user_id',user.id).eq('app_scope',APP_SCOPE);
-}
-// Read-only bridge from canonical Work fields to native Tiempo/dashboard state.
-// Do NOT add Work-owned columns to taskRow(): calendar mutations must not
-// write stale assignees, status, start dates, buckets or attachments.
 function projectTaskRow(t,catKey,projKey){
   return {
     id:t.client_key||t.id,title:t.title,date:t.due_date||null,
@@ -314,70 +236,6 @@ async function pullState(local,maps){
   return {...freshest,projects:localProjects(maps),teamPeople:teamPeople||[],teamAllocations,memory:remoteMemory,feedPreferences:remoteFeed,
     assistantPreferences:remoteAssistant,messages:freshest.messages};
 }
-async function updateMessageMetadata(clientKey,patch){
-  if(!user||!clientKey||!patch||typeof patch!=='object')return false;
-  try{
-    const cid=await conversationId();
-    const {data,error}=await sb.from('conversation_messages')
-      .select('metadata')
-      .eq('user_id',user.id).eq('conversation_id',cid).eq('client_key',String(clientKey))
-      .maybeSingle();
-    if(error)throw error;
-    const next={...(data?.metadata||{}),...patch,app:APP_SCOPE};
-    const {error:ue}=await sb.from('conversation_messages')
-      .update({metadata:next})
-      .eq('user_id',user.id).eq('conversation_id',cid).eq('client_key',String(clientKey));
-    if(ue)throw ue;
-    return true;
-  }catch(e){setStatus('No pude sincronizar la reacción: '+apiError(e));return false}
-}
-function mergeConversationMessages(remote=[],local=[]){
-  const byId=new Map(),out=[];
-  for(const m of remote||[]){
-    if(!m?.id||byId.has(m.id))continue;
-    byId.set(m.id,m);out.push(m);
-  }
-  for(const m of local||[]){
-    if(!m?.id)continue;
-    const saved=byId.get(m.id);
-    if(!saved){byId.set(m.id,m);out.push(m);continue}
-    // A remote echo can predate the first durable metadata write.
-    // Preserve a local, explicit request binding without overwriting
-    // newer server-delivered status, content or provenance.
-    const requestId=m.metadata?.durable_request_id;
-    if(requestId&&!saved.metadata?.durable_request_id){
-      saved.metadata={...(saved.metadata||{}),durable_request_id:requestId,
-        ...(m.metadata?.durable_status?{durable_status:m.metadata.durable_status}:{})};
-    }
-    // A remote conversation echo can predate the confirmed review. Preserve
-    // local server-verified acknowledgement only for the SAME registered
-    // request; do not infer execution from message text or mere metadata.
-    const localReceipt=m.metadata?.review_receipt_id;
-    const localReview=m.metadata?.review_proposals;
-    const remoteReview=saved.metadata?.review_proposals;
-    if(m.metadata?.review_state==='applied_verified'&&
-       typeof localReceipt==='string'&&/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(localReceipt)&&
-       Array.isArray(localReview)&&localReview.length===1&&
-       Array.isArray(remoteReview)&&remoteReview.length===1&&
-       localReview[0]?.request_id&&
-       localReview[0].request_id===remoteReview[0]?.request_id){
-      saved.metadata={...(saved.metadata||{}),review_state:'applied_verified',
-        review_receipt_id:localReceipt};
-    }
-  }
-  out.sort((a,b)=>String(a.at||'').localeCompare(String(b.at||'')));
-  return out;
-}
-async function pullConversation(){
-  const {data,error}=await sb.from('conversations').select('id').eq('user_id',user.id).eq('app_scope',APP_SCOPE).order('updated_at',{ascending:false}).limit(1);
-  if(error||!data?.length)return[];
-  const {data:msgs,error:me}=await sb.from('conversation_messages').select('client_key,role,content,created_at,metadata,exposure_scope_version,exposure_scope_kind,exposure_scope_ref,exposure_scope_key,provenance_class,conversations!inner(app_scope)').eq('conversations.app_scope',APP_SCOPE).eq('user_id',user.id).eq('conversation_id',data[0].id).order('created_at',{ascending:true});
-  if(me)throw me;
-  return (msgs||[]).map(m=>{
-    const scope=m.exposure_scope_version===1?{version:1,kind:m.exposure_scope_kind||'global',ref:m.exposure_scope_ref||null,key:m.exposure_scope_key||'global'}:null;
-    return {id:m.client_key,role:m.role,text:m.content,at:m.created_at,reaction:m.metadata?.reaction||null,replyTo:m.metadata?.reply_to?.id?{id:String(m.metadata.reply_to.id),role:m.metadata.reply_to.role==='assistant'?'assistant':'user',text:String(m.metadata.reply_to.text||'')}:null,metadata:{...(m.metadata||{}),...(scope?{exposure_scope:scope}:{}),provenance_class:m.provenance_class||null},sources:Array.isArray(m.metadata?.sources)?m.metadata.sources:[],attachments:Array.isArray(m.metadata?.attachments)?m.metadata.attachments:[],artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[]};
-  });
-}
 async function recordProposalFeedback(detail){
   return; // no proposal log in the office yet
   try{
@@ -455,6 +313,5 @@ async function syncNow(opts={}){
 }
 window.ISABELLA_SYNC_NOW=(opts={})=>syncNow(opts);
 window.ISABELLA_SYNC_PULL_NOW=()=>syncNow({pullOnly:true});
-window.ISABELLA_SYNC_MESSAGE_META=(clientKey,patch)=>updateMessageMetadata(clientKey,patch);
 init();
 })();

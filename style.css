@@ -95,6 +95,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--m-blue);
 }
 .lens-nav-item:hover{background:#f5f6f8;color:#1d1d1f;border:0}
 .lens-nav-item.active{background:#eff2f7;color:#202329}
+/* Heute, Kalender and Work are links into the office app (./app/). */
+a.lens-nav-item{display:flex;align-items:center;text-decoration:none}
+.button-link{display:inline-flex;align-items:center;min-height:38px;padding:0 14px;border:1px solid var(--m-border,#e5e5ea);border-radius:999px;background:#fff;color:var(--m-ink,#1d1d1f);font-size:13px;font-weight:600;text-decoration:none}
+.button-link:hover{background:#f5f6f8}
 .lens-glyph{display:grid;place-items:center;flex:0 0 21px;color:#646a74}
 .lens-glyph svg{width:21px;height:21px;display:block}
 .lens-nav-item.active .lens-glyph{color:var(--m-blue)}

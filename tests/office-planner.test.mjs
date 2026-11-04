@@ -75,15 +75,13 @@ test('Schema: buckets and tasks behind RLS, one rule set for read, write and del
   assert.doesNotMatch(sql,/to anon/);
 });
 
-test('Page wiring: Kalender lens, project tabs, Planner before app, no browser dialogs',()=>{
-  const index=read('index.html'),planner=read('planner.js'),app=read('app.js');
-  assert.match(index,/data-view="kalender" aria-label="Kalender"/);
-  assert.match(index,/data-project-tab="panorama"[\s\S]*data-project-tab="planner"/);
-  assert.ok(index.indexOf('src="./planner.js')<index.indexOf('src="./app.js'),'planner.js loads before app.js routes');
-  assert.match(planner,/\.insert\(\{\.\.\.payload,project_id:projectId,created_by:uid\(\),position:/);
-  assert.match(planner,/\.or\(`assignee_id\.eq\.\$\{me\},and\(assignee_id\.is\.null,created_by\.eq\.\$\{me\}\)`\)/);
-  assert.match(planner,/btn\.textContent='Wirklich löschen\?'/);
-  assert.doesNotMatch(planner,/window\.confirm|\bconfirm\(|\balert\(/);
-  assert.match(app,/if\(name==='kalender'\)window\.TBA_PLANNER\?\.openKalender\(\);/);
-  assert.match(app,/leadsProject:id=>member\?\.role==='admin'\|\|!!projects\.find/);
+test('The first Kalender and Planner are retired: the start page links into the office app',()=>{
+  const index=read('index.html'),app=read('app.js');
+  assert.doesNotMatch(index,/planner\.js|id="kalenderView"|data-project-tab=|id="taskDialog"|id="bucketDialog"/);
+  for(const [section,label] of [['feed','Heute'],['calendar','Kalender'],['work','Work']])
+    assert.match(index,new RegExp(`<a class="lens-nav-item" href="\\./app/#section=${section}" aria-label="${label}">`));
+  assert.match(index,/data-view="work" aria-label="Projekte"/);
+  assert.match(app,/if\(r\.view==='kalender'\)\{location\.replace\('\.\/app\/#section=calendar'\);return\}/);
+  assert.match(app,/\$\('#projectWorkLink'\)\.href='\.\/app\/#section=work&project='\+encodeURIComponent\(p\.id\)/);
+  assert.doesNotMatch(app,/TBA_PLANNER|TBA_OFFICE_APP/);
 });
