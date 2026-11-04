@@ -12,3 +12,5 @@
 /* Attachments need the office's file storage, which arrives with the Desktop (part C). */
 .office-app .minds-task-section:has(#taskDetailAddFile),
 .office-app .work-task-detail-section:has(#workAddAttachment){display:none}
+
+/* Shared Desktop action buttons pending. */
