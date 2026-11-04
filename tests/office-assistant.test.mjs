@@ -5,16 +5,29 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const sql=read('supabase/migrations/20261104220000_office_assistant_personal_v1.sql');
 const edge=read('supabase/functions/office-assistant/index.ts');
 
-test('Assistant is present in Office navigation but not Window personal memory',()=>{
-  const shell=read('app/shell.js'),html=read('app/index.html'),frontend=read('app/office-assistant.js');
-  assert.match(shell,/data-nav="assistant" aria-label="Assistent"/);
-  assert.doesNotMatch(shell,/data-nav="assistant" aria-label="Assistent" hidden/);
-  assert.match(html,/office-assistant\.js\?v=office5/);
-  assert.match(html,/office-assistant\.css\?v=office4/);
-  assert.match(frontend,/office_assistant_conversations/);
-  assert.match(frontend,/office_assistant_messages/);
-  assert.doesNotMatch(frontend,/isabella-chat|WINDOW_NATIVE|window\.MINDS_WORK/);
-  assert.match(frontend,/textContent/); // Never render server messages as HTML.
+test('Assistant reuses Window chat rather than building another UI',()=>{
+  const shell=read('app/shell.js'),html=read('app/index.html');
+  const frontend=read('app/office-assistant.js');
+  const app=read('app/app.js'),css=read('app/office-assistant.css');
+  for(const needle of ['data-nav="assistant" aria-label="Assistent"','id="assistantScreen"','id="messages"','id="chatInput"','id="sendButton"','id="micButton"','id="attachButton"']){
+    assert.ok(shell.includes(needle),'Window shell missing '+needle);
+  }
+  assert.ok(!shell.includes('data-nav="assistant" aria-label="Assistent" hidden'));
+  for(const needle of ['office-assistant.js?v=office6','office-assistant.css?v=office6','app.js?v=office6']){
+    assert.ok(html.includes(needle),'asset cache not bumped '+needle);
+  }
+  for(const needle of ['office_assistant_conversations','office_assistant_messages','app()?.setOfficeMessages','window.TBA_OFFICE_ASSISTANT']){
+    if(needle==='window.TBA_OFFICE_ASSISTANT')assert.ok(app.includes(needle));
+    else assert.ok(frontend.includes(needle),'backend adapter missing '+needle);
+  }
+  for(const removed of ['workspace.innerHTML','office-chat-layout','office-chat-sidebar','officeChatInput','officeChatForm','isabella-chat','WINDOW_NATIVE','window.MINDS_WORK']){
+    assert.ok(!frontend.includes(removed),'Office cannot replace Window UI: '+removed);
+  }
+  assert.ok(!css.includes('#assistantScreen>.assistant-scroll'));
+  assert.ok(!css.includes('#assistantScreen>.composer-wrap'));
+  assert.ok(app.includes('OFFICE?{...state,messages:[]}:state'),'Office messages must not be cached in localStorage');
+  assert.ok(app.includes('OFFICE?officeChatMessages:normalizeMessages'),'Synced state must not overwrite Office chat');
+  assert.ok(frontend.includes('textContent'));
   new Function(frontend);
 });
 
