@@ -97,14 +97,14 @@ document.body.innerHTML = `
       <div class="work-shell">
         <div class="work-head">
           <div><h1 id="workProjectTitle">Work</h1></div>
-          <div class="work-project-switch" aria-label="Projekt">
+          <div class="work-project-switch" aria-label="Bereich">
             <span class="small">Lade Projekte …</span>
           </div>
           <span class="minds-menu-slot" data-menu-slot="work"></span>
         </div>
         <div class="work-tabs" role="tablist">
           <button data-work-view="overview" class="active">Panorama</button>
-          <button data-work-view="desktop" hidden>Desktop</button>
+          <button data-work-view="desktop">Desktop</button>
           <button data-work-view="planner">Planner</button>
           <button data-work-view="knowledge" hidden>Wissen</button>
           <button data-work-view="threads" hidden>Threads</button>

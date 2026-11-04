@@ -29,7 +29,7 @@ test('Only the parts the office uses are loaded; the assistant comes later',()=>
   const shell=src('shell.js');
   for(const nav of ['assistant','bandeja','readings','thoughts'])
     assert.match(shell,new RegExp(`data-nav="${nav}"[^>]*hidden`),nav+' stays hidden');
-  assert.match(shell,/<button data-work-view="desktop" hidden>Desktop<\/button>/,'Desktop comes with part C');
+  assert.match(shell,/<button data-work-view="desktop">Desktop<\/button>/,'Desktop is now available');
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
   assert.match(src('work.js'),/^const OFFICE=true;$/m);

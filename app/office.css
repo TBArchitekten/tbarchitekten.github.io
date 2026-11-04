@@ -9,6 +9,11 @@
   background:#fff;padding:13px 2px;font:inherit;font-size:15px;line-height:1.5;color:var(--m-ink,#111);text-decoration:none;cursor:pointer}
 .office-app .drawer>#officeSignOut{color:var(--m-danger,#b42318)}
 
-/* Attachments need the office's file storage, which arrives with the Desktop (part C). */
-.office-app .minds-task-section:has(#taskDetailAddFile),
-.office-app .work-task-detail-section:has(#workAddAttachment){display:none}
+/* Shared Office Desktop: folder/file tile with accessible action row. */
+.office-app .work-files .office-desktop-item{min-width:0;display:flex;flex-direction:column;gap:4px}
+.office-app .office-desktop-item>.work-file{width:100%;flex:1;min-width:0}
+.office-app .office-desktop-actions{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
+.office-app .office-desktop-actions button{font:inherit;font-size:11px;line-height:1.5;padding:3px 5px;border:1px solid #e0e4e8;border-radius:6px;background:#fff;color:#4b5563;cursor:pointer}
+.office-app .office-desktop-actions button:hover,.office-app .office-desktop-actions button:focus-visible{color:#111;border-color:#9da5b0;background:#f6f7f8}
+.office-app .office-desktop-actions button:last-child{color:#aa3434}
+@media(max-width:680px){.office-app .office-desktop-actions button{font-size:10px;padding:4px 3px}}

@@ -3,11 +3,12 @@
 // Projects are the office's (all of them, not "mine"); Panorama shows the next 14 days and the project's
 // Terminpläne; the Akte parts, Wissen and Threads stay off until the office has them.
 const OFFICE=true;
+const OFFICE_ROOT='__office__';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sb=window.MINDS_SUPABASE;
 const DEFAULT_BUCKETS=['Projektorganisation','Entwurf','Genehmigung','Ausführungsplanung','Ausschreibung/Vergabe','Baustelle','Dokumentation'];
-let projectKey=localStorage.getItem('minds-work-project')||'',view=(()=>{const v=localStorage.getItem('minds-work-view')||'overview';return OFFICE&&['knowledge','threads','desktop'].includes(v)?'overview':v})(),folderId=null,project=null,folders=[],files=[],buckets=[],tasks=[],threads=[],activeThreadId=null,bound=false,pendingTaskFiles=[],editingAttachments=[],draggedWorkTaskId=null,draggedWorkBucketId=null;
+let projectKey=localStorage.getItem('minds-work-project')||OFFICE_ROOT,view=(()=>{const v=localStorage.getItem('minds-work-view')||'overview';return OFFICE&&['knowledge','threads'].includes(v)?'overview':v})(),folderId=null,project=null,folders=[],files=[],buckets=[],tasks=[],threads=[],activeThreadId=null,bound=false,pendingTaskFiles=[],editingAttachments=[],draggedWorkTaskId=null,draggedWorkBucketId=null;
 const workSignedCache=new Map();
 let team=[],reviewSettings=null,reviewReportLimit=20,workRenderVersion=0;
 /* Purely visual preferences and labels; no task statuses are rewritten. */
@@ -20,7 +21,7 @@ async function getSession(){if(!sb)return null;const {data}=await sb.auth.getSes
 async function loadProject(knownSession=null){const session=knownSession||await getSession();if(!session)return null;const {data,error}=await sb.from('isabella_projects').select('id,client_key,name,number').eq('client_key',projectKey).maybeSingle();if(error)throw error;return data||null}
 function bindStatic(){
   if(bound)return;bound=true;
-  $('.work-project-switch')?.addEventListener('click',e=>{const b=e.target.closest('[data-work-project]');if(!b)return;projectKey=b.dataset.workProject;localStorage.setItem('minds-work-project',projectKey);folderId=null;activeThreadId=null;reviewReportLimit=20;void render()});
+  $('.work-project-switch')?.addEventListener('click',e=>{const b=e.target.closest('[data-work-project]');if(!b)return;projectKey=b.dataset.workProject;localStorage.setItem('minds-work-project',projectKey);if(projectKey===OFFICE_ROOT)view='desktop';folderId=null;activeThreadId=null;reviewReportLimit=20;void render()});
   $$('[data-work-view]').forEach(b=>b.onclick=()=>{view=b.dataset.workView;localStorage.setItem('minds-work-view',view);paintChrome();void render()});
   const input=$('#workFileInput');if(input)input.onchange=()=>{const fs=[...(input.files||[])];input.value='';if(fs.length)void uploadFiles(fs)};
   const body=$('#workBody');
@@ -30,7 +31,7 @@ function bindStatic(){
   body?.addEventListener('drop',e=>{if(view!=='desktop')return;e.preventDefault();body.classList.remove('is-dragging');const fs=[...(e.dataTransfer?.files||[])];if(fs.length)void uploadFiles(fs)});
 }
 function paintChrome(){
-  $('#workProjectTitle').textContent=project?.name||projectKey;
+  $('#workProjectTitle').textContent=projectKey===OFFICE_ROOT?'Büro':project?.name||projectKey;
   $$('[data-work-project]').forEach(b=>b.classList.toggle('active',b.dataset.workProject===projectKey));
   $$('[data-work-view]').forEach(b=>b.classList.toggle('active',b.dataset.workView===view));
 }
@@ -72,14 +73,15 @@ async function render(){
     if(!latest())return;
     if(catalog.error)throw catalog.error;
     const switcher=$('.work-project-switch');
-    if(switcher)switcher.innerHTML=(catalog.data||[]).length
-      ?catalog.data.map(p=>'<button data-work-project="'+esc(p.client_key)+'" title="'+esc((p.number?p.number+' · ':'')+p.name)+'">'+esc(p.name)+'</button>').join('')
-      :'<span class="small">Keine Projekte vorhanden</span>';
-    if(!(catalog.data||[]).some(p=>p.client_key===projectKey)&&catalog.data?.length)
-      projectKey=catalog.data[0].client_key;
-    const loadedProject=await waitForWork(loadProject(session),'project');
+    if(switcher)switcher.innerHTML='<button data-work-project="'+OFFICE_ROOT+'">Büro</button>'+
+      (catalog.data||[]).map(p=>'<button data-work-project="'+esc(p.client_key)+'" title="'+esc((p.number?p.number+' · ':'')+p.name)+'">'+esc(p.name)+'</button>').join('');
+    if(projectKey!==OFFICE_ROOT&&!(catalog.data||[]).some(p=>p.client_key===projectKey))
+      projectKey=(catalog.data||[])[0]?.client_key||OFFICE_ROOT;
+    if(projectKey===OFFICE_ROOT)view='desktop';
+    const loadedProject=projectKey===OFFICE_ROOT?null:await waitForWork(loadProject(session),'project');
     if(!latest())return;
     project=loadedProject;
+    $('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
     paintChrome();
     const settings=project&&!OFFICE?await waitForWork(
       sb.from('minds_self_review_settings').select('enabled,timezone,local_hour,code_preparation_enabled')
@@ -88,11 +90,12 @@ async function render(){
     ):null;
     if(!latest())return;
     reviewSettings=settings?.data||null;
-    if(!project){
+    if(!project&&projectKey!==OFFICE_ROOT){
       workBootFailure('Dieses Projekt wurde nicht gefunden.');
       return;
     }
-    const scene=view==='overview'&&reviewSettings?renderSelfReview()
+    const scene=projectKey===OFFICE_ROOT?renderDesktop()
+      :view==='overview'&&reviewSettings?renderSelfReview()
       :view==='overview'?renderOverview()
       :view==='threads'?renderThreads()
       :view==='knowledge'?renderKnowledge()
@@ -547,7 +550,8 @@ async function knowledgeToAkte(id){
   knowledgeBusy.delete(c.id);paintKnowledge();
   setStatus(error?'No pude llevarlo a la Akte.':(type==='deadline'?'Frist':'Entscheidung')+' eingetragen: '+title.slice(0,80));
 }
-async function loadFolders(){const {data,error}=await sb.from('minds_work_folders').select('id,parent_id,name,sort_order,created_at').eq('project_id',project.id).order('sort_order').order('name');if(error)throw error;folders=data||[]}
+function documentScope(q){return project?q.eq('project_id',project.id):q.is('project_id',null)}
+async function loadFolders(){const {data,error}=await documentScope(sb.from('minds_work_folders').select('id,user_id,parent_id,name,sort_order,created_at')).order('sort_order').order('name');if(error)throw error;folders=data||[]}
 function folderTrail(){const out=[];let id=folderId,guard=0;while(id&&guard++<30){const f=folders.find(x=>x.id===id);if(!f)break;out.unshift(f);id=f.parent_id}return out}
 function workKnowledgeStatus(file){
   const k=String(file?.index_status||'stored');
@@ -606,7 +610,8 @@ function duplicateGroups(rows){
   return [...map.values()].filter(g=>g.length>1).map(g=>[...g].sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||''))));
 }
 async function loadDuplicateGroups(){
-  const {data,error}=await sb.from('minds_work_files').select('id,folder_id,name,size_bytes,metadata,storage_path,created_at').eq('project_id',project.id).order('created_at',{ascending:true}).limit(3000);
+  const session=await getSession();if(!session)return [];
+  const {data,error}=await documentScope(sb.from('minds_work_files').select('id,user_id,folder_id,name,size_bytes,metadata,storage_path,created_at')).eq('user_id',session.user.id).order('created_at',{ascending:true}).limit(3000);
   if(error)throw error;return duplicateGroups(data);
 }
 async function duplicatesPanel(){
@@ -629,20 +634,22 @@ async function duplicatesPanel(){
     if(!button.dataset.confirm){button.dataset.confirm='1';button.textContent='Sicher? '+ids.length+' endgültig löschen';return}
     button.disabled=true;button.textContent='Lösche …';
     const rows=copies.filter(f=>ids.includes(f.id));
+    const removal=await sb.storage.from('minds-work').remove(rows.map(f=>f.storage_path).filter(Boolean));
+    if(removal.error){button.disabled=false;button.textContent='Erneut versuchen';setStatus('Die Dateien konnten nicht gelöscht werden.');return}
     const {error}=await sb.from('minds_work_files').delete().in('id',rows.map(f=>f.id));
-    if(error){button.disabled=false;button.textContent='Erneut versuchen';setStatus('Die Duplikate konnten nicht gelöscht werden.');return}
-    try{await sb.storage.from('minds-work').remove(rows.map(f=>f.storage_path).filter(Boolean))}catch{}
-    window.ISABELLA_APP?.closeModal?.();setStatus(rows.length+' copia'+(rows.length===1?'':'s')+' borrada'+(rows.length===1?'':'s')+'.');
+    if(error){button.disabled=false;button.textContent='Erneut versuchen';setStatus('Die Dateien wurden entfernt, aber das Register konnte nicht aktualisiert werden.');return}
+    window.ISABELLA_APP?.closeModal?.();setStatus(rows.length+' Duplikat'+(rows.length===1?'':'e')+' gelöscht.');
     await renderDesktop();
   };
 }
 async function renderDesktop(){
   await loadFolders();
-  let fq=sb.from('minds_work_files').select('id,folder_id,name,mime_type,size_bytes,source_kind,index_status,metadata,storage_path,created_at').eq('project_id',project.id).order('created_at',{ascending:false});
+  if(folderId&&!folders.some(f=>f.id===folderId))folderId=null;
+  let fq=documentScope(sb.from('minds_work_files').select('id,user_id,folder_id,name,mime_type,size_bytes,source_kind,index_status,metadata,storage_path,created_at')).order('created_at',{ascending:false});
   fq=folderId?fq.eq('folder_id',folderId):fq.is('folder_id',null);
   const {data:fileRows,error:fe}=await fq;if(fe)throw fe;files=fileRows||[];
   const childFolders=folders.filter(x=>(x.parent_id||null)===(folderId||null)),trail=folderTrail(),body=$('#workBody');
-  body.innerHTML=`<div class="work-desktop-toolbar"><div class="work-breadcrumb"><button data-work-project-root>${esc(project.name)}</button>${trail.map(f=>`<span>›</span><button data-work-crumb="${f.id}">${esc(f.name)}</button>`).join('')}</div><div class="work-toolbar-actions"><button data-work-dupes hidden>Duplikate</button><button data-work-new-folder>＋ Ordner</button><button data-work-upload>↑ Dateien</button></div></div>
+  body.innerHTML=`<div class="work-desktop-toolbar"><div class="work-breadcrumb"><button data-work-project-root>${esc(project?.name||'Büro')}</button>${trail.map(f=>`<span>›</span><button data-work-crumb="${f.id}">${esc(f.name)}</button>`).join('')}</div><div class="work-toolbar-actions"><button data-work-dupes hidden>Duplikate</button><button data-work-new-folder>＋ Ordner</button><button data-work-upload>↑ Dateien</button></div></div>
     <div class="work-drop-hint">Dateien, PDFs, Word, Excel, Bilder oder E-Mails hierher ziehen</div>
     <div class="work-files">
       ${folderId?`<button class="work-file work-folder work-up" data-work-up><span class="work-file-icon">${workTileIcon('back')}</span><strong>Zurück</strong><small>Ordner</small></button>`:''}
@@ -657,23 +664,24 @@ async function renderDesktop(){
   $$('[data-work-folder]').forEach(b=>b.onclick=()=>{folderId=b.dataset.workFolder;void renderDesktop()});
   $('[data-work-up]')?.addEventListener('click',()=>{folderId=folders.find(x=>x.id===folderId)?.parent_id||null;void renderDesktop()});
   $$('[data-work-file]').forEach(b=>b.onclick=()=>void openFile(b.dataset.workFile));
+  await window.TBA_OFFICE_DESKTOP?.enhance({sb,folders,files,refresh:renderDesktop,projectName:project?.name||'Büro'});
   const dupesButton=$('[data-work-dupes]');
   if(dupesButton){dupesButton.onclick=()=>void duplicatesPanel();
     loadDuplicateGroups().then(groups=>{const n=groups.reduce((a,g)=>a+g.length-1,0);if(n&&document.body.contains(dupesButton)){dupesButton.hidden=false;dupesButton.textContent='Duplikate · '+n}}).catch(()=>{})}
 }
-async function newFolder(){const name=window.prompt('Name des Ordners');if(!name?.trim())return;setStatus('Lege Ordner an …');const {error}=await sb.from('minds_work_folders').insert({project_id:project.id,parent_id:folderId,name:name.trim()});setStatus(error?'Der Ordner konnte nicht angelegt werden.':'');if(!error)await renderDesktop()}
+async function newFolder(){const name=window.prompt('Name des Ordners');if(!name?.trim())return;setStatus('Lege Ordner an …');const {error}=await sb.from('minds_work_folders').insert({project_id:project?.id||null,parent_id:folderId,name:name.trim()});setStatus(error?'Der Ordner konnte nicht angelegt werden.':'');if(!error)await renderDesktop()}
 async function uploadFiles(list){
-  const session=await getSession();if(!session||!project)return;
+  const session=await getSession();if(!session||(projectKey!==OFFICE_ROOT&&!project))return;
   const attempted=[...(list||[])],failed=[];let succeeded=0;
   setStatus(`Lade ${attempted.length} Datei${attempted.length===1?'':'en'} hoch …`);
   for(const file of attempted){
-    const path=`${session.user.id}/${project.client_key}/${folderId||'root'}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName(file.name)}`;
+    const path=`${session.user.id}/${project?.client_key||'office'}/${folderId||'root'}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName(file.name)}`;
     let stored=false;
     try{
       const {error:ue}=await sb.storage.from('minds-work').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:false});
       if(ue)throw ue;
       stored=true;
-      const {error:ie}=await sb.from('minds_work_files').insert({project_id:project.id,folder_id:folderId,name:file.name,mime_type:file.type||'application/octet-stream',size_bytes:file.size,storage_path:path,source_kind:sourceKind(file),metadata:{last_modified:file.lastModified||null}});
+      const {error:ie}=await sb.from('minds_work_files').insert({project_id:project?.id||null,folder_id:folderId,name:file.name,mime_type:file.type||'application/octet-stream',size_bytes:file.size,storage_path:path,source_kind:sourceKind(file),metadata:{last_modified:file.lastModified||null}});
       if(ie)throw ie;
       succeeded++;
     }catch(e){
