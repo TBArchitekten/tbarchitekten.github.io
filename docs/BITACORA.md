@@ -20,10 +20,10 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 ### 2026-11-04 · Adjuntos del chat de Romy reutilizados de Window · ChatGPT
 - **Qué cambió y por qué:** Gari exige recuperar las capacidades existentes de Isabella sin crear otra aplicación. Se reactiva el picker, preprocesador y uploader del chat original de Window; Romy almacena archivos en bucket privado por empleado y entrega imágenes/documentos al modelo con el mismo contrato de Window.
 - **Archivos:** app/app.js, app/office-assistant.js, app/romy-transport.js, app/index.html, supabase/functions/office-assistant/index.ts, supabase/functions/office-assistant/romy-attachments.mjs, supabase/migrations/20261104235500_office_romy_uploads_v1.sql, tests/office-romy-attachments.test.mjs y documentación.
-- **Base de datos:** migración preparada, no aplicada todavía.
-- **Deploy de funciones:** pendiente de revisión y CI.
-- **Cómo se probó:** SQL rollback PASS (bucket privado, dueño puede subir/leer, acceso ajeno denegado); CI de rama pendiente de reejecución.
-- **Quedó pendiente o sin probar:** probar subida/lectura autenticada de PDF, imágenes y Office, historial, aceptación Safari y dos empleados.
+- **Base de datos:** migración `office_romy_uploads_v1` aplicada, versión Supabase `20261104230525`; bucket privado y columna de adjuntos con RLS.
+- **Deploy de funciones:** `office-assistant` ACTIVE v4, JWT obligatorio; seis archivos de runtime desplegados.
+- **Cómo se probó:** CI 108/108 PASS; SQL rollback PASS (bucket privado, dueño puede subir/leer, acceso ajeno denegado); esquema, políticas y función verificados live; Security Advisors sin avisos.
+- **Quedó pendiente o sin probar:** merge y frontend web publicado; prueba E2E autenticada de PDF, imágenes y Office, historial de adjuntos, aceptación Safari y dos empleados.
 - **Riesgos o decisiones que necesitan a Gari:** ninguna decisión de interfaz; se mantienen los formatos/tamaños de Window. No compartir adjuntos privados entre empleados.
 - **PR:** #27.
 
