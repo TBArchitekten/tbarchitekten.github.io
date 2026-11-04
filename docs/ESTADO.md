@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (corrección: límite no autorizado del Assistent; PR pendiente).
+**Actualizado:** 04.11.2026, por ChatGPT (límite no autorizado retirado de Supabase; PR #20 de frontend pendiente).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -22,7 +22,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 | Editor de Terminplan | `terminplan.html`, `terminplan-engine.js`, `terminplan-dialogue.js`, `window-editor.css` | Gantt por proyecto y fase (LPH), a partir de los Muster. Historia en `docs/TERMINPLAN-ASSISTENT-v0.1…v0.6.md`. |
 | Funciones de Supabase | `supabase/functions/office-terminplan-ai` | Asistente IA del Terminplan. Modelo `gpt-6.1-terra`; el secreto `TBA_OFFICE_OPENAI_MODEL` lo cambia sin deploy. La clave está en el secreto `TBA_OFFICE_OPENAI_API_KEY`, con cuota por persona. |
 | | `supabase/functions/office-admin` | Alta de miembros y contraseña de inicio (solo admin). |
-| | `supabase/functions/office-assistant` | Servicio de chat individual; ACTIVE v1 con JWT; historial privado por miembro, sin límite diario numérico impuesto; registro de solicitudes por empleado. |
+| | `supabase/functions/office-assistant` | Servicio de chat individual; ACTIVE v2 con JWT; historial privado por miembro, sin límite diario numérico impuesto; registro de solicitudes por empleado. |
 | Base de datos | `supabase/migrations/` | Ver §4. |
 | Pruebas | `tests/`, CI en `.github/workflows/terminplan-audit.yml` | `node --test tests/*.test.cjs tests/*.test.mjs` (87 pasan al 04.11). |
 
@@ -50,7 +50,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - `20261104000500_office_window_fixes`
 - `20261104210000_office_desktop_v1` (aplicada con Supabase MCP como versión `20261104203250`; incluye bucket privado `minds-work`)
 - `20261104220000_office_assistant_personal_v1` (aplicada en Supabase, versión registrada `20261104205847`; 3 tablas, 7 políticas RLS).
-- `20261104223000_office_assistant_remove_unapproved_daily_cap` (PR en preparación; aplicación pendiente).
+- `20261104223000_office_assistant_remove_unapproved_daily_cap` (aplicada como versión Supabase `20261104213325`; sustituye la función de reserva sin cuota numérica diaria).
 
 **Tablas principales:**
 - `office_members`: `role` = `admin` | `projektleiter` | `member`; además `is_active` y `must_change_password`.
@@ -102,7 +102,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 
 ### Próximos pasos concretos (orden revisado por Gari; Desktop integrado)
 1. **Parte C · Desktop compartido (integrado; falta aceptación en navegador)** (PR #16 integrado en main; migración aplicada): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. El autor y los admins pueden renombrar, mover y borrar. Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
-2. **Parte D · Assistent individual (PR #18):** un historial privado por empleado activo, con conversaciones persistentes. Modos Schnell y Gründlich. La cuota de 15 solicitudes diarias que ChatGPT impuso sin acuerdo se retira expresamente; no se establece ningún nuevo máximo diario sin decisión de Gari. El registro de consumo y la deduplicación permanecen. Sin lectura automática de documentos, tareas ni calendarios, ni acciones sobre el sistema. Presupuesto mensual por decidir. Migración y función activas; frontend integrado; falta aceptación real con usuarios.
+2. **Parte D · Assistent individual (PR #18):** un historial privado por empleado activo, con conversaciones persistentes. Modos Schnell y Gründlich. La cuota de 15 solicitudes diarias que ChatGPT impuso sin acuerdo ha sido retirada en Supabase; no se establece ningún nuevo máximo diario sin decisión de Gari. El registro de consumo y la deduplicación permanecen. Sin lectura automática de documentos, tareas ni calendarios, ni acciones sobre el sistema. Presupuesto mensual por decidir. Migración aplicada y Edge Function v2 activa; actualización de frontend en PR #20, pendiente de integración y aceptación real.
 3. **Limpieza sin tocar tablas:** funciones del Planner retirado, enlace «‹ Projekte» en Terminplan y textos de interfaz en alemán. No borrar `office_tasks` ni `office_task_buckets` sin OK explícito.
 4. **Opcional:** clima en Heute (Augsburg) y revisión de mensajes MINDS heredados.
 5. **Aceptación conjunta con 1–2 colegas:** tras integrar C y D, comprobar Heute, Kalender, Planner, Terminplan, permisos, archivos y Assistent en escritorio y móvil. Gari también tiene pendiente revocar la antigua clave OpenAI del asistente anterior.
