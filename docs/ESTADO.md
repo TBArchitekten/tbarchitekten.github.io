@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 05.11.2026, por ChatGPT (Romy PR #29: CI 112/112; Edge v5 activa; merge pendiente, aceptación Safari pendiente).
+**Actualizado:** 05.11.2026, por ChatGPT (PR #29 integrado: Romy v5, 112/112 CI; aceptación auténtica en Safari pendiente).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -13,7 +13,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Contrato visual:** también el Assistent debe usar la interfaz de Window/Isabella (pantalla de chat, compositor, mensajes, voz, navegación responsive), sin inventar otra vista. La cuenta, el historial y los permisos son individuales en TBA Office, mediante backend independiente. PR #22 retira el chat paralelo creado por error en PR #18.
 - **Origen:** la parte de Heute, Kalender y Work es una **copia del web app de Window** (la app personal de Gari, repo `gari01234/minds`, carpetas `apps/isabella` y `shared`, commit `34744c7`). Se copió el código para que se vea y funcione igual; los datos están separados.
 
-**Navegación móvil:** el menú original de Window con cinco accesos (Romy, Heute, Kalender, Work, Tools) es la referencia en `/app/` y también en las páginas raíz de Terminplan/Projekte. El menú de cuenta permanece fuera de la barra inferior, y la administración de Projekte es accesible desde Tools. PR #26 en preparación; aceptación visual Safari pendiente.
+**Navegación móvil:** el menú original de Window con cinco accesos (Romy, Heute, Kalender, Work, Tools) es la referencia en `/app/` y también en las páginas raíz de Terminplan/Projekte. El menú de cuenta permanece fuera de la barra inferior, y la administración de Projekte es accesible desde Tools. PR #26 integrado; aceptación visual Safari pendiente.
 
 ## 2. Mapa del código
 
@@ -25,7 +25,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 | Editor de Terminplan | `terminplan.html`, `terminplan-engine.js`, `terminplan-dialogue.js`, `window-editor.css` | Gantt por proyecto y fase (LPH), a partir de los Muster. Historia en `docs/TERMINPLAN-ASSISTENT-v0.1…v0.6.md`. |
 | Funciones de Supabase | `supabase/functions/office-terminplan-ai` | Asistente IA del Terminplan. Modelo `gpt-6.1-terra`; el secreto `TBA_OFFICE_OPENAI_MODEL` lo cambia sin deploy. La clave está en el secreto `TBA_OFFICE_OPENAI_API_KEY`, con cuota por persona. |
 | | `supabase/functions/office-admin` | Alta de miembros y contraseña de inicio (solo admin). |
-| | `supabase/functions/office-assistant` | Servicio de chat individual; ACTIVE v2 con JWT; historial privado por miembro, sin límite diario numérico impuesto; registro de solicitudes por empleado. |
+| | `supabase/functions/office-assistant` | Servicio personal Romy; ACTIVE v5 con JWT; historial privado por miembro, sin límite diario numérico impuesto; registro de solicitudes por empleado. |
 | Base de datos | `supabase/migrations/` | Ver §4. |
 | Pruebas | `tests/`, CI en `.github/workflows/terminplan-audit.yml` | `node --test tests/*.test.cjs tests/*.test.mjs` (87 pasan al 04.11). |
 
@@ -56,7 +56,8 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - `20261104223000_office_assistant_remove_unapproved_daily_cap` (aplicada como versión Supabase `20261104213325`; sustituye la función de reserva sin cuota numérica diaria).
 - `20261104232000_office_shared_desktop_edit_for_all` (PR #24; **aplicada en TBA Office como 20261104221830**): todos los empleados activos pueden renombrar/mover/borrar compartidos; personales aislados.
 - `20261104232500_office_storage_scope_qualified_name` (aplicada como versión Supabase `20261104222033`; verificada)
-- `20261104234500_office_romy_proposals_review_v1` (**aplicada**, Supabase versión `20261104224513`): propuestas privadas por miembro, acciones solo tras revisión.: corrige variable `name` sombreada en políticas Storage de lectura/subida/borrado por proyecto.
+- `20261104234500_office_romy_proposals_review_v1` (**aplicada**, Supabase versión `20261104224513`): propuestas privadas por miembro, acciones solo tras revisión.
+- `20261104235500_office_romy_uploads_v1` (**aplicada**, Supabase versión `20261104230525`): bucket privado `office-romy-uploads`, políticas owner-only y adjuntos de conversación.
 
 **Tablas principales:**
 - `office_members`: `role` = `admin` | `projektleiter` | `member`; además `is_active` y `must_change_password`.
@@ -75,7 +76,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 
 **Paridad de capacidades Romy/Isabella:** objetivo confirmado por Gari. La interfaz ya reutiliza Window y la ampliación del runtime en PR #25 incorpora streaming y una primera selección de herramientas, pero todavía no todas las capacidades de Isabella. No declarar D completa hasta aceptar sus capacidades reales una por una; reutilizar módulos de Window y aislar Supabase y permisos de empleado. No volver a inventar modos o cuotas.
 
-## 5. Dónde estamos (04.11.2026)
+## 5. Dónde estamos (05.11.2026)
 - **Integrado en main** (PR #10–#18): inicio de sesión, contraseñas, Projekte, Mitglieder, Terminplan con asistente, y la app (Heute, Kalender, Work → Panorama, Planner y Desktop). Desktop aún no tiene aceptación autenticada con personas reales.
 - **Probado:** con datos simulados en escritorio y teléfono (sin errores ni textos en español), consultas RLS en transacciones revertidas, y la página publicada sin sesión (manda al inicio de sesión).
 - **Desktop no probado todavía con personas reales.** Al 04.11 solo existe la cuenta de Gari (admin) y **no hay proyectos** en la base de datos.
@@ -112,7 +113,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 
 ### Próximos pasos concretos (orden revisado por Gari; Desktop integrado)
 1. **Parte C · Desktop compartido (integrado; falta aceptación en navegador)** (PR #16 integrado en main; migración aplicada): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. **Todos los miembros activos pueden renombrar, mover y borrar carpetas y archivos compartidos**, independientemente del autor; los archivos personales conservan el acceso individual (PR #24). Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
-2. **Parte D · Romy individual (PR #18, #22, #25 y #27):** historial privado por empleado, interfaz de chat de Window, respuestas progresivas, selección automática de modelo con el router de Window, lectura por JWT de proyectos/tareas/calendario y archivos de texto, propuestas revisables de creación de tareas/terminos y adjuntos PDF/Office/imágenes con almacenamiento privado. La cuota diaria no autorizada se retiró, así como los modos manuales Schnell y Gründlich. **Todavía no hay paridad total con Isabella:** faltan artefactos, Skills, memoria avanzada, trabajo persistente y otras herramientas; está pendiente E2E real de la integración y del proveedor con distintos tipos de archivo. PR #29 corrige envíos con solo archivos y calendario Europe/Berlin durante cambios DST; Edge Function `office-assistant` v5 ya desplegada con JWT. CI 112/112 PASS; merge frontend/documentación todavía pendiente. El presupuesto mensual sigue sin acordarse.
+2. **Parte D · Romy individual (PR #18, #22, #25 y #27):** historial privado por empleado, interfaz de chat de Window, respuestas progresivas, selección automática de modelo con el router de Window, lectura por JWT de proyectos/tareas/calendario y archivos de texto, propuestas revisables de creación de tareas/terminos y adjuntos PDF/Office/imágenes con almacenamiento privado. La cuota diaria no autorizada se retiró, así como los modos manuales Schnell y Gründlich. **Todavía no hay paridad total con Isabella:** faltan artefactos, Skills, memoria avanzada, trabajo persistente y otras herramientas; está pendiente E2E real de la integración y del proveedor con distintos tipos de archivo. PR #29 corrige envíos con solo archivos y calendario Europe/Berlin durante cambios DST; Edge Function `office-assistant` v5 ya desplegada con JWT. CI 112/112 PASS; cambios integrados en main (PR #29). El presupuesto mensual sigue sin acordarse.
 
 3. **Limpieza sin tocar tablas:** funciones del Planner retirado, enlace «‹ Projekte» en Terminplan y textos de interfaz en alemán. No borrar `office_tasks` ni `office_task_buckets` sin OK explícito.
 4. **Opcional:** clima en Heute (Augsburg) y revisión de mensajes MINDS heredados.
@@ -120,7 +121,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 
 **Después:** vínculo Planner↔Terminplan, Planliste, Controlling LPH/horas, Kostenschätzung/Kostenberechnung, Projektakte y Microsoft M365, según la hoja de ruta de arriba.
 
-**Romy y archivos adjuntos:** el código Window para elegir archivos, normalizar imágenes y subir PDF/Office está integrado desde PR #27 (`office-romy-window-attachments-v1`), con bucket privado `office-romy-uploads` y RLS estricta por empleado. El backend pasará los ficheros al modelo siguiendo el contrato `input_image`/`input_file` de Window. Migración aplicada en TBA Office como versión Supabase `20261104230525`, Edge Function `office-assistant` ACTIVE v4 con JWT. CI 108/108 PASS. Aceptación de subida y lectura en Safari autenticado pendiente; no afirmarla antes del E2E. El historial visible conserva las referencias a los adjuntos. Frontend integrado en main con PR #27, CI 108/108 PASS; aceptación autenticada con documentos aún pendiente. La lectura multimodal de documentos en turnos posteriores y el resto de la paridad con Isabella siguen pendientes.
+**Romy y archivos adjuntos:** el código Window para elegir archivos, normalizar imágenes y subir PDF/Office está integrado desde PR #27 (`office-romy-window-attachments-v1`), con bucket privado `office-romy-uploads` y RLS estricta por empleado. El backend pasa las referencias de adjuntos al modelo siguiendo el contrato `input_image`/`input_file` de Window, con carga autorizada por JWT. La aceptación con archivos reales sigue pendiente. Migración aplicada en TBA Office como versión Supabase `20261104230525`, Edge Function `office-assistant` ACTIVE v5 con JWT. CI 108/108 PASS. Aceptación de subida y lectura en Safari autenticado pendiente; no afirmarla antes del E2E. El historial visible conserva las referencias a los adjuntos. Frontend integrado en main con PR #27, CI 108/108 PASS; aceptación autenticada con documentos aún pendiente. La lectura multimodal de documentos en turnos posteriores y el resto de la paridad con Isabella siguen pendientes.
 
 ## 7. Cuidado con
 - **La copia de Window es un fork.** Si se trae código nuevo de Window, hay que volver a aplicar los cambios de oficina:

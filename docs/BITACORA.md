@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · Cierre de robustez Romy v5 · ChatGPT
+- Qué cambió y por qué: PR #29 integrado en main (squash 6aa9a063). El servidor permite enviar solo archivos sin romper CHECK de contenido, consulta calendarios por límites Europe/Berlin y exige offset explícito para las propuestas de citas.
+- Archivos: docs/ESTADO.md, docs/BITACORA.md; código de PR #29 ya integrado.
+- Base de datos: sin migración nueva; RLS y cupos inalterados.
+- Deploy de funciones: office-assistant ACTIVE v5 con JWT, verificado en Supabase.
+- Cómo se probó: CI 112/112 PASS; pruebas de cambio horario verano/invierno, fechas inválidas y adjuntos sin texto; Security Advisors sin advertencias.
+- Quedó pendiente o sin probar: aceptación de Safari y pruebas E2E con sesiones reales; artifacts, Skills, memoria avanzada y trabajo persistente todavía no portados de Window.
+- Riesgos o decisiones: no declarar paridad total ni afirmar que el proveedor ha procesado PDF/DOCX reales sin la prueba. No introducir cuotas.
+- PR: #30 (solo cierre documental).
+
+
 ### 2026-11-05 · Romy: adjuntos sin texto y fechas Europe/Berlin · ChatGPT
 - Qué cambió y por qué: revisión de PR #25–#28. Se detectó el fallo potencial de un mensaje compuesto solo por adjuntos debido al CHECK de texto no vacío. El calendario consultaba fechas UTC, no días de la oficina en Europe/Berlin, lo que podía omitir citas cercanas a medianoche. Las propuestas de eventos sin offset podían interpretarse en la zona horaria del servidor.
 - Archivos: supabase/functions/office-assistant/index.ts, romy-tools.mjs, nuevo romy-time.mjs, tests/office-romy-time-and-attachment.test.mjs y docs.
