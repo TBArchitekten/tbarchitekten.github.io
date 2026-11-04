@@ -2540,7 +2540,7 @@ async function uploadChatFiles(files){
     const id=globalThis.crypto?.randomUUID?.()||uid();
     const safeExt=String(prepared.ext||'bin').replace(/[^a-z0-9]/gi,'').toLowerCase()||'bin';
     const path=session.user.id+'/chat/'+today()+'/'+id+'.'+safeExt;
-    const {error}=await sb.storage.from('isabella-uploads').upload(path,prepared.blob,{contentType:prepared.mime,upsert:false});
+    const {error}=await sb.storage.from(OFFICE?'office-romy-uploads':'isabella-uploads').upload(path,prepared.blob,{contentType:prepared.mime,upsert:false});
     if(error)throw new Error('No pude subir '+String(file.name||'el archivo')+': '+error.message);
     out.push({path,mime:prepared.mime,name:file.name||('Archivo.'+safeExt),size:Number(file.size||0)});
   }
@@ -2548,10 +2548,10 @@ async function uploadChatFiles(files){
 }
 async function hydrateChatImages(){
   const imgs=[...document.querySelectorAll('img[data-chat-image-path]')].filter(x=>!x.dataset.loaded);
-  for(const img of imgs)observeStorageImage(img,'isabella-uploads',img.dataset.chatImagePath||'');
+  for(const img of imgs)observeStorageImage(img,OFFICE?'office-romy-uploads':'isabella-uploads',img.dataset.chatImagePath||'');
   const files=[...document.querySelectorAll('a[data-chat-file-path]')].filter(x=>!x.dataset.loaded);
   for(const link of files){
-    const path=link.dataset.chatFilePath||'',url=await signedAssetUrl('isabella-uploads',path,900);
+    const path=link.dataset.chatFilePath||'',url=await signedAssetUrl(OFFICE?'office-romy-uploads':'isabella-uploads',path,900);
     if(url&&link.isConnected){link.href=url;link.dataset.loaded='1'}
   }
 }
@@ -2564,20 +2564,17 @@ function bind(){
  const i=$('#chatInput'),imageInput=$('#chatImageInput'),attachButton=$('#attachButton');
  i.addEventListener('focus',()=>syncOrbCompact(true));
  const autosize=()=>{i.style.height='auto';i.style.height=Math.min(i.scrollHeight,156)+'px'};
- attachButton.onclick=()=>OFFICE
-   ?window.TBA_OFFICE_ASSISTANT?.showAttachmentNotice?.()
-   :imageInput.click();
- imageInput.onchange=()=>{if(OFFICE){imageInput.value='';window.TBA_OFFICE_ASSISTANT?.showAttachmentNotice?.();return}const chosen=[...imageInput.files||[]],next=chosen.filter(chatUploadSupported);if(chosen.length&&!next.length)say('assistant','Dieses Format wird noch nicht unterstützt. Möglich sind PDF, Office-Dokumente, Text, CSV, JSON oder Bilder.');pendingChatFiles=[...pendingChatFiles,...next].slice(0,3);imageInput.value='';renderPendingChatFiles()};
+ attachButton.onclick=()=>imageInput.click();
+ imageInput.onchange=()=>{const chosen=[...imageInput.files||[]],next=chosen.filter(chatUploadSupported);if(chosen.length&&!next.length)say('assistant','Dieses Format wird noch nicht unterstützt. Möglich sind PDF, Office-Dokumente, Text, CSV, JSON oder Bilder.');pendingChatFiles=[...pendingChatFiles,...next].slice(0,3);imageInput.value='';renderPendingChatFiles()};
  let chatSending=false;
  const send=async()=>{
    if(chatSending)return;
    const t=i.value.trim();if(!t&&!pendingChatFiles.length)return;
-   if(OFFICE&&pendingChatFiles.length){window.TBA_OFFICE_ASSISTANT?.showAttachmentNotice?.();return}
    chatSending=true;
    const replyTo=pendingReplyTo?{...pendingReplyTo}:null;
    const files=[...pendingChatFiles];$('#sendButton').disabled=true;attachButton.disabled=true;
    try{
-     const attachments=!OFFICE&&files.length?await uploadChatFiles(files):[];
+     const attachments=files.length?await uploadChatFiles(files):[];
      clearSentChatFiles();i.value='';autosize();
      await handle(t,attachments,replyTo);
    }catch(e){say('assistant',e?.message||'Die Datei konnte nicht gesendet werden.')}
@@ -4697,7 +4694,7 @@ window.ISABELLA_APP={
       id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
       text:String(m.content||m.text||''),
       at:String(m.created_at||m.at||new Date().toISOString()),
-      metadata:{},sources:[],attachments:[],artifacts:[],quickReplies:[]
+      metadata:{},sources:[],attachments:Array.isArray(m.attachments)?m.attachments:[],artifacts:[],quickReplies:[]
     }));
     renderMessages(true);
   },
