@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Cierre de paridad visual del Assistent · ChatGPT
+- Qué cambió y por qué: PR #22 integrado en main (squash 68ee48c). Se eliminó la interfaz de chat paralela y se restauró la reutilización del chat original de Window para cada empleado de la oficina.
+- Archivos: docs/ESTADO.md y docs/BITACORA.md.
+- Base de datos: sin cambios, conversaciones privadas por usuario conservadas.
+- Deploy de funciones: ninguno, office-assistant ACTIVE v2 continúa.
+- Cómo se probó: CI 95/95 PASS, verificación de referencias en main, CSS anterior ya no oculta el chat de Window.
+- Quedó pendiente o sin probar: prueba visual en Safari móvil y primera respuesta autenticada; adjuntos no habilitados en el backend de Office.
+- Riesgos o decisiones que necesitan a Gari: ninguna decisión nueva de interfaz; Window sigue siendo el contrato visual.
+- PR: #23.
+
+
 ### 2026-11-04 · Restitución de la interfaz Window del Assistent · ChatGPT
 - **Qué cambió y por qué:** Gari mostró capturas comparando el chat de Office con Window e identificó una divergencia contra el contrato de reutilización. En PR #18 se había creado y mostrado un chat nuevo en lugar de usar la interfaz existente. La corrección elimina esa pantalla paralela y conecta el compositor, mensajes y navegación originales al backend individual de TBA Office.
 - **Archivos:** app/app.js, app/office-assistant.js (adaptador de datos, no UI paralela), app/office-assistant.css (solo ajustes discretos), app/index.html, tests/office-assistant.test.mjs, AGENTS.md, docs/ESTADO.md y docs/BITACORA.md.
