@@ -35,7 +35,7 @@ create index minds_work_files_folder_idx on public.minds_work_files(project_id, 
 create index minds_work_files_user_idx on public.minds_work_files(user_id);
 
 -- A folder never changes project scope. Moves cannot create cycles.
--- including office-root (null-project) folders attached to project documents.
+-- Office-root (null-project) folders cannot be attached to project documents.
 create function public.office_desktop_folder_guard() returns trigger
 language plpgsql security invoker set search_path = '' as $$
 begin
@@ -122,6 +122,7 @@ create policy office_files_read on public.minds_work_files for select to authent
 create policy office_files_insert on public.minds_work_files for insert to authenticated
   with check (user_id = (select auth.uid()) and (select private.office_is_member())
     and split_part(storage_path, '/', 1) = (select auth.uid())::text
+    and split_part(storage_path, '/', 2) = coalesce(project_id::text, 'office')
     and (project_id is null or exists (
       select 1 from public.office_projects p where p.id = project_id and p.status = 'aktiv'
     )));
@@ -139,12 +140,32 @@ values ('minds-work', 'minds-work', false)
 on conflict (id) do nothing;
 
 -- Storage access is independent from metadata RLS. Keep BOTH private.
+-- The 'personal' prefix is used by Window's personal task attachments:
+-- it stays private to the owner even though project files are shared.
 create policy office_work_storage_read on storage.objects for select to authenticated
-  using (bucket_id = 'minds-work' and (select private.office_is_member()));
+  using (bucket_id = 'minds-work' and (select private.office_is_member())
+    and (
+      (storage.foldername(name))[2] = 'office'
+      or ((storage.foldername(name))[2] = 'personal'
+          and (storage.foldername(name))[1] = (select auth.uid())::text)
+      or exists (
+        select 1 from public.office_projects p
+        where p.id::text = (storage.foldername(name))[2]
+      )
+    ));
 create policy office_work_storage_insert on storage.objects for insert to authenticated
   with check (bucket_id = 'minds-work' and (select private.office_is_member())
-    and (storage.foldername(name))[1] = (select auth.uid())::text);
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and (
+      (storage.foldername(name))[2] in ('office','personal')
+      or exists (
+        select 1 from public.office_projects p
+        where p.id::text = (storage.foldername(name))[2] and p.status = 'aktiv'
+      )
+    ));
 create policy office_work_storage_delete on storage.objects for delete to authenticated
   using (bucket_id = 'minds-work' and (select private.office_is_member())
-    and ((storage.foldername(name))[1] = (select auth.uid())::text
-      or (select private.office_is_admin())));
+    and (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      or ((select private.office_is_admin()) and (storage.foldername(name))[2] <> 'personal')
+    ));

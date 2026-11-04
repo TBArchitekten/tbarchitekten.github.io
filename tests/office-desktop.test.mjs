@@ -26,7 +26,7 @@ test('Nested folder operations are real and deletion requires explicit confirmat
 });
 test('Files and metadata are private to active Office members, but visible across project teams',()=>{
   const sql=read('supabase/migrations/20261104210000_office_desktop_v1.sql');
-  for(const t of ['minds_work_folders','minds_work_files'])assert.match(sql,new RegExp('alter table public\\\\.'+t+' enable row level security;'));
+  for(const t of ['minds_work_folders','minds_work_files'])assert.ok(sql.includes('alter table public.'+t+' enable row level security;'));
   for(const name of ['office_folders_read','office_files_read','office_work_storage_read','office_work_storage_insert'])
     assert.match(sql,new RegExp('create policy '+name));
   assert.match(sql,/private\.office_is_member\(\)/);
@@ -35,6 +35,7 @@ test('Files and metadata are private to active Office members, but visible acros
   assert.match(sql,/storage\.foldername\(name\)/);
   assert.match(sql,/office_folder_cycle/);
   assert.match(sql,/office_file_folder_scope/);
+  assert.match(sql,/storage\.foldername\(name\)\)\[2\] = 'personal'/);
   assert.doesNotMatch(sql,/to anon/);
   assert.doesNotMatch(sql,/service_role/);
 });
