@@ -8,25 +8,40 @@
   const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
   const {esc,formatDate}=C;
   const views={auth:$('#authView'),password:$('#passwordView'),app:$('#appView')};
-  let member=null,user=null,templates=[],instances=[],projects=[],members=[],creating=false,passwordVoluntary=false,booting=null,currentProjectId=null;
+  let member=null,user=null,templates=[],instances=[],projects=[],members=[],creating=false,passwordVoluntary=false,booting=null,currentProjectId=null,currentProjectTab='panorama';
 
   function showOnly(name){for(const [k,el] of Object.entries(views))el.hidden=k!==name}
   // One view at a time; the sidebar marks its lens (Work holds the project pages, Tools the Muster).
-  const LENS_OF={work:'work',project:'work',tools:'tools',plans:'tools',members:null};
-  function switchView(name,{id=null,push=true}={}){
+  const LENS_OF={kalender:'kalender',work:'work',project:'work',tools:'tools',plans:'tools',members:null};
+  function switchView(name,{id=null,tab='panorama',push=true}={}){
     if(name==='members'&&member?.role!=='admin')name='work';
     if(name==='project'&&!projects.some(p=>p.id===id))name='work';
     $$('.view').forEach(v=>v.hidden=true);
     $$('.lens-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===LENS_OF[name]));
     ($('#'+name+'View')||$('#workView')).hidden=false;
     closeAccountMenu();
-    if(name==='project'){currentProjectId=id;renderProjectPage()}
+    if(name==='project'){currentProjectId=id;renderProjectPage();showProjectTab(tab)}
+    if(name==='kalender')window.TBA_PLANNER?.openKalender();
     if(name==='members')void loadMembers();
-    const hash=C.hashFor(name,id);
+    const hash=C.hashFor(name,id,name==='project'?tab:null);
     if(push&&location.hash!==hash)history.pushState(null,'',hash);
     window.scrollTo(0,0);
   }
-  function routeFromHash(){const r=C.viewFromHash(location.hash);switchView(r.view,{id:r.id,push:false})}
+  function routeFromHash(){const r=C.viewFromHash(location.hash);switchView(r.view,{id:r.id,tab:r.tab||'panorama',push:false})}
+  // Project page: Panorama (facts and Terminpläne) and Planner (buckets and tasks).
+  function showProjectTab(tab){
+    currentProjectTab=tab==='planner'?'planner':'panorama';
+    $$('[data-project-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.projectTab===currentProjectTab)));
+    $('#projectPanorama').hidden=currentProjectTab!=='panorama';
+    $('#projectPlanner').hidden=currentProjectTab!=='planner';
+    $('#projectNewPlanBtn').hidden=currentProjectTab!=='panorama'||projects.find(p=>p.id===currentProjectId)?.status!=='aktiv';
+    if(currentProjectTab==='planner')window.TBA_PLANNER?.openProject(currentProjectId);
+  }
+  $$('[data-project-tab]').forEach(b=>b.onclick=()=>{
+    showProjectTab(b.dataset.projectTab);
+    const hash=C.hashFor('project',currentProjectId,currentProjectTab);
+    if(location.hash!==hash)history.pushState(null,'',hash);
+  });
   window.addEventListener('popstate',routeFromHash);
 
   async function ownMembership(uid){
@@ -133,7 +148,7 @@
       <div><p class="eyebrow">Status</p><strong>${esc(p.status)}</strong></div>
       <div><p class="eyebrow">Terminpläne</p><strong>${plans.length}</strong></div>`;
     $('#projectPlanCount').textContent=planWord(plans.length);
-    $('#projectNewPlanBtn').hidden=p.status!=='aktiv';
+    $('#projectNewPlanBtn').hidden=p.status!=='aktiv'||currentProjectTab!=='panorama';
     const host=$('#projectPlanList');host.innerHTML='';host.className=plans.length?'card row-list':'';
     if(!plans.length){host.innerHTML='<div class="empty">Noch kein Terminplan für dieses Projekt. Mit „+ Terminplan“ aus einem Office-Muster anlegen.</div>';return}
     for(const plan of plans)host.append(planRow(plan,{withProject:false}));
@@ -351,6 +366,15 @@
   document.addEventListener('click',e=>{if(!e.target.closest('.lens-account'))closeAccountMenu()});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAccountMenu()});
 
+  // What planner.js needs from the page: the client, who is signed in, colleagues and projects.
+  window.TBA_OFFICE_APP=Object.freeze({
+    sb,
+    get user(){return user},get member(){return member},
+    get members(){return members},get projects(){return projects},
+    memberName,
+    leadsProject:id=>member?.role==='admin'||!!projects.find(p=>p.id===id&&p.projektleiter_id===user?.id),
+    openProject:(id,tab)=>switchView('project',{id,tab})
+  });
   sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT')showOnly('auth')});
   sb.auth.getSession().then(({data})=>bootSafely(data.session)).catch(console.error);
 })();
