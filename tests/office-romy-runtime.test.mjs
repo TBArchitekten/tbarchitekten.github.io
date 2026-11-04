@@ -29,7 +29,7 @@ test('Romy requires explicit owner review before actions, enforced by user RLS',
  const code=read('supabase/functions/office-assistant/romy-tools.mjs');
  const sql=read('supabase/migrations/20261104234500_office_romy_proposals_review_v1.sql');
  assert.equal(ROMY_TOOLS.filter(x=>x.name.startsWith('propose_')).length,2);
- for(const k of ['reviewRomyProposal','userDb.from(table).insert(values)','status:"applying"','eq("status","pending")']){
+ for(const k of ['reviewRomyProposal','userDb.from(table).insert(values)','const status=decision==="reject"?"rejected":"applying"','eq("status","pending")']){
    assert.ok(code.includes(k),'missing '+k);
  }
  assert.ok(sql.includes('office_romy_proposals_owner_read'));
