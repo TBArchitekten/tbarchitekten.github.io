@@ -78,9 +78,10 @@ test('Schema: buckets and tasks behind RLS, one rule set for read, write and del
 test('The first Kalender and Planner are retired: the start page links into the office app',()=>{
   const index=read('index.html'),app=read('app.js');
   assert.doesNotMatch(index,/planner\.js|id="kalenderView"|data-project-tab=|id="taskDialog"|id="bucketDialog"/);
-  for(const [section,label] of [['feed','Heute'],['calendar','Kalender'],['work','Work']])
+  for(const [section,label] of [['feed','Heute'],['calendar','Kalender']])
     assert.match(index,new RegExp(`<a class="lens-nav-item" href="\\./app/#section=${section}" aria-label="${label}">`));
-  assert.match(index,/data-view="work" aria-label="Projekte"/);
+  assert.match(index,/data-view="work" aria-label="Work"/);
+  assert.match(index,/href=".\/app\/#section=assistant" aria-label="Romy"/);
   assert.match(app,/if\(r\.view==='kalender'\)\{location\.replace\('\.\/app\/#section=calendar'\);return\}/);
   assert.match(app,/\$\('#projectWorkLink'\)\.href='\.\/app\/#section=work&project='\+encodeURIComponent\(p\.id\)/);
   assert.doesNotMatch(app,/TBA_PLANNER|TBA_OFFICE_APP/);

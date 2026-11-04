@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Titus Bernhard Architekten · Office</title>
-  <link rel="stylesheet" href="./style.css?v=5">
+  <link rel="stylesheet" href="./style.css?v=office4">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
   <script src="./office-config.js?v=1"></script>
 </head>
@@ -46,6 +46,7 @@
     <nav id="lenses" class="lenses" aria-label="Office">
       <div class="lenses-brand">Titus Bernhard <strong>Architekten</strong><small>Office</small></div>
       <div class="lenses-heading">ANSICHTEN</div>
+      <a class="lens-nav-item" href="./app/#section=assistant" aria-label="Romy"><span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></span><span class="lens-copy"><strong>Romy</strong><small>Assistentin</small></span></a>
       <a class="lens-nav-item" href="./app/#section=feed" aria-label="Heute">
         <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg></span>
         <span class="lens-copy"><strong>Heute</strong><small>Ihr Tag</small></span>
@@ -54,13 +55,9 @@
         <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
         <span class="lens-copy"><strong>Kalender</strong><small>Termine und Aufgaben</small></span>
       </a>
-      <a class="lens-nav-item" href="./app/#section=work" aria-label="Work">
+      <button class="lens-nav-item" data-view="work" aria-label="Work">
         <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18"/></svg></span>
-        <span class="lens-copy"><strong>Work</strong><small>Panorama und Planner</small></span>
-      </a>
-      <button class="lens-nav-item active" data-view="work" aria-label="Projekte">
-        <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
-        <span class="lens-copy"><strong>Projekte</strong><small>Anlegen und verwalten</small></span>
+        <span class="lens-copy"><strong>Work</strong><small>Projekte verwalten</small></span>
       </button>
       <button class="lens-nav-item" data-view="tools" aria-label="Tools">
         <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>

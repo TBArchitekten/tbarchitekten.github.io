@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (PR #22 integrado: Assistent de TBA Office reutiliza el chat original de Window; prueba móvil real pendiente).
+**Actualizado:** 04.11.2026, por ChatGPT (PR #24: permisos y Storage aplicados, interfaz pendiente de merge; Romy es el nombre público).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -52,6 +52,8 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - `20261104210000_office_desktop_v1` (aplicada con Supabase MCP como versión `20261104203250`; incluye bucket privado `minds-work`)
 - `20261104220000_office_assistant_personal_v1` (aplicada en Supabase, versión registrada `20261104205847`; 3 tablas, 7 políticas RLS).
 - `20261104223000_office_assistant_remove_unapproved_daily_cap` (aplicada como versión Supabase `20261104213325`; sustituye la función de reserva sin cuota numérica diaria).
+- `20261104232000_office_shared_desktop_edit_for_all` (PR #24; **aplicada en TBA Office como 20261104221830**): todos los empleados activos pueden renombrar/mover/borrar compartidos; personales aislados.
+- `20261104232500_office_storage_scope_qualified_name` (aplicada como versión Supabase `20261104222033`; verificada): corrige variable `name` sombreada en políticas Storage de lectura/subida/borrado por proyecto.
 
 **Tablas principales:**
 - `office_members`: `role` = `admin` | `projektleiter` | `member`; además `is_active` y `must_change_password`.
@@ -65,6 +67,10 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Tareas de proyecto:** las leen todos los miembros. Las cambian el autor, quien está asignado (persona o equipo), la dirección del proyecto y los admins. Las borran el autor, la dirección y los admins.
 - **Buckets:** los leen todos los miembros. Se crean solo en proyectos `aktiv`. Los cambian el autor, la dirección y los admins.
 - **Equipo de proyecto:** solo la dirección y los admins.
+
+**Unificación de navegación (PR #24):** actualmente el enlace Tools salta desde la shell Window a la página raíz con seis iconos. Se prepara una vista Tools integrada en la shell y una barra inferior de cinco iconos equivalente para la administración. Romy es el nombre público del asistente individual; los símbolos técnicos heredados `ISABELLA_*` siguen siendo compatibilidad interna, no otra asistente.
+
+**Paridad de capacidades Romy/Isabella:** objetivo confirmado por Gari. La interfaz ya reutiliza Window, pero el runtime de Office aún NO ofrece las mismas herramientas, streaming, archivos y acciones que Isabella. No declarar D completa hasta aceptar sus capacidades reales una por una; reutilizar módulos de Window y aislar Supabase y permisos de empleado. No volver a inventar modos o cuotas.
 
 ## 5. Dónde estamos (04.11.2026)
 - **Integrado en main** (PR #10–#18): inicio de sesión, contraseñas, Projekte, Mitglieder, Terminplan con asistente, y la app (Heute, Kalender, Work → Panorama, Planner y Desktop). Desktop aún no tiene aceptación autenticada con personas reales.
@@ -102,8 +108,8 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 - Vigilar el gasto de tokens.
 
 ### Próximos pasos concretos (orden revisado por Gari; Desktop integrado)
-1. **Parte C · Desktop compartido (integrado; falta aceptación en navegador)** (PR #16 integrado en main; migración aplicada): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. El autor y los admins pueden renombrar, mover y borrar. Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
-2. **Parte D · Assistent individual (PR #18 y corrección visual PR #22):** un historial privado por empleado activo, con conversaciones persistentes. Modos Schnell y Gründlich. La cuota de 15 solicitudes diarias que ChatGPT impuso sin acuerdo ha sido retirada en Supabase; no se establece ningún nuevo máximo diario sin decisión de Gari. El registro de consumo y la deduplicación permanecen. Sin lectura automática de documentos, tareas ni calendarios, ni acciones sobre el sistema. Presupuesto mensual por decidir. Migración aplicada, Edge Function v2 activa y frontend integrado en PR #20. PR #22 sustituye la interfaz paralela por un adaptador de conversaciones sobre el chat original de Window: el chat se sigue representando mediante app.js y shell.js, sin almacenar mensajes en localStorage; historial privado accesible desde el menú. Esta corrección está integrada en main (PR #22, squash 68ee48c), con CI 95/95 PASS. Falta aceptación visual y funcional en Safari con cuentas autenticadas.
+1. **Parte C · Desktop compartido (integrado; falta aceptación en navegador)** (PR #16 integrado en main; migración aplicada): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. **Todos los miembros activos pueden renombrar, mover y borrar carpetas y archivos compartidos**, independientemente del autor; los archivos personales conservan el acceso individual (PR #24). Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
+2. **Parte D · Romy individual por empleado (PR #18 y corrección visual PR #22):** un historial privado por empleado activo, con conversaciones persistentes. Modos Schnell y Gründlich. La cuota de 15 solicitudes diarias que ChatGPT impuso sin acuerdo ha sido retirada en Supabase; no se establece ningún nuevo máximo diario sin decisión de Gari. El registro de consumo y la deduplicación permanecen. Sin lectura automática de documentos, tareas ni calendarios, ni acciones sobre el sistema. Presupuesto mensual por decidir. Migración aplicada, Edge Function v2 activa y frontend integrado en PR #20. PR #22 sustituye la interfaz paralela por un adaptador de conversaciones sobre el chat original de Window: el chat se sigue representando mediante app.js y shell.js, sin almacenar mensajes en localStorage; historial privado accesible desde el menú. Esta corrección está integrada en main (PR #22, squash 68ee48c), con CI 95/95 PASS. Falta aceptación visual y funcional en Safari con cuentas autenticadas.
 3. **Limpieza sin tocar tablas:** funciones del Planner retirado, enlace «‹ Projekte» en Terminplan y textos de interfaz en alemán. No borrar `office_tasks` ni `office_task_buckets` sin OK explícito.
 4. **Opcional:** clima en Heute (Augsburg) y revisión de mensajes MINDS heredados.
 5. **Aceptación conjunta con 1–2 colegas:** tras integrar C y D, comprobar Heute, Kalender, Planner, Terminplan, permisos, archivos y Assistent en escritorio y móvil. Gari también tiene pendiente revocar la antigua clave OpenAI del asistente anterior.

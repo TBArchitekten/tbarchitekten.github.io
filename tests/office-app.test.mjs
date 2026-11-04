@@ -29,7 +29,7 @@ test('Office loads only its own assistant, not personal Window AI modules',()=>{
   const shell=src('shell.js');
   for(const nav of ['bandeja','readings','thoughts'])
     assert.match(shell,new RegExp(`data-nav="${nav}"[^>]*hidden`),nav+' stays hidden');
-  assert.match(shell,/data-nav="assistant" aria-label="Assistent"/);
+  assert.match(shell,/data-nav="assistant" aria-label="Romy"/);
   assert.match(shell,/<button data-work-view="desktop">Desktop<\/button>/,'Desktop is now available');
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
