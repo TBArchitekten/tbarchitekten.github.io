@@ -5,16 +5,32 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const sql=read('supabase/migrations/20261104220000_office_assistant_personal_v1.sql');
 const edge=read('supabase/functions/office-assistant/index.ts');
 
-test('Assistant is present in Office navigation but not Window personal memory',()=>{
-  const shell=read('app/shell.js'),html=read('app/index.html'),frontend=read('app/office-assistant.js');
+test('Assistant reuses Window chat rather than building another UI',()=>{
+  const shell=read('app/shell.js'),html=read('app/index.html');
+  const frontend=read('app/office-assistant.js');
+  const app=read('app/app.js'),css=read('app/office-assistant.css');
   assert.match(shell,/data-nav="assistant" aria-label="Assistent"/);
   assert.doesNotMatch(shell,/data-nav="assistant" aria-label="Assistent" hidden/);
-  assert.match(html,/office-assistant\.js\?v=office5/);
-  assert.match(html,/office-assistant\.css\?v=office4/);
+  assert.match(shell,/id="assistantScreen"/);
+  assert.match(shell,/id="messages"/);
+  assert.match(shell,/id="chatInput"/);
+  assert.match(shell,/id="sendButton"/);
+  assert.match(shell,/id="micButton"/);
+  assert.match(shell,/id="attachButton"/);
+  assert.match(html,/office-assistant\\.js\\?v=office6/);
+  assert.match(html,/office-assistant\\.css\\?v=office6/);
+  assert.match(html,/app\\.js\\?v=office6/);
   assert.match(frontend,/office_assistant_conversations/);
   assert.match(frontend,/office_assistant_messages/);
-  assert.doesNotMatch(frontend,/isabella-chat|WINDOW_NATIVE|window\.MINDS_WORK/);
-  assert.match(frontend,/textContent/); // Never render server messages as HTML.
+  assert.match(frontend,/app\\(\\)\\?\\.setOfficeMessages/);
+  assert.doesNotMatch(frontend,/workspace\\.innerHTML|office-chat-layout|office-chat-sidebar|officeChatInput|officeChatForm/);
+  assert.doesNotMatch(css,/#assistantScreen>\\.assistant-scroll[^}]*display:none/i);
+  assert.doesNotMatch(css,/#assistantScreen>\\.composer-wrap[^}]*display:none/i);
+  assert.match(app,/window\\.TBA_OFFICE_ASSISTANT\\.send/);
+  assert.match(app,/OFFICE\\?\\{\\.\\.\\.state,messages:\\[\\]\\}:state/);
+  assert.match(app,/OFFICE\\?officeChatMessages:normalizeMessages/);
+  assert.doesNotMatch(frontend,/isabella-chat|WINDOW_NATIVE|window\\.MINDS_WORK/);
+  assert.match(frontend,/textContent/);
   new Function(frontend);
 });
 

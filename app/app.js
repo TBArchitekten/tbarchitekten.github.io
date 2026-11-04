@@ -196,9 +196,9 @@ function load(){try{
   x.feedThreads=x.feedThreads&&typeof x.feedThreads==='object'&&!Array.isArray(x.feedThreads)?x.feedThreads:{};
   x.feedSignals=Array.isArray(x.feedSignals)?x.feedSignals:[];
   x.memory=(Array.isArray(x.memory)?x.memory:[]).map((m,i)=>{if(typeof m!=='object')return {id:'memory-'+i,kind:'context',content:String(m),status:'active',confidence:1,source:'local'};return {...m,kind:normalizeMemoryKind(m.kind),status:m.status==='deleted'?'deleted':(m.status||'active')}});
-  x.messages=normalizeMessages(x.messages);return x
+  x.messages=OFFICE?[]:normalizeMessages(x.messages);return x
 }catch{return JSON.parse(JSON.stringify(base))}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch{} window.ISABELLA_STATE=state;try{window.dispatchEvent(new CustomEvent('isabella:state',{detail:JSON.parse(JSON.stringify(state))}))}catch{} renderToday();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(OFFICE?{...state,messages:[]}:state))}catch{} window.ISABELLA_STATE=state;try{window.dispatchEvent(new CustomEvent('isabella:state',{detail:JSON.parse(JSON.stringify(state))}))}catch{} renderToday();}
 function pretty(s,opt={weekday:'long',day:'numeric',month:'long'}){return fromIso(s).toLocaleDateString('de-DE',opt)}
 function cat(id){return state.categories.find(x=>x.id===id)?.name||''} function project(id){return state.projects.find(x=>x.id===id)?.name||''}
 function fallbackColor(seed=''){
@@ -2358,6 +2358,14 @@ async function syncDurableChatJobs(){
 }
 
 async function handle(text,attachments=[],replyTo=null){
+  // Reuse Window's composer and message renderer. Office has its own authenticated
+  // conversation service; never invoke Isabella's runtime, proposals or local fallback.
+  if(OFFICE){
+    clearReplyTarget();
+    if(!window.TBA_OFFICE_ASSISTANT?.send)return;
+    await window.TBA_OFFICE_ASSISTANT.send(text,{attachments,replyTo});
+    return;
+  }
   const copy=(attachments||[]).map(x=>({path:x.path,mime:x.mime,name:x.name}));
   clearAssistantStream();
   // Persist the binding atomically with the first user turn; syncing between
@@ -2556,17 +2564,20 @@ function bind(){
  const i=$('#chatInput'),imageInput=$('#chatImageInput'),attachButton=$('#attachButton');
  i.addEventListener('focus',()=>syncOrbCompact(true));
  const autosize=()=>{i.style.height='auto';i.style.height=Math.min(i.scrollHeight,156)+'px'};
- attachButton.onclick=()=>imageInput.click();
- imageInput.onchange=()=>{const chosen=[...imageInput.files||[]],next=chosen.filter(chatUploadSupported);if(chosen.length&&!next.length)say('assistant','Dieses Format wird noch nicht unterstützt. Möglich sind PDF, Office-Dokumente, Text, CSV, JSON oder Bilder.');pendingChatFiles=[...pendingChatFiles,...next].slice(0,3);imageInput.value='';renderPendingChatFiles()};
+ attachButton.onclick=()=>OFFICE
+   ?window.TBA_OFFICE_ASSISTANT?.showAttachmentNotice?.()
+   :imageInput.click();
+ imageInput.onchange=()=>{if(OFFICE){imageInput.value='';window.TBA_OFFICE_ASSISTANT?.showAttachmentNotice?.();return}const chosen=[...imageInput.files||[]],next=chosen.filter(chatUploadSupported);if(chosen.length&&!next.length)say('assistant','Dieses Format wird noch nicht unterstützt. Möglich sind PDF, Office-Dokumente, Text, CSV, JSON oder Bilder.');pendingChatFiles=[...pendingChatFiles,...next].slice(0,3);imageInput.value='';renderPendingChatFiles()};
  let chatSending=false;
  const send=async()=>{
    if(chatSending)return;
    const t=i.value.trim();if(!t&&!pendingChatFiles.length)return;
+   if(OFFICE&&pendingChatFiles.length){window.TBA_OFFICE_ASSISTANT?.showAttachmentNotice?.();return}
    chatSending=true;
    const replyTo=pendingReplyTo?{...pendingReplyTo}:null;
    const files=[...pendingChatFiles];$('#sendButton').disabled=true;attachButton.disabled=true;
    try{
-     const attachments=files.length?await uploadChatFiles(files):[];
+     const attachments=!OFFICE&&files.length?await uploadChatFiles(files):[];
      clearSentChatFiles();i.value='';autosize();
      await handle(t,attachments,replyTo);
    }catch(e){say('assistant',e?.message||'Die Datei konnte nicht gesendet werden.')}
@@ -4673,11 +4684,22 @@ window.addEventListener('isabella:synced',()=>{
 window.ISABELLA_APP={
   getState:()=>JSON.parse(JSON.stringify(state)),
   replaceState:(next)=>{
+    const officeChatMessages=OFFICE?state.messages.slice():null;
     const visibleScreen=state.screen||'assistant';
     state={...base,...next,screen:visibleScreen,assistantPreferences:{...base.assistantPreferences,...(next?.assistantPreferences||{})},feedPreferences:canonicalFeedPreferences(next?.feedPreferences||{})};
     state.assistantPreferences.attention=canonicalAttentionPreferences(next?.assistantPreferences?.attention||state.assistantPreferences.attention);
-    state.messages=normalizeMessages(state.messages);
+    state.messages=OFFICE?officeChatMessages:normalizeMessages(state.messages);
     save();renderMessages(false);renderToday();renderCalendar();
+  },
+  setOfficeMessages:(rows)=>{
+    if(!OFFICE)return;
+    state.messages=(Array.isArray(rows)?rows:[]).slice(-250).map(m=>({
+      id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
+      text:String(m.content||m.text||''),
+      at:String(m.created_at||m.at||new Date().toISOString()),
+      metadata:{},sources:[],attachments:[],artifacts:[],quickReplies:[]
+    }));
+    renderMessages(true);
   },
   addAssistantMessage:(text)=>say('assistant',text),
   addUserMessage:(text)=>say('user',text),

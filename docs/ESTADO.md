@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (corrección de cuota del Assistent integrada en PR #20; aceptación real pendiente).
+**Actualizado:** 04.11.2026, por ChatGPT (PR #22: corrección de paridad visual del Assistent de Office con Window, pendiente de integración).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -10,6 +10,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Repositorio:** `TBArchitekten/tbarchitekten.github.io`. Es público y se publica con GitHub Pages: todo lo que entra a `main` está en línea en ~1 minuto.
 - **Backend:** Supabase, proyecto "TBA Office" (ref `ynzsbemisjvfgbqcqliq`, Frankfurt, plan Pro).
 - **Idioma de la interfaz:** alemán. Gari escribe en español.
+- **Contrato visual:** también el Assistent debe usar la interfaz de Window/Isabella (pantalla de chat, compositor, mensajes, voz, navegación responsive), sin inventar otra vista. La cuenta, el historial y los permisos son individuales en TBA Office, mediante backend independiente. PR #22 retira el chat paralelo creado por error en PR #18.
 - **Origen:** la parte de Heute, Kalender y Work es una **copia del web app de Window** (la app personal de Gari, repo `gari01234/minds`, carpetas `apps/isabella` y `shared`, commit `34744c7`). Se copió el código para que se vea y funcione igual; los datos están separados.
 
 ## 2. Mapa del código
@@ -35,7 +36,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Kalender de cada persona:** sus tareas propias, las que tiene asignadas (`assignee_person_id` o lista de equipo) y sus propios Termine.
 - **Categorías:** `arbeit` y `personal` por persona. Una tarea de proyecto sin categoría propia se muestra como Arbeit.
 - **Equipo de proyecto:** se elige entre los miembros de la oficina (`isabella_people` = vista de `office_members`). Solo la dirección del proyecto y los admins lo cambian.
-- **Oculto a propósito:** Assistent, Eingang (Bandeja), Lecturas, Thoughts, clima, feed, la pestaña Desktop y los adjuntos de tareas.
+- **Oculto a propósito:** Eingang (Bandeja), Lecturas y Thoughts; el Assistent y Desktop están integrados, aunque siguen pendientes de aceptación con usuarios.
 
 ## 4. Base de datos y permisos
 **Migraciones**, todas aplicadas a Supabase al 04.11.2026:
@@ -102,7 +103,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 
 ### Próximos pasos concretos (orden revisado por Gari; Desktop integrado)
 1. **Parte C · Desktop compartido (integrado; falta aceptación en navegador)** (PR #16 integrado en main; migración aplicada): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. El autor y los admins pueden renombrar, mover y borrar. Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
-2. **Parte D · Assistent individual (PR #18):** un historial privado por empleado activo, con conversaciones persistentes. Modos Schnell y Gründlich. La cuota de 15 solicitudes diarias que ChatGPT impuso sin acuerdo ha sido retirada en Supabase; no se establece ningún nuevo máximo diario sin decisión de Gari. El registro de consumo y la deduplicación permanecen. Sin lectura automática de documentos, tareas ni calendarios, ni acciones sobre el sistema. Presupuesto mensual por decidir. Migración aplicada, Edge Function v2 activa y frontend integrado en PR #20; aceptación con usuarios reales pendiente.
+2. **Parte D · Assistent individual (PR #18 y corrección visual PR #22):** un historial privado por empleado activo, con conversaciones persistentes. Modos Schnell y Gründlich. La cuota de 15 solicitudes diarias que ChatGPT impuso sin acuerdo ha sido retirada en Supabase; no se establece ningún nuevo máximo diario sin decisión de Gari. El registro de consumo y la deduplicación permanecen. Sin lectura automática de documentos, tareas ni calendarios, ni acciones sobre el sistema. Presupuesto mensual por decidir. Migración aplicada, Edge Function v2 activa y frontend integrado en PR #20. PR #22 sustituye la interfaz paralela por un adaptador de conversaciones sobre el chat original de Window: el chat se sigue representando mediante app.js y shell.js, sin almacenar mensajes en localStorage; historial privado accesible desde el menú. Esta corrección todavía necesita CI, merge y aceptación visual/autenticada con usuarios reales.
 3. **Limpieza sin tocar tablas:** funciones del Planner retirado, enlace «‹ Projekte» en Terminplan y textos de interfaz en alemán. No borrar `office_tasks` ni `office_task_buckets` sin OK explícito.
 4. **Opcional:** clima en Heute (Augsburg) y revisión de mensajes MINDS heredados.
 5. **Aceptación conjunta con 1–2 colegas:** tras integrar C y D, comprobar Heute, Kalender, Planner, Terminplan, permisos, archivos y Assistent en escritorio y móvil. Gari también tiene pendiente revocar la antigua clave OpenAI del asistente anterior.

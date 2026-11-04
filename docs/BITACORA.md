@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Restitución de la interfaz Window del Assistent · ChatGPT
+- **Qué cambió y por qué:** Gari mostró capturas comparando el chat de Office con Window e identificó una divergencia contra el contrato de reutilización. En PR #18 se había creado y mostrado un chat nuevo en lugar de usar la interfaz existente. La corrección elimina esa pantalla paralela y conecta el compositor, mensajes y navegación originales al backend individual de TBA Office.
+- **Archivos:** app/app.js, app/office-assistant.js (adaptador de datos, no UI paralela), app/office-assistant.css (solo ajustes discretos), app/index.html, tests/office-assistant.test.mjs, AGENTS.md, docs/ESTADO.md y docs/BITACORA.md.
+- **Base de datos:** sin cambios; las conversaciones permanecen privadas por usuario en Supabase.
+- **Deploy de funciones:** ninguno; se conserva office-assistant ACTIVE v2.
+- **Cómo se probó:** sintaxis JS verificada; CI y aceptación visual móvil/autenticada pendientes.
+- **Quedó pendiente o sin probar:** CI, integración del PR y pruebas en móvil con cuenta real; audio y archivos solo cuando el backend tenga soporte verificado. Menú de conversaciones utiliza modal de Window.
+- **Riesgos o decisiones que necesitan a Gari:** ninguna decisión adicional para respetar el diseño ya acordado. No inventar una UI distinta por empleado.
+- **PR:** #22, en preparación.
+
+
 ### 2026-11-04 · Cierre documental: límite del Assistent retirado · ChatGPT
 - Qué cambió y por qué: PR #20 integrado en main (squash 508252b); retirado el límite diario que no había sido acordado con Gari.
 - Archivos: docs/ESTADO.md y docs/BITACORA.md.

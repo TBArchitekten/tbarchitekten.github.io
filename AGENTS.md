@@ -17,6 +17,7 @@ Si trabajas sin acceso al repositorio (un chat normal), termina dándole a Gari 
 ## Reglas que no se negocian
 - **Nunca pidas a Gari que pegue contraseñas, tokens ni claves en el chat.** Las claves viven en Supabase (Secrets) o en el panel del proveedor. En el navegador solo existe la clave publicable de `office-config.js`.
 - **El repositorio es público** (GitHub Pages). No escribas aquí datos de clientes, correos personales ni nada confidencial, tampoco en los docs.
+- **Paridad visual y de interacción con Window.** TBA Office reutiliza la interfaz de chat, compositor, mensajes, navegación y responsive de Window. Para adaptar datos de oficina, crea un adaptador al backend y modifica mínimamente la capa existente; no construyas una segunda interfaz de asistente ni ocultes la original sin decisión expresa de Gari. Separación de datos/personas en backend, no duplicación de UI.
 - **Office y Window están separados.** Window (gari01234/minds) es la app personal de Gari. De ahí se puede copiar código, pero nunca datos ni conexiones a su Supabase. Las tablas de Bernried y el proyecto antiguo de Supabase no se tocan.
 - **SQL destructivo** (DROP, DELETE, TRUNCATE, quitar columnas o políticas) solo con el OK explícito de Gari para ese cambio concreto.
 - **Toda tabla nueva lleva RLS** con los helpers `private.office_*`, probada en una transacción que se revierte.

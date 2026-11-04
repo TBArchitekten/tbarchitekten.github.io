@@ -1,202 +1,210 @@
-// Personal assistant in TBA Office. No imported Window/Isabella memory, tools or chat state.
+// TBA Office · adapter for Window's ORIGINAL assistant screen.
+// Do not build a second chat interface. Only wire Window's composer, message
+// renderer, navigation and modal to Office's per-employee Supabase history.
 (()=>{
 'use strict';
 const sb=window.MINDS_SUPABASE;
-const root=document.getElementById('assistantScreen');
-if(!sb||!root)return;
-let userId=null,conversationId=null,busy=false,threads=[],ticket=0;
-const E=(tag,className,text)=>{
-  const el=document.createElement(tag);
-  if(className)el.className=className;
-  if(text!==undefined)el.textContent=String(text);
-  return el;
-};
-const workspace=E('div','office-chat-layout');
-workspace.innerHTML=`
-  <aside class="office-chat-sidebar">
-    <div class="office-chat-sidebar-head">
-      <strong>Meine Gespräche</strong>
-      <button type="button" id="officeChatNew">＋ Neu</button>
-    </div>
-    <div id="officeChatThreads" class="office-chat-threads" aria-label="Meine Gespräche"></div>
-  </aside>
-  <section class="office-chat-main" aria-label="Persönlicher Assistent">
-    <header class="office-chat-head">
-      <div><h1>Assistent</h1><small id="officeChatIdentity">Persönliches Gespräch</small></div>
-      <label class="office-chat-mode-label">Antwortmodus
-        <select id="officeChatMode" aria-label="Antwortmodus">
-          <option value="standard">Schnell</option>
-          <option value="gruendlich">Gründlich</option>
-        </select>
-      </label>
-    </header>
-    <div id="officeChatMessages" class="office-chat-messages" role="log" aria-live="polite"></div>
-    <form id="officeChatForm" class="office-chat-form">
-      <label for="officeChatInput" class="office-chat-sr-only">Ihre Nachricht</label>
-      <textarea id="officeChatInput" rows="2" maxlength="4000" placeholder="Schreiben Sie Ihrem Assistenten …"></textarea>
-      <button type="submit" id="officeChatSend">Senden</button>
-    </form>
-    <div id="officeChatStatus" class="office-chat-status" role="status" aria-live="polite"></div>
-  </section>
-`;
-root.appendChild(workspace);
-const $=sel=>workspace.querySelector(sel);
-function status(message=''){const el=$('#officeChatStatus');if(el)el.textContent=message}
-function errorText(error,body){
-  const code=String(body?.error||'');
-  const messages={
-    request_already_received:'Diese Nachricht wurde bereits empfangen. Bitte laden Sie den Verlauf erneut.',
+const screen=document.getElementById('assistantScreen');
+const app=()=>window.ISABELLA_APP;
+if(!sb||!screen)return;
+
+let ownerId=null,threadId=null,threads=[],rows=[],busy=false,loadVersion=0,mode='standard';
+const composer=screen.querySelector('.composer-wrap');
+const statusEl=document.createElement('div');
+statusEl.id='officeAssistantStatus';
+statusEl.className='office-assistant-status';
+statusEl.setAttribute('role','status');
+statusEl.setAttribute('aria-live','polite');
+statusEl.hidden=true;
+composer?.insertBefore(statusEl,composer.firstChild);
+function status(label=''){
+  statusEl.textContent=label;
+  statusEl.hidden=!label;
+}
+function errorMessage(code){
+  const errors={
+    request_already_received:'Die Nachricht wurde bereits empfangen. Bitte prüfen Sie den Verlauf.',
     conversation_not_found:'Dieses Gespräch ist für Ihr Konto nicht verfügbar.',
     member_not_active:'Ihr Office-Zugang ist nicht aktiv.',
-    ai_provider_unavailable:'Der KI-Dienst ist momentan nicht verfügbar.',
-    ai_timeout_or_network:'Die Anfrage hat zu lange gedauert. Bitte prüfen Sie den Verlauf vor erneutem Senden.',
-    assistant_not_configured:'Der Assistent ist serverseitig noch nicht vollständig eingerichtet.',
-    request_registration_unavailable:'Ihre Anfrage konnte nicht sicher erfasst werden. Bitte versuchen Sie es erneut.',
+    ai_provider_unavailable:'Der KI-Dienst antwortet derzeit nicht.',
+    ai_timeout_or_network:'Die Antwort ist unbestätigt. Prüfen Sie den Verlauf vor erneutem Senden.',
+    assistant_not_configured:'Der Assistent ist serverseitig nicht vollständig eingerichtet.',
+    request_registration_unavailable:'Die Anfrage konnte nicht sicher erfasst werden.',
   };
-  return messages[code]||'Die Nachricht konnte nicht abgeschlossen werden. Bitte prüfen Sie den Verlauf und versuchen Sie es erneut.';
+  return errors[code]||'Die Antwort konnte nicht bestätigt werden. Prüfen Sie den Gesprächsverlauf.';
 }
-function emptyState(){
-  const wrap=E('div','office-chat-empty');
-  wrap.appendChild(E('h2','', 'Ihr persönlicher Assistent'));
-  wrap.appendChild(E('p','',
-    'Ihre Gespräche gehören nur zu Ihrem Konto. Der Assistent kann derzeit keine Projektdateien, Aufgaben oder Kalender selbstständig lesen und nichts verändern.'));
-  return wrap;
-}
-function bubble(role,content,provisional=false){
-  const article=E('article','office-chat-bubble '+(role==='user'?'from-user':'from-assistant')+(provisional?' pending':'')); 
-  article.appendChild(E('div','office-chat-bubble-author',role==='user'?'Sie':'Assistent'));
-  article.appendChild(E('div','office-chat-bubble-text',content));
-  return article;
-}
-function drawMessages(rows){
-  const out=$('#officeChatMessages');out.replaceChildren();
-  if(!(rows||[]).length){out.appendChild(emptyState());return}
-  for(const m of rows)out.appendChild(bubble(m.role,m.content));
-  out.scrollTop=out.scrollHeight;
-}
-function drawThreads(){
-  const target=$('#officeChatThreads');target.replaceChildren();
-  if(!threads.length)target.appendChild(E('p','office-chat-no-threads','Noch keine Gespräche.'));
-  for(const t of threads){
-    const row=E('div','office-chat-thread'+(t.id===conversationId?' active':''));
-    const open=E('button','office-chat-thread-open',t.title);
-    open.type='button';open.title=t.title;
-    open.addEventListener('click',()=>void selectThread(t.id));
-    const rename=E('button','office-chat-thread-small','✎');
-    rename.type='button';rename.title='Gespräch umbenennen';
-    rename.setAttribute('aria-label','Umbenennen: '+t.title);
-    rename.addEventListener('click',()=>void renameThread(t));
-    const remove=E('button','office-chat-thread-small','×');
-    remove.type='button';remove.title='Gespräch löschen';
-    remove.setAttribute('aria-label','Löschen: '+t.title);
-    remove.addEventListener('click',()=>void deleteThread(t));
-    row.append(open,rename,remove);target.appendChild(row);
-  }
+function display(content=rows){
+  app()?.setOfficeMessages?.(content);
 }
 async function refreshThreads(){
-  if(!userId)return;
+  if(!ownerId)return false;
   const {data,error}=await sb.from('office_assistant_conversations')
-    .select('id,title,updated_at').eq('user_id',userId)
+    .select('id,title,updated_at').eq('user_id',ownerId)
     .order('updated_at',{ascending:false}).limit(100);
-  if(error){status('Gespräche konnten nicht geladen werden.');return}
-  threads=data||[];drawThreads();
+  if(error){status('Die Gesprächsliste konnte nicht geladen werden.');return false}
+  threads=data||[];
+  return true;
 }
-async function selectThread(id){
-  if(busy)return;
-  conversationId=id;drawThreads();
-  const current=++ticket;
-  status('Gespräch wird geladen …');
+async function loadThread(id,{internal=false}={}){
+  if(!ownerId||!id||(busy&&!internal))return false;
+  const serial=++loadVersion;
   const {data,error}=await sb.from('office_assistant_messages')
     .select('id,role,content,created_at').eq('conversation_id',id)
     .order('created_at',{ascending:true}).order('id',{ascending:true}).limit(250);
-  if(ticket!==current)return;
-  if(error){status('Nachrichten konnten nicht geladen werden.');return}
-  drawMessages(data||[]);status('');
+  if(serial!==loadVersion)return false;
+  if(error){status('Die Nachrichten konnten nicht geladen werden.');return false}
+  threadId=id;rows=data||[];display();status('');
+  return true;
 }
-function newThread(){
+function startNew(){
   if(busy)return;
-  ticket++;conversationId=null;drawThreads();drawMessages([]);status('');
-  $('#officeChatInput').focus();
+  ++loadVersion;threadId=null;rows=[];display();status('');
+  document.getElementById('chatInput')?.focus();
 }
 async function renameThread(thread){
   if(busy)return;
-  const value=window.prompt('Neuer Gesprächstitel:',thread.title);
-  if(value===null||value.trim()===thread.title)return;
-  if(!value.trim()||value.trim().length>140){status('Bitte einen gültigen Titel angeben.');return}
+  const name=window.prompt('Gespräch umbenennen:',thread.title);
+  if(name===null||name.trim()===thread.title)return;
+  if(!name.trim()||name.trim().length>140){status('Ungültiger Gesprächstitel.');return}
   const {error}=await sb.from('office_assistant_conversations')
-    .update({title:value.trim()}).eq('id',thread.id).eq('user_id',userId);
+    .update({title:name.trim()}).eq('id',thread.id).eq('user_id',ownerId);
   if(error){status('Umbenennen fehlgeschlagen.');return}
-  await refreshThreads();status('Titel aktualisiert.');
+  await refreshThreads();openHistory();
 }
 async function deleteThread(thread){
   if(busy)return;
-  if(!window.confirm('Gespräch „'+thread.title+'“ mit allen Nachrichten endgültig löschen?'))return;
+  if(!window.confirm('Gespräch „'+thread.title+'“ endgültig löschen?'))return;
   const {error}=await sb.from('office_assistant_conversations')
-    .delete().eq('id',thread.id).eq('user_id',userId);
-  if(error){status('Das Gespräch konnte nicht gelöscht werden.');return}
-  if(conversationId===thread.id)newThread();
-  await refreshThreads();status('Gespräch gelöscht.');
+    .delete().eq('id',thread.id).eq('user_id',ownerId);
+  if(error){status('Gespräch konnte nicht gelöscht werden.');return}
+  if(threadId===thread.id)startNew();
+  await refreshThreads();openHistory();
 }
-async function send(event){
-  event?.preventDefault?.();
-  if(busy||!userId)return;
-  const input=$('#officeChatInput'),message=input.value.trim();
-  if(!message||message.length>4000)return;
-  if(!crypto?.randomUUID){status('Dieser Browser unterstützt keine sichere Nachrichten-ID.');return}
+function element(tag,text,className){
+  const el=document.createElement(tag);
+  if(text!=null)el.textContent=String(text);
+  if(className)el.className=className;
+  return el;
+}
+function openHistory(){
+  if(!ownerId||busy)return;
+  app()?.openModal?.('Meine Gespräche','');
+  const body=document.getElementById('modalBody');
+  if(!body)return;
+  body.replaceChildren();
+  const controls=element('div',null,'office-assistant-history-controls');
+  const newBtn=element('button','＋ Neues Gespräch','secondary');
+  newBtn.type='button';
+  newBtn.addEventListener('click',()=>{app()?.closeModal?.();startNew()});
+  controls.appendChild(newBtn);
+  const label=element('label','Antwortmodus ','office-assistant-mode');
+  const select=element('select');
+  for(const [value,title] of [['standard','Schnell'],['gruendlich','Gründlich']]){
+    const option=element('option',title);option.value=value;select.appendChild(option);
+  }
+  select.value=mode;
+  select.addEventListener('change',()=>{mode=select.value});
+  label.appendChild(select);
+  controls.appendChild(label);
+  body.appendChild(controls);
+  if(!threads.length){
+    body.appendChild(element('p','Noch keine Gespräche.','small'));
+    return;
+  }
+  const list=element('div',null,'office-assistant-history');
+  for(const thread of threads){
+    const line=element('div',null,'office-assistant-history-row');
+    const open=element('button',thread.title,'office-assistant-history-open');
+    open.type='button';
+    if(thread.id===threadId)open.setAttribute('aria-current','true');
+    open.addEventListener('click',async()=>{
+      app()?.closeModal?.();
+      await loadThread(thread.id);
+    });
+    const rename=element('button','✎','office-assistant-history-edit');
+    rename.type='button';rename.setAttribute('aria-label','Umbenennen: '+thread.title);
+    rename.addEventListener('click',()=>void renameThread(thread));
+    const remove=element('button','×','office-assistant-history-edit');
+    remove.type='button';remove.setAttribute('aria-label','Löschen: '+thread.title);
+    remove.addEventListener('click',()=>void deleteThread(thread));
+    line.append(open,rename,remove);list.appendChild(line);
+  }
+  body.appendChild(list);
+}
+function showAttachmentNotice(){
+  status('Dateianhänge im Büro-Chat sind noch nicht freigeschaltet. Text und Sprache funktionieren.');
+}
+async function send(message,{attachments=[]}={}){
+  await initialized;
+  if(busy)return;
+  if(!ownerId){status('Bitte melden Sie sich erneut im Office an.');return}
+  if(attachments.length){showAttachmentNotice();return}
+  const text=String(message||'').trim();
+  if(!text||text.length>4000){status('Bitte eine Nachricht mit maximal 4000 Zeichen eingeben.');return}
+  if(!globalThis.crypto?.randomUUID){status('Dieser Browser unterstützt keine sichere Nachrichten-ID.');return}
+  busy=true;
+  const requestId=crypto.randomUUID();
+  const targetThread=threadId;
+  display([...rows,{id:requestId,role:'user',content:text,created_at:new Date().toISOString()}]);
+  const sendButton=document.getElementById('sendButton');
+  if(sendButton)sendButton.disabled=true;
   let failure='';
-  busy=true;$('#officeChatSend').disabled=true;
-  $('#officeChatMode').disabled=true;$('#officeChatNew').disabled=true;
-  const target=$('#officeChatMessages');
-  if(target.querySelector('.office-chat-empty'))target.replaceChildren();
-  target.appendChild(bubble('user',message,true));
-  target.scrollTop=target.scrollHeight;
-  input.value='';input.disabled=true;
-  status('Antwort wird vorbereitet …');
+  status('Der Assistent antwortet …');
   try{
     const {data,error}=await sb.functions.invoke('office-assistant',{
-      body:{message,mode:$('#officeChatMode').value,conversation_id:conversationId,request_id:crypto.randomUUID()}
+      body:{message:text,mode,conversation_id:targetThread,request_id:requestId}
     });
     if(error){
       let body={};
       try{body=await error.context?.clone?.().json()}catch{}
-      failure=errorText(error,body);
-      return;
-    }
-    if(!data?.conversation_id||!data?.reply)throw new Error('incomplete_reply');
-    conversationId=data.conversation_id;
-    await refreshThreads();
-    await selectThread(conversationId);
-    status('');
-  }catch(error){
-    console.error('office_assistant_ui_error',String(error?.name||'request_failed'));
-    failure='Die Antwort konnte nicht bestätigt werden. Bitte prüfen Sie den Gesprächsverlauf.';
+      failure=errorMessage(body?.error);
+    }else if(data?.conversation_id&&data?.reply){
+      threadId=data.conversation_id;
+    }else failure=errorMessage('invalid_reply');
+  }catch(err){
+    console.error('office_assistant_request_error',String(err?.name||'request_error'));
+    failure=errorMessage('request_unconfirmed');
   }finally{
-    busy=false;input.disabled=false;$('#officeChatSend').disabled=false;
-    $('#officeChatMode').disabled=false;$('#officeChatNew').disabled=false;
+    busy=false;
+    if(sendButton)sendButton.disabled=false;
     await refreshThreads();
-    if(conversationId)await selectThread(conversationId);
-    else drawMessages([]);
+    const toOpen=threadId||threads[0]?.id;
+    if(toOpen)await loadThread(toOpen,{internal:true});
+    else{rows=[];display();}
     if(failure)status(failure);
-    if(!input.value)input.focus();
   }
 }
+function addMenuButton(id,title,action){
+  if(document.getElementById(id))return;
+  const signout=document.getElementById('officeSignOut');
+  if(!signout?.parentElement)return;
+  const button=element('button',title,'office-assistant-menu-action');
+  button.id=id;button.type='button';
+  button.addEventListener('click',()=>{
+    document.getElementById('closeDrawer')?.click();
+    action();
+  });
+  signout.parentElement.insertBefore(button,signout);
+}
+addMenuButton('officeAssistantHistory','Meine Gespräche',()=>void refreshThreads().then(openHistory));
+addMenuButton('officeAssistantNew','Neues Gespräch',startNew);
 async function init(){
   const {data:{session},error}=await sb.auth.getSession();
   if(error||!session){status('Bitte melden Sie sich im Office an.');return}
-  const {data:member}=await sb.from('office_members')
-    .select('display_name,is_active,must_change_password').eq('user_id',session.user.id).maybeSingle();
-  if(!member?.is_active||member.must_change_password){status('Der Office-Zugang ist nicht aktiv.');return}
-  userId=session.user.id;
-  $('#officeChatIdentity').textContent=(member.display_name||'Ihr Konto')+' · Persönlicher Verlauf';
-  drawMessages([]);await refreshThreads();
+  const {data:member, error:memberError}=await sb.from('office_members')
+    .select('is_active,must_change_password').eq('user_id',session.user.id).maybeSingle();
+  if(memberError||!member?.is_active||member.must_change_password){
+    status('Ihr Office-Zugang ist nicht aktiv.');return;
+  }
+  ownerId=session.user.id;
+  rows=[];display();
+  if(await refreshThreads()&&threads.length)await loadThread(threads[0].id);
 }
-$('#officeChatNew').addEventListener('click',newThread);
-$('#officeChatForm').addEventListener('submit',event=>void send(event));
-$('#officeChatInput').addEventListener('keydown',event=>{
-  if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();void send(event)}
+const initialized=init();
+sb.auth.onAuthStateChange?.((_event,session)=>{
+  if(ownerId&&session?.user?.id!==ownerId){
+    ownerId=null;threadId=null;threads=[];rows=[];display();
+  }
 });
-window.addEventListener('office:member',event=>{
-  if(!event.detail?.is_active && userId){userId=null;newThread();status('Der Office-Zugang ist nicht aktiv.')}
-});
-void init();
+window.TBA_OFFICE_ASSISTANT={send,openHistory,startNew,showAttachmentNotice};
 })();
