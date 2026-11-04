@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Cierre documental: límite del Assistent retirado · ChatGPT
+- Qué cambió y por qué: PR #20 integrado en main (squash 508252b); retirado el límite diario que no había sido acordado con Gari.
+- Archivos: docs/ESTADO.md y docs/BITACORA.md.
+- Base de datos: sin migración adicional; cambio aplicado anteriormente como versión 20261104213325.
+- Deploy de funciones: office-assistant ACTIVE v2, JWT obligatorio.
+- Cómo se probó: 95/95 pruebas CI; función viva sin rama daily_limit; nueva interfaz en main; 32 reservas válidas con rollback.
+- Quedó pendiente o sin probar: aceptación autenticada con usuarios y decisión explícita de presupuesto.
+- Riesgos o decisiones que necesitan a Gari: las llamadas al modelo siguen teniendo coste real, aunque no hay máximo diario de la aplicación.
+- PR: #21.
+
 ### 2026-11-04 · Retirada de cuota no acordada del Assistent · ChatGPT
 - Qué cambió y por qué: el límite diario de 15 consultas por miembro fue una decisión unilateral de ChatGPT, no aceptada por Gari. Se retira sin crear otra cuota arbitraria.
 - Archivos: migración office_assistant_remove_unapproved_daily_cap.sql, función office-assistant, interfaz, pruebas y documentación.
