@@ -51,7 +51,7 @@ async function loadThread(id,{internal=false}={}){
   const all=[];
   for(let offset=0;;offset+=1000){
     const {data,error}=await sb.from('office_assistant_messages')
-      .select('id,role,content,attachments,created_at').eq('conversation_id',id)
+      .select('id,role,content,attachments,metadata,created_at').eq('conversation_id',id)
       .order('created_at',{ascending:true}).order('id',{ascending:true}).range(offset,offset+999);
     if(serial!==loadVersion)return false;
     if(error){status('Die Nachrichten konnten nicht geladen werden.');return false}

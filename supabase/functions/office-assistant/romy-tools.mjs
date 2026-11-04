@@ -8,6 +8,13 @@ export const ROMY_TOOLS=[
  {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments overlapping an inclusive date range in Europe/Berlin. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_files",description:"List filenames and metadata in the shared Office or project Desktop. project_id can be omitted for the shared Büro root.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},search:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"read_text_file",description:"Read text/markdown/CSV/JSON source material from a shared Desktop file by exact file UUID. Other formats may require an attachment; do not pretend to read them.",strict:false,parameters:{type:"object",properties:{file_id:{type:"string"}},required:["file_id"],additionalProperties:false}},
+ {type:"function",name:"create_document",
+ description:"Produce an actual downloadable DOCX, PDF or TXT document from drafted content, using the original Window artifact makers. The document is privately stored for this employee; it is not automatically project truth or shared with Office Desktop.",
+ strict:false,parameters:{type:"object",properties:{
+   kind:{type:"string",enum:["docx","pdf","txt"]},
+   title:{type:"string"},
+   content:{type:"string",description:"Complete document content written for the employee, with Markdown headings and paragraphs; not a brief description."}
+ },required:["kind","title","content"],additionalProperties:false}},
  {type:"function",name:"propose_create_task",description:"Register a proposal to CREATE a task, not an actual change. It will be applied only after the employee explicitly approves it.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},due_date:{type:"string"},project_id:{type:"string"},notes:{type:"string"}},required:["title"],additionalProperties:false}},
  {type:"function",name:"propose_create_event",description:"Register a proposal to CREATE an appointment in the user's personal calendar. It is NOT written until the employee explicitly confirms.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},starts_at:{type:"string",description:"ISO-8601 with explicit UTC Z or timezone offset for Europe/Berlin (e.g. +01:00/+02:00); never infer an ungrounded clock time."},ends_at:{type:"string",description:"ISO-8601 with explicit UTC Z or timezone offset for Europe/Berlin."},project_id:{type:"string"},notes:{type:"string"}},required:["title","starts_at","ends_at"],additionalProperties:false}},
 ];
