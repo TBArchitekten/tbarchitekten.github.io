@@ -9,7 +9,7 @@ test('Assistant is present in Office navigation but not Window personal memory',
   const shell=read('app/shell.js'),html=read('app/index.html'),frontend=read('app/office-assistant.js');
   assert.match(shell,/data-nav="assistant" aria-label="Assistent"/);
   assert.doesNotMatch(shell,/data-nav="assistant" aria-label="Assistent" hidden/);
-  assert.match(html,/office-assistant\.js\?v=office4/);
+  assert.match(html,/office-assistant\.js\?v=office5/);
   assert.match(html,/office-assistant\.css\?v=office4/);
   assert.match(frontend,/office_assistant_conversations/);
   assert.match(frontend,/office_assistant_messages/);
