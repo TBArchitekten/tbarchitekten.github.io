@@ -1,19 +1,19 @@
+import { validOfficeDate, berlinDateRangeUtc, parseExplicitZonedInstant } from "./romy-time.mjs";
 // Adapted tool boundary for Romy using Window's explicit tool/approval discipline.
 // Queries execute with the employee's JWT and the Office RLS policies,
 // never with a shared service-role reader.
 export const ROMY_TOOLS=[
  {type:"function",name:"list_projects",description:"Read the office project catalog (shared with active office members).",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
  {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. Filter optionally by due date or project UUID.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
- {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments within a date range. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
+ {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments overlapping an inclusive date range in Europe/Berlin. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_files",description:"List filenames and metadata in the shared Office or project Desktop. project_id can be omitted for the shared Büro root.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},search:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"read_text_file",description:"Read text/markdown/CSV/JSON source material from a shared Desktop file by exact file UUID. Other formats may require an attachment; do not pretend to read them.",strict:false,parameters:{type:"object",properties:{file_id:{type:"string"}},required:["file_id"],additionalProperties:false}},
  {type:"function",name:"propose_create_task",description:"Register a proposal to CREATE a task, not an actual change. It will be applied only after the employee explicitly approves it.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},due_date:{type:"string"},project_id:{type:"string"},notes:{type:"string"}},required:["title"],additionalProperties:false}},
- {type:"function",name:"propose_create_event",description:"Register a proposal to CREATE an appointment in the user's personal calendar. It is NOT written until the employee explicitly confirms.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},starts_at:{type:"string"},ends_at:{type:"string"},project_id:{type:"string"},notes:{type:"string"}},required:["title","starts_at","ends_at"],additionalProperties:false}},
+ {type:"function",name:"propose_create_event",description:"Register a proposal to CREATE an appointment in the user's personal calendar. It is NOT written until the employee explicitly confirms.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},starts_at:{type:"string",description:"ISO-8601 with explicit UTC Z or timezone offset for Europe/Berlin (e.g. +01:00/+02:00); never infer an ungrounded clock time."},ends_at:{type:"string",description:"ISO-8601 with explicit UTC Z or timezone offset for Europe/Berlin."},project_id:{type:"string"},notes:{type:"string"}},required:["title","starts_at","ends_at"],additionalProperties:false}},
 ];
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE=/^\d{4}-\d{2}-\d{2}$/;
 const validId=s=>typeof s==="string"&&UUID.test(s);
-const validDate=s=>typeof s==="string"&&DATE.test(s)&&!Number.isNaN(Date.parse(s+"T12:00:00Z"));
+const validDate=validOfficeDate;
 const normalized=(s,max)=>String(s||"").trim().slice(0,max);
 const err=(code)=>({error:code});
 const safeArray=(data,max=100)=>Array.isArray(data)?data.slice(0,max):[];
@@ -51,11 +51,14 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
  }
  if(name==="list_calendar"){
   if(!validDate(a.from)||!validDate(a.to)||a.to<a.from)return err("invalid_date_range");
+  const bounds=berlinDateRangeUtc(a.from,a.to);
   const rows=await checkedQuery(userDb.from("isabella_events")
     .select("id,title,starts_at,ends_at,all_day,project_id,notes")
-    .gte("starts_at",a.from+"T00:00:00Z").lt("starts_at",a.to+"T23:59:59Z")
+    .lt("starts_at",bounds.endExclusive).gt("ends_at",bounds.start)
     .order("starts_at").limit(250));
-  return {events:safeArray(rows,250),scope:"only this employee's own calendar via RLS"};
+  return {events:safeArray(rows,250),scope:"only this employee's own calendar via RLS",
+    timezone:"Europe/Berlin",date_from:a.from,date_to:a.to,
+    may_have_more:rows.length===250};
  }
  if(name==="list_files"){
   if(a.project_id&&!validId(a.project_id))return err("invalid_project_id");
@@ -91,11 +94,11 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
  }
  if(name==="propose_create_event"){
   const title=normalized(a.title,200);
-  const start=Date.parse(a.starts_at||""),end=Date.parse(a.ends_at||"");
-  if(!title||!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return err("invalid_event_time");
+  const start=parseExplicitZonedInstant(a.starts_at),end=parseExplicitZonedInstant(a.ends_at);
+  if(!title||!start||!end||end<=start)return err("event_time_requires_explicit_timezone");
   if(a.project_id&&!validId(a.project_id))return err("invalid_project_id");
   return await registerProposal({admin,requestId,userId,conversationId,kind:"create_event",
-    payload:{title,starts_at:new Date(start).toISOString(),ends_at:new Date(end).toISOString(),
+    payload:{title,starts_at:start,ends_at:end,
       project_id:a.project_id||null,notes:normalized(a.notes,4000)}});
  }
  return err("unsupported_tool");
