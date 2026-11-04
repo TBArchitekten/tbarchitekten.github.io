@@ -84,16 +84,83 @@
     return tasks.filter(t=>t&&t.type==='milestone'&&typeof t.start==='string'&&t.start>=today)
       .sort((a,b)=>a.start.localeCompare(b.start)||String(a.name||'').localeCompare(String(b.name||''),'de'))[0]||null;
   }
-  // Window-style addresses: #work, #project=<id>, #tools, #plans, #members.
-  const VIEWS=['work','project','tools','plans','members'];
+  // Window-style addresses: #kalender, #work, #project=<id>, #project=<id>/planner, #tools, #plans, #members.
+  const VIEWS=['kalender','work','project','tools','plans','members'];
   function viewFromHash(hash){
     const raw=String(hash||'').replace(/^#/,'');
     const [name,value]=raw.split('=');
-    if(name==='project'&&/^[0-9a-f-]{36}$/i.test(value||''))return {view:'project',id:value.toLowerCase()};
-    return {view:VIEWS.includes(name)&&name!=='project'?name:'work',id:null};
+    if(name==='project'){
+      const m=/^([0-9a-f-]{36})(?:\/(planner))?$/i.exec(value||'');
+      if(m)return {view:'project',id:m[1].toLowerCase(),tab:m[2]?'planner':'panorama'};
+    }
+    return {view:VIEWS.includes(name)&&name!=='project'?name:'work',id:null,tab:null};
   }
-  function hashFor(view,id){return view==='project'&&id?'#project='+id:'#'+view}
+  function hashFor(view,id,tab){return view==='project'&&id?'#project='+id+(tab==='planner'?'/planner':''):'#'+view}
+
+  // ── Planner and Kalender ───────────────────────────────────────────────
+  const WEEKDAYS=['Mo','Di','Mi','Do','Fr','Sa','So'];
+  const MONTHS=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const addDays=(s,n)=>{const d=parseDate(s);d.setUTCDate(d.getUTCDate()+n);return iso(d)};
+  const mondayOf=s=>{const d=parseDate(s);return addDays(s,-((d.getUTCDay()+6)%7))};
+  function weekDays(anchor){const mon=mondayOf(anchor);return Array.from({length:7},(_,i)=>addDays(mon,i))}
+  // Six weeks from the Monday on or before the 1st: a stable month grid.
+  function monthGrid(anchor){const first=anchor.slice(0,7)+'-01';const start=mondayOf(first);return Array.from({length:42},(_,i)=>addDays(start,i))}
+  function isoWeek(s){
+    const d=parseDate(s);d.setUTCDate(d.getUTCDate()+3-((d.getUTCDay()+6)%7));
+    const jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4));
+    return 1+Math.round(((d-jan4)/864e5-3+((jan4.getUTCDay()+6)%7))/7);
+  }
+  function weekTitle(anchor){
+    const days=weekDays(anchor),a=parseDate(days[0]),b=parseDate(days[6]);
+    const span=a.getUTCMonth()===b.getUTCMonth()
+      ?`${a.getUTCDate()}.–${b.getUTCDate()}. ${MONTHS[b.getUTCMonth()]} ${b.getUTCFullYear()}`
+      :`${a.getUTCDate()}. ${MONTHS[a.getUTCMonth()]} – ${b.getUTCDate()}. ${MONTHS[b.getUTCMonth()]} ${b.getUTCFullYear()}`;
+    return `KW ${isoWeek(days[0])} · ${span}`;
+  }
+  function monthTitle(anchor){const d=parseDate(anchor);return `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`}
+  function shiftAnchor(anchor,mode,dir){
+    if(mode==='month'){const d=parseDate(anchor.slice(0,7)+'-01');d.setUTCMonth(d.getUTCMonth()+dir);return iso(d)}
+    return addDays(anchor,7*dir);
+  }
+  // A person's Kalender: what is assigned to them, and their own unassigned tasks.
+  function mineForCalendar(tasks,uid){
+    return (tasks||[]).filter(t=>t&&(t.assignee_id===uid||(!t.assignee_id&&t.created_by===uid)));
+  }
+  function tasksOnDay(tasks,day){
+    return (tasks||[]).filter(t=>t.due_date===day)
+      .sort((a,b)=>(a.completed_at?1:0)-(b.completed_at?1:0)||(a.kind==='abgabe'?-1:0)-(b.kind==='abgabe'?-1:0)||String(a.title).localeCompare(String(b.title),'de'));
+  }
+  function overdueTasks(tasks,today){return (tasks||[]).filter(t=>!t.completed_at&&t.due_date&&t.due_date<today).sort((a,b)=>a.due_date.localeCompare(b.due_date))}
+  function dueLabel(day,today){
+    if(!day)return '';
+    if(day===today)return 'Heute';
+    if(day===addDays(today,1))return 'Morgen';
+    if(day===addDays(today,-1))return 'Gestern';
+    const d=parseDate(day);
+    return `${WEEKDAYS[(d.getUTCDay()+6)%7]}., ${String(d.getUTCDate()).padStart(2,'0')}.${String(d.getUTCMonth()+1).padStart(2,'0')}.`+(day.slice(0,4)!==today.slice(0,4)?day.slice(2,4):'');
+  }
+  // Who may change a task or bucket in the page: the same rule as the database.
+  function canEditTask(t,uid,leads){return !!t&&(t.created_by===uid||t.assignee_id===uid||(!!t.project_id&&!!leads))}
+  function canDeleteTask(t,uid,leads){return !!t&&(t.created_by===uid||(!!t.project_id&&!!leads))}
+  function canEditBucket(b,uid,leads){return !!b&&(b.created_by===uid||!!leads)}
+  function nextPosition(items){return (items||[]).reduce((m,x)=>Math.max(m,Number(x.position)||0),0)+1}
+  function checklistProgress(list){const items=Array.isArray(list)?list:[];return {done:items.filter(x=>x&&x.done).length,total:items.length}}
+  const TASK_ERRORS=Object.freeze({
+    personal_task_is_own:'Persönliche Aufgaben gehören nur Ihnen.',
+    personal_task_without_bucket:'Persönliche Aufgaben haben keinen Bucket.',
+    bucket_of_other_project:'Dieser Bucket gehört zu einem anderen Projekt.',
+    assignee_not_member:'Diese Person hat keinen aktiven Office-Zugang.'
+  });
+  function taskErrorText(error){
+    const msg=String(error?.message||'');
+    for(const [code,text] of Object.entries(TASK_ERRORS))if(msg.includes(code))return text;
+    if(String(error?.code)==='42501')return 'Dafür fehlt Ihnen die Berechtigung.';
+    return 'Die Änderung konnte nicht gespeichert werden.';
+  }
+
   return {iso,parseDate,isWeekend,nextWorkday,addWorkdays,workdayOffset,formatDate,esc,todayKey,
     cloneStateForProject,passwordProblem,ROLE_LABELS,canLead,adminErrorText,authErrorText,
-    initials,nextMilestone,viewFromHash,hashFor};
+    initials,nextMilestone,viewFromHash,hashFor,
+    WEEKDAYS,MONTHS,addDays,mondayOf,weekDays,monthGrid,isoWeek,weekTitle,monthTitle,shiftAnchor,
+    mineForCalendar,tasksOnDay,overdueTasks,dueLabel,canEditTask,canDeleteTask,canEditBucket,nextPosition,checklistProgress,taskErrorText};
 });

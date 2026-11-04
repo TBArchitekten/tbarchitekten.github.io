@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Titus Bernhard Architekten · Office</title>
-  <link rel="stylesheet" href="./style.css?v=3">
+  <link rel="stylesheet" href="./style.css?v=4">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
   <script src="./office-config.js?v=1"></script>
 </head>
@@ -46,6 +46,10 @@
     <nav id="lenses" class="lenses" aria-label="Office">
       <div class="lenses-brand">Titus Bernhard <strong>Architekten</strong><small>Office</small></div>
       <div class="lenses-heading">ANSICHTEN</div>
+      <button class="lens-nav-item" data-view="kalender" aria-label="Kalender">
+        <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
+        <span class="lens-copy"><strong>Kalender</strong><small>Aufgaben und Abgaben</small></span>
+      </button>
       <button class="lens-nav-item active" data-view="work" aria-label="Work">
         <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18"/></svg></span>
         <span class="lens-copy"><strong>Work</strong><small>Projekte</small></span>
@@ -69,6 +73,34 @@
     </nav>
 
     <main class="content">
+      <section id="kalenderView" class="view view-wide" hidden>
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Kalender</p>
+            <h1 id="calTitle">Kalender</h1>
+            <p class="lead">Ihre Aufgaben und Abgaben. Termine bleiben im Outlook-Kalender des Büros.</p>
+          </div>
+          <div class="page-actions"><button id="calNewTask" class="primary" type="button">+ Aufgabe</button></div>
+        </div>
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button type="button" class="icon-nav" id="calPrev" aria-label="Zurück">‹</button>
+            <button type="button" id="calToday">Heute</button>
+            <button type="button" class="icon-nav" id="calNext" aria-label="Weiter">›</button>
+          </div>
+          <div class="segment" role="tablist" aria-label="Ansicht">
+            <button type="button" role="tab" data-cal-mode="week" aria-selected="true">Woche</button>
+            <button type="button" role="tab" data-cal-mode="month" aria-selected="false">Monat</button>
+          </div>
+        </div>
+        <div id="calOverdue"></div>
+        <div id="calBody"></div>
+        <section class="section" id="calUndatedSection" hidden>
+          <div class="section-title"><h2>Ohne Fälligkeit</h2><span id="calUndatedCount" class="count"></span></div>
+          <div id="calUndated" class="card row-list"></div>
+        </section>
+      </section>
+
       <section id="workView" class="view">
         <div class="page-head">
           <div>
@@ -81,7 +113,7 @@
         <div id="projectList" class="project-grid"></div>
       </section>
 
-      <section id="projectView" class="view" hidden>
+      <section id="projectView" class="view view-wide" hidden>
         <div class="back-row"><button type="button" class="back" data-go="work">‹ Projekte</button></div>
         <div class="page-head">
           <div>
@@ -90,11 +122,18 @@
           </div>
           <div class="page-actions"><button id="projectNewPlanBtn" class="primary" type="button">+ Terminplan</button></div>
         </div>
-        <div id="projectFacts" class="card project-facts"></div>
-        <section class="section">
-          <div class="section-title"><h2>Terminpläne</h2><span id="projectPlanCount" class="count"></span></div>
-          <div id="projectPlanList"></div>
-        </section>
+        <div class="tabs" role="tablist" aria-label="Projekt">
+          <button type="button" role="tab" data-project-tab="panorama" aria-selected="true">Panorama</button>
+          <button type="button" role="tab" data-project-tab="planner" aria-selected="false">Planner</button>
+        </div>
+        <div id="projectPanorama">
+          <div id="projectFacts" class="card project-facts"></div>
+          <section class="section">
+            <div class="section-title"><h2>Terminpläne</h2><span id="projectPlanCount" class="count"></span></div>
+            <div id="projectPlanList"></div>
+          </section>
+        </div>
+        <div id="projectPlanner" hidden></div>
       </section>
 
       <section id="toolsView" class="view" hidden>
@@ -237,7 +276,76 @@
     </form>
   </dialog>
 
-  <script src="./office-core.js?v=2"></script>
-  <script src="./app.js?v=3"></script>
+  <dialog id="taskDialog" class="task-dialog">
+    <form method="dialog" id="taskForm">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow" id="taskContext">Aufgabe</p>
+          <h2 id="taskDialogTitle">Neue Aufgabe</h2>
+        </div>
+        <button value="cancel" class="icon-btn" aria-label="Schließen">×</button>
+      </div>
+      <div class="form-grid">
+        <label class="span-2">Titel<input id="taskTitle" type="text" maxlength="200" required></label>
+        <label>Art
+          <select id="taskKind">
+            <option value="aufgabe">Aufgabe</option>
+            <option value="abgabe">Abgabe</option>
+          </select>
+        </label>
+        <label>Projekt<select id="taskProject"></select></label>
+        <label data-task-project-only>Bucket<select id="taskBucket"></select></label>
+        <label data-task-project-only>Verantwortlich<select id="taskAssignee"></select></label>
+        <label>Beginn<input id="taskStart" type="date"></label>
+        <label>Fällig<input id="taskDue" type="date"></label>
+        <label>Priorität
+          <select id="taskPriority">
+            <option value="niedrig">Niedrig</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hoch">Hoch</option>
+          </select>
+        </label>
+        <label class="task-done-label"><span>Status</span><span class="check-line"><input id="taskDone" type="checkbox"> Erledigt</span></label>
+        <div class="span-2 checklist">
+          <div class="checklist-head"><span>Checkliste</span><button type="button" class="quiet" id="taskAddCheck">+ Punkt</button></div>
+          <div id="taskChecklist"></div>
+        </div>
+        <label class="span-2">Notizen<textarea id="taskNotes" rows="3" maxlength="4000" placeholder="Keine Kunden- oder vertraulichen Daten."></textarea></label>
+      </div>
+      <p class="dialog-note" id="taskReadOnly" hidden>Nur lesbar: Ändern können Ersteller/in, Verantwortliche/r und Projektleitung.</p>
+      <div id="taskMessage" class="message" aria-live="polite"></div>
+      <div class="dialog-actions">
+        <button type="button" id="taskDelete" class="danger" hidden>Löschen</button>
+        <span class="spacer"></span>
+        <button value="cancel" type="button" id="taskCancel">Abbrechen</button>
+        <button class="primary" type="submit" id="taskSave">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="bucketDialog">
+    <form method="dialog" id="bucketForm">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">Planner</p>
+          <h2 id="bucketDialogTitle">Neuer Bucket</h2>
+        </div>
+        <button value="cancel" class="icon-btn" aria-label="Schließen">×</button>
+      </div>
+      <div class="form-grid">
+        <label class="span-2">Name<input id="bucketName" type="text" maxlength="80" required placeholder="z. B. Entwurf, Fachplanung, Abgabe"></label>
+      </div>
+      <div id="bucketMessage" class="message" aria-live="polite"></div>
+      <div class="dialog-actions">
+        <button value="cancel" type="button" id="bucketCancel">Abbrechen</button>
+        <button class="primary" type="submit">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="./office-core.js?v=3"></script>
+  <!-- planner.js first: app.js may route to the Kalender or a Planner as soon as the session is known. -->
+  <script src="./planner.js?v=1"></script>
+  <script src="./app.js?v=4"></script>
 </body>
 </html>

@@ -83,10 +83,13 @@ test('Window design: helpers for the account avatar, the next milestone and the 
   assert.equal(C.nextMilestone(state,'2027-03-01'),null);
   assert.equal(C.nextMilestone(null,'2026-11-04'),null);
   const id='aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-  assert.deepEqual(C.viewFromHash('#project='+id),{view:'project',id});
-  assert.deepEqual(C.viewFromHash('#project=not-a-uuid'),{view:'work',id:null});
-  assert.deepEqual(C.viewFromHash('#members'),{view:'members',id:null});
-  assert.deepEqual(C.viewFromHash(''),{view:'work',id:null});
+  assert.deepEqual(C.viewFromHash('#project='+id),{view:'project',id,tab:'panorama'});
+  assert.deepEqual(C.viewFromHash('#project='+id+'/planner'),{view:'project',id,tab:'planner'});
+  assert.deepEqual(C.viewFromHash('#kalender'),{view:'kalender',id:null,tab:null});
+  assert.deepEqual(C.viewFromHash('#project=not-a-uuid'),{view:'work',id:null,tab:null});
+  assert.deepEqual(C.viewFromHash('#members'),{view:'members',id:null,tab:null});
+  assert.deepEqual(C.viewFromHash(''),{view:'work',id:null,tab:null});
+  assert.equal(C.hashFor('project',id,'planner'),'#project='+id+'/planner');
   assert.equal(C.hashFor('project',id),'#project='+id);
   assert.equal(C.hashFor('tools'),'#tools');
 });

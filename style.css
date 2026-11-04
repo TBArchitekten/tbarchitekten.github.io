@@ -232,3 +232,141 @@ dialog form{padding:24px 26px 22px}
   .start-password{flex-direction:column;align-items:flex-start}
   .auth-card{padding:30px 22px 26px}
 }
+
+/* ── Stage 2 · Planner and Kalender (Window's Planner and Tiempo language) ── */
+.view-wide{max-width:none}
+.ui-icon{flex:none;width:15px;height:15px;display:inline-block;vertical-align:middle;pointer-events:none}
+.avatar.small{flex-basis:26px;width:26px;height:26px;font-size:10px}
+button.danger{color:var(--m-error)}
+button.danger:hover{color:#9b3628;border-color:rgba(181,71,54,.35)}
+.dialog-actions .spacer{flex:1}
+/* Tabs: one hairline, blue active rule (Window Work tabs) */
+.tabs{display:flex;gap:3px;margin:-6px 0 22px;border-bottom:1px solid rgba(26,29,36,.1)}
+.tabs button{
+  min-height:44px;margin-bottom:-1px;padding:10px 15px 12px;border:0;border-bottom:2px solid transparent;border-radius:0;
+  background:transparent;box-shadow:none;color:#6b6c73;font-size:13.5px;font-weight:560;
+}
+.tabs button:hover{background:transparent;color:#23252a;border-color:transparent;border-bottom-color:transparent}
+.tabs button[aria-selected="true"]{color:var(--m-blue);border-bottom-color:var(--m-blue)}
+/* Segment: grey track, white thumb (Window calendar switch) */
+.segment{display:inline-flex;gap:2px;padding:3px;border-radius:11px;background:#eceef2}
+.segment button{min-height:30px;padding:5px 14px;border:0;border-radius:9px;background:transparent;box-shadow:none;color:#55585f;font-size:12.5px}
+.segment button:hover{background:rgba(255,255,255,.6);border:0}
+.segment button[aria-selected="true"]{background:#fff;color:#1d1d1f;box-shadow:0 1px 3px rgba(20,24,35,.12)}
+
+/* Planner board */
+.planner-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.planner-toolbar>div{display:flex;align-items:baseline;gap:10px}
+.planner-toolbar strong{font-size:16px;font-weight:650;letter-spacing:-.01em}
+.planner-toolbar span{font-size:12.5px;color:var(--m-ink-faint)}
+.board{display:flex;gap:14px;align-items:flex-start;overflow-x:auto;padding:4px 2px 22px;scrollbar-color:#c8cbd0 transparent}
+.bucket{flex:0 0 312px;min-width:280px;padding:12px;border:1px solid rgba(20,25,35,.055);border-radius:21px;background:#eef0f3;box-shadow:inset 0 1px 0 rgba(255,255,255,.67)}
+.bucket.is-drop-target{background:#e6effc;outline:2px dashed rgba(0,98,204,.5)}
+.bucket-head{display:flex;align-items:center;gap:8px;min-height:40px;padding:2px 3px 10px}
+.bucket-head strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:680;letter-spacing:-.015em;color:#25262b}
+.bucket-count{display:inline-grid;place-items:center;min-width:25px;height:25px;padding:0 6px;border-radius:99px;background:#e1e4ea;color:#696b75;font-size:11px;font-weight:620;font-variant-numeric:tabular-nums}
+.bucket-actions{position:relative;margin-left:auto}
+.bucket-more{width:34px;min-height:32px;height:32px;padding:0;border-radius:11px;background:rgba(255,255,255,.8);color:#5d626a;font-size:14px}
+.bucket-menu{position:absolute;right:0;top:calc(100% + 5px);z-index:30;display:grid;gap:2px;min-width:220px;padding:6px;border:1px solid var(--m-hairline);border-radius:15px;background:rgba(252,252,253,.97);box-shadow:0 15px 45px rgba(23,29,42,.14),0 3px 10px rgba(28,35,49,.07)}
+.bucket-menu button{justify-content:flex-start;min-height:38px;border:0;border-radius:9px;background:transparent;box-shadow:none;font-size:12.5px;font-weight:530;color:#282a2e;white-space:normal;text-align:left}
+.bucket-menu button:hover:not(:disabled){background:rgba(0,98,204,.08);border:0}
+.bucket-menu .is-danger{color:var(--m-error);margin-top:4px;border-top:1px solid rgba(30,33,38,.09);border-radius:0 0 9px 9px}
+.add-task{width:100%;justify-content:flex-start;gap:8px;min-height:42px;margin:0 0 12px;padding:10px 12px;border:1px solid transparent;border-radius:12px;background:rgba(255,255,255,.5);box-shadow:none;color:#727680;font-size:12.5px;font-weight:480}
+.add-task:hover{background:rgba(255,255,255,.92);color:var(--m-blue);border-color:var(--m-hairline)}
+.add-task .ui-icon{width:17px;height:17px}
+.task-list{display:grid;gap:10px}
+.task-card{border:1px solid rgba(30,33,45,.09);border-radius:16px;background:#fff;box-shadow:0 1px 2px rgba(15,19,30,.035),0 5px 16px rgba(27,32,45,.035);cursor:pointer;transition:box-shadow .16s ease,border-color .16s ease,transform .16s ease}
+.task-card:hover{border-color:rgba(35,44,63,.14);box-shadow:0 4px 20px rgba(28,33,48,.09);transform:translateY(-1px)}
+.task-card.is-done{opacity:.72}
+.task-card.is-done strong{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.3)}
+.task-card.is-dragging{opacity:.45}
+.task-title-row{display:grid;grid-template-columns:23px minmax(0,1fr);gap:11px;align-items:start;padding:15px 15px 10px}
+.task-title-row strong{font-size:14px;font-weight:650;line-height:1.42;letter-spacing:-.012em;color:#202126;overflow-wrap:anywhere}
+.task-toggle{width:22px;min-height:22px;height:22px;padding:0;border:1.6px solid #858a94;border-radius:50%;background:#fff;box-shadow:none;color:#fff;font-size:12px;line-height:1}
+.task-toggle:hover:not(:disabled){border-color:var(--m-blue);background:#fff}
+.task-toggle.is-checked,.task-toggle.is-checked:hover{background:var(--m-blue);border-color:var(--m-blue);color:#fff}
+.task-toggle:disabled{opacity:.4}
+.task-toggle.mini{flex:0 0 18px;width:18px;min-height:18px;height:18px;font-size:10px;border-width:1.4px}
+.task-card footer{display:grid;gap:9px;padding:10px 14px 12px;border-top:1px solid rgba(30,33,43,.075)}
+.task-card footer:has(.task-chips:empty):not(:has(.task-assignee)){display:none}
+.task-chips{display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:12px;color:#737784}
+.task-chips:empty{display:none}
+.due-chip{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:4px 8px;border:1px solid #e4e6ea;border-radius:9px;background:#f4f5f7;color:#464951;font-size:12px;font-weight:590;font-variant-numeric:tabular-nums;white-space:nowrap}
+.due-chip.is-overdue{color:#c32231;background:#fff2f3;border-color:#f5c5c9}
+.kind-chip{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:4px 8px;border-radius:9px;background:var(--m-blue-soft);color:var(--m-blue);font-size:12px;font-weight:620}
+.meta-chip{display:inline-flex;align-items:center;gap:5px;color:#737784}
+.priority-chip{padding:4px 7px;border-radius:7px;background:#fff1e8;color:#aa5424;font-size:11px;font-weight:570}
+.task-assignee{display:flex;align-items:center;gap:9px;min-width:0;font-size:12px;font-weight:600;color:#303138}
+.task-assignee span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.completed{margin-top:10px;padding-top:8px;border-top:1px solid rgba(35,40,52,.1)}
+.completed summary{padding:8px 4px;font-size:12px;font-weight:520;color:#62656d;cursor:pointer}
+.completed summary span{margin-left:4px;padding:2px 7px;border-radius:8px;background:#e1e4e9;font-size:11px}
+.completed .task-list{margin-top:6px}
+
+/* Task editor */
+.task-dialog{width:min(660px,calc(100vw - 32px))}
+.check-line{display:flex;align-items:center;gap:8px;min-height:42px;font-size:14px;font-weight:500;color:var(--m-ink)}
+.check-line input,.check-row input[type="checkbox"]{width:18px;min-height:18px;height:18px;padding:0;accent-color:var(--m-blue)}
+.checklist{display:grid;gap:8px}
+.checklist-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:#42454b}
+.check-row{display:grid;grid-template-columns:22px minmax(0,1fr) 32px;gap:8px;align-items:center}
+.check-row input[type="text"]{min-height:36px;padding:7px 10px;font-size:14px}
+textarea{resize:vertical;min-height:72px;font-family:inherit}
+
+/* Kalender */
+.cal-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-8px 0 16px}
+.cal-nav{display:flex;align-items:center;gap:6px}
+.icon-nav{width:36px;padding:0;font-size:18px}
+.overdue-card{margin-bottom:14px;padding:12px 14px;border-color:#f5c5c9;background:#fffafa}
+.overdue-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.overdue-head strong{font-size:13.5px;color:#c32231}
+.overdue-head span{padding:1px 7px;border-radius:99px;background:#fde3e5;color:#c32231;font-size:11px;font-weight:650}
+.overdue-list{display:flex;flex-wrap:wrap;gap:8px}
+.overdue-item{display:flex;align-items:center;gap:6px;max-width:100%}
+.overdue-date{font-size:12px;font-weight:600;color:#c32231;white-space:nowrap}
+.cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.cal-day{position:relative;display:flex;flex-direction:column;min-height:300px;padding:10px 8px 40px;border:1px solid var(--m-hairline);border-radius:16px;background:#fff}
+.cal-day.is-weekend{background:#fbfbfb}
+.cal-day header{display:flex;align-items:baseline;justify-content:space-between;gap:6px;padding:0 4px 9px}
+.cal-dow{font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--m-ink-faint)}
+.cal-date{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border-radius:99px;font-size:15px;font-weight:650;color:#26282d}
+.cal-day.is-today .cal-date{background:#c33c4a;color:#fff}
+.cal-items{display:grid;gap:6px}
+.cal-add{position:absolute;left:8px;right:8px;bottom:8px;min-height:28px;padding:0;border:1px dashed transparent;border-radius:9px;background:transparent;box-shadow:none;color:#a0a4ab;opacity:0}
+.cal-day:hover .cal-add,.cal-add:focus-visible{opacity:1;border-color:#d9dce1}
+.cal-add:hover{color:var(--m-blue);background:var(--m-blue-soft);border-color:transparent}
+.cal-chip{display:flex;align-items:flex-start;gap:7px;min-width:0;padding:7px 8px;border:1px solid rgba(30,33,45,.08);border-left:3px solid #8a8f98;border-radius:9px;background:#fff;cursor:pointer;font-size:12.5px;line-height:1.35;box-shadow:0 1px 2px rgba(15,19,30,.03)}
+.cal-chip:hover{border-color:rgba(35,44,63,.16);box-shadow:0 3px 12px rgba(28,33,48,.08)}
+.cal-chip.is-abgabe{border-left-color:var(--m-blue);background:#f7faff}
+.cal-chip.is-done{opacity:.6}
+.cal-chip.is-done .cal-chip-title{text-decoration:line-through}
+.cal-chip-text{display:grid;gap:2px;min-width:0}
+.cal-chip-title{overflow-wrap:anywhere;font-weight:560;color:#24262b}
+.cal-chip-meta{font-size:11px;color:var(--m-ink-faint)}
+.cal-month{border:1px solid var(--m-hairline);border-radius:16px;background:#fff;overflow:hidden}
+.cal-month-head{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid #efeff1}
+.cal-month-head span{padding:9px 10px;font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--m-ink-faint)}
+.cal-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cal-cell{display:grid;align-content:start;gap:4px;min-height:108px;padding:6px;border-right:1px solid #f1f1f3;border-bottom:1px solid #f1f1f3}
+.cal-cell:nth-child(7n){border-right:0}
+.cal-cell.is-weekend{background:#fcfcfc}
+.cal-cell.is-other{background:#fafafa}
+.cal-cell.is-other .cal-cell-date{color:#b4b7bd}
+.cal-cell-date{justify-self:start;display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 5px;border-radius:99px;font-size:12.5px;font-weight:620;color:#3a3d43}
+.cal-cell.is-today .cal-cell-date{background:#c33c4a;color:#fff}
+.cal-cell .cal-chip{padding:3px 6px;font-size:11.5px;border-left-width:3px}
+.cal-cell .cal-chip-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-more{justify-self:start;min-height:22px;padding:1px 6px;border:0;background:transparent;box-shadow:none;color:var(--m-blue);font-size:11.5px}
+#calUndated .row{grid-template-columns:minmax(0,1fr) auto}
+#calUndated .cal-chip{border:0;box-shadow:none;background:transparent;padding-left:0}
+
+@media(max-width:900px){
+  .bucket{flex-basis:84vw;min-width:0}
+  .cal-week{grid-template-columns:1fr}
+  .cal-day{min-height:0;padding-bottom:10px}
+  .cal-day header{justify-content:flex-start}
+  .cal-add{position:static;opacity:1;margin-top:6px;border-color:#e3e5e9}
+  .cal-cell{min-height:70px}
+  .cal-cell .cal-chip-title{font-size:10.5px}
+  .cal-toolbar{flex-wrap:wrap}
+}
