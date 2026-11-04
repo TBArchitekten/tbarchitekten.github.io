@@ -1,4 +1,8 @@
 (()=>{'use strict';
+// TBA Office · Window's sync layer for an office of several people (adapted from gari01234/minds sync.js).
+// Differences: office sign-in (start page), shared projects from isabella_projects (a view of office_projects),
+// the Kalender holds one's own tasks plus those assigned to one, client_key is unique per table,
+// and there is no memory, feed or conversation to sync (the assistant comes later).
 const sb=window.MINDS_SUPABASE;
 const APP_SCOPE='isabella';
 const app=window.ISABELLA_APP;
@@ -25,7 +29,10 @@ function stopRealtime(){
   if(realtimeChannel){try{sb.removeChannel(realtimeChannel)}catch{}realtimeChannel=null}
 }
 function startRealtime(){
-  stopRealtime();if(!user||!sb?.channel)return;
+  stopRealtime();
+  // No conversation stream in the office yet.
+  return;
+  if(!user||!sb?.channel)return;
   realtimeChannel=sb.channel('isabella-mission-'+user.id)
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'conversation_messages',filter:'user_id=eq.'+user.id},payload=>{
       const row=payload?.new||{},source=String(row?.metadata?.source||'');
@@ -42,26 +49,28 @@ async function init(){
   const {data,error}=await sb.auth.getSession();
   if(error){setStatus('No se pudo leer la sesión');return}
   user=data.session?.user||null;
+  // Office sign-in happens on the start page; only active members with their own password get in.
+  if(!user){location.replace('../');return}
+  const {data:member,error:memberError}=await sb.from('office_members')
+    .select('user_id,email,display_name,role,is_active,must_change_password').eq('user_id',user.id).eq('is_active',true).maybeSingle();
+  if(memberError||!member||member.must_change_password){location.replace('../');return}
+  window.TBA_OFFICE_MEMBER=Object.freeze({...member});
+  try{window.dispatchEvent(new CustomEvent('office:member',{detail:{...member}}))}catch{}
   paintAuth();
-  if(user){await syncNow({initial:true});startRealtime()}
-  sb.auth.onAuthStateChange((_event,session)=>{stopRealtime();user=session?.user||null;paintAuth();if(user)setTimeout(async()=>{await syncNow({initial:true});startRealtime()},0)});
+  await syncNow({initial:true});
+  sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||!session)location.replace('../')});
   window.addEventListener('isabella:state',()=>{if(hydrating||!user)return;clearTimeout(timer);timer=setTimeout(()=>syncNow({pushOnly:true}),900)});
   window.addEventListener('isabella:mutation',e=>{if(!user||!e.detail)return;recordActivity(e.detail)});
   window.addEventListener('isabella:proposal-feedback',e=>{if(!user||!e.detail)return;recordProposalFeedback(e.detail)});
 }
 function paintAuth(){
   if(!authButton)return;
-  if(user){
-    authButton.textContent='Memoria conectada';
-    authButton.onclick=()=>syncNow({});
-    setStatus('Supabase conectado · sincronización automática');
-  }else{
-    authButton.textContent='Conectar memoria';
-    authButton.onclick=openLogin;
-    setStatus('Memoria local · conecta Supabase para sincronizar');
-  }
+  authButton.textContent='Jetzt synchronisieren';
+  authButton.onclick=()=>syncNow({});
+  setStatus('Office verbunden · automatische Synchronisierung');
 }
 function openLogin(){
+  location.replace('../');return;
   // Inside the Window app the app owns the session: sign-in happens in the app.
   if(window.WINDOW_NATIVE?.available){void window.WINDOW_NATIVE.call('session.signIn');return}
   app.openModal('Conectar memoria',`<div class="form">
@@ -109,20 +118,20 @@ function openLogin(){
 async function ensureTaxonomy(state){
   const categories=(state.categories||[]).map((c,i)=>({user_id:user.id,client_key:c.id,name:c.name,color:c.color||null,sort_order:i}));
   if(categories.length){
-    const {error}=await sb.from('isabella_categories').upsert(categories,{onConflict:'user_id,client_key'});
+    const {error}=await sb.from('isabella_categories').upsert(categories,{onConflict:'client_key'});
     if(error)throw error;
   }
   const {data:cats,error:ce}=await sb.from('isabella_categories').select('id,client_key,name,color').eq('user_id',user.id);
   if(ce)throw ce;
   const catByKey=new Map((cats||[]).map(c=>[c.client_key,c]));
-  const projects=(state.projects||[]).map(p=>({user_id:user.id,client_key:p.id,name:p.name,color:p.color||null,category_id:catByKey.get(p.categoryId)?.id||null})).filter(p=>p.category_id);
-  if(projects.length){
-    const {error}=await sb.from('isabella_projects').upsert(projects,{onConflict:'user_id,client_key'});
-    if(error)throw error;
-  }
-  const {data:projs,error:pe}=await sb.from('isabella_projects').select('id,client_key,name,color,category_id').eq('user_id',user.id);
+  // Office projects are created on the office page; here they are only read (shared by the whole office).
+  const {data:projs,error:pe}=await sb.from('isabella_projects').select('id,client_key,name,color,category_id,number,archived').eq('archived',false).order('number');
   if(pe)throw pe;
   return {cats:cats||[],projs:projs||[],catByKey,projByKey:new Map((projs||[]).map(p=>[p.client_key,p]))};
+}
+// The office projects as Window's local project list: id = client_key, all under "Arbeit".
+function localProjects(maps){
+  return (maps.projs||[]).map(p=>({id:p.client_key,categoryId:'arbeit',name:p.name,number:p.number||'',color:p.color||null}));
 }
 function taskRow(t,maps){
   if(t.done&&!t.completedAt)t.completedAt=new Date().toISOString();
@@ -175,7 +184,7 @@ async function persistEntityMutation(detail){
   if(!detail.after)return;
   const maps=await ensureTaxonomy(app.getState());
   const row=kind==='task'?taskRow({...detail.after,updatedAt:detail.after.updatedAt||new Date().toISOString()},maps):eventRow({...detail.after,updatedAt:detail.after.updatedAt||new Date().toISOString()},maps);
-  const {error}=await sb.from(table).upsert(row,{onConflict:'user_id,client_key'});
+  const {error}=await sb.from(table).upsert(row,{onConflict:'client_key'});
   if(error)throw error;
 }
 async function pushState(state,maps){
@@ -189,7 +198,7 @@ async function pushState(state,maps){
   }
   const tasks=(state.tasks||[]).map(t=>taskRow(t,maps));
   if(tasks.length){
-    const {error}=await sb.from('isabella_tasks').upsert(tasks,{onConflict:'user_id,client_key',ignoreDuplicates:true});
+    const {error}=await sb.from('isabella_tasks').upsert(tasks,{onConflict:'client_key',ignoreDuplicates:true});
     if(error)throw error;
   }
   if((state.deletedTaskIds||[]).length){
@@ -198,55 +207,14 @@ async function pushState(state,maps){
   }
   const events=(state.events||[]).map(e=>eventRow(e,maps));
   if(events.length){
-    const {error}=await sb.from('isabella_events').upsert(events,{onConflict:'user_id,client_key',ignoreDuplicates:true});
+    const {error}=await sb.from('isabella_events').upsert(events,{onConflict:'client_key',ignoreDuplicates:true});
     if(error)throw error;
   }
   if((state.deletedEventIds||[]).length){
     const {error}=await sb.from('isabella_events').delete().eq('user_id',user.id).in('client_key',state.deletedEventIds);
     if(error)throw error;
   }
-  const forgottenMemoryKeys=(state.memory||[])
-    .filter(m=>typeof m==='object'&&m.status==='deleted')
-    .map((m,i)=>String(m.id||'memory-'+i))
-    .filter(Boolean);
-  for(const clientKey of forgottenMemoryKeys){
-    const {error}=await sb.rpc('minds_forget_memory',{p_client_key:clientKey});
-    if(error)throw error;
-  }
-  const memories=(state.memory||[]).filter(m=>typeof m!=='object'||m.status!=='deleted').map((m,i)=>{
-    const obj=typeof m==='object'?m:null,source=obj?(obj.source||'conversation'):'conversation';
-    const provenance=obj?.provenance_class||(['ai_derived','assistant','agent'].includes(source)?'agent':['web','external','project_source'].includes(source)?'external':source==='system'?'system':'owner');
-    return {user_id:user.id,client_key:obj?(obj.id||'memory-'+i):'memory-'+i,kind:obj?normalizeMemoryKind(obj.kind):'context',subject:obj?(obj.subject||null):null,content:obj?(obj.content||''):String(m),status:obj&&['active','corrected','rejected','archived'].includes(String(obj.status||''))?obj.status:'active',confidence:Math.max(0,Math.min(1,Number(obj?(obj.confidence??1):1))),source,exposure_scope_key:obj?.exposure_scope_key||obj?.metadata?.exposure_scope?.key||'global',provenance_class:provenance,metadata:obj?(obj.metadata||{}):{}};
-  }).filter(x=>x.content);
-  if(memories.length){
-    const {error}=await sb.from('isabella_memories').upsert(memories,{onConflict:'user_id,client_key'});
-    if(error)throw error;
-  }
-  if(state.feedPreferences){
-    const {error}=await sb.from('isabella_preferences').upsert({
-      user_id:user.id,
-      preference_key:'feed',
-      value:canonicalFeedPreferences(state.feedPreferences),
-      status:'confirmed',
-      confidence:1,
-      evidence:[{source:'isabella_client',at:new Date().toISOString()}],
-      updated_at:new Date().toISOString()
-    },{onConflict:'user_id,preference_key'});
-    if(error)throw error;
-  }
-  if(state.assistantPreferences){
-    const {error}=await sb.from('isabella_preferences').upsert({
-      user_id:user.id,
-      preference_key:'assistant',
-      value:state.assistantPreferences,
-      status:'confirmed',
-      confidence:1,
-      evidence:[{source:'isabella_client',at:new Date().toISOString()}],
-      updated_at:new Date().toISOString()
-    },{onConflict:'user_id,preference_key'});
-    if(error)throw error;
-  }
-  await pushConversation(state.messages||[]);
+  // Memory, feed preferences and the conversation are not part of the office (yet).
 }
 async function conversationId(){
   const {data,error}=await sb.from('conversations').select('id,metadata').eq('user_id',user.id).eq('app_scope',APP_SCOPE).order('updated_at',{ascending:false}).limit(1);
@@ -325,18 +293,27 @@ function projectTaskRow(t,catKey,projKey){
     updatedAt:t.updated_at||null
   };
 }
+// The Kalender of one person: their own tasks (personal or in a project) and every task assigned to them,
+// directly or through the task's team list. Colleagues' other project tasks stay in each project's Planner.
+async function officeCalendarTasks(){
+  const {data:links,error:le}=await sb.from('minds_work_task_assignees').select('task_id').eq('person_id',user.id);
+  if(le)return {data:null,error:le};
+  const linked=[...new Set((links||[]).map(x=>x.task_id))];
+  const filter='user_id.eq.'+user.id+',assignee_person_id.eq.'+user.id+(linked.length?',id.in.('+linked.join(',')+')':'');
+  return await sb.from('isabella_tasks').select('*').or(filter).order('due_date',{ascending:true});
+}
 async function pullState(local,maps){
   const [{data:tasks,error:te},{data:events,error:ee},{data:mem,error:me},{data:pref,error:pre},{data:assistantPref,error:ape},
     {data:assignees,error:asError},{data:allocations,error:alError},
     {data:teamPeople,error:peopleError}] = await Promise.all([
-    sb.from('isabella_tasks').select('*').eq('user_id',user.id).order('due_date',{ascending:true}),
+    officeCalendarTasks(),
     sb.from('isabella_events').select('*').eq('user_id',user.id).order('starts_at',{ascending:true}),
-    sb.from('isabella_memories').select('*').eq('user_id',user.id).eq('status','active').order('created_at',{ascending:true}),
-    sb.from('isabella_preferences').select('value,status,updated_at').eq('user_id',user.id).eq('preference_key','feed').maybeSingle(),
-    sb.from('isabella_preferences').select('value,status,updated_at').eq('user_id',user.id).eq('preference_key','assistant').maybeSingle(),
-    sb.from('minds_work_task_assignees').select('task_id,person_id,created_at').eq('user_id',user.id),
-    sb.from('minds_work_task_allocations').select('task_id,person_id,work_date,planned_minutes').eq('user_id',user.id),
-    sb.from('isabella_people').select('id,name').eq('user_id',user.id)
+    Promise.resolve({data:[],error:null}),
+    Promise.resolve({data:null,error:null}),
+    Promise.resolve({data:null,error:null}),
+    sb.from('minds_work_task_assignees').select('task_id,person_id,created_at'),
+    sb.from('minds_work_task_allocations').select('task_id,person_id,work_date,planned_minutes'),
+    sb.from('isabella_people').select('id,name').order('name')
   ]);
   if(te)throw te;if(ee)throw ee;if(me)throw me;if(pre)throw pre;if(ape)throw ape;
   if(asError)throw asError;if(alError)throw alError;if(peopleError)throw peopleError;
@@ -369,13 +346,11 @@ async function pullState(local,maps){
   })).filter(a=>a.taskId);
   const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||'personal',projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null}});
   const remoteMemory=(mem||[]).map(m=>({id:m.client_key||m.id,kind:m.kind,subject:m.subject,content:m.content,status:m.status,confidence:Number(m.confidence),source:m.source,exposure_scope_key:m.exposure_scope_key||'global',provenance_class:m.provenance_class||'owner',metadata:m.metadata||{}}));
-  const remoteMessages=await pullConversation();
-  const mergedMessages=mergeConversationMessages(remoteMessages,local.messages||[]);
   const freshest=mergePulledEntityState(remoteTasks,remoteEvents,app.getState(),local);
   const remoteFeed=(pref?.status!=='rejected'&&pref?.value&&typeof pref.value==='object')?canonicalFeedPreferences(pref.value):canonicalFeedPreferences(freshest.feedPreferences);
   const remoteAssistant=(assistantPref?.status!=='rejected'&&assistantPref?.value&&typeof assistantPref.value==='object')?{...(freshest.assistantPreferences||{}),...assistantPref.value}:freshest.assistantPreferences;
-  return {...freshest,teamPeople:teamPeople||[],teamAllocations,memory:remoteMemory,feedPreferences:remoteFeed,
-    assistantPreferences:remoteAssistant,messages:mergedMessages.length?mergedMessages:freshest.messages};
+  return {...freshest,projects:localProjects(maps),teamPeople:teamPeople||[],teamAllocations,memory:remoteMemory,feedPreferences:remoteFeed,
+    assistantPreferences:remoteAssistant,messages:freshest.messages};
 }
 async function updateMessageMetadata(clientKey,patch){
   if(!user||!clientKey||!patch||typeof patch!=='object')return false;
@@ -442,6 +417,7 @@ async function pullConversation(){
   });
 }
 async function recordProposalFeedback(detail){
+  return; // no proposal log in the office yet
   try{
     const proposal=detail.proposal||{};
     await sb.from('isabella_proposal_feedback').insert({user_id:user.id,outcome:detail.outcome,proposal});
@@ -460,10 +436,9 @@ async function recordActivity(detail){
       if(error)throw error;
     }
     await persistEntityMutation(detail);
-    const {error}=await sb.from('isabella_activity_log').insert(row);
-    if(error)throw error;
+    void row; // Window also writes an activity log; the office keeps none.
   }catch(e){
-    setStatus('Cambio local guardado · sincronización pendiente: '+apiError(e));
+    setStatus('Lokal gespeichert · Synchronisierung ausstehend: '+apiError(e));
   }finally{
     pendingEntityMutations.delete(pendingKey);
   }
@@ -474,7 +449,7 @@ async function syncNow(opts={}){
     queuedSync={...(queuedSync||{}),...opts};
     return new Promise(resolve=>queuedSyncWaiters.push(resolve));
   }
-  syncing=true;let succeeded=false;setStatus('Sincronizando…');
+  syncing=true;let succeeded=false;setStatus('Synchronisiere …');
   try{
     const {data:deleted,error:de}=await sb.from('isabella_deleted_items').select('entity_type,client_key').eq('user_id',user.id);
     if(de)throw de;
@@ -488,20 +463,11 @@ async function syncNow(opts={}){
       deletedTaskIds:[...new Set([...(local.deletedTaskIds||[]),...deletedTasks])],
       deletedEventIds:[...new Set([...(local.deletedEventIds||[]),...deletedEvents])]
     };
-    if(opts.initial){
-      const [{data:feedPref},{data:assistantPref}]=await Promise.all([
-        sb.from('isabella_preferences').select('value,status').eq('user_id',user.id).eq('preference_key','feed').maybeSingle(),
-        sb.from('isabella_preferences').select('value,status').eq('user_id',user.id).eq('preference_key','assistant').maybeSingle()
-      ]);
-      if(feedPref?.status!=='rejected'&&feedPref?.value&&typeof feedPref.value==='object')local.feedPreferences=canonicalFeedPreferences(feedPref.value);
-      if(assistantPref?.status!=='rejected'&&assistantPref?.value&&typeof assistantPref.value==='object')local.assistantPreferences={...(local.assistantPreferences||{}),...assistantPref.value};
-    }
     local.feedPreferences=canonicalFeedPreferences(local.feedPreferences);
     const maps=await ensureTaxonomy(local);
     if(opts.initial||opts.pullOnly){
       const next=await pullState(local,maps);
       hydrating=true;app.replaceState(next);hydrating=false;
-      if(opts.initial)await pushConversation(next.messages||[]);
     }else{
       await pushState(local,maps);
       if(!opts.pushOnly){
@@ -510,9 +476,9 @@ async function syncNow(opts={}){
       }
     }
     succeeded=true;
-    setStatus('Memoria sincronizada · Supabase');
+    setStatus('Synchronisiert · TBA Office');
     try{window.dispatchEvent(new CustomEvent('isabella:synced',{detail:{initial:!!opts.initial}}))}catch{}
-  }catch(e){setStatus('Error de sincronización: '+apiError(e))}
+  }catch(e){console.error(e);setStatus('Synchronisierung fehlgeschlagen: '+apiError(e))}
   finally{
     syncing=false;
     if(queuedSync){
