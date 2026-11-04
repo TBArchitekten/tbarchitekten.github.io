@@ -34,7 +34,7 @@ create table public.minds_work_files (
 create index minds_work_files_folder_idx on public.minds_work_files(project_id, folder_id, created_at desc);
 create index minds_work_files_user_idx on public.minds_work_files(user_id);
 
--- A folder never changes scope or parent in v1. Cross-project references are refused,
+-- A folder never changes project scope. Moves cannot create cycles.
 -- including office-root (null-project) folders attached to project documents.
 create function public.office_desktop_folder_guard() returns trigger
 language plpgsql security invoker set search_path = '' as $$
@@ -42,10 +42,17 @@ begin
   if tg_op = 'UPDATE' then
     if new.user_id is distinct from old.user_id
        or new.project_id is distinct from old.project_id
-       or new.parent_id is distinct from old.parent_id
        or new.created_at is distinct from old.created_at then
       raise exception 'office_folder_scope_immutable' using errcode = '23514';
     end if;
+    if new.parent_id is distinct from old.parent_id and exists (
+      with recursive ancestors(id, parent_id) as (
+        select p.id, p.parent_id from public.minds_work_folders p where p.id = new.parent_id
+        union all
+        select p.id, p.parent_id from public.minds_work_folders p join ancestors a on p.id = a.parent_id
+      )
+      select 1 from ancestors where id = new.id
+    ) then raise exception 'office_folder_cycle' using errcode = '23514'; end if;
     new.updated_at := now();
   end if;
   if new.parent_id is not null and not exists (

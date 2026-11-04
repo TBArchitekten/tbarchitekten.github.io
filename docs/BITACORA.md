@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Desktop compartido con carpetas y archivos · ChatGPT
+- **Qué cambió y por qué:** Gari confirmó la navegación por todas las carpetas de proyecto para todos los miembros activos, un Desktop común de oficina y la posibilidad técnica de subir todo tipo de archivos. Se prepara la integración de carpetas y subcarpetas, subida y lectura, cambio de nombre, movimiento y borrado con confirmación. Solo el autor o un admin puede modificar o borrar elementos existentes.
+- **Archivos:** `app/work.js`, `app/office-desktop-ops.js`, `app/shell.js`, `app/index.html`, `app/office.css`, `supabase/migrations/20261104210000_office_desktop_v1.sql`, `tests/office-desktop.test.mjs`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- **Base de datos:** migración `20261104210000_office_desktop_v1.sql` — aplicada en Supabase: **NO** (pendiente de verificación y PR).
+- **Deploy de funciones:** ninguno.
+- **Cómo se probó:** sintaxis de los scripts revisada; pruebas automáticas/CI y aceptación en navegador, pendientes.
+- **Quedó pendiente o sin probar:** ejecutar CI, aplicar la migración en TBA Office, verificar RLS con varias identidades, publicar tras revisión, comprobar cargas grandes y aceptación con compañeros. La extracción de texto/indexación no forma parte de esta primera integración.
+- **Riesgos o decisiones que necesitan a Gari:** hablar con la dirección del uso real de documentos confidenciales; aún sin política interna decidida. Revocar clave OpenAI antigua. SQL destructivo no ejecutado.
+- **PR:** pendiente de apertura.
+
 ### 2026-11-04 · Hoja de ruta completa en ESTADO · Claude
 - **Qué cambió y por qué:** `ESTADO.md` §6 solo listaba C y D. Ahora tiene las cinco etapas acordadas, lo que va después (vínculo Planner↔Terminplan, Planliste, Controlling, herramientas de costos, Projektakte, login con Microsoft) y las reglas de base de Gari. Se precisó la pregunta sobre el Desktop: fundamentos y guías de la oficina, sin datos de clientes.
 - **Archivos:** `docs/ESTADO.md`, `docs/BITACORA.md`.
