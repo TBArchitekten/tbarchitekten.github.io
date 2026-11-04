@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · Romy: adjuntos sin texto y fechas Europe/Berlin · ChatGPT
+- Qué cambió y por qué: revisión de PR #25–#28. Se detectó el fallo potencial de un mensaje compuesto solo por adjuntos debido al CHECK de texto no vacío. El calendario consultaba fechas UTC, no días de la oficina en Europe/Berlin, lo que podía omitir citas cercanas a medianoche. Las propuestas de eventos sin offset podían interpretarse en la zona horaria del servidor.
+- Archivos: supabase/functions/office-assistant/index.ts, romy-tools.mjs, nuevo romy-time.mjs, tests/office-romy-time-and-attachment.test.mjs y docs.
+- Base de datos: sin migración, conservando RLS y la validación de contenido existente.
+- Deploy de funciones: `office-assistant` ACTIVE v5, JWT obligatorio y 7 archivos. No se introducen cuotas ni permisos nuevos.
+- Cómo se probó: CI 112/112 PASS (DST, offsets, archivo sin mensaje), Edge v5 ACTIVE y Security Advisors sin advertencias. E2E Safari aún pendiente.
+- Quedó pendiente: aceptación de los flujos completos en Safari, consultas reales y formatos PDF/Office; paridad restante en artifacts, Skills, memoria y trabajo persistente.
+- Riesgos y decisiones: no se inventan horas ni se confirman horas sin zona; la zona de TBA Office es Europe/Berlin.
+- PR: #29.
+
+
 ### 2026-11-04 · Cierre del PR #27: adjuntos privados de Romy · ChatGPT
 - **Qué cambió y por qué:** PR #27 integrado en main (squash `ca12d910`). Picker, normalización y subida de archivos en el chat original de Window, adaptados a almacenamiento y sesiones individuales de TBA Office. Romy recibe `input_file`/`input_image` y almacena referencias privadas.
 - **Archivos:** docs/ESTADO.md y docs/BITACORA.md; código y migración del PR #27.

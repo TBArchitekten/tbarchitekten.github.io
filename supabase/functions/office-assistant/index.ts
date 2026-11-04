@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
 import { chatTurnModel, documentModel } from "./chat-model-routing.mjs";
+import { officeLocalNow } from "./romy-time.mjs";
 import { interactiveTurnContract } from "./turn-capability-contract.mjs";
 import { routeRomyTurn } from "./romy-router.mjs";
 import { ROMY_TOOLS, executeRomyTool, reviewRomyProposal } from "./romy-tools.mjs";
@@ -65,7 +66,10 @@ async function requestModel({apiKey,model,input,allowTools=true,onDelta=()=>{}})
   const response=await fetch("https://api.openai.com/v1/responses",{
    method:"POST",signal:abort.signal,headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json"},
    body:JSON.stringify({
-     model,store:false,stream:true,input,instructions:instruction,
+     model,store:false,stream:true,input,
+     instructions:instruction+"\nAktuelles Datum und Ortszeit (Europe/Berlin): "+officeLocalNow()+
+       "\nTermine benötigen nachgewiesene Uhrzeiten und explizite Zeitzonen-Offsets (+01:00/+02:00 oder Z)."+
+       "\nKlare Rückfrage statt geschätzter Kalenderzeiten.",
      ...(allowTools?{tools:ROMY_TOOLS,tool_choice:"auto"}:{}),
    })
   });
@@ -201,7 +205,10 @@ Deno.serve(async req=>{
  catch(e){await completeRequest(admin,uid,requestId,{status:"failed"});
   return json(400,{error:String(e?.message||"invalid_attachment")});}
  const {error:saveError}=await admin.from("office_assistant_messages").insert({
-  conversation_id:conversation.id,user_id:uid,request_id:requestId,role:"user",content:message,attachments:attached.metadata,
+  conversation_id:conversation.id,user_id:uid,request_id:requestId,role:"user",
+  // Keep attachment-only requests compatible with the existing nonempty-text constraint;
+  // the actual model input remains attachments-only, without an invented question.
+  content:message||"Datei(en) angehängt",attachments:attached.metadata,
  });
  if(saveError){
   await completeRequest(admin,uid,requestId,{status:"failed"});
