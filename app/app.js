@@ -1165,7 +1165,7 @@ window.addEventListener('message',e=>{
   document.body.classList.toggle('sofia-chat-open',open);
 });
 let pendingReplyTo=null;
-function replyAuthor(reply){return reply?.role==='assistant'?'Isabella':'Tú'}
+function replyAuthor(reply){return reply?.role==='assistant'?(OFFICE?'Romy':'Isabella'):(OFFICE?'Sie':'Tú')}
 function replySnippet(text){return String(text||'').replace(/\s+/g,' ').trim().slice(0,180)}
 function renderReplyPreview(){
   const box=$('#chatReplyPreview');if(!box)return;
@@ -4693,7 +4693,7 @@ window.ISABELLA_APP={
   },
   setOfficeMessages:(rows)=>{
     if(!OFFICE)return;
-    state.messages=(Array.isArray(rows)?rows:[]).slice(-250).map(m=>({
+    state.messages=(Array.isArray(rows)?rows:[]).map(m=>({
       id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
       text:String(m.content||m.text||''),
       at:String(m.created_at||m.at||new Date().toISOString()),

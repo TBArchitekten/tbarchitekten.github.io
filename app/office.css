@@ -37,3 +37,9 @@
 .office-app .office-tools-arrow{margin-left:auto;font-size:24px;color:#9ca3ad}
 .office-app .office-tools-manage{display:inline-block;margin-top:22px;font-size:13px;color:#596575}
 @media(max-width:680px){.office-app .office-tools-scroll{padding:24px 22px}.office-app .office-tools-head h1{font-size:31px}.office-app .office-tools-card{padding:18px}}
+
+/* Office has five visible Window lenses (Romy/Heute/Kalender/Work/Tools);
+   Window has a sixth Bandeja lane. Never retain an empty sixth grid slot. */
+@media(max-width:899px){
+ .office-app #mainNav{grid-template-columns:repeat(5,minmax(0,1fr))}
+}

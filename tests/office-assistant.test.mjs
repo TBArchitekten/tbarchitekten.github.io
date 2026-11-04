@@ -13,7 +13,7 @@ test('Assistant reuses Window chat rather than building another UI',()=>{
     assert.ok(shell.includes(needle),'Window shell missing '+needle);
   }
   assert.ok(!shell.includes('data-nav="assistant" aria-label="Assistent" hidden'));
-  for(const needle of ['office-assistant.js?v=office6','office-assistant.css?v=office6','app.js?v=office6']){
+  for(const needle of ['office-assistant.js?v=office8','office-assistant.css?v=office8','app.js?v=office8']){
     assert.ok(html.includes(needle),'asset cache not bumped '+needle);
   }
   for(const needle of ['office_assistant_conversations','office_assistant_messages','app()?.setOfficeMessages','window.TBA_OFFICE_ASSISTANT']){
@@ -66,21 +66,26 @@ test('Personal assistant requests are authenticated and deduplicated without an 
   assert.ok(!frontend.includes('15 Anfragen'));
   assert.ok(!frontend.includes('quota_unavailable'));
   assert.ok(frontend.includes('request_registration_unavailable'));
-  for(const expected of ['office_assistant_reserve','response.ok','store: false','max_output_tokens']){
+  for(const expected of ['office_assistant_reserve','response.ok','store:false','stream:true']){
     assert.ok(edge.includes(expected),'missing '+expected);
   }
 });
 
-test('Provider calls are server-only; no project, calendar or document is read by v1',()=>{
-  assert.match(edge,/getUser\(token\)/);
-  assert.match(edge,/member\.must_change_password/);
-  assert.match(edge,/SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(edge,/TBA_OFFICE_OPENAI_API_KEY/);
-  assert.match(edge,/gpt-5\.6-luna/);
-  assert.match(edge,/gpt-5\.6-terra/);
-  assert.match(edge,/response\.ok/);
-  assert.doesNotMatch(edge,/from\("minds_work_files"\)|from\("isabella_tasks"\)|from\("isabella_events"\)/);
-  assert.match(edge,/conversation_not_found/);
-  assert.match(edge,/conversationId/);
-  assert.match(edge,/requestId/);
+test('Romy tools, model routing and streaming are connected on the server',()=>{
+ const tools=read('supabase/functions/office-assistant/romy-tools.mjs');
+ const routing=read('supabase/functions/office-assistant/chat-model-routing.mjs');
+ const contract=read('supabase/functions/office-assistant/turn-capability-contract.mjs');
+ for(const key of ['getUser(token)','member.must_change_password','SUPABASE_SERVICE_ROLE_KEY','TBA_OFFICE_OPENAI_API_KEY','conversation_not_found','ROMY_TOOLS','executeRomyTool','stream:true','interactiveTurnContract','chatTurnModel']){
+   assert.ok(edge.includes(key),'missing '+key);
+ }
+ for(const key of ['list_projects','list_tasks','list_calendar','list_files','read_text_file','propose_create_task','propose_create_event','reviewRomyProposal']){
+   assert.ok(tools.includes(key),'missing tool '+key);
+ }
+ assert.ok(routing.includes('gpt-5.6-luna'));
+ assert.ok(routing.includes('gpt-5.6-terra'));
+ assert.ok(contract.includes('tool_capable'));
+ assert.ok(!edge.includes('max_output_tokens'));
+ assert.ok(!edge.includes('.limit(16)'));
+ assert.ok(!edge.includes('.slice(0, 3000)'));
+ assert.ok(!edge.includes('message.length > 4000'));
 });

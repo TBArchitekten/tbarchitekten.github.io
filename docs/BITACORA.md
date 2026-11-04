@@ -28,6 +28,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - **PR:** #26.
 
 
+### 2026-11-04 · Romy: capacidades supervisadas sobre la infraestructura de Window · ChatGPT
+- Qué cambió y por qué: Gari exige Romy con las capacidades de Isabella, no un chat básico nuevo. Se reutilizaron directamente chat-model-routing.mjs y turn-capability-contract.mjs de Window, el parser SSE y la interfaz. Nuevo adaptador Office con herramientas autorizadas por RLS, lectura contextual, streaming y propuestas de tarea/Termin con aprobación.
+- Archivos: supabase/functions/office-assistant/{index.ts,chat-model-routing.mjs,turn-capability-contract.mjs,romy-tools.mjs}, app/{romy-transport.js,office-assistant.js,office-assistant.css,app.js,index.html}, nueva migración de propuestas y tests.
+- Base de datos: office_romy_proposals_review_v1 aplicada en TBA Office (Supabase `20261104224513`), comprobación RLS de titular y ausencia de permisos directos INSERT/UPDATE superada.
+- Deploy de funciones: `office-assistant` ACTIVE v3 con JWT, 5 archivos (index.ts más cuatro módulos), sin tocar Window.
+- Cómo se probó: CI 102/102 PASS; migración RLS en transacción revertida PASS; Supabase activo con Security Advisors sin lints; aceptación autenticada con usuario real pendiente.
+- Quedó pendiente o sin probar: adjuntos y lectura binaria (PDF/DOCX), ejecución de artefactos, Skills/Missions, memoria proactiva, background, aceptación iPhone con dos empleados. **No declarar paridad completa**.
+- Riesgos o decisiones: sin nuevas cuotas diarias ni selector manual de modelos; acciones explícitamente confirmadas por empleado, RLS revalidada en el servidor. No conectar a Supabase de Window.
+- PR: #25, pendiente de integración.
+
 ### 2026-11-04 · Romy y paridad de navegación/compartidos · ChatGPT
 - Qué cambió y por qué: Gari exige un único sistema de navegación coherente con Window, Desktop editable por todos y el nombre Romy. PR #24 hace Tools una sección en la shell Window; unifica la barra de la página raíz, elimina la restricción autor/admin para archivos compartidos, corrige duplicados sin proyecto.
 - Archivos: app/shell.js, app/app.js, app/index.html, app/office.css, app/work.js, app/office-desktop-ops.js, index.html, style.css, tests, docs y migración SQL.
