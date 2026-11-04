@@ -314,7 +314,7 @@ function init(){
     setInterval(()=>{if(!document.hidden)void syncDurableChatJobs()},7000);
   }
   const reviewId=OFFICE?null:reviewRequestIdFromUrl();
-  show(reviewId?'assistant':(OFFICE&&state.screen==='assistant'?'feed':state.screen));
+  show(reviewId?'assistant':state.screen);
   if(reviewId)setTimeout(()=>void handleReviewDeepLink(),0);
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='visible'){

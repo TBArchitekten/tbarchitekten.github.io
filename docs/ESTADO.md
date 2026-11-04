@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (Desktop PR #16 integrado en main; aceptación real pendiente).
+**Actualizado:** 04.11.2026, por ChatGPT (PR #18: Assistent personal en desarrollo).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -77,7 +77,7 @@ Las etapas para traer Window a la oficina:
 | 1 | Diseño y estructura como Window | ✔ hecho (PR #11) |
 | 2 | Planner y Kalender | ✔ hecho (primero propio en PR #12; sustituido por la copia de Window en PR #13) |
 | 3 | Heute (como "Ahora" de Window) | ✔ hecho (PR #13) |
-| 4 | Assistent personal por persona (parecido a Isabella, con otro nombre) | pendiente = **parte D** |
+| 4 | Assistent individual para cada miembro activo | PR #18 en desarrollo; sin deploy ni aceptación |
 | 5 | Desktop compartido de Büro y de cada proyecto, con carpetas y archivos | integrado en main (PR #16); aceptación con usuarios pendiente |
 
 La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heute), C (Desktop) y D (Assistent). **A y B están hechas.** Gari decidió integrar Desktop (C) antes del Assistent (D) y probar el conjunto con compañeros después.

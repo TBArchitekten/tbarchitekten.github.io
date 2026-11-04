@@ -144,6 +144,7 @@ async function send(event){
   const input=$('#officeChatInput'),message=input.value.trim();
   if(!message||message.length>4000)return;
   if(!crypto?.randomUUID){status('Dieser Browser unterstützt keine sichere Nachrichten-ID.');return}
+  let failure='';
   busy=true;$('#officeChatSend').disabled=true;
   $('#officeChatMode').disabled=true;$('#officeChatNew').disabled=true;
   const target=$('#officeChatMessages');
@@ -159,7 +160,7 @@ async function send(event){
     if(error){
       let body={};
       try{body=await error.context?.clone?.().json()}catch{}
-      status(errorText(error,body));
+      failure=errorText(error,body);
       return;
     }
     if(!data?.conversation_id||!data?.reply)throw new Error('incomplete_reply');
@@ -169,13 +170,14 @@ async function send(event){
     status('');
   }catch(error){
     console.error('office_assistant_ui_error',String(error?.name||'request_failed'));
-    status('Die Antwort konnte nicht bestätigt werden. Bitte prüfen Sie den Gesprächsverlauf.');
+    failure='Die Antwort konnte nicht bestätigt werden. Bitte prüfen Sie den Gesprächsverlauf.';
   }finally{
     busy=false;input.disabled=false;$('#officeChatSend').disabled=false;
     $('#officeChatMode').disabled=false;$('#officeChatNew').disabled=false;
     await refreshThreads();
     if(conversationId)await selectThread(conversationId);
     else drawMessages([]);
+    if(failure)status(failure);
     if(!input.value)input.focus();
   }
 }

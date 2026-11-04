@@ -23,7 +23,7 @@ document.body.innerHTML = `
 
   <nav id="desktopLenses" class="desktop-lenses" aria-label="Office">
     <div class="lenses-heading">ANSICHTEN</div>
-    <button class="lens-nav-item" data-nav="assistant" aria-label="Assistent" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.assistant}</span><span class="lens-copy"><strong>Assistent</strong><small>Mit dem Assistenten sprechen</small></span></button>
+    <button class="lens-nav-item" data-nav="assistant" aria-label="Assistent"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.assistant}</span><span class="lens-copy"><strong>Assistent</strong><small>Mit dem Assistenten sprechen</small></span></button>
     <button class="lens-nav-item active" data-nav="feed" aria-label="Heute"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.feed}</span><span class="lens-copy"><strong>Heute</strong><small>Ihr Tag</small></span></button>
     <button class="lens-nav-item" data-nav="calendar" aria-label="Kalender"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.calendar}</span><span class="lens-copy"><strong>Kalender</strong><small>Termine und Aufgaben</small></span></button>
     <button class="lens-nav-item" data-nav="work" aria-label="Work"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.work}</span><span class="lens-copy"><strong>Work</strong><small>Projekte</small></span></button>
@@ -171,7 +171,7 @@ document.body.innerHTML = `
   </section>
 
   <nav id="mainNav" class="main-nav" aria-label="MINDS">
-    <button class="main-nav-item" data-nav="assistant" aria-label="Assistent" hidden><span class="nav-icon">${NAV_ICONS.assistant}</span></button>
+    <button class="main-nav-item" data-nav="assistant" aria-label="Assistent"><span class="nav-icon">${NAV_ICONS.assistant}</span></button>
     <button class="main-nav-item active" data-nav="feed" aria-label="Heute"><span class="nav-icon">${NAV_ICONS.feed}</span></button>
     <button class="main-nav-item" data-nav="calendar" aria-label="Kalender"><span class="nav-icon">${NAV_ICONS.calendar}</span></button>
     <button class="main-nav-item" data-nav="work" aria-label="Work"><span class="nav-icon">${NAV_ICONS.work}</span></button>

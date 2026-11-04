@@ -20,15 +20,16 @@ test('The app connects only to TBA Office, with the office sign-in',()=>{
   assert.doesNotMatch(appIndex,/serviceWorker|sw\.js|oauth-consent/);
 });
 
-test('Only the parts the office uses are loaded; the assistant comes later',()=>{
+test('Office loads only its own assistant, not personal Window AI modules',()=>{
   for(const f of ['ai.js','bandeja.js','ambient.js','akte-skills.js','credit.js','situation.js','chat-stream-recovery.js'])
     assert.ok(!loaded.includes(f),f+' is not loaded');
-  for(const f of ['shell.js','app.js','work.js','ahora.js','sync.js','task-detail.js','office-fristen.js'])
+  for(const f of ['shell.js','app.js','work.js','ahora.js','sync.js','task-detail.js','office-fristen.js','office-assistant.js'])
     assert.ok(loaded.includes(f),f+' is loaded');
   assert.ok(loaded.indexOf('office-fristen.js')<loaded.indexOf('app.js'));
   const shell=src('shell.js');
-  for(const nav of ['assistant','bandeja','readings','thoughts'])
+  for(const nav of ['bandeja','readings','thoughts'])
     assert.match(shell,new RegExp(`data-nav="${nav}"[^>]*hidden`),nav+' stays hidden');
+  assert.match(shell,/<button data-nav="assistant" aria-label="Assistent">/);
   assert.match(shell,/<button data-work-view="desktop">Desktop<\/button>/,'Desktop is now available');
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);

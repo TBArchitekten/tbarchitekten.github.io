@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Assistent individual por miembro · ChatGPT
+- Qué cambió y por qué: se preparó un chat privado para cada cuenta activa de TBA Office, con conversaciones persistentes y modos Schnell y Gründlich. No se copia la memoria de Window ni se consultan automáticamente archivos o calendarios.
+- Archivos: app/office-assistant.js, app/office-assistant.css, app/shell.js, app/app.js, app/index.html, supabase/functions/office-assistant/index.ts, supabase/migrations/20261104220000_office_assistant_personal_v1.sql y tests.
+- Base de datos: migración pendiente de aplicar.
+- Deploy de funciones: pendiente.
+- Cómo se probó: esquema y cuota comprobados en transacción revertida; CI pendiente.
+- Quedó pendiente: aceptación en navegadores con dos empleados y decisión del presupuesto mensual.
+- Riesgos o decisiones: límite provisional de 15 solicitudes diarias por miembro; sin acciones automáticas.
+- PR: #18.
+
 ### 2026-11-04 · Desktop integrado, documentación de cierre · ChatGPT
 - **Qué cambió y por qué:** PR #16 ya integrado en `main` (squash `c6afe968`); se aclara que la aceptación autenticada de Desktop aún no está hecha y que la respuesta pública de GitHub Pages no pudo comprobarse desde el entorno.
 - **Archivos:** `docs/ESTADO.md` y `docs/BITACORA.md`.
