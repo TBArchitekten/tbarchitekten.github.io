@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Romy y paridad de navegación/compartidos · ChatGPT
+- Qué cambió y por qué: Gari exige un único sistema de navegación coherente con Window, Desktop editable por todos y el nombre Romy. PR #24 hace Tools una sección en la shell Window; unifica la barra de la página raíz, elimina la restricción autor/admin para archivos compartidos, corrige duplicados sin proyecto.
+- Archivos: app/shell.js, app/app.js, app/index.html, app/office.css, app/work.js, app/office-desktop-ops.js, index.html, style.css, tests, docs y migración SQL.
+- Base de datos: migración office_shared_desktop_edit_for_all.sql, todavía pendiente de aplicar.
+- Deploy de funciones: ninguno en este PR.
+- Cómo se probó: CI y SQL rollback pendientes.
+- Quedó pendiente o sin probar: aceptación Safari en iPhone, dos cuentas activas, operación de archivos reales, paridad funcional completa del runtime Romy con Isabella.
+- Riesgos o decisiones: la autorización de editar y eliminar archivos compartidos es expresa de Gari; personales conservan privacidad. Romy/Window es una exigencia de paridad total; no declarar que se ha alcanzado.
+- PR: #24 en preparación.
+
 ### 2026-11-04 · Cierre de paridad visual del Assistent · ChatGPT
 - Qué cambió y por qué: PR #22 integrado en main (squash 68ee48c). Se eliminó la interfaz de chat paralela y se restauró la reutilización del chat original de Window para cada empleado de la oficina.
 - Archivos: docs/ESTADO.md y docs/BITACORA.md.

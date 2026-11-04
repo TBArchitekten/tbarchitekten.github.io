@@ -17,3 +17,23 @@
 .office-app .office-desktop-actions button:hover,.office-app .office-desktop-actions button:focus-visible{color:#111;border-color:#9da5b0;background:#f6f7f8}
 .office-app .office-desktop-actions button:last-child{color:#aa3434}
 @media(max-width:680px){.office-app .office-desktop-actions button{font-size:10px;padding:4px 3px}}
+
+/* Tools lives in Window's single shell; no navigation jump to another menu. */
+.office-app .office-tools-screen{background:#fafafa;min-height:0}
+.office-app .office-tools-scroll{height:100%;overflow:auto;padding:40px clamp(20px,5vw,70px)}
+.office-app .office-tools-head{margin:0 0 28px}
+.office-app .office-tools-head>p:first-child{font-size:12px;letter-spacing:.14em;color:#90939b;font-weight:700;margin:0 0 12px}
+.office-app .office-tools-head h1{font-size:34px;letter-spacing:-.035em;margin:0 0 14px}
+.office-app .office-tools-head>p:last-child{font-size:16px;color:#686e77;line-height:1.55;max-width:600px;margin:0}
+.office-app .office-tools-card{
+ display:flex;align-items:center;gap:17px;padding:22px;max-width:620px;
+ text-decoration:none;color:#191919;background:#fff;border:1px solid #e4e6e9;
+ border-radius:18px;box-shadow:0 4px 12px rgba(0,0,0,.04)
+}
+.office-app .office-tools-card strong{display:block;font-size:20px;margin-bottom:8px}
+.office-app .office-tools-card small{display:block;color:#6d737c;line-height:1.5;font-size:14px}
+.office-app .office-tools-symbol{display:grid;place-items:center;flex:0 0 50px;width:50px;height:50px;background:#eef3fc;color:#2d67c3;border-radius:15px}
+.office-app .office-tools-symbol svg{width:24px;height:24px}
+.office-app .office-tools-arrow{margin-left:auto;font-size:24px;color:#9ca3ad}
+.office-app .office-tools-manage{display:inline-block;margin-top:22px;font-size:13px;color:#596575}
+@media(max-width:680px){.office-app .office-tools-scroll{padding:24px 22px}.office-app .office-tools-head h1{font-size:31px}.office-app .office-tools-card{padding:18px}}

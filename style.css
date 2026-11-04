@@ -374,3 +374,37 @@ textarea{resize:vertical;min-height:72px;font-family:inherit}
   .cal-cell .cal-chip-title{font-size:10.5px}
   .cal-toolbar{flex-wrap:wrap}
 }
+
+/* Office navigation parity: use one five-icon Window-style bottom control
+   in both the main office pages and the Window-based work/chat pages. */
+@media(max-width:900px){
+ #appView{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+ #appView #lenses{
+   position:fixed;z-index:100;left:16px;right:16px;width:auto;
+   bottom:calc(16px + env(safe-area-inset-bottom,0px));top:auto;
+   display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;
+   padding:5px;height:auto;border:1px solid #e6e6e9;border-radius:999px;
+   background:rgba(255,255,255,.96);box-shadow:0 6px 18px rgba(0,0,0,.04);
+   backdrop-filter:blur(18px);overflow:visible
+ }
+ #appView #lenses>.lens-nav-item{
+   display:flex;min-width:0;min-height:51px;padding:7px 0;
+   flex-direction:column;align-items:center;justify-content:center;
+   border:0;border-radius:999px;color:#141518;background:transparent!important
+ }
+ #appView #lenses>.lens-nav-item.active{background:#ececed!important;color:#121212}
+ #appView #lenses .lens-glyph{color:inherit;flex-basis:auto}
+ #appView #lenses .lens-glyph svg{width:24px;height:24px}
+ #appView #lenses .lens-copy{display:none!important}
+ #appView #lenses .lenses-brand,#appView #lenses .lenses-heading,
+ #appView #lenses .lenses-spacer{display:none!important}
+ #appView #lenses .lens-account{
+   position:fixed;top:calc(90px + env(safe-area-inset-top,0px));
+   right:20px;left:auto;padding:0;border:0;z-index:101
+ }
+ #appView #lenses .lens-account-button{width:42px;height:42px;min-height:42px;padding:0;justify-content:center}
+ #appView #lenses .lens-account-button .avatar{flex-basis:36px;width:36px;height:36px}
+ #appView #lenses .account-menu{
+   top:calc(100% + 5px);bottom:auto;right:0;left:auto;width:220px;
+ }
+}

@@ -616,7 +616,7 @@ async function loadDuplicateGroups(){
 }
 async function duplicatesPanel(){
   let groups=[];try{groups=await loadDuplicateGroups()}catch{setStatus('Duplikate konnten nicht gesucht werden.');return}
-  const folderName=id=>folders.find(f=>f.id===id)?.name||project.name;
+  const folderName=id=>folders.find(f=>f.id===id)?.name||(project?.name||'Büro');
   const copies=groups.flatMap(g=>g.slice(1));
   if(!copies.length){setStatus('Keine Duplikate in diesem Projekt.');return}
   const html=`<div class="work-dupes"><p class="small">Die älteste Datei jeder Gruppe bleibt; die markierten Kopien werden endgültig gelöscht (Datei und extrahierter Text). Kopien, die bleiben sollen, abwählen.</p>

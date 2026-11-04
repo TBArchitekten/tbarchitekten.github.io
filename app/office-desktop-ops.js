@@ -27,8 +27,9 @@ async function enhance({sb,folders,files,refresh,projectName}){
   const {data:sessionData}=await sb.auth.getSession();
   const userId=sessionData?.session?.user?.id;
   if(!userId)return;
-  const {data:member}=await sb.from('office_members').select('role').eq('user_id',userId).maybeSingle();
-  const canManage=item=>item?.user_id===userId||member?.role==='admin';
+  // All active Office employees can manage shared files and folders, as on
+  // the existing shared Windows drive. The DB and Storage policies enforce it.
+  const canManage=()=>true;
   async function update(table,item,patch,errorMessage,successMessage){
     if(!item)return;
     const {data,error}=await sb.from(table).update(patch).eq('id',item.id).select('id');

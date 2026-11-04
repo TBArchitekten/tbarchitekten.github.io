@@ -23,11 +23,11 @@ document.body.innerHTML = `
 
   <nav id="desktopLenses" class="desktop-lenses" aria-label="Office">
     <div class="lenses-heading">ANSICHTEN</div>
-    <button class="lens-nav-item" data-nav="assistant" aria-label="Assistent"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.assistant}</span><span class="lens-copy"><strong>Assistent</strong><small>Mit dem Assistenten sprechen</small></span></button>
+    <button class="lens-nav-item" data-nav="assistant" aria-label="Romy"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.assistant}</span><span class="lens-copy"><strong>Romy</strong><small>Persönliche Assistentin</small></span></button>
     <button class="lens-nav-item active" data-nav="feed" aria-label="Heute"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.feed}</span><span class="lens-copy"><strong>Heute</strong><small>Ihr Tag</small></span></button>
     <button class="lens-nav-item" data-nav="calendar" aria-label="Kalender"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.calendar}</span><span class="lens-copy"><strong>Kalender</strong><small>Termine und Aufgaben</small></span></button>
     <button class="lens-nav-item" data-nav="work" aria-label="Work"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.work}</span><span class="lens-copy"><strong>Work</strong><small>Projekte</small></span></button>
-    <a class="lens-nav-item office-link" href="../#tools" aria-label="Tools"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.tools}</span><span class="lens-copy"><strong>Tools</strong><small>Terminplan und Muster</small></span></a>
+    <button class="lens-nav-item office-link" data-nav="tools" aria-label="Tools"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.tools}</span><span class="lens-copy"><strong>Tools</strong><small>Terminplan und Muster</small></span></button>
     <button class="lens-nav-item" data-nav="bandeja" aria-label="Eingang" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.bandeja}${bandejaBadge}</span><span class="lens-copy"><strong>Eingang</strong><small>Vorschläge</small></span></button>
     <button class="lens-nav-item" data-nav="readings" aria-label="Lecturas" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.readings}</span><span class="lens-copy"><strong>Lecturas</strong><small></small></span></button>
     <button class="lens-nav-item" data-nav="thoughts" aria-label="Thoughts" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.thoughts}</span><span class="lens-copy"><strong>Thoughts</strong><small></small></span></button>
@@ -93,6 +93,18 @@ document.body.innerHTML = `
       </div>
     </section>
 
+    <section id="toolsScreen" class="screen office-tools-screen" data-screen="tools" aria-label="Werkzeuge">
+      <div class="office-tools-scroll">
+        <div class="office-tools-head"><p>TOOLS</p><h1>Werkzeuge</h1>
+        <p>Wiederverwendbare Werkzeuge und Office-Muster für die Projektarbeit.</p></div>
+        <a class="office-tools-card" href="../#plans" aria-label="Terminplan öffnen">
+          <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.tools}</span>
+          <span><strong>Terminplan</strong><small>Muster für LPH 3 und LPH 5 auswählen, projektbezogen instanziieren und fortschreiben.</small></span>
+          <span class="office-tools-arrow" aria-hidden="true">›</span>
+        </a>
+        <a class="office-tools-manage" href="../#work">Projekte verwalten</a>
+      </div>
+    </section>
     <section id="workScreen" class="screen work-screen" data-screen="work">
       <div class="work-shell">
         <div class="work-head">
@@ -171,11 +183,11 @@ document.body.innerHTML = `
   </section>
 
   <nav id="mainNav" class="main-nav" aria-label="MINDS">
-    <button class="main-nav-item" data-nav="assistant" aria-label="Assistent"><span class="nav-icon">${NAV_ICONS.assistant}</span></button>
+    <button class="main-nav-item" data-nav="assistant" aria-label="Romy"><span class="nav-icon">${NAV_ICONS.assistant}</span></button>
     <button class="main-nav-item active" data-nav="feed" aria-label="Heute"><span class="nav-icon">${NAV_ICONS.feed}</span></button>
     <button class="main-nav-item" data-nav="calendar" aria-label="Kalender"><span class="nav-icon">${NAV_ICONS.calendar}</span></button>
     <button class="main-nav-item" data-nav="work" aria-label="Work"><span class="nav-icon">${NAV_ICONS.work}</span></button>
-    <a class="main-nav-item office-link" href="../#tools" aria-label="Tools"><span class="nav-icon">${NAV_ICONS.tools}</span></a>
+    <button class="main-nav-item office-link" data-nav="tools" aria-label="Tools"><span class="nav-icon">${NAV_ICONS.tools}</span></button>
     <button class="main-nav-item" data-nav="bandeja" aria-label="Eingang" hidden><span class="nav-icon">${NAV_ICONS.bandeja}${bandejaBadge}</span></button>
   </nav>
 

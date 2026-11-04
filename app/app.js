@@ -466,7 +466,7 @@ function placeGlobalMenu(name){
 // and one shared page. The app chooses the section through the URL fragment
 // (#section=…); a section that belongs to another tab is opened by the app.
 const WINDOW_TAB_FOR={assistant:'chat',feed:'ahora',calendar:'tiempo',work:'work',bandeja:'bandeja',ideas:'bandeja'};
-const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','readings','thoughts'];
+const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','tools','readings','thoughts'];
 let windowShell=false,windowShellTab='chat',windowShellCaps=[];
 function show(name,options={}){
   if(windowShell){
