@@ -51,7 +51,7 @@ async function loadThread(id,{internal=false}={}){
   const all=[];
   for(let offset=0;;offset+=1000){
     const {data,error}=await sb.from('office_assistant_messages')
-      .select('id,role,content,created_at').eq('conversation_id',id)
+      .select('id,role,content,attachments,created_at').eq('conversation_id',id)
       .order('created_at',{ascending:true}).order('id',{ascending:true}).range(offset,offset+999);
     if(serial!==loadVersion)return false;
     if(error){status('Die Nachrichten konnten nicht geladen werden.');return false}
@@ -129,7 +129,7 @@ function openHistory(){
   body.appendChild(list);
 }
 function showAttachmentNotice(){
-  status('Dateianhänge im Romy-Chat sind noch nicht freigeschaltet. Text und Sprache funktionieren.');
+  status('Dieses Dateiformat ist noch nicht verfügbar. PDF, Office-Dokumente, Text und Bilder werden unterstützt.');
 }
 async function showPendingProposals(){
   if(!ownerId||!threadId)return;
@@ -180,13 +180,12 @@ async function send(message,{attachments=[],replyTo=null}={}){
   await initialized;
   if(busy)return;
   if(!ownerId){status('Bitte melden Sie sich erneut im Office an.');return}
-  if(attachments.length){showAttachmentNotice();return}
   const text=String(message||'').trim();
-  if(!text)return;
+  if(!text&&!attachments.length)return;
   if(!globalThis.crypto?.randomUUID){status('Dieser Browser unterstützt keine sichere Nachrichten-ID.');return}
   busy=true;
   const requestId=crypto.randomUUID(),targetThread=threadId;
-  const optimistic={id:requestId,role:'user',content:text,created_at:new Date().toISOString()};
+  const optimistic={id:requestId,role:'user',content:text,attachments,created_at:new Date().toISOString()};
   display([...rows,optimistic]);
   const sendButton=document.getElementById('sendButton');
   if(sendButton)sendButton.disabled=true;
@@ -194,7 +193,7 @@ async function send(message,{attachments=[],replyTo=null}={}){
   status('Romy antwortet …');
   try{
     const result=await window.TBA_ROMY_TRANSPORT.send({
-      message:text,conversationId:targetThread,requestId,replyTo,
+      message:text,conversationId:targetThread,requestId,replyTo,attachments,
       onDelta:(_delta,partial)=>display([...rows,optimistic,
         {id:requestId+':assistant',role:'assistant',content:partial,
           created_at:new Date().toISOString()}]),

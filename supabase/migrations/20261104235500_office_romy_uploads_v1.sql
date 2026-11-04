@@ -31,3 +31,14 @@ alter table public.office_assistant_messages
 alter table public.office_assistant_messages
  add constraint office_assistant_messages_attachments_array
  check (jsonb_typeof(attachments)='array');
+
+-- Window also allows an attachment-only turn. Preserve the user's actual
+-- empty text instead of inserting invented prose into their private history.
+alter table public.office_assistant_messages
+ drop constraint office_assistant_messages_content_check;
+alter table public.office_assistant_messages
+ add constraint office_assistant_messages_content_check
+ check (
+  (role='assistant' and length(btrim(content))>=1)
+  or (role='user' and (length(btrim(content))>=1 or jsonb_array_length(attachments)>0))
+ );

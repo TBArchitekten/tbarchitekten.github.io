@@ -3,6 +3,7 @@ import { chatTurnModel, documentModel } from "./chat-model-routing.mjs";
 import { interactiveTurnContract } from "./turn-capability-contract.mjs";
 import { routeRomyTurn } from "./romy-router.mjs";
 import { ROMY_TOOLS, executeRomyTool, reviewRomyProposal } from "./romy-tools.mjs";
+import { loadRomyAttachments } from "./romy-attachments.mjs";
 
 // Office has its OWN Supabase users and records. This is a scoped adaptation of
 // Window's tool-capable turn architecture, not a connection to Gari's Isabella.
@@ -31,7 +32,7 @@ const instruction=[
 const textOf=payload=>(payload?.output||[]).filter(x=>x?.type==="message")
  .flatMap(x=>(x.content||[]).filter(p=>p?.type==="output_text").map(p=>String(p.text||""))).join("").trim();
 const functionCalls=payload=>(payload?.output||[]).filter(x=>x?.type==="function_call"&&x.call_id&&x.name);
-const apiInput=(history,message)=>[...history.map(m=>({role:m.role,content:m.content})),{role:"user",content:message}];
+const apiInput=(history,message,attachmentInputs=[])=>[...history.map(m=>({role:m.role,content:m.content})),{role:"user",content:attachmentInputs.length?[...(message?[{type:"input_text",text:message}]:[]),...attachmentInputs]:message}];
 async function getHistory(db,id){
  const rows=[];let from=0;
  for(;;){
@@ -86,16 +87,16 @@ async function requestModel({apiKey,model,input,allowTools=true,onDelta=()=>{}})
   return completed;
  }finally{clearTimeout(timeout);}
 }
-async function runRomy({db,admin,uid,conversationId,requestId,history,message,apiKey,onDelta}){
+async function runRomy({db,admin,uid,conversationId,requestId,history,message,attachmentInputs=[],apiKey,onDelta}){
  // Use Window's server-authoritative capability contract on every browser turn.
- const contract=interactiveTurnContract({surface:"chat_browser",background:false,attachments:0});
+ const contract=interactiveTurnContract({surface:"chat_browser",background:false,attachments:attachmentInputs.length});
  if(contract.tools!=="governed")throw new Error("capability_contract_failed");
  const env={OPENAI_MODEL:Deno.env.get("TBA_OFFICE_ASSISTANT_MODEL"),
             OPENAI_DEEP_MODEL:Deno.env.get("TBA_OFFICE_ASSISTANT_DEEP_MODEL")};
  const complexity=await routeRomyTurn({message,history,apiKey,
    model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||env.OPENAI_MODEL||"gpt-5.6-luna"});
  let route=chatTurnModel({complexity:complexity.complexity,depth:"normal",background:false,env});
- let prompt=apiInput(history,message),text="",proposals=[],
+ let prompt=apiInput(history,message,attachmentInputs),text="",proposals=[],
    inTokens=complexity.input_tokens,outTokens=complexity.output_tokens;
  for(let round=0;round<5;round++){
   const payload=await requestModel({apiKey,model:route.model,input:prompt,onDelta,
@@ -170,7 +171,8 @@ Deno.serve(async req=>{
  }
  const message=typeof input?.message==="string"?input.message.trim():"",
        requestId=input?.request_id,conversationId=input?.conversation_id;
- if(!isUuid(requestId)||!message||(conversationId!=null&&!isUuid(conversationId)))
+ const attachments=Array.isArray(input?.attachments)?input.attachments:[];
+ if(!isUuid(requestId)||(!message&&!attachments.length)||(conversationId!=null&&!isUuid(conversationId)))
    return json(400,{error:"invalid_request"});
  let conversation;
  if(conversationId){
@@ -194,8 +196,12 @@ Deno.serve(async req=>{
  if(reserveError)return json(503,{error:"request_registration_unavailable"});
  if(reserved==="duplicate")return json(409,{error:"request_already_received"});
  if(reserved!=="reserved")return json(403,{error:"not_authorized"});
+ let attached;
+ try{attached=await loadRomyAttachments(db,uid,attachments)}
+ catch(e){await completeRequest(admin,uid,requestId,{status:"failed"});
+  return json(400,{error:String(e?.message||"invalid_attachment")});}
  const {error:saveError}=await admin.from("office_assistant_messages").insert({
-  conversation_id:conversation.id,user_id:uid,request_id:requestId,role:"user",content:message,
+  conversation_id:conversation.id,user_id:uid,request_id:requestId,role:"user",content:message,attachments:attached.metadata,
  });
  if(saveError){
   await completeRequest(admin,uid,requestId,{status:"failed"});
@@ -203,7 +209,7 @@ Deno.serve(async req=>{
  }
  const process=async onDelta=>{
   const result=await runRomy({db,admin,uid,conversationId:conversation.id,
-    requestId,history,message,apiKey:key,onDelta});
+    requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta});
   if(!result.reply)throw new Error("ai_empty_response");
   await persistReply(admin,uid,conversation.id,requestId,result.reply);
   await completeRequest(admin,uid,requestId,{

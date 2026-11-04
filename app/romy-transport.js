@@ -14,7 +14,7 @@ function parseFastSse(buffer,onEvent){
  }
  return rest;
 }
-async function send({message,conversationId,requestId,onDelta,replyTo}){
+async function send({message,conversationId,requestId,onDelta,replyTo,attachments=[]}){
  const sb=window.MINDS_SUPABASE,cfg=window.MINDS_SUPABASE_CONFIG;
  const {data:{session}}=await sb.auth.getSession();
  if(!session||!cfg?.url||!cfg?.publishableKey)throw new Error('authentication_required');
@@ -23,7 +23,7 @@ async function send({message,conversationId,requestId,onDelta,replyTo}){
   headers:{apikey:cfg.publishableKey,Authorization:'Bearer '+session.access_token,
     'Content-Type':'application/json',Accept:'text/event-stream'},
   body:JSON.stringify({message,conversation_id:conversationId,request_id:requestId,
-    stream:true,reply_to:replyTo||null}),
+    stream:true,reply_to:replyTo||null,attachments}),
  });
  if(!response.ok||!response.body){
   let err={};try{err=await response.json()}catch{}
