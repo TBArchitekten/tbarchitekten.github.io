@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (PR #25 integrado; Romy adjuntos Window en PR de revisión, aún sin aplicar).
+**Actualizado:** 04.11.2026, por ChatGPT (PR #25 integrado; Romy adjuntos Window en PR #27, migración validada sin aplicar).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -119,7 +119,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 
 **Después:** vínculo Planner↔Terminplan, Planliste, Controlling LPH/horas, Kostenschätzung/Kostenberechnung, Projektakte y Microsoft M365, según la hoja de ruta de arriba.
 
-**Romy y archivos adjuntos:** el código Window para elegir archivos, normalizar imágenes y subir PDF/Office se está reactivando en `office-romy-window-attachments-v1`, con bucket privado `office-romy-uploads` y RLS estricta por empleado. El backend pasará los ficheros al modelo siguiendo el contrato `input_image`/`input_file` de Window. La migración y el deploy todavía NO están aplicados; no afirmar funcionalidad real antes del E2E. El historial visible conservará las referencias a los adjuntos. La lectura multimodal de documentos en turnos posteriores y el resto de la paridad con Isabella siguen pendientes.
+**Romy y archivos adjuntos:** el código Window para elegir archivos, normalizar imágenes y subir PDF/Office se está reactivando en PR #27 (`office-romy-window-attachments-v1`), con bucket privado `office-romy-uploads` y RLS estricta por empleado. El backend pasará los ficheros al modelo siguiendo el contrato `input_image`/`input_file` de Window. La migración y el deploy todavía NO están aplicados; no afirmar funcionalidad real antes del E2E. El historial visible conservará las referencias a los adjuntos. La lectura multimodal de documentos en turnos posteriores y el resto de la paridad con Isabella siguen pendientes.
 
 ## 7. Cuidado con
 - **La copia de Window es un fork.** Si se trae código nuevo de Window, hay que volver a aplicar los cambios de oficina:

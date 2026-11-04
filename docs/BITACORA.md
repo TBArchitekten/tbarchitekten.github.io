@@ -22,10 +22,10 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - **Archivos:** app/app.js, app/office-assistant.js, app/romy-transport.js, app/index.html, supabase/functions/office-assistant/index.ts, supabase/functions/office-assistant/romy-attachments.mjs, supabase/migrations/20261104235500_office_romy_uploads_v1.sql, tests/office-romy-attachments.test.mjs y documentación.
 - **Base de datos:** migración preparada, no aplicada todavía.
 - **Deploy de funciones:** pendiente de revisión y CI.
-- **Cómo se probó:** pruebas automatizadas de contrato y aislamiento diseñadas; CI y SQL rollback pendientes.
+- **Cómo se probó:** SQL rollback PASS (bucket privado, dueño puede subir/leer, acceso ajeno denegado); CI de rama pendiente de reejecución.
 - **Quedó pendiente o sin probar:** probar subida/lectura autenticada de PDF, imágenes y Office, historial, aceptación Safari y dos empleados.
 - **Riesgos o decisiones que necesitan a Gari:** ninguna decisión de interfaz; se mantienen los formatos/tamaños de Window. No compartir adjuntos privados entre empleados.
-- **PR:** pendiente de apertura.
+- **PR:** #27.
 
 
 ### 2026-11-04 · Navegación única en la página raíz · ChatGPT

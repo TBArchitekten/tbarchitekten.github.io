@@ -45,7 +45,7 @@ test('Romy requires explicit owner review before actions, enforced by user RLS',
 });
 test('Romy keeps original Window composer and private histories, no extra chat UI',()=>{
  const app=read('app/app.js'),html=read('app/index.html'),front=read('app/office-assistant.js');
- assert.ok(html.includes('romy-transport.js?v=office8'));
+ assert.ok(html.includes('romy-transport.js?v=office27'));
  assert.ok(html.indexOf('romy-transport.js')<html.indexOf('office-assistant.js'));
  assert.ok(app.includes('setOfficeMessages:'));
  assert.ok(front.includes('showPendingProposals'));
