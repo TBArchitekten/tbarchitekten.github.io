@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (Desktop v1 en rama, todavía sin despliegue).
+**Actualizado:** 04.11.2026, por ChatGPT (migración Desktop aplicada; frontend en PR #16, aún sin publicar).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -47,11 +47,13 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - `20261104000300_office_planner_v1` (tablas `office_tasks` y `office_task_buckets`, **sin uso**, ver §6)
 - `20261104000400_office_window_tables_v1`
 - `20261104000500_office_window_fixes`
+- `20261104210000_office_desktop_v1` (aplicada con Supabase MCP como versión `20261104203250`; incluye bucket privado `minds-work`)
 
 **Tablas principales:**
 - `office_members`: `role` = `admin` | `projektleiter` | `member`; además `is_active` y `must_change_password`.
 - `office_projects`: número, nombre, `status` `aktiv`/`archiviert`, `projektleiter_id`.
 - `office_terminplan_templates` / `office_terminplan_instances`: el Terminplan es `state` jsonb, con `server_revision` para no pisar cambios.
+- Desktop: `minds_work_folders` y `minds_work_files` (Büro con `project_id` nulo, proyectos con su UUID; RLS de lectura compartida para miembros activos; las carpetas de tareas personales siguen privadas en Storage).
 - Tablas de Window: `isabella_tasks`, `isabella_events`, `isabella_categories`, `isabella_preferences`, `isabella_deleted_items`, `minds_work_buckets`, `minds_work_project_people`, `minds_work_task_assignees`, `minds_work_task_allocations`. Las vistas `isabella_projects` e `isabella_people` son de solo lectura.
 
 **Reglas (RLS).** Los helpers `SECURITY DEFINER` están en el esquema `private`: `office_is_member`, `office_is_admin`, `office_can_lead`, `office_leads_project(uuid)`, `office_can_edit_plan`, `office_can_edit_window_task`, `office_can_edit_window_task_id`.
@@ -76,7 +78,7 @@ Las etapas para traer Window a la oficina:
 | 2 | Planner y Kalender | ✔ hecho (primero propio en PR #12; sustituido por la copia de Window en PR #13) |
 | 3 | Heute (como "Ahora" de Window) | ✔ hecho (PR #13) |
 | 4 | Assistent personal por persona (parecido a Isabella, con otro nombre) | pendiente = **parte D** |
-| 5 | Desktop compartido de Büro y de cada proyecto, con carpetas y archivos | parte C en preparación; aún no publicada |
+| 5 | Desktop compartido de Büro y de cada proyecto, con carpetas y archivos | backend aplicado; interfaz en PR #16, aún no publicada |
 
 La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heute), C (Desktop) y D (Assistent). **A y B están hechas.** Gari decidió integrar Desktop (C) antes del Assistent (D) y probar el conjunto con compañeros después.
 
@@ -96,7 +98,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 - Vigilar el gasto de tokens.
 
 ### Próximos pasos concretos (orden revisado por Gari)
-1. **Parte C · Desktop compartido** (rama `office-desktop-shared-folders-v1`, pendiente de merge/aplicación): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. El autor y los admins pueden renombrar, mover y borrar. Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía.
+1. **Parte C · Desktop compartido** (rama `office-desktop-shared-folders-v1`, migración aplicada, pendiente de merge del PR #16): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. El autor y los admins pueden renombrar, mover y borrar. Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
 2. **Parte D · Assistent de oficina:** chat personal por persona, conversaciones persistentes/Threads, cuota por persona y permisos de lectura. Configuración de modelos y gasto mensual pendiente de decisión; no mezclar con Window.
 3. **Limpieza sin tocar tablas:** funciones del Planner retirado, enlace «‹ Projekte» en Terminplan y textos de interfaz en alemán. No borrar `office_tasks` ni `office_task_buckets` sin OK explícito.
 4. **Opcional:** clima en Heute (Augsburg) y revisión de mensajes MINDS heredados.
