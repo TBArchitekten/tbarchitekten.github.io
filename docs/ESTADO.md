@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (Assistent personal: backend aplicado, frontend en PR #18).
+**Actualizado:** 04.11.2026, por ChatGPT (Assistent personal PR #18 integrado; aceptación funcional pendiente).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -65,7 +65,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Equipo de proyecto:** solo la dirección y los admins.
 
 ## 5. Dónde estamos (04.11.2026)
-- **Integrado en main** (PR #10–#16): inicio de sesión, contraseñas, Projekte, Mitglieder, Terminplan con asistente, y la app (Heute, Kalender, Work → Panorama, Planner y Desktop). Desktop aún no tiene aceptación autenticada con personas reales.
+- **Integrado en main** (PR #10–#18): inicio de sesión, contraseñas, Projekte, Mitglieder, Terminplan con asistente, y la app (Heute, Kalender, Work → Panorama, Planner y Desktop). Desktop aún no tiene aceptación autenticada con personas reales.
 - **Probado:** con datos simulados en escritorio y teléfono (sin errores ni textos en español), consultas RLS en transacciones revertidas, y la página publicada sin sesión (manda al inicio de sesión).
 - **Desktop no probado todavía con personas reales.** Al 04.11 solo existe la cuenta de Gari (admin) y **no hay proyectos** en la base de datos.
 
@@ -79,7 +79,7 @@ Las etapas para traer Window a la oficina:
 | 1 | Diseño y estructura como Window | ✔ hecho (PR #11) |
 | 2 | Planner y Kalender | ✔ hecho (primero propio en PR #12; sustituido por la copia de Window en PR #13) |
 | 3 | Heute (como "Ahora" de Window) | ✔ hecho (PR #13) |
-| 4 | Assistent individual para cada miembro activo | PR #18 en desarrollo; sin deploy ni aceptación |
+| 4 | Assistent individual para cada miembro activo | PR #18 integrado; backend activo; aceptación real pendiente |
 | 5 | Desktop compartido de Büro y de cada proyecto, con carpetas y archivos | integrado en main (PR #16); aceptación con usuarios pendiente |
 
 La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heute), C (Desktop) y D (Assistent). **A y B están hechas.** Gari decidió integrar Desktop (C) antes del Assistent (D) y probar el conjunto con compañeros después.
@@ -101,7 +101,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 
 ### Próximos pasos concretos (orden revisado por Gari; Desktop integrado)
 1. **Parte C · Desktop compartido (integrado; falta aceptación en navegador)** (PR #16 integrado en main; migración aplicada): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. El autor y los admins pueden renombrar, mover y borrar. Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
-2. **Parte D · Assistent individual (PR #18):** un historial privado por empleado activo, con conversaciones persistentes. Modos Schnell y Gründlich, límite provisional de 15 llamadas al día por persona. Sin lectura automática de documentos, tareas ni calendarios, ni acciones sobre el sistema. Presupuesto mensual por decidir. Migración y función en preparación; falta aceptación real.
+2. **Parte D · Assistent individual (PR #18):** un historial privado por empleado activo, con conversaciones persistentes. Modos Schnell y Gründlich, límite provisional de 15 llamadas al día por persona. Sin lectura automática de documentos, tareas ni calendarios, ni acciones sobre el sistema. Presupuesto mensual por decidir. Migración y función activas; frontend integrado; falta aceptación real con usuarios.
 3. **Limpieza sin tocar tablas:** funciones del Planner retirado, enlace «‹ Projekte» en Terminplan y textos de interfaz en alemán. No borrar `office_tasks` ni `office_task_buckets` sin OK explícito.
 4. **Opcional:** clima en Heute (Augsburg) y revisión de mensajes MINDS heredados.
 5. **Aceptación conjunta con 1–2 colegas:** tras integrar C y D, comprobar Heute, Kalender, Planner, Terminplan, permisos, archivos y Assistent en escritorio y móvil. Gari también tiene pendiente revocar la antigua clave OpenAI del asistente anterior.
