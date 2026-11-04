@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (PR #24: permisos y Storage aplicados, interfaz pendiente de merge; Romy es el nombre público).
+**Actualizado:** 04.11.2026, por ChatGPT (PR #24 integrado; PR #26 separa la cuenta del menú de cinco accesos de las páginas raíz).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -12,6 +12,8 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Idioma de la interfaz:** alemán. Gari escribe en español.
 - **Contrato visual:** también el Assistent debe usar la interfaz de Window/Isabella (pantalla de chat, compositor, mensajes, voz, navegación responsive), sin inventar otra vista. La cuenta, el historial y los permisos son individuales en TBA Office, mediante backend independiente. PR #22 retira el chat paralelo creado por error en PR #18.
 - **Origen:** la parte de Heute, Kalender y Work es una **copia del web app de Window** (la app personal de Gari, repo `gari01234/minds`, carpetas `apps/isabella` y `shared`, commit `34744c7`). Se copió el código para que se vea y funcione igual; los datos están separados.
+
+**Navegación móvil:** el menú original de Window con cinco accesos (Romy, Heute, Kalender, Work, Tools) es la referencia en `/app/` y también en las páginas raíz de Terminplan/Projekte. El menú de cuenta permanece fuera de la barra inferior, y la administración de Projekte es accesible desde Tools. PR #26 en preparación; aceptación visual Safari pendiente.
 
 ## 2. Mapa del código
 
