@@ -55,7 +55,7 @@
     .sort((a,b) => Number(!!a.done) - Number(!!b.done)
       || Number(a.date !== key) - Number(b.date !== key)
       || Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
-      || String(a.title || '').localeCompare(String(b.title || ''),'es'));
+      || String(a.title || '').localeCompare(String(b.title || ''),'de'));
   const eventsForDay = (state, key) => (state.events || [])
     .filter(e => e.date === key)
     .sort((a,b) => String(a.start || '').localeCompare(String(b.start || '')));
@@ -146,7 +146,7 @@
       else if (!due||invalid) unscheduled.push(entry);
     }
     const order=(a,b)=>String(a.due||'9999-12-31').localeCompare(String(b.due||'9999-12-31'))
-      ||String(a.task.title||'').localeCompare(String(b.task.title||''),'es');
+      ||String(a.task.title||'').localeCompare(String(b.task.title||''),'de');
     rows.sort(order);unscheduled.sort(order);overdue.sort(order);
     events.sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))
       ||String(a.start||'').localeCompare(String(b.start||'')));
@@ -172,8 +172,8 @@
     for (const t of unique.values()) {
       const key=t.assigneePersonId?'person:'+t.assigneePersonId:
         t.assignee?'legacy:'+t.assignee:'unassigned';
-      const name=t.assigneePersonId?personNames.get(t.assigneePersonId)||t.assignee||'Responsable sin nombre':
-        t.assignee||'Sin responsable';
+      const name=t.assigneePersonId?personNames.get(t.assigneePersonId)||t.assignee||'Ohne Namen':
+        t.assignee||'Ohne Verantwortliche';
       const group=ensure(key,name);
       group.tasks++;
       if(t.date>=week.start&&t.date<=week.end)group.dueThisWeek++;
@@ -191,7 +191,7 @@
       if(!Number.isFinite(duration)||duration<=0)continue;
       reservedOwnMinutes+=duration;bookings++;
     }
-    return {tasks:unique.size,groups:[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'es')),
+    return {tasks:unique.size,groups:[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'de')),
       reservedOwnMinutes,bookings,availabilityKnown:false,actualTimeKnown:false};
   };
   const projectFor = (state,id) => (state.projects || []).find(p => p.id === id);

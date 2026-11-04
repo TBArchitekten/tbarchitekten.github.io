@@ -1,5 +1,5 @@
 const navIcon = paths => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+paths+'</svg>';
-const NAV_ICONS = Object.freeze({
+const NAV_ICONS = ({
   feed:navIcon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>'),
   assistant:navIcon('<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>'),
   calendar:navIcon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>'),
@@ -8,33 +8,37 @@ const NAV_ICONS = Object.freeze({
   thoughts:navIcon('<path d="m12 2 9 5-9 5-9-5 9-5zM3 7v10l9 5 9-5V7M12 12v10"/>'),
   bandeja:navIcon('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>')
 });
+// TBA Office: Window's frame in German. Chat, Bandeja, Lecturas and Thoughts stay in the page (the copied code
+// expects their elements) but are hidden until the office has an assistant. Tools links to the office tools.
+NAV_ICONS.tools='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
 // Only «Por confirmar» carries a number; the web and the iPhone show the same count.
 const bandejaBadge='<span class="nav-badge hidden" data-bandeja-badge aria-hidden="true"></span>';
 
 document.body.innerHTML = `
 <div class="app" id="app">
   <header class="topbar">
-    <div class="topbar-brand"><div class="eyebrow">MINDS</div></div>
-    <div class="top-actions"><button id="menuButton" class="dots" aria-label="Menú">•••</button></div>
+    <div class="topbar-brand"><div class="eyebrow">TBA OFFICE</div></div>
+    <div class="top-actions"><button id="menuButton" class="dots" aria-label="Menü">•••</button></div>
   </header>
 
-  <nav id="desktopLenses" class="desktop-lenses" aria-label="Vistas de MINDS">
-    <div class="lenses-heading">VISTAS</div>
-    <button class="lens-nav-item active" data-nav="assistant" aria-label="Chat"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.assistant}</span><span class="lens-copy"><strong>Chat</strong><small>Hablar con Isabella</small></span></button>
-    <button class="lens-nav-item" data-nav="feed" aria-label="Ahora"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.feed}</span><span class="lens-copy"><strong>Ahora</strong><small>Tu día</small></span></button>
-    <button class="lens-nav-item" data-nav="calendar" aria-label="Tiempo"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.calendar}</span><span class="lens-copy"><strong>Tiempo</strong><small>Calendario y tareas</small></span></button>
-    <button class="lens-nav-item" data-nav="work" aria-label="Work"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.work}</span><span class="lens-copy"><strong>Work</strong><small>Proyectos</small></span></button>
-    <button class="lens-nav-item" data-nav="bandeja" aria-label="Bandeja"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.bandeja}${bandejaBadge}</span><span class="lens-copy"><strong>Bandeja</strong><small>Lo que Isabella propone</small></span></button>
-    <button class="lens-nav-item" data-nav="readings" aria-label="Lecturas"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.readings}</span><span class="lens-copy"><strong>Lecturas</strong><small>Investigación</small></span></button>
-    <button class="lens-nav-item" data-nav="thoughts" aria-label="Thoughts"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.thoughts}</span><span class="lens-copy"><strong>Thoughts</strong><small>Dear: Thoughts</small></span></button>
+  <nav id="desktopLenses" class="desktop-lenses" aria-label="Office">
+    <div class="lenses-heading">ANSICHTEN</div>
+    <button class="lens-nav-item" data-nav="assistant" aria-label="Assistent" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.assistant}</span><span class="lens-copy"><strong>Assistent</strong><small>Mit dem Assistenten sprechen</small></span></button>
+    <button class="lens-nav-item active" data-nav="feed" aria-label="Heute"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.feed}</span><span class="lens-copy"><strong>Heute</strong><small>Ihr Tag</small></span></button>
+    <button class="lens-nav-item" data-nav="calendar" aria-label="Kalender"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.calendar}</span><span class="lens-copy"><strong>Kalender</strong><small>Termine und Aufgaben</small></span></button>
+    <button class="lens-nav-item" data-nav="work" aria-label="Work"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.work}</span><span class="lens-copy"><strong>Work</strong><small>Projekte</small></span></button>
+    <a class="lens-nav-item office-link" href="../#tools" aria-label="Tools"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.tools}</span><span class="lens-copy"><strong>Tools</strong><small>Terminplan und Muster</small></span></a>
+    <button class="lens-nav-item" data-nav="bandeja" aria-label="Eingang" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.bandeja}${bandejaBadge}</span><span class="lens-copy"><strong>Eingang</strong><small>Vorschläge</small></span></button>
+    <button class="lens-nav-item" data-nav="readings" aria-label="Lecturas" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.readings}</span><span class="lens-copy"><strong>Lecturas</strong><small></small></span></button>
+    <button class="lens-nav-item" data-nav="thoughts" aria-label="Thoughts" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.thoughts}</span><span class="lens-copy"><strong>Thoughts</strong><small></small></span></button>
     <div class="minds-menu-slot lens-menu-slot" data-menu-slot="sidebar"></div>
-    <div class="lenses-foot">Una memoria · distintas vistas</div>
+    <div class="lenses-foot">Titus Bernhard Architekten</div>
   </nav>
 
   <main id="swipeArea" class="swipe-area">
     <section id="assistantScreen" class="screen active" data-screen="assistant">
       <div class="assistant-scroll">
-        <button id="todayCard" class="today-card"><span class="today-title">Hoy</span><span id="todaySummary" class="today-summary">0 eventos · 0 tareas</span><span id="todayNext" class="today-next">Sin próxima cita</span><span class="chevron">›</span></button>
+        <button id="todayCard" class="today-card"><span class="today-title">Heute</span><span id="todaySummary" class="today-summary">0 Termine · 0 Aufgaben</span><span id="todayNext" class="today-next">Kein nächster Termin</span><span class="chevron">›</span></button>
         <div id="messages" class="messages" aria-live="polite"></div>
       </div>
       <div class="composer-wrap">
@@ -44,17 +48,17 @@ document.body.innerHTML = `
           <button id="attachButton" class="attach" aria-label="Adjuntar archivo" title="Adjuntar archivo"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
           <input id="chatImageInput" class="hidden" type="file" accept="image/*,.pdf,.txt,.md,.csv,.json,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.eml" multiple>
           <button id="micButton" class="mic" aria-label="Hablar" title="Hablar"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg></button>
-          <textarea id="chatInput" rows="1" placeholder="Escríbele a Isabella..."></textarea>
+          <textarea id="chatInput" rows="1" placeholder="Nachricht an den Assistenten …"></textarea>
           <button id="sendButton" class="send" aria-label="Enviar" title="Enviar mensaje"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
         </div>
       </div>
     </section>
 
-    <section id="feedScreen" class="screen surface-screen ahora-screen" data-screen="feed" aria-label="Ahora">
+    <section id="feedScreen" class="screen surface-screen ahora-screen" data-screen="feed" aria-label="Heute">
       <div class="surface-scroll ahora-scroll">
-        <div class="pull-refresh-indicator" data-pull-indicator="feed" aria-hidden="true"><span>Desliza para actualizar</span></div>
+        <div class="pull-refresh-indicator" data-pull-indicator="feed" aria-hidden="true"><span>Zum Aktualisieren ziehen</span></div>
         <header class="ahora-head">
-          <div class="ahora-title"><span id="ahoraDate" class="ahora-date"></span><h1>Ahora</h1></div>
+          <div class="ahora-title"><span id="ahoraDate" class="ahora-date"></span><h1>Heute</h1></div>
           <div class="ahora-head-tools"><div id="situationWeather" class="ahora-weather"></div><span class="minds-menu-slot" data-menu-slot="feed"></span></div>
         </header>
         <div id="ahoraWeatherWeek" class="ahora-weather-week hidden"></div>
@@ -93,25 +97,26 @@ document.body.innerHTML = `
       <div class="work-shell">
         <div class="work-head">
           <div><h1 id="workProjectTitle">Work</h1></div>
-          <div class="work-project-switch" aria-label="Proyecto">
-            <span class="small">Cargando proyectos…</span>
+          <div class="work-project-switch" aria-label="Projekt">
+            <span class="small">Lade Projekte …</span>
           </div>
           <span class="minds-menu-slot" data-menu-slot="work"></span>
         </div>
         <div class="work-tabs" role="tablist">
           <button data-work-view="overview" class="active">Panorama</button>
-          <button data-work-view="desktop">Desktop</button>
+          <button data-work-view="desktop" hidden>Desktop</button>
           <button data-work-view="planner">Planner</button>
-          <button data-work-view="knowledge">Conocimiento</button>\n          <button data-work-view="threads">Threads</button>
+          <button data-work-view="knowledge" hidden>Wissen</button>
+          <button data-work-view="threads" hidden>Threads</button>
         </div>
         <div id="workStatus" class="work-status" aria-live="polite"></div>
-        <div id="workBody" class="work-body"><div class="surface-loading">Abriendo Work…</div></div>
+        <div id="workBody" class="work-body"><div class="surface-loading">Öffne Work …</div></div>
         <input id="workFileInput" class="hidden" type="file" multiple>
       </div>
     </section>
 
     <section id="calendarScreen" class="screen" data-screen="calendar">
-      <div class="cal-toolbar"><button id="backButton" class="text-btn">‹ Isabella</button><div class="segments"><button data-view="day">Día</button><button data-view="week">Semana</button><button class="active" data-view="month">Mes</button></div><div class="cal-toolbar-right"><button id="todayButton" class="text-btn right">Hoy</button><span class="minds-menu-slot" data-menu-slot="calendar"></span></div></div>
+      <div class="cal-toolbar"><button id="backButton" class="text-btn" hidden>‹</button><div class="segments"><button data-view="day">Tag</button><button data-view="week">Woche</button><button class="active" data-view="month">Monat</button></div><div class="cal-toolbar-right"><button id="todayButton" class="text-btn right">Heute</button><span class="minds-menu-slot" data-menu-slot="calendar"></span></div></div>
       <div class="cal-nav"><button id="prevButton" class="round">‹</button><div id="calTitle" class="cal-title"></div><button id="nextButton" class="round">›</button></div>
       <div id="calendarContent" class="calendar-content"></div>
     </section>
@@ -166,15 +171,26 @@ document.body.innerHTML = `
   </section>
 
   <nav id="mainNav" class="main-nav" aria-label="MINDS">
-    <button class="main-nav-item active" data-nav="assistant" aria-label="Chat"><span class="nav-icon">${NAV_ICONS.assistant}</span></button>
-    <button class="main-nav-item" data-nav="feed" aria-label="Ahora"><span class="nav-icon">${NAV_ICONS.feed}</span></button>
-    <button class="main-nav-item" data-nav="calendar" aria-label="Tiempo"><span class="nav-icon">${NAV_ICONS.calendar}</span></button>
+    <button class="main-nav-item" data-nav="assistant" aria-label="Assistent" hidden><span class="nav-icon">${NAV_ICONS.assistant}</span></button>
+    <button class="main-nav-item active" data-nav="feed" aria-label="Heute"><span class="nav-icon">${NAV_ICONS.feed}</span></button>
+    <button class="main-nav-item" data-nav="calendar" aria-label="Kalender"><span class="nav-icon">${NAV_ICONS.calendar}</span></button>
     <button class="main-nav-item" data-nav="work" aria-label="Work"><span class="nav-icon">${NAV_ICONS.work}</span></button>
-    <button class="main-nav-item" data-nav="bandeja" aria-label="Bandeja"><span class="nav-icon">${NAV_ICONS.bandeja}${bandejaBadge}</span></button>
+    <a class="main-nav-item office-link" href="../#tools" aria-label="Tools"><span class="nav-icon">${NAV_ICONS.tools}</span></a>
+    <button class="main-nav-item" data-nav="bandeja" aria-label="Eingang" hidden><span class="nav-icon">${NAV_ICONS.bandeja}${bandejaBadge}</span></button>
   </nav>
 
   <div id="drawerBackdrop" class="backdrop hidden"></div>
-  <aside id="drawer" class="drawer hidden"><div class="drawer-head"><div><div class="eyebrow">ISABELLA</div><div class="drawer-title">Más</div></div><button id="closeDrawer" class="round">×</button></div><button data-shell-nav="readings">Lecturas</button><button data-shell-nav="thoughts">Thoughts</button><button id="authButton">Conectar memoria</button><button id="refreshViewAction" data-action="refreshview" class="hidden">Actualizar vista</button><button data-action="tasks">Tareas</button><button data-action="new">Agregar manualmente</button><button data-action="memory">Lo que Isabella sabe de mí</button><button data-action="assistantprefs">Proactividad de Isabella</button><button data-action="push">Avisos de Isabella</button><button data-action="permissions">Permisos de Isabella</button><button data-action="reviews">Revisiones</button><button data-action="routines">Rutinas</button><button data-action="intents">Memoria futura</button><button data-action="continuity">Continuidad</button><button data-action="skills">Habilidades</button><button data-action="doctor">Estado de MINDS</button><button data-action="feedprefs">Feed y clima</button><button data-action="artifacts">Artefactos</button><button data-action="aiusage">Uso IA</button><button data-action="categories">Categorías y proyectos</button><div id="syncStatus" class="drawer-note">Preparando memoria…</div><div id="currentBuildInfo" class="drawer-note">Versión local de MINDS</div></aside>
-  <div id="focusMode" class="focus hidden" role="dialog" aria-modal="true"><div class="focus-head"><div class="focus-name">Isabella</div><button id="focusClose" class="round">×</button></div><div class="focus-center"><div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="focusStatus" class="focus-status">Escuchando…</div><textarea id="focusTranscript" class="focus-transcript" rows="5" readonly placeholder="Tu transcripción aparecerá aquí."></textarea></div><div class="focus-actions"><button id="focusKeyboard">Cancelar</button><button id="focusStop" class="dark">Detener</button></div></div>
+  <aside id="drawer" class="drawer hidden"><div class="drawer-head"><div><div class="eyebrow">TBA OFFICE</div><div class="drawer-title">Mehr</div></div><button id="closeDrawer" class="round">×</button></div><a class="drawer-link" href="../#work">Projekte verwalten</a><a class="drawer-link" href="../#plans">Terminplan-Muster</a><a class="drawer-link" href="../#members" data-office-admin hidden>Mitglieder</a><button data-action="new">Neu anlegen</button><button data-action="tasks">Aufgaben</button><button data-action="categories">Kategorien</button><a class="drawer-link" href="../#password">Passwort ändern</a><button id="officeSignOut">Abmelden</button><button id="authButton" hidden>Synchronisieren</button><button id="refreshViewAction" data-action="refreshview" class="hidden">Ansicht aktualisieren</button><div class="office-hidden-actions" hidden><button data-shell-nav="readings">Lecturas</button><button data-shell-nav="thoughts">Thoughts</button><button data-action="memory"></button><button data-action="assistantprefs"></button><button data-action="push"></button><button data-action="permissions"></button><button data-action="reviews"></button><button data-action="routines"></button><button data-action="intents"></button><button data-action="continuity"></button><button data-action="skills"></button><button data-action="doctor"></button><button data-action="feedprefs"></button><button data-action="artifacts"></button><button data-action="aiusage"></button></div><div id="syncStatus" class="drawer-note">Verbinde mit dem Office …</div><div id="currentBuildInfo" class="drawer-note">TBA Office · auf Basis von Window</div></aside>
+  <div id="focusMode" class="focus hidden" role="dialog" aria-modal="true"><div class="focus-head"><div class="focus-name">Assistent</div><button id="focusClose" class="round">×</button></div><div class="focus-center"><div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="focusStatus" class="focus-status">Hört zu …</div><textarea id="focusTranscript" class="focus-transcript" rows="5" readonly placeholder="Tu transcripción aparecerá aquí."></textarea></div><div class="focus-actions"><button id="focusKeyboard">Abbrechen</button><button id="focusStop" class="dark">Stopp</button></div></div>
   <div id="modalBackdrop" class="backdrop hidden"></div><div id="modal" class="modal hidden"><div class="modal-head"><div id="modalTitle" class="modal-title"></div><button id="closeModal" class="round">×</button></div><div id="modalBody"></div></div>
 </div>`;
+
+// Office menu: admins see Mitglieder; Abmelden ends the office session for all office pages.
+window.addEventListener('office:member',e=>{
+  document.querySelectorAll('[data-office-admin]').forEach(el=>{el.hidden=e.detail?.role!=='admin'});
+});
+document.getElementById('officeSignOut')?.addEventListener('click',async()=>{
+  try{localStorage.removeItem('tba-office-window-v1')}catch{}
+  try{await window.MINDS_SUPABASE?.auth.signOut()}catch{}
+  location.replace('../');
+});

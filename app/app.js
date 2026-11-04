@@ -1,6 +1,9 @@
 (()=>{'use strict';
+// TBA Office: Window's app.js (gari01234/minds apps/isabella) in office mode. The assistant, feed, ideas and
+// proactive cycles are switched off (OFFICE); calendar, Heute, tasks and Work run as in Window.
+const OFFICE=true;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const KEY='isabella-staging-v03';
+const KEY='tba-office-window-v1';
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 const pad=n=>String(n).padStart(2,'0');
 const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -16,7 +19,7 @@ function humanStateHTML(value,technical=''){
   return '<div class="human-state tone-'+esc(value.tone||'neutral')+'"><b>'+esc(value.headline||'')+'</b>'+
     (value.detail?'<p>'+esc(value.detail)+'</p>':'')+
     (meta?'<div class="human-state-meta">'+meta+'</div>':'')+
-    (technical?'<details class="human-tech"><summary>Ver detalle técnico</summary>'+technical+'</details>':'')+
+    (technical?'<details class="human-tech"><summary>Technische Details</summary>'+technical+'</details>':'')+
     '</div>';
 }
 
@@ -56,7 +59,7 @@ const activeTask=t=>!t.done&&!t.archivedAt;
 const MEMORY_KINDS=new Set(['fact','person','routine','episodic','preference','context']);
 const MEMORY_KIND_ALIASES={schedule:'routine',habit:'routine',working_style:'preference',interaction:'preference',constraint:'context',goal:'context',priority:'context',value:'preference',project:'context',relation:'context',relationship:'person',work:'context',identity:'fact',note:'context',other:'context'};
 function normalizeMemoryKind(kind){const k=String(kind||'context').trim().toLowerCase();return MEMORY_KINDS.has(k)?k:(MEMORY_KIND_ALIASES[k]||'context')}
-const taskOrder=(a,b)=>(Number(a.sortOrder||0)-Number(b.sortOrder||0))||String(a.title||'').localeCompare(String(b.title||''),'es');
+const taskOrder=(a,b)=>(Number(a.sortOrder||0)-Number(b.sortOrder||0))||String(a.title||'').localeCompare(String(b.title||''),'de');
 function nextTaskOrder(date){const key=date||null,xs=state.tasks.filter(t=>(t.date||null)===key&&!t.archivedAt);return xs.length?Math.max(...xs.map(t=>Number(t.sortOrder||0)))+10:10}
 let calendarDraggedTaskId=null,calendarDraggedSourceDate=null,calendarDragCommitted=false;
 function orderedPendingTaskElements(container,date){
@@ -146,17 +149,11 @@ function canonicalAttentionPreferences(value={}){
     quietEnd:/^([01]\d|2[0-3]):[0-5]\d$/.test(String(p.quietEnd||''))?String(p.quietEnd):'07:00'
   };
 }
-const base={screen:'assistant',view:'month',date:today(),messages:[],categories:[
-  {id:'casa',name:'Casa',color:'#5A9EC1'},
-  {id:'trabajo',name:'Trabajo',color:'#6D7278'},
-  {id:'minds',name:'MINDS',color:'#8A72C7'},
-  {id:'personal',name:'Personal',color:'#D08A6A'},
-  {id:'architectures',name:'Architectures',color:'#9A9466'}
-],projects:[
-  {id:'bernried',categoryId:'trabajo',name:'Bernried',color:'#2F6FB0'},
-  {id:'schwarz',categoryId:'trabajo',name:'Schwarz',color:'#4F8A62'}
-],tasks:[],events:[],memory:[],pendingIntent:null,deletedTaskIds:[],deletedEventIds:[],feedThreads:{},feedSignals:[],assistantPreferences:{
-  curiosityEnabled:true,
+const base={screen:OFFICE?'feed':'assistant',view:'month',date:today(),messages:[],categories:[
+  {id:'arbeit',name:'Arbeit',color:'#6D7278'},
+  {id:'personal',name:'Persönlich',color:'#D08A6A'}
+],projects:[],tasks:[],events:[],memory:[],pendingIntent:null,deletedTaskIds:[],deletedEventIds:[],feedThreads:{},feedSignals:[],assistantPreferences:{
+  curiosityEnabled:!OFFICE,
   curiosityCadenceHours:30,
   behaviorRules:[],
   attention:canonicalAttentionPreferences()
@@ -202,7 +199,7 @@ function load(){try{
   x.messages=normalizeMessages(x.messages);return x
 }catch{return JSON.parse(JSON.stringify(base))}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch{} window.ISABELLA_STATE=state;try{window.dispatchEvent(new CustomEvent('isabella:state',{detail:JSON.parse(JSON.stringify(state))}))}catch{} renderToday();}
-function pretty(s,opt={weekday:'long',day:'numeric',month:'long'}){return fromIso(s).toLocaleDateString('es-ES',opt)}
+function pretty(s,opt={weekday:'long',day:'numeric',month:'long'}){return fromIso(s).toLocaleDateString('de-DE',opt)}
 function cat(id){return state.categories.find(x=>x.id===id)?.name||''} function project(id){return state.projects.find(x=>x.id===id)?.name||''}
 function fallbackColor(seed=''){
   const palette=['#5A9EC1','#6D7278','#8A72C7','#D08A6A','#9A9466','#2F6FB0','#4F8A62','#B678A2'];
@@ -303,24 +300,25 @@ async function handleReviewDeepLink(){
 function init(){
   repairKnownDuplicate();
   state.messages=normalizeMessages(state.messages);
-  if(!state.messages.length)state.messages=[{id:uid(),role:'assistant',text:'Hola. Soy Isabella.'}];
+  if(!OFFICE&&!state.messages.length)state.messages=[{id:uid(),role:'assistant',text:'Hola. Soy Isabella.'}];
   save();
   setOrbPalette();
   bind();
   initSituationPullRefresh();
   renderMessages(true);
-  void recoverReviewedTaskReceipts();
+  if(!OFFICE)void recoverReviewedTaskReceipts();
   renderToday();
   renderCalendar();
-  void syncDurableChatJobs();
-  setInterval(()=>{if(!document.hidden)void syncDurableChatJobs()},7000);
-  const reviewId=reviewRequestIdFromUrl();
-  show(reviewId?'assistant':state.screen);
+  if(!OFFICE){
+    void syncDurableChatJobs();
+    setInterval(()=>{if(!document.hidden)void syncDurableChatJobs()},7000);
+  }
+  const reviewId=OFFICE?null:reviewRequestIdFromUrl();
+  show(reviewId?'assistant':(OFFICE&&state.screen==='assistant'?'feed':state.screen));
   if(reviewId)setTimeout(()=>void handleReviewDeepLink(),0);
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='visible'){
-      void syncDurableChatJobs();
-      void recoverReviewedTaskReceipts();
+      if(!OFFICE){void syncDurableChatJobs();void recoverReviewedTaskReceipts();}
       if(state.screen==='calendar')window.ISABELLA_SYNC_PULL_NOW?.();
     }
   });
@@ -407,6 +405,7 @@ async function maybeReactivateIdeas(){
   }catch{}
 }
 async function afterSync(){
+  if(OFFICE)return;
   if(proactiveCycleBusy)return;
   proactiveCycleBusy=true;
   try{
@@ -679,7 +678,7 @@ async function updateIdeaLifecycle(item,lifecycle,status='active'){
 function ideaWorkspaceCard(w){
   const artifact=String(w.artifact_content||'').trim(),done=w.status==='done';
   const stateLabel=done?'PRODUCIDO':artifact?'ARTEFACTO EN DESARROLLO':'EN PRODUCCIÓN';
-  return `<button class="idea-workspace-card ${done?'done':''}" data-open-idea-workspace="${esc(w.id)}"><span class="idea-workspace-card-state">${stateLabel}</span><strong>${esc(w.title||'Trabajo')}</strong><span>${artifact?'Artefacto disponible':'Trabajo activo'} · ${new Date(w.updated_at||w.created_at||Date.now()).toLocaleDateString('es-ES')}</span></button>`;
+  return `<button class="idea-workspace-card ${done?'done':''}" data-open-idea-workspace="${esc(w.id)}"><span class="idea-workspace-card-state">${stateLabel}</span><strong>${esc(w.title||'Trabajo')}</strong><span>${artifact?'Artefacto disponible':'Trabajo activo'} · ${new Date(w.updated_at||w.created_at||Date.now()).toLocaleDateString('de-DE')}</span></button>`;
 }
 async function loadIdeaWorkspaces(){
   const sb=window.MINDS_SUPABASE;if(!sb)return [];
@@ -981,8 +980,10 @@ function weatherNumbers(body){
 }
 function renderAhoraWeather(weather){
   const pill=$('#situationWeather'),week=$('#ahoraWeatherWeek');if(!pill||!week)return;
+  // The office has no feed and therefore no weather yet: the pill stays away.
+  if(OFFICE){pill.innerHTML='';week.innerHTML='';week.classList.add('hidden');return}
   if(!weather){
-    pill.innerHTML='<button type="button" class="ahora-weather-pill is-empty" data-weather-settings aria-label="Clima: sin localidad. Ajustar">'+weatherSymbolSvg('🌡️')+'<span><strong>Clima</strong><small>Ajustar</small></span></button>';
+    pill.innerHTML='<button type="button" class="ahora-weather-pill is-empty" data-weather-settings aria-label="Wetter: kein Ort. Einstellen">'+weatherSymbolSvg('🌡️')+'<span><strong>Wetter</strong><small>Einstellen</small></span></button>';
     week.innerHTML='';week.classList.add('hidden');
     pill.querySelector('[data-weather-settings]').onclick=feedPreferencesPanel;
     return;
@@ -990,16 +991,17 @@ function renderAhoraWeather(weather){
   const n=weatherNumbers(weather.body),details=Array.isArray(weather.details)?weather.details:(Array.isArray(weather.metadata?.details)?weather.metadata.details:[]);
   const place=String(weather.title||'').replace(/^Clima\s*·\s*/,'');
   const range=n.max!=null&&n.min!=null?n.max+'° / '+n.min+'°':'';
-  pill.innerHTML='<button type="button" class="ahora-weather-pill" aria-expanded="'+String(!week.classList.contains('hidden'))+'" aria-controls="ahoraWeatherWeek" aria-label="'+esc('Clima en '+place+': '+(n.now!=null?n.now+' grados, ':'')+n.label+'. Ver la semana')+'">'+weatherSymbolSvg(weatherConditionEmoji(weather.body))+
+  pill.innerHTML='<button type="button" class="ahora-weather-pill" aria-expanded="'+String(!week.classList.contains('hidden'))+'" aria-controls="ahoraWeatherWeek" aria-label="'+esc('Wetter in '+place+': '+(n.now!=null?n.now+' Grad, ':'')+n.label+'. Woche anzeigen')+'">'+weatherSymbolSvg(weatherConditionEmoji(weather.body))+
     '<span><strong>'+esc(n.now!=null?n.now+'°':n.label)+'</strong>'+(range?'<small>'+esc(range)+'</small>':'')+'</span></button>';
   week.innerHTML='<div class="ahora-weather-place"><strong>'+esc(place)+'</strong><span>'+esc(weather.body||'')+'</span></div>'+
     details.slice(0,7).map(d=>{const v=String(d.value||d.summary||''),sym=weatherConditionEmoji(v);return '<div class="weather-row"><span>'+esc(d.label||d.day||'')+'</span><b>'+(sym==='🌡️'?'':'<span class="weather-row-symbol" aria-hidden="true">'+weatherSymbolSvg(sym)+'</span>')+esc(v)+'</b></div>'}).join('')+
-    '<button type="button" class="ahora-text-button" data-weather-settings>Cambiar localidad</button>';
+    '<button type="button" class="ahora-text-button" data-weather-settings>Ort ändern</button>';
   const button=pill.querySelector('.ahora-weather-pill');
   button.onclick=()=>{const opening=week.classList.contains('hidden');week.classList.toggle('hidden',!opening);button.setAttribute('aria-expanded',String(opening))};
   week.querySelector('[data-weather-settings]').onclick=feedPreferencesPanel;
 }
 async function renderFeed(force=false){
+  if(OFFICE){renderAhoraWeather(null);return}
   void window.MINDS_SITUATION?.render?.();
   if(!String(state.feedPreferences?.weatherLocation||'').trim()&&!$('#situationWeather')?.children.length)renderAhoraWeather(null);
   const box=$('#feedList'),status=$('#feedRefreshStatus');if(!box||feedBusy)return;feedBusy=true;
@@ -1007,25 +1009,25 @@ async function renderFeed(force=false){
   try{
     const cached=await (window.ISABELLA_AI?.loadSurface?.('feed','isabella',{allowStale:true})||[]);
     visible=dedupeFeedItems([...(cached||[]),...visible]);
-    if(visible.length)renderFeedItems(visible);else box.innerHTML='<div class="surface-loading">Leyendo tu situación…</div>';
+    if(visible.length)renderFeedItems(visible);else box.innerHTML='<div class="surface-loading">Lade …</div>';
     const hasCurrent=(cached||[]).some(x=>Number(x?.metadata?.surface_version||0)>=11);
-    if(status&&(force||!hasCurrent))status.textContent='Reevaluando tu situación…';
+    if(status&&(force||!hasCurrent))status.textContent='Aktualisiere …';
     const request=await window.ISABELLA_AI?.startFeedRefresh?.(state,{force,currentItems:visible});
     if(!request||request.skipped){try{localStorage.removeItem('isabella-feed-dirty')}catch{}if(status)status.textContent='';return}
-    if(status)status.textContent='Reevaluando tu situación…';
+    if(status)status.textContent='Aktualisiere …';
     const result=await window.ISABELLA_AI?.waitForFeedRefresh?.(request.generation_id,{timeoutMs:90000,intervalMs:1600});
     if(result?.status==='succeeded'){
       try{localStorage.removeItem('isabella-feed-dirty')}catch{}
       const fresh=result.items||await window.ISABELLA_AI?.loadSurface?.('feed','isabella',{allowStale:true})||[];
       if(fresh.length)renderFeedItems(fresh);
-      if(status){status.textContent='Al día';setTimeout(()=>{if(status.textContent==='Al día')status.textContent=''},1800)}
+      if(status){status.textContent='Aktuell';setTimeout(()=>{if(status.textContent==='Aktuell')status.textContent=''},1800)}
     }else if(result?.status==='pending'){
-      if(status)status.textContent='Sigo reevaluando en segundo plano…';
-      setTimeout(()=>{if(status.textContent==='Sigo reevaluando en segundo plano…')status.textContent=''},4500);
+      if(status)status.textContent='Aktualisiere im Hintergrund …';
+      setTimeout(()=>{if(status.textContent==='Aktualisiere im Hintergrund …')status.textContent=''},4500);
     }
   }catch(err){
-    if(visible.length)renderFeedItems(visible);else box.innerHTML='<div class="surface-empty">No pude reevaluar tu situación ahora mismo.</div>';
-    if(status){status.textContent='No pude reevaluar';setTimeout(()=>{if(status.textContent==='No pude reevaluar')status.textContent=''},2600)}
+    if(visible.length)renderFeedItems(visible);else box.innerHTML='<div class="surface-empty">Konnte gerade nicht aktualisieren.</div>';
+    if(status){status.textContent='Nicht aktualisiert';setTimeout(()=>{if(status.textContent==='Nicht aktualisiert')status.textContent=''},2600)}
   }finally{
     feedBusy=false;
   }
@@ -1252,9 +1254,9 @@ function naturalDay(day,now=new Date()){
   const [y,m,d]=String(day).split('-').map(Number),target=new Date(y,m-1,d),base=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const diff=Math.round((target-base)/864e5);
   if(diff===0)return 'hoy';if(diff===1)return 'mañana';if(diff===-1)return 'ayer';
-  const weekday=target.toLocaleDateString('es-ES',{weekday:'long'});
+  const weekday=target.toLocaleDateString('de-DE',{weekday:'long'});
   if(diff>1&&diff<7)return 'el '+weekday;
-  return 'el '+weekday+' '+d+' de '+target.toLocaleDateString('es-ES',{month:'long'})+(y!==now.getFullYear()?' de '+y:'');
+  return 'el '+weekday+' '+d+' de '+target.toLocaleDateString('de-DE',{month:'long'})+(y!==now.getFullYear()?' de '+y:'');
 }
 function naturalList(values){const xs=values.filter(Boolean);return xs.length<2?(xs[0]||''):xs.slice(0,-1).join(', ')+' y '+xs[xs.length-1]}
 function confirmationText(items,now=new Date()){
@@ -1462,7 +1464,7 @@ function bindMessageReactions(){
   });
 }
 
-function renderToday(){const d=today(),ev=state.events.filter(x=>x.date===d).sort((a,b)=>a.start.localeCompare(b.start)),ta=state.tasks.filter(x=>(x.date===d||taskSpansDay(x,d))&&activeTask(x));$('#todaySummary').textContent=`${ev.length} ${ev.length===1?'evento':'eventos'} · ${ta.length} ${ta.length===1?'tarea':'tareas'}`;$('#todayNext').textContent=ev[0]?`${ev[0].start} · ${ev[0].title}`:'Sin próxima cita'}
+function renderToday(){const d=today(),ev=state.events.filter(x=>x.date===d).sort((a,b)=>a.start.localeCompare(b.start)),ta=state.tasks.filter(x=>(x.date===d||taskSpansDay(x,d))&&activeTask(x));$('#todaySummary').textContent=`${ev.length} ${ev.length===1?'Termin':'Termine'} · ${ta.length} ${ta.length===1?'Aufgabe':'Aufgaben'}`;$('#todayNext').textContent=ev[0]?`${ev[0].start} · ${ev[0].title}`:'Kein nächster Termin'}
 function orb(mode='idle',label=''){const o=$('#orbButton');if(!o)return;o.classList.remove('listening','thinking');if(mode!=='idle')o.classList.add(mode);const s=$('#orbStatus');if(s)s.textContent=label}
 function setWorking(el,on){if(el)el.classList.toggle('is-working',!!on)}
 function localFallback(text){const n=text.toLowerCase();if(/qué tengo hoy|que tengo hoy|agenda de hoy/.test(n)){const d=today(),e=state.events.filter(x=>x.date===d),t=state.tasks.filter(x=>x.date===d&&activeTask(x));return `Hoy tienes ${e.length} ${e.length===1?'evento':'eventos'} y ${t.length} ${t.length===1?'tarea pendiente':'tareas pendientes'}.`}if(/calendario|agenda/.test(n)){show('calendar');return 'Te abro el calendario.'}return 'Te escucho. Para usar la IA, conecta la memoria desde el menú •••.'}
@@ -1494,7 +1496,7 @@ function proposalLabel(p){
   if(p.kind==='work_claim')return ['Guardar conocimiento',p.project,p.claim_type,p.statement].filter(Boolean).join(' · ');
   if(p.kind==='skill_proposal')return ['Crear Skill',p.agent==='sofia'?'Sofía':'Isabella',p.name].filter(Boolean).join(' · ');
   const action=p.action||'create';
-  const actionName=action==='update'?'Modificar':action==='delete'?'Eliminar':action==='complete'?'Completar':action==='archive'?'Archivar':'Agregar';
+  const actionName=action==='update'?'Modificar':action==='delete'?'Eliminar':action==='complete'?'Completar':action==='archive'?'Archivieren':'Agregar';
   const bits=[actionName,p.kind==='event'?'evento':'tarea',p.title,p.date];
   if(p.time)bits.push(p.time);
   if(p.duration_minutes)bits.push(p.duration_minutes+' min');
@@ -1667,13 +1669,13 @@ function proposalEditor(p,onDone){
   const categoryName=(p.category??cat(target?.categoryId)??'Personal')||'Personal';
   const projectName=(p.project??project(target?.projectId)??'')||'';
   const cats=state.categories.map(x=>`<option value="${esc(x.name)}" ${x.name===categoryName?'selected':''}>${esc(x.name)}</option>`).join('');
-  const projects='<option value="">Sin proyecto</option>'+state.projects.map(x=>`<option value="${esc(x.name)}" ${x.name===projectName?'selected':''}>${esc(x.name)}</option>`).join('');
+  const projects='<option value="">Ohne Projekt</option>'+state.projects.map(x=>`<option value="${esc(x.name)}" ${x.name===projectName?'selected':''}>${esc(x.name)}</option>`).join('');
   const specific=p.kind==='event'
-    ?`<label>Hora<input id="proposalTime" type="time" value="${esc(time||'09:00')}"></label><label>Duración (min)<input id="proposalDuration" type="number" min="5" step="5" value="${Number(duration||60)}"></label>`
+    ?`<label>Hora<input id="proposalTime" type="time" value="${esc(time||'09:00')}"></label><label>Dauer (min)<input id="proposalDuration" type="number" min="5" step="5" value="${Number(duration||60)}"></label>`
     :`<label>Recordatorio<input id="proposalReminder" type="time" value="${esc(reminder||'')}"></label>`;
   modal('Revisar antes de confirmar',`<div class="form proposal-editor">
     <label>Nombre<input id="proposalTitle" value="${esc(title)}"></label>
-    <label>${p.kind==='task'?'Fecha (opcional)':'Fecha'}<input id="proposalDate" type="date" value="${esc(date||'')}"></label>
+    <label>${p.kind==='task'?'Datum (optional)':'Datum'}<input id="proposalDate" type="date" value="${esc(date||'')}"></label>
     ${specific}
     <label>Categoría<select id="proposalCategory">${cats}</select></label>
     <label>Proyecto<select id="proposalProject">${projects}</select></label>
@@ -1785,7 +1787,7 @@ function confirmProposal(p){
   $('#proposalEdit').onclick=()=>proposalEditor(p,q=>{if(q)confirmProposal(reviewedProposal(p,q));else confirmProposal(p)});
   $('#proposalConfirm').onclick=()=>{
     const b=$('#proposalConfirm');if(b.disabled)return;
-    b.disabled=true;b.textContent='Guardando…';
+    b.disabled=true;b.textContent='Speichere …';
     const verified=p.kind==='routine'||(p.kind==='task'&&['update','create'].includes(p.action||'create'));
     // For a verified calendar mutation, accepting a proposal cannot precede
     // its canonical write receipt. The legacy feedback remains unchanged for
@@ -1808,7 +1810,7 @@ function confirmProposals(list){
   modal('Confirmar cambios',`<div class="proposal-list">${items.map((p,i)=>`<div class="proposal-row"><span>${esc(proposalLabel(p))}${proposalDetails(p)}</span><button data-proposal-edit="${i}" class="proposal-inline-edit">Editar</button></div>`).join('')}</div><div class="small" style="margin-top:10px">Puedes revisar cada cambio antes de confirmar todos.</div><div class="confirm-actions" style="margin-top:18px"><button id="proposalBatchCancel" class="secondary">Cancelar</button><button id="proposalBatchConfirm" class="primary">Confirmar todo</button></div>`);
   $$('[data-proposal-edit]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.proposalEdit);proposalEditor(items[i],q=>{if(q)items[i]=reviewedProposal(items[i],q);confirmProposals(items)})});
   $('#proposalBatchCancel').onclick=()=>{state.pendingIntent=null;save();for(const p of items)proposalFeedback('rejected',p);finalizeInlineReview(items,'rejected');closeModal();say('assistant','De acuerdo, no hice ningún cambio.')};
-  $('#proposalBatchConfirm').onclick=async()=>{const b=$('#proposalBatchConfirm');if(b.disabled)return;b.disabled=true;b.textContent='Guardando…';state.pendingIntent=null;save();const appliedTasks=[];let marked=false;try{for(const p of items){
+  $('#proposalBatchConfirm').onclick=async()=>{const b=$('#proposalBatchConfirm');if(b.disabled)return;b.disabled=true;b.textContent='Speichere …';state.pendingIntent=null;save();const appliedTasks=[];let marked=false;try{for(const p of items){
       const verified=p.kind==='routine'||(p.kind==='task'&&['update','create'].includes(p.action||'create'));
       if(!verified)proposalFeedback('accepted',p);
       await Promise.resolve().then(()=>applyProposal(p,{quiet:true}));
@@ -1843,7 +1845,7 @@ async function createRoutineProposal(p){
   const verb={create:'Programé',update:'Actualicé',pause:'Pausé',resume:'Reactivé',delete:'Eliminé'}[p.action||'create'];
   const row=receipt.after;
   say('assistant',`Listo. ${verb} la rutina “${row?.title||p.title}”.`+
-    (row?.enabled&&row?.next_run_at?` Próxima ejecución: ${new Date(row.next_run_at).toLocaleString('es-ES',{timeZone:row.timezone})} (${row.timezone}).`:''));
+    (row?.enabled&&row?.next_run_at?` Próxima ejecución: ${new Date(row.next_run_at).toLocaleString('de-DE',{timeZone:row.timezone})} (${row.timezone}).`:''));
   return receipt;
 }
 async function dbWorkProjectByName(name){
@@ -1905,7 +1907,7 @@ async function createExpectationProposal(p){
   if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No pude guardar esa expectativa todavía: '+error.message);return}
   closeModal();
   const row=data?.expectation||{};
-  const due=row.due_at?new Date(row.due_at).toLocaleString('es-ES',{timeZone:row.timezone||timezone,dateStyle:'medium',...(row.due_precision==='datetime'?{timeStyle:'short'}:{})}):p.due_date;
+  const due=row.due_at?new Date(row.due_at).toLocaleString('de-DE',{timeZone:row.timezone||timezone,dateStyle:'medium',...(row.due_precision==='datetime'?{timeStyle:'short'}:{})}):p.due_date;
   say('assistant',`Listo. Mantendré “${row.title||p.title}” pendiente hasta ${due}. Si llega ese momento sin confirmación, te diré que sigue sin comprobar; no asumiré que no ocurrió.`);
 }
 async function createCommitmentProposal(p){
@@ -2160,7 +2162,7 @@ async function applyDirectCalendarCreate(p){
   return {receipt_id:receipt.receipt_id,request_id:p.request_id,
     kind:p.kind,title:row.title,action:'create',
     date:p.kind==='task'?(row.due_date||null):new Date(row.starts_at).toLocaleDateString('sv-SE'),
-    when:p.kind==='task'?(row.due_date||'sin fecha'):new Date(row.starts_at).toLocaleString('es-ES'),
+    when:p.kind==='task'?(row.due_date||'sin fecha'):new Date(row.starts_at).toLocaleString('de-DE'),
     entity_client_key:receipt.entity_client_key};
 }
 function directCreationBatch(result,integrity){
@@ -2555,7 +2557,7 @@ function bind(){
  i.addEventListener('focus',()=>syncOrbCompact(true));
  const autosize=()=>{i.style.height='auto';i.style.height=Math.min(i.scrollHeight,156)+'px'};
  attachButton.onclick=()=>imageInput.click();
- imageInput.onchange=()=>{const chosen=[...imageInput.files||[]],next=chosen.filter(chatUploadSupported);if(chosen.length&&!next.length)say('assistant','Ese formato todavía no es compatible. Puedes adjuntar PDF, documentos de Office, texto, CSV, JSON o imágenes.');pendingChatFiles=[...pendingChatFiles,...next].slice(0,3);imageInput.value='';renderPendingChatFiles()};
+ imageInput.onchange=()=>{const chosen=[...imageInput.files||[]],next=chosen.filter(chatUploadSupported);if(chosen.length&&!next.length)say('assistant','Dieses Format wird noch nicht unterstützt. Möglich sind PDF, Office-Dokumente, Text, CSV, JSON oder Bilder.');pendingChatFiles=[...pendingChatFiles,...next].slice(0,3);imageInput.value='';renderPendingChatFiles()};
  let chatSending=false;
  const send=async()=>{
    if(chatSending)return;
@@ -2567,7 +2569,7 @@ function bind(){
      const attachments=files.length?await uploadChatFiles(files):[];
      clearSentChatFiles();i.value='';autosize();
      await handle(t,attachments,replyTo);
-   }catch(e){say('assistant',e?.message||'No pude enviar el archivo.')}
+   }catch(e){say('assistant',e?.message||'Die Datei konnte nicht gesendet werden.')}
    finally{chatSending=false;$('#sendButton').disabled=false;attachButton.disabled=false}
  };
  $('#sendButton').onclick=send;i.addEventListener('input',autosize);i.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();send()}});autosize();
@@ -2601,7 +2603,7 @@ function initSituationPullRefresh(){
     const reset=()=>{
       start=null;pulling=false;travel=0;
       indicator.classList.remove('is-pulling');
-      if(!refreshing){indicator.style.opacity='';label.style.transform='';label.textContent='Desliza para actualizar'}
+      if(!refreshing){indicator.style.opacity='';label.style.transform='';label.textContent='Zum Aktualisieren ziehen'}
     };
     scroller.addEventListener('touchstart',event=>{
       if(refreshing||event.touches.length!==1||!screen.classList.contains('active')||scroller.scrollTop>1||feedBusy&&view==='feed'||document.body.classList.contains('drawer-open'))return;
@@ -2616,7 +2618,7 @@ function initSituationPullRefresh(){
       if(event.cancelable)event.preventDefault();
       pulling=true;travel=dy;
       indicator.classList.add('is-pulling');
-      label.textContent=dy>=84?'Suelta para actualizar':'Desliza para actualizar';
+      label.textContent=dy>=84?'Zum Aktualisieren loslassen':'Zum Aktualisieren ziehen';
       label.style.transform='translateY('+Math.min(9,-35+dy*.47)+'px)';
       indicator.style.opacity=String(Math.min(1,dy/42));
     },{passive:false});
@@ -2628,12 +2630,12 @@ function initSituationPullRefresh(){
       indicator.classList.add('is-refreshing');
       indicator.style.opacity='1';
       label.style.transform='translateY(4px)';
-      label.textContent='Actualizando…';
+      label.textContent='Aktualisiere …';
       Promise.resolve().then(()=>view==='feed'?Promise.all([window.MINDS_AHORA?.render?.({fresh:true}),window.ISABELLA_SYNC_PULL_NOW?.(),renderFeed(false)]):window.MINDS_BANDEJA?.refresh?.()).catch(()=>{
-        label.textContent='No pude actualizar';
+        label.textContent='Nicht aktualisiert';
       }).finally(()=>{
         refreshing=false;indicator.classList.remove('is-refreshing');
-        indicator.style.opacity='';label.style.transform='';label.textContent='Desliza para actualizar';
+        indicator.style.opacity='';label.style.transform='';label.textContent='Zum Aktualisieren ziehen';
       });
     };
     scroller.addEventListener('touchend',()=>finish(false),{passive:true});
@@ -2668,7 +2670,7 @@ function initVoice(){
   const browserFallback=()=>{
     if(!R){phase='error';$('#focusStatus').textContent='Voz no disponible';setText('Puedes seguir escribiendo.');primary.textContent='Cerrar';secondary.textContent='Escribir';return}
     try{
-      phase='recording';fallbackRec=new R();fallbackRec.lang='es-ES';fallbackRec.interimResults=true;let finalText='';
+      phase='recording';fallbackRec=new R();fallbackRec.lang='de-DE';fallbackRec.interimResults=true;let finalText='';
       fallbackRec.onresult=e=>{let interim='';for(let k=e.resultIndex;k<e.results.length;k++){const x=e.results[k][0].transcript;if(e.results[k].isFinal)finalText+=x;else interim+=x}setText((finalText+' '+interim).trim())};
       fallbackRec.onend=()=>{if(!discard&&phase==='recording')review(finalText||getText())};
       fallbackRec.onerror=()=>{phase='error';$('#focusStatus').textContent='No pude escuchar';setText('Revisa el permiso del micrófono o escribe el mensaje.');primary.textContent='Cerrar';secondary.textContent='Escribir'};
@@ -2734,17 +2736,17 @@ function nativePlanSelectedPeople(projectId){
     const ids=task.assigneePersonIds?.length?task.assigneePersonIds:(task.assigneePersonId?[task.assigneePersonId]:[]);
     for(const id of ids){
       const key='person:'+id;
-      if(!people.has(key))people.set(key,state.teamPeople?.find(x=>x.id===id)?.name||'Responsable');
+      if(!people.has(key))people.set(key,state.teamPeople?.find(x=>x.id===id)?.name||'Verantwortlich');
     }
     if(!ids.length&&task.assignee)people.set('legacy:'+task.assignee,task.assignee);
   }
-  return [...people].sort((a,b)=>a[1].localeCompare(b[1],'es'));
+  return [...people].sort((a,b)=>a[1].localeCompare(b[1],'de'));
 }
 function nativePlanTeamName(task){
   const ids=task.assigneePersonIds?.length?task.assigneePersonIds:(task.assigneePersonId?[task.assigneePersonId]:[]);
   if(ids.length)return ids.map(id=>state.teamPeople?.find(p=>p.id===id)?.name||
-    nativePlanRoster.people.find(p=>p.id===id)?.name||'Responsable').join(', ');
-  return task.assignee||'Sin responsable';
+    nativePlanRoster.people.find(p=>p.id===id)?.name||'Verantwortlich').join(', ');
+  return task.assignee||'Ohne Verantwortliche';
 }
 function nativePlanTeamAllocations(date,filters){
   const tasks=new Map(state.tasks.map(t=>[t.id,t]));
@@ -2753,7 +2755,7 @@ function nativePlanTeamAllocations(date,filters){
     return a.date===date&&t&&!t.archivedAt&&window.MINDS_CALENDAR_PLAN.qualifies(t,filters)&&
       (!filters.personKey||filters.personKey==='person:'+a.personId);
   }).map(a=>{
-    const t=tasks.get(a.taskId),person=state.teamPeople?.find(p=>p.id===a.personId)?.name||'Equipo';
+    const t=tasks.get(a.taskId),person=state.teamPeople?.find(p=>p.id===a.personId)?.name||'Team';
     return {task:t,person,minutes:a.plannedMinutes};
   });
 }
@@ -2773,17 +2775,17 @@ function nativePlanLoadRoster(projectId){
 function nativePlanToolbar(){
   const filters=nativePlanFilters();
   if(filters.projectId)nativePlanLoadRoster(filters.projectId);
-  const projects='<option value="">Todos los proyectos</option>'+state.projects.map(p=>
+  const projects='<option value="">Alle Projekte</option>'+state.projects.map(p=>
     '<option value="'+esc(p.id)+'" '+(filters.projectId===p.id?'selected':'')+'>'+esc(p.name)+'</option>').join('');
-  const people='<option value="">Todos los responsables</option>'+
-    '<option value="unassigned" '+(filters.personKey==='unassigned'?'selected':'')+'>Sin asignar</option>'+
+  const people='<option value="">Alle Verantwortlichen</option>'+
+    '<option value="unassigned" '+(filters.personKey==='unassigned'?'selected':'')+'>Nicht zugewiesen</option>'+
     nativePlanSelectedPeople(filters.projectId).map(([key,name])=>
       '<option value="'+esc(key)+'" '+(filters.personKey===key?'selected':'')+'>'+esc(name)+'</option>').join('');
   return '<div class="minds-plan-controls"><div class="minds-plan-filter-row">'+
-    '<select aria-label="Filtrar proyecto" data-native-filter="project">'+projects+'</select>'+
-    '<select aria-label="Filtrar responsable" data-native-filter="person">'+people+'</select></div>'+
-    '<span>Las barras son períodos de tarea, no horas trabajadas</span>'+
-    (state.nativePlanShowAll?'<button type="button" data-native-show-all>Mostrar menos</button>':'')+'</div>';
+    '<select aria-label="Projekt filtern" data-native-filter="project">'+projects+'</select>'+
+    '<select aria-label="Verantwortliche filtern" data-native-filter="person">'+people+'</select></div>'+
+    '<span>Balken: Aufgabenzeiträume, keine Arbeitsstunden</span>'+
+    (state.nativePlanShowAll?'<button type="button" data-native-show-all>Weniger anzeigen</button>':'')+'</div>';
 }
 function nativePlanBand(week,monthMode=false){
   if(!week)return '';
@@ -2796,18 +2798,18 @@ function nativePlanBand(week,monthMode=false){
         segment.continuesBefore?'is-continued-start':'',segment.continuesAfter?'is-continued-end':''].filter(Boolean).join(' ');
       return '<div class="'+classes+'" style="grid-column:'+segment.col+' / span '+segment.length+
         ';grid-row:'+(segment.lane+1)+';--item-color:'+itemColor(t)+'" data-plan-task="'+esc(t.id)+'">'+
-        (!segment.continuesBefore?'<button class="minds-plan-span-handle" data-plan-edge="start" aria-label="Arrastrar inicio de '+esc(t.title)+'" title="Arrastra para ajustar el inicio">‹</button>':'')+
+        (!segment.continuesBefore?'<button class="minds-plan-span-handle" data-plan-edge="start" aria-label="Beginn verschieben: '+esc(t.title)+'" title="Ziehen, um den Beginn anzupassen">‹</button>':'')+
         '<button type="button" class="minds-plan-span-label" data-plan-open="'+esc(t.id)+'" '+
         'title="'+esc(t.title)+' · '+esc(details)+' · '+esc(segment.originalStart)+' → '+esc(segment.originalEnd)+'">'+
         (t.done?'✓ ':'')+esc(t.title)+(month?'<span class="minds-plan-span-identity">'+esc(month)+'</span>':'')+'</button>'+
-        (!segment.continuesAfter?'<button class="minds-plan-span-handle" data-plan-edge="due" aria-label="Arrastrar entrega de '+esc(t.title)+'" title="Arrastra para ajustar la entrega">›</button>':'')+
+        (!segment.continuesAfter?'<button class="minds-plan-span-handle" data-plan-edge="due" aria-label="Fälligkeit verschieben: '+esc(t.title)+'" title="Ziehen, um die Fälligkeit anzupassen">›</button>':'')+
         '</div>';
     }).join('')+'</div>';
   const more=week.hidden?'<button type="button" class="minds-plan-more" data-native-show-all>'+
-    '＋ '+week.hidden+' tareas más</button>':'';
+    '＋ '+week.hidden+' weitere Aufgaben</button>':'';
   return monthMode?'<div class="minds-month-span-week"><div></div>'+grid+more+'</div>':
-    '<div class="minds-native-plan-week"><div class="minds-native-plan-head"><span>Períodos de trabajo</span>'+
-    '<span>'+week.total+' tareas visibles esta semana</span></div>'+grid+more+'</div>';
+    '<div class="minds-native-plan-week"><div class="minds-native-plan-head"><span>Arbeitszeiträume</span>'+
+    '<span>'+week.total+(week.total===1?' Aufgabe':' Aufgaben')+' in dieser Woche</span></div>'+grid+more+'</div>';
 }
 function nativePlanModel(anchor,weeks){
   const filters=nativePlanFilters();
@@ -2886,10 +2888,10 @@ function nativePlanToast(message,undo=null){
   area.className='minds-calendar-toast';
   const title=document.createElement('span');title.textContent=message;area.append(title);
   if(undo){
-    const button=document.createElement('button');button.type='button';button.textContent='Deshacer';
+    const button=document.createElement('button');button.type='button';button.textContent='Rückgängig';
     button.onclick=()=>{area.remove();void undo()};area.append(button);
   }
-  const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Cerrar');
+  const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Schließen');
   close.onclick=()=>area.remove();area.append(close);document.body.append(area);
   nativeToastTimer=setTimeout(()=>area.remove(),7000);
 }
@@ -2898,48 +2900,48 @@ async function nativePlanChangeDates(clientKey,edge,shift){
   if(!sb||!P||!Number.isInteger(shift)||shift===0||Math.abs(shift)>90)return;
   try{
     const {data:row,error}=await sb.from('isabella_tasks').select('id,client_key,start_date,due_date,updated_at').eq('client_key',clientKey).maybeSingle();
-    if(error||!row)throw error||new Error('Tarea no encontrada');
+    if(error||!row)throw error||new Error('Aufgabe nicht gefunden');
     const start=P.valid(row.start_date)?row.start_date:row.due_date;
     const due=P.valid(row.due_date)?row.due_date:row.start_date;
-    if(!P.valid(start)||!P.valid(due))throw new Error('La tarea no tiene fechas válidas.');
+    if(!P.valid(start)||!P.valid(due))throw new Error('Die Aufgabe hat keine gültigen Daten.');
     let nextStart=start,nextDue=due;
     if(edge==='start')nextStart=P.addDays(start,shift);
     else if(edge==='due')nextDue=P.addDays(due,shift);
     else if(edge==='move'){nextStart=P.addDays(start,shift);nextDue=P.addDays(due,shift)}
     else return;
     if((edge==='start'||P.valid(row.start_date))&&nextStart>nextDue)
-      throw new Error('El inicio no puede quedar después de la entrega.');
-    const label=edge==='move'?'¿Desplazar el período a '+nextStart+' → '+nextDue+'?':
-      '¿Actualizar '+(edge==='start'?'el inicio':'la entrega')+' a '+(edge==='start'?nextStart:nextDue)+'?';
+      throw new Error('Der Beginn darf nicht nach der Fälligkeit liegen.');
+    const label=edge==='move'?'Zeitraum verschoben: '+nextStart+' → '+nextDue+'.':
+      (edge==='start'?'Beginn':'Fälligkeit')+' geändert: '+(edge==='start'?nextStart:nextDue)+'.';
     // The deliberate drag is the approval. Provide a reversible, non-blocking toast instead.
     const patch=edge==='move'?{start_date:nextStart,due_date:nextDue}:
       edge==='start'?{start_date:nextStart}:{due_date:nextDue};
     const {data,error:writeError}=await sb.from('isabella_tasks')
       .update({...patch,updated_at:new Date().toISOString()}).eq('id',row.id).eq('updated_at',row.updated_at)
       .select('id').maybeSingle();
-    if(writeError||!data)throw writeError||new Error('La tarea cambió mientras editabas. Recarga antes de intentarlo.');
+    if(writeError||!data)throw writeError||new Error('Die Aufgabe wurde inzwischen geändert. Bitte neu laden und erneut versuchen.');
     const updated=await window.ISABELLA_SYNC_PULL_NOW?.();
-    if(updated!==true)throw new Error('Cambio guardado en MINDS. No se pudo refrescar la vista; recarga la aplicación.');
+    if(updated!==true)throw new Error('Änderung gespeichert. Die Ansicht konnte nicht aktualisiert werden; bitte die Seite neu laden.');
     renderCalendar();
-    nativePlanToast(label+' Las sesiones reservadas no se han movido.',async()=>{
+    nativePlanToast(label+' Reservierte Arbeitszeiten wurden nicht verschoben.',async()=>{
       try{
         const {data:latest,error:readError}=await sb.from('isabella_tasks')
           .select('id,updated_at,start_date,due_date').eq('id',row.id).maybeSingle();
-        if(readError||!latest)throw readError||new Error('Tarea no encontrada.');
+        if(readError||!latest)throw readError||new Error('Aufgabe nicht gefunden.');
         if(latest.start_date!==(patch.start_date??row.start_date)||
           latest.due_date!==(patch.due_date??row.due_date))
-          throw new Error('La tarea cambió de nuevo. Abre su ficha antes de deshacer.');
+          throw new Error('Die Aufgabe wurde erneut geändert. Bitte erst die Aufgabe öffnen.');
         const undoPatch=edge==='move'?{start_date:row.start_date,due_date:row.due_date}:
           edge==='start'?{start_date:row.start_date}:{due_date:row.due_date};
         const {data:undone,error:undoError}=await sb.from('isabella_tasks')
           .update({...undoPatch,updated_at:new Date().toISOString()})
           .eq('id',row.id).eq('updated_at',latest.updated_at).select('id').maybeSingle();
-        if(undoError||!undone)throw undoError||new Error('Conflicto al deshacer.');
+        if(undoError||!undone)throw undoError||new Error('Konflikt beim Rückgängigmachen.');
         await window.ISABELLA_SYNC_PULL_NOW?.();renderCalendar();
-        nativePlanToast('Movimiento deshecho.');
-      }catch(error){nativePlanToast('No se pudo deshacer: '+(error?.message||error))}
+        nativePlanToast('Verschiebung rückgängig gemacht.');
+      }catch(error){nativePlanToast('Rückgängig fehlgeschlagen: '+(error?.message||error))}
     });
-  }catch(error){nativePlanToast('No se pudo cambiar el período: '+(error?.message||error))}
+  }catch(error){nativePlanToast('Zeitraum konnte nicht geändert werden: '+(error?.message||error))}
 }
 // Confirmed Fristen from the project registers (Projektakte) show read-only in Tiempo.
 const akteFristen={at:0,rows:[],loading:false};
@@ -2947,6 +2949,16 @@ function loadAkteFristen(force=false){
   const sb=window.MINDS_SUPABASE;
   if(!sb||akteFristen.loading||(!force&&Date.now()-akteFristen.at<5*60000))return;
   akteFristen.loading=true;
+  if(window.TBA_OFFICE_FRISTEN){
+    const from=iso(addDays(new Date(),-62));
+    window.TBA_OFFICE_FRISTEN.load(force).then(c=>{
+      akteFristen.loading=false;akteFristen.at=Date.now();if(!c.ok)return;
+      const rows=c.rows.filter(r=>r.date>=from).map(r=>({id:r.id,title:r.title,date:r.date,project:r.project,projectKey:r.projectKey}));
+      const changed=JSON.stringify(rows)!==JSON.stringify(akteFristen.rows);akteFristen.rows=rows;
+      if(changed&&state.screen==='calendar')renderCalendar();
+    },()=>{akteFristen.loading=false;akteFristen.at=Date.now()});
+    return;
+  }
   Promise.resolve(sb.from('minds_work_memory').select('id,project_id,title,occurred_at,isabella_projects(name,client_key)')
     .eq('memory_type','deadline').eq('status','confirmed').gte('occurred_at',iso(addDays(new Date(),-62))).order('occurred_at',{ascending:true}).limit(300))
     .then(({data,error})=>{
@@ -2958,36 +2970,36 @@ function loadAkteFristen(force=false){
 }
 function akteFristenOn(day){return nativePlanFilters()?.personKey?[]:akteFristen.rows.filter(r=>r.date===day)}
 function fristAgendaRow(f){
-  return `<button type="button" class="agenda-item frist-item" data-frist-project="${esc(f.projectKey)}"><span class="frist-mark" aria-hidden="true"></span><div class="agenda-main"><strong>${esc(f.title)}</strong><div class="meta">Frist · ${esc(f.project||'Proyecto')}</div></div><div class="agenda-tail"><div class="atime">Plazo</div></div></button>`;
+  return `<button type="button" class="agenda-item frist-item" data-frist-project="${esc(f.projectKey)}"><span class="frist-mark" aria-hidden="true"></span><div class="agenda-main"><strong>${esc(f.title)}</strong><div class="meta">Frist · ${esc(f.project||'Projekt')}</div></div><div class="agenda-tail"><div class="atime">Frist</div></div></button>`;
 }
 function fristChip(f){return `<button type="button" class="wk-chip frist-chip" data-frist-project="${esc(f.projectKey)}" title="Frist · ${esc(f.project)}"><span class="frist-mark" aria-hidden="true"></span><span class="wk-chip-label">${esc(f.title)}</span></button>`}
 function bindFristen(){
   $$('[data-frist-project]').forEach(b=>b.onclick=e=>{e.stopPropagation();window.MINDS_WORK?.open?.(b.dataset.fristProject,'overview');document.querySelector('[data-nav="work"]')?.click()});
 }
-function renderCalendar(){loadAkteFristen();$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));const d=fromIso(state.date);$('#calTitle').textContent=state.view==='month'?d.toLocaleDateString('es-ES',{month:'long'}):state.view==='week'?`Semana ${weekNo(d)}`:d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});if(state.view==='month')month();else if(state.view==='week')week();else day()}
+function renderCalendar(){loadAkteFristen();$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));const d=fromIso(state.date);$('#calTitle').textContent=state.view==='month'?d.toLocaleDateString('de-DE',{month:'long'}):state.view==='week'?`KW ${weekNo(d)}`:d.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});if(state.view==='month')month();else if(state.view==='week')week();else day()}
 function taskSpansDay(task,key){return !!window.MINDS_DESK_MODEL?.spansDay?.(task,key)}
-function spanUntilLabel(task){const d=fromIso(task.date);return 'hasta '+d.toLocaleDateString('es-ES',{day:'numeric',month:'short'}).replace('.','')}
+function spanUntilLabel(task){const d=fromIso(task.date);return 'bis '+d.toLocaleDateString('de-DE',{day:'numeric',month:'short'}).replace('.','')}
 function workSessionPresentation(event){
   if(event?.metadata?.kind!=='task_work_session_v1')
     return {title:event?.title||'',isSession:false,task:null};
   const key=event.metadata.task_client_key;
   const task=typeof key==='string'&&key?state.tasks.find(t=>t.id===key)||null:null;
-  return {title:'Sesión · '+(task?.title||event.title),isSession:true,task};
+  return {title:'Arbeitszeit · '+(task?.title||event.title),isSession:true,task};
 }
 function agendaRow(kind,item){
   const category=cat(item.categoryId),proj=item.projectId?' · '+project(item.projectId):'';
   const presentation=kind==='event'?workSessionPresentation(item):null;
-  const time=kind==='event'?(presentation.isSession?item.start+' · '+item.duration+' min':item.start):'Todo el día';
+  const time=kind==='event'?(presentation.isSession?item.start+' · '+item.duration+' min':item.start):'Ganztägig';
   const color=itemColor(item),done=kind==='task'&&!!item.done,span=kind==='task'&&item.date!==state.date&&taskSpansDay(item,state.date);
   return `<div class="agenda-item ${kind}-item ${kind==='task'&&!span?'task-item':''} ${span?'is-span':''} ${done?'task-done':''} ${presentation?.isSession?'is-work-session':''}" data-kind="${kind}" data-id="${item.id}" ${span?'':`data-date="${item.date}"`} tabindex="0" style="--item-color:${color}">
-    ${kind==='task'?`<button class="task-check ${done?'checked':''}" data-task-toggle="${item.id}" aria-label="${done?'Marcar pendiente':'Marcar hecha'}">${done?'✓':''}</button>`:'<span class="adot"></span>'}
-    <div class="agenda-main"><strong>${esc(presentation?.title||item.title)}</strong><div class="meta">${presentation?.isSession?'Tiempo reservado · ':''}${esc(category)}${esc(proj)}${span?' · en curso '+esc(spanUntilLabel(item)):''}</div></div>
-    <div class="agenda-tail"><div class="atime">${esc(span?'En curso':time)}</div>${kind==='task'&&!span?'<button class="drag-handle" aria-label="Mantén y arrastra para reordenar">⠿</button>':''}</div>
+    ${kind==='task'?`<button class="task-check ${done?'checked':''}" data-task-toggle="${item.id}" aria-label="${done?'Als offen markieren':'Als erledigt markieren'}">${done?'✓':''}</button>`:'<span class="adot"></span>'}
+    <div class="agenda-main"><strong>${esc(presentation?.title||item.title)}</strong><div class="meta">${presentation?.isSession?'Reservierte Zeit · ':''}${esc(category)}${esc(proj)}${span?' · läuft '+esc(spanUntilLabel(item)):''}</div></div>
+    <div class="agenda-tail"><div class="atime">${esc(span?'In Bearbeitung':time)}</div>${kind==='task'&&!span?'<button class="drag-handle" aria-label="Halten und ziehen zum Sortieren">⠿</button>':''}</div>
   </div>`;
 }
 function month(){
   const monthPlanning=nativePlanModel(iso(startWeek(new Date(fromIso(state.date).getFullYear(),fromIso(state.date).getMonth(),1))),6);
-  const f=fromIso(state.date),first=new Date(f.getFullYear(),f.getMonth(),1),start=startWeek(first),wd=['L','M','X','J','V','S','D'];
+  const f=fromIso(state.date),first=new Date(f.getFullYear(),f.getMonth(),1),start=startWeek(first),wd=['Mo','Di','Mi','Do','Fr','Sa','So'];
   let h=nativePlanToolbar()+`<div class="month-year">${f.getFullYear()}</div><div class="month-weekdays"><div></div>${wd.map(x=>`<div>${x}</div>`).join('')}</div><div class="month-grid">`;
   for(let r=0;r<6;r++){
     const rs=addDays(start,r*7);h+=`<div class="mw">${weekNo(rs)}</div>`;
@@ -2995,27 +3007,27 @@ function month(){
       const d=addDays(rs,col),di=iso(d),mut=d.getMonth()!==f.getMonth();
       const colors=[...dayColors(di,nativePlanFilters()),...(akteFristenOn(di).length?['#d93025']:[])];
       const teammateMinutes=nativePlanTeamAllocations(di,nativePlanFilters()).reduce((n,a)=>n+Number(a.minutes||0),0);
-      h+=`<button class="mc ${col>4?'weekend':''} ${mut?'muted':''} ${di===today()?'today':''} ${di===state.date?'selected':''}" data-date="${di}"><span class="mn">${d.getDate()}</span><span class="dotset">${colors.map(color=>`<i style="--item-color:${color}"></i>`).join('')}</span>${teammateMinutes?`<span class="minds-team-month-time">${Math.round(teammateMinutes/60*10)/10} h equipo</span>`:''}</button>`;
+      h+=`<button class="mc ${col>4?'weekend':''} ${mut?'muted':''} ${di===today()?'today':''} ${di===state.date?'selected':''}" data-date="${di}"><span class="mn">${d.getDate()}</span><span class="dotset">${colors.map(color=>`<i style="--item-color:${color}"></i>`).join('')}</span>${teammateMinutes?`<span class="minds-team-month-time">${Math.round(teammateMinutes/60*10)/10} h Team</span>`:''}</button>`;
     }
     h+=nativePlanBand(monthPlanning.weeks[r],true);
   }
   h+='</div>';
   // The month action belongs between the month grid and the selected-day agenda.
-  h+='<div class="calendar-create-row calendar-create-after-grid"><button type="button" data-calendar-create>＋ Añadir tarea o evento</button></div>';
+  h+='<div class="calendar-create-row calendar-create-after-grid"><button type="button" data-calendar-create>＋ Aufgabe oder Termin</button></div>';
   // Month groups linked reservations under their canonical task, even when
   // the booking falls on a different day than the task's due date.
   const filters=nativePlanFilters(),model=window.MINDS_CALENDAR_PLAN;
   const visibleState={...state,tasks:state.tasks.filter(t=>model.qualifies(t,filters)),
     events:filters.personKey?[]:state.events.filter(e=>!filters.projectId||e.projectId===filters.projectId)};
   const {tasks:ta,events:ev}=window.MINDS_DESK_MODEL.monthAgendaGroups(visibleState,state.date);
-  h+=`<div class="agenda"><div class="agenda-head">${esc(pretty(state.date))}${state.date===today()?' · Hoy':''}</div>`;
+  h+=`<div class="agenda"><div class="agenda-head">${esc(pretty(state.date))}${state.date===today()?' · Heute':''}</div>`;
   const fristen=akteFristenOn(state.date);
-  if(!ev.length&&!ta.length&&!fristen.length)h+='<div class="meta empty-day">No tienes nada previsto para este día.</div>';
+  if(!ev.length&&!ta.length&&!fristen.length)h+='<div class="meta empty-day">Für diesen Tag ist nichts geplant.</div>';
   for(const f of fristen)h+=fristAgendaRow(f);
   for(const e of ev)h+=agendaRow('event',e);
   for(const {task,sessions} of ta){
     h+=agendaRow('task',task);
-    if(sessions.length)h+='<div class="month-session-links">'+sessions.map(e=>`<button type="button" class="calendar-entry month-session-link" data-kind="event" data-id="${esc(e.id)}" data-date="${esc(e.date)}" aria-label="Editar sesión de ${esc(task.title)}">${esc(e.start)} · ${Number(e.duration)||0} min reservados</button>`).join('')+'</div>';
+    if(sessions.length)h+='<div class="month-session-links">'+sessions.map(e=>`<button type="button" class="calendar-entry month-session-link" data-kind="event" data-id="${esc(e.id)}" data-date="${esc(e.date)}" aria-label="Arbeitszeit bearbeiten: ${esc(task.title)}">${esc(e.start)} · ${Number(e.duration)||0} min reserviert</button>`).join('')+'</div>';
   }
   h+='</div>';
   $('#calendarContent').innerHTML=h;
@@ -3046,11 +3058,11 @@ function week(){
   const range=e=>{const at=clock(e.start),end=at+Number(e.duration);return pad(Math.floor(at/60)%24)+':'+pad(at%60)+'–'+pad(Math.floor(end/60)%24)+':'+pad(end%60)};
   const check=t=>'<span class="wk-check" aria-hidden="true"></span>';
   let h=nativePlanToolbar()+nativePlanBand(projection.weeks[0])+`<div class="week week-timegrid" style="--wk-hour:${HOUR}px;--wk-hours:${hours}">`;
-  h+='<div class="wk-head"><div class="wk-gutter"></div>'+days.map(x=>`<div class="wk-dayhead ${x.di===today()?'is-today':''}"><span>${esc(x.d.toLocaleDateString('es-ES',{weekday:'short'}).replace('.',''))}</span><strong>${x.d.getDate()}</strong></div>`).join('')+'</div>';
-  h+='<div class="wk-allday"><div class="wk-gutter wk-allday-label">Todo el día</div>'+days.map(x=>`<div class="wday" data-week-date="${x.di}">${akteFristenOn(x.di).map(fristChip).join('')}${
+  h+='<div class="wk-head"><div class="wk-gutter"></div>'+days.map(x=>`<div class="wk-dayhead ${x.di===today()?'is-today':''}"><span>${esc(x.d.toLocaleDateString('de-DE',{weekday:'short'}).replace('.',''))}</span><strong>${x.d.getDate()}</strong></div>`).join('')+'</div>';
+  h+='<div class="wk-allday"><div class="wk-gutter wk-allday-label">Ganztägig</div>'+days.map(x=>`<div class="wday" data-week-date="${x.di}">${akteFristenOn(x.di).map(fristChip).join('')}${
     x.untimed.map(e=>{const p=workSessionPresentation(e);return `<button class="calendar-entry event-item wk-chip wk-chip-event ${p.isSession?'is-work-session':''}" data-kind="event" data-id="${e.id}" data-date="${e.date}" style="--item-color:${itemColor(e)}">${esc(p.title)}</button>`}).join('')}${
     x.ta.map(t=>`<button class="calendar-entry task-item wk-chip ${t.done?'task-done':''}" draggable="true" data-kind="task" data-id="${t.id}" data-date="${t.date}" style="--item-color:${itemColor(t)}">${check(t)}<span class="wk-chip-label">${esc(t.title)}</span></button>`).join('')}${
-    x.teamPlan.map(a=>`<button type="button" class="wk-chip minds-team-day-entry" data-team-task="${esc(a.task.id)}" title="Horas previstas, no calendario confirmado">${esc(a.person)} · ${esc(a.task.title)} · ${Number(a.minutes)} min previstos</button>`).join('')}</div>`).join('')+'</div>';
+    x.teamPlan.map(a=>`<button type="button" class="wk-chip minds-team-day-entry" data-team-task="${esc(a.task.id)}" title="Geplante Stunden, kein bestätigter Termin">${esc(a.person)} · ${esc(a.task.title)} · ${Number(a.minutes)} min geplant</button>`).join('')}</div>`).join('')+'</div>';
   h+='<div class="wk-body"><div class="wk-gutter wk-hours">'+Array.from({length:hours},(_,i)=>`<span style="top:${i*HOUR}px">${pad(fromH+i)}:00</span>`).join('')+'</div>';
   for(const x of days){
     const lanes=window.MINDS_DAY_LAYOUT?.layout(x.timed)||new Map();
@@ -3073,14 +3085,14 @@ function day(){
   const spans=state.tasks.filter(x=>taskSpansDay(x,state.date)).sort(taskOrder);
   const lanes=window.MINDS_DAY_LAYOUT?.layout(ev)||new Map();
   const dayFristen=akteFristenOn(state.date);
-  let h='<div class="day-all"><b>Todo el día</b><div>'+dayFristen.map(fristChip).join('')+
+  let h='<div class="day-all"><b>Ganztägig</b><div>'+dayFristen.map(fristChip).join('')+
     (ta.length||spans.length?ta.map(t=>'<button class="pill calendar-entry task-item '+(t.done?'task-done':'')+
       '" data-kind="task" data-id="'+esc(t.id)+'" data-date="'+esc(t.date)+
       '" style="--item-color:'+itemColor(t)+'"><span class="wk-check" aria-hidden="true"></span>'+esc(t.title)+'</button>').join('')+
       spans.map(t=>'<button class="pill calendar-entry is-span" data-kind="task" data-id="'+esc(t.id)+
-      '" style="--item-color:'+itemColor(t)+'" title="Tarea en curso '+esc(spanUntilLabel(t))+'"><span class="wk-check" aria-hidden="true"></span>'+esc(t.title)+
+      '" style="--item-color:'+itemColor(t)+'" title="Aufgabe läuft '+esc(spanUntilLabel(t))+'"><span class="wk-check" aria-hidden="true"></span>'+esc(t.title)+
       '<span class="pill-span">'+esc(spanUntilLabel(t))+'</span></button>').join(''):
-      (dayFristen.length?'':'<span class="meta">Sin tareas</span>'))+'</div></div><div class="hours">';
+      (dayFristen.length?'':'<span class="meta">Keine Aufgaben</span>'))+'</div></div><div class="hours">';
   for(let hr=7;hr<=22;hr++)h+='<div class="hrow"><div class="hlabel">'+pad(hr)+':00</div><div></div></div>';
   for(const e of ev){
     const slot=lanes.get(e.id);
@@ -3095,9 +3107,9 @@ function day(){
       (slot.height>=40?'<div class="meta">'+esc(cat(e.categoryId))+
         (e.projectId?' · '+esc(project(e.projectId)):'')+'</div>':'')+
       '<span class="day-resize-handle" data-day-resize="'+esc(e.id)+
-      '" role="slider" tabindex="0" aria-label="Ajustar duración de '+esc(presentation.title)+
+      '" role="slider" tabindex="0" aria-label="Dauer anpassen: '+esc(presentation.title)+
       '" aria-valuemin="15" aria-valuemax="720" aria-valuenow="'+Number(e.duration||60)+
-      '" title="Arrastra para ajustar duración (15 minutos)"></span></button>';
+      '" title="Ziehen, um die Dauer anzupassen (15 Minuten)"></span></button>';
   }
   h+='</div>';$('#calendarContent').innerHTML=h;bindCalendarItems();bindDayResize();bindFristen();
 }
@@ -3106,7 +3118,7 @@ function bindCalendarItems(){
   if(calendarBody){
     // Day/Week retain their existing create placement; Month owns its position after the grid.
     if(state.view!=='month'&&!calendarBody.querySelector('[data-calendar-create]')){
-      calendarBody.insertAdjacentHTML('afterbegin','<div class="calendar-create-row"><button type="button" data-calendar-create>＋ Añadir tarea o evento</button></div>');
+      calendarBody.insertAdjacentHTML('afterbegin','<div class="calendar-create-row"><button type="button" data-calendar-create>＋ Aufgabe oder Termin</button></div>');
     }
     calendarBody.querySelector('[data-calendar-create]')?.addEventListener('click',()=>newPanel(state.date));
   }
@@ -3191,27 +3203,27 @@ async function openCanonicalTaskById(rowId){
   // "Ahora" reads database UUIDs, while the existing editor addresses client_key.
   // Resolve identity server-side and reuse the canonical editor, never fork a task.
   const sb=window.MINDS_SUPABASE;
-  if(!sb){modal('Editar tarea','<div class="small">No hay conexión con la memoria de MINDS.</div>');return}
+  if(!sb){modal('Aufgabe bearbeiten','<div class="small">Keine Verbindung zum Office.</div>');return}
   try{
     const {data:{session}}=await sb.auth.getSession();
-    if(!session)throw new Error('Sesión no disponible.');
+    if(!session)throw new Error('Arbeitszeit nicht verfügbar.');
     const {data,error}=await sb.from('isabella_tasks').select('id,client_key').eq('id',String(rowId)).eq('user_id',session.user.id).maybeSingle();
     if(error)throw error;
-    if(!data)throw new Error('Esta tarea ya no está disponible.');
+    if(!data)throw new Error('Diese Aufgabe ist nicht mehr verfügbar.');
     const key=data.client_key||data.id;
     const refreshed=await window.ISABELLA_SYNC_PULL_NOW?.();
-    if(refreshed!==true)throw new Error('No pude comprobar la última versión de esta tarea en MINDS. Vuelve a intentarlo.');
-    if(!itemBy('task',key))throw new Error('No pude actualizar esta tarea desde MINDS. Comprueba la sincronización e inténtalo de nuevo.');
+    if(refreshed!==true)throw new Error('Die aktuelle Version dieser Aufgabe konnte nicht geprüft werden. Bitte erneut versuchen.');
+    if(!itemBy('task',key))throw new Error('Diese Aufgabe konnte nicht aktualisiert werden. Bitte die Synchronisierung prüfen und erneut versuchen.');
     editItem('task',key);
   }catch(e){
-    modal('No pude abrir la tarea','<div class="small">'+esc(e?.message||'Error de sincronización')+'</div>');
+    modal('Aufgabe konnte nicht geöffnet werden','<div class="small">'+esc(e?.message||'Synchronisierungsfehler')+'</div>');
   }
 }
 function itemActions(kind,id){
   const item=itemBy(kind,id);if(!item)return;
   const archive=kind==='task'?'<button id="quickArchive" class="sheet-action">Archivar</button>':'';
-  const complete=kind==='task'?'<button id="quickComplete" class="sheet-action">'+(item.done?'Marcar como pendiente':'Marcar como hecha')+'</button>':'';
-  modal(item.title,`<div class="sheet-actions">${complete}<button id="quickEdit" class="sheet-action">Editar / mover</button><button id="quickDuplicate" class="sheet-action">Duplicar</button>${archive}<button id="quickDelete" class="sheet-action danger">Eliminar</button></div>`);
+  const complete=kind==='task'?'<button id="quickComplete" class="sheet-action">'+(item.done?'Als offen markieren':'Als erledigt markieren')+'</button>':'';
+  modal(item.title,`<div class="sheet-actions">${complete}<button id="quickEdit" class="sheet-action">Bearbeiten / verschieben</button><button id="quickDuplicate" class="sheet-action">Duplizieren</button>${archive}<button id="quickDelete" class="sheet-action danger">Löschen</button></div>`);
   $('#quickEdit').onclick=()=>editItem(kind,id);
   $('#quickDuplicate').onclick=()=>duplicateItem(kind,id);
   if(kind==='task'){
@@ -3224,25 +3236,25 @@ function editItem(kind,id){
   if(kind==='task'&&typeof window!=='undefined'&&window.MINDS_TASK_DETAIL?.open){void window.MINDS_TASK_DETAIL.open({clientKey:id});return;}
   const item=itemBy(kind,id);if(!item)return;
   const cats=state.categories.map(x=>`<option value="${x.id}" ${x.id===item.categoryId?'selected':''}>${esc(x.name)}</option>`).join('');
-  const projects='<option value="">Sin proyecto</option>'+state.projects.map(x=>`<option value="${x.id}" ${x.id===item.projectId?'selected':''}>${esc(x.name)}</option>`).join('');
+  const projects='<option value="">Ohne Projekt</option>'+state.projects.map(x=>`<option value="${x.id}" ${x.id===item.projectId?'selected':''}>${esc(x.name)}</option>`).join('');
   const session=kind==='event'?workSessionPresentation(item):null;
   const specific=kind==='event'
-    ?`<label>Hora<input id="editTime" type="time" value="${esc(item.start||'09:00')}"></label><label>Duración (min)<input id="editDuration" type="number" min="5" step="5" value="${Number(item.duration||60)}"></label>`
-    :`<label>Recordatorio<input id="editReminder" type="time" value="${esc(item.reminderTime||'')}"></label>`;
+    ?`<label>Uhrzeit<input id="editTime" type="time" value="${esc(item.start||'09:00')}"></label><label>Dauer (min)<input id="editDuration" type="number" min="5" step="5" value="${Number(item.duration||60)}"></label>`
+    :`<label>Erinnerung<input id="editReminder" type="time" value="${esc(item.reminderTime||'')}"></label>`;
   const sessionDetails=session?.isSession
-    ?'<p class="small">Tiempo reservado, no una segunda tarea. '+(session.task?'Tarea original: '+esc(session.task.title):'La tarea vinculada no está disponible.')+'</p>'+
-      (session.task?'<button type="button" id="editLinkedTask" class="secondary">Abrir tarea original ↗</button>':'')
+    ?'<p class="small">Reservierte Zeit, keine zweite Aufgabe. '+(session.task?'Ursprüngliche Aufgabe: '+esc(session.task.title):'Die verknüpfte Aufgabe ist nicht verfügbar.')+'</p>'+
+      (session.task?'<button type="button" id="editLinkedTask" class="secondary">Ursprüngliche Aufgabe öffnen ↗</button>':'')
     :'';
-  modal(kind==='event'?(session?.isSession?'Editar sesión':'Editar evento'):'Editar tarea',`<div class="form item-editor">
-    <label>Título<input id="editTitle" value="${esc(item.title)}"></label>
-    <label>${kind==='task'?'Fecha (opcional)':'Fecha'}<input id="editDate" type="date" value="${esc(item.date||'')}"></label>
+  modal(kind==='event'?(session?.isSession?'Arbeitszeit bearbeiten':'Termin bearbeiten'):'Aufgabe bearbeiten',`<div class="form item-editor">
+    <label>Titel<input id="editTitle" value="${esc(item.title)}"></label>
+    <label>${kind==='task'?'Datum (optional)':'Datum'}<input id="editDate" type="date" value="${esc(item.date||'')}"></label>
     ${specific}
     ${sessionDetails}
-    <label>Categoría<select id="editCategory">${cats}</select></label>
-    <label>Proyecto<select id="editProject">${projects}</select></label>
-    <label>Notas<textarea id="editNotes" rows="3">${esc(item.notes||'')}</textarea></label>
-    <button id="editSave" class="primary">Guardar cambios</button>
-    <button id="editDelete" class="secondary danger-text">Eliminar</button>
+    <label>Kategorie<select id="editCategory">${cats}</select></label>
+    <label>Projekt<select id="editProject">${projects}</select></label>
+    <label>Notizen<textarea id="editNotes" rows="3">${esc(item.notes||'')}</textarea></label>
+    <button id="editSave" class="primary">Änderungen speichern</button>
+    <button id="editDelete" class="secondary danger-text">Löschen</button>
   </div>`);
   $('#editSave').onclick=()=>{
     const before=clone(item);
@@ -3287,7 +3299,7 @@ function restoreTask(id){
 function deleteItem(kind,id){
   const item=itemBy(kind,id);if(!item)return;
   const title=item.title;
-  modal('Eliminar',`<div class="confirm-copy">¿Eliminar “${esc(title)}”?</div><div class="confirm-actions"><button id="deleteCancel" class="secondary">Cancelar</button><button id="deleteConfirm" class="primary danger-button">Eliminar</button></div>`);
+  modal('Löschen',`<div class="confirm-copy">„${esc(title)}“ löschen?</div><div class="confirm-actions"><button id="deleteCancel" class="secondary">Abbrechen</button><button id="deleteConfirm" class="primary danger-button">Löschen</button></div>`);
   $('#deleteCancel').onclick=closeModal;
   $('#deleteConfirm').onclick=()=>{
     const before=clone(item),list=kind==='task'?state.tasks:state.events,idx=list.findIndex(x=>x.id===id);
@@ -3405,17 +3417,17 @@ async function resizeDayEvent(clientKey,duration){
   try{
     const {data:row,error}=await sb.from('isabella_events')
       .select('id,starts_at,ends_at,updated_at').eq('client_key',clientKey).maybeSingle();
-    if(error||!row)throw error||new Error('Sesión no encontrada.');
+    if(error||!row)throw error||new Error('Arbeitszeit nicht gefunden.');
     const end=new Date(Date.parse(row.starts_at)+duration*60000);
-    if(!Number.isFinite(end.getTime()))throw new Error('Horario inválido.');
+    if(!Number.isFinite(end.getTime()))throw new Error('Ungültige Uhrzeit.');
     const {data:updated,error:writeError}=await sb.from('isabella_events')
       .update({ends_at:end.toISOString(),updated_at:new Date().toISOString()})
       .eq('id',row.id).eq('updated_at',row.updated_at).select('id').maybeSingle();
-    if(writeError||!updated)throw writeError||new Error('La sesión cambió. Recarga antes de ajustarla.');
+    if(writeError||!updated)throw writeError||new Error('Die Arbeitszeit wurde geändert. Bitte neu laden.');
     const ok=await window.ISABELLA_SYNC_PULL_NOW?.();
-    if(ok!==true)throw new Error('El cambio está guardado. Recarga para actualizar la vista.');
-    renderCalendar();nativePlanToast('Duración actualizada · '+duration+' min');
-  }catch(error){renderCalendar();nativePlanToast('No se pudo ajustar la sesión: '+(error?.message||error))}
+    if(ok!==true)throw new Error('Die Änderung ist gespeichert. Bitte neu laden, um die Ansicht zu aktualisieren.');
+    renderCalendar();nativePlanToast('Dauer geändert · '+duration+' min');
+  }catch(error){renderCalendar();nativePlanToast('Arbeitszeit konnte nicht angepasst werden: '+(error?.message||error))}
 }
 function initEventDrag(){
   $$('.hours .event-item[data-kind="event"]').forEach(row=>{
@@ -3466,10 +3478,10 @@ function openDrawer(){
     const source=document.querySelector('script[src*="app.js?v="]')?.getAttribute('src')||'';
     const assetVersion=/app\.js\?v=([\w.\-]+)/.exec(source)?.[1]||'desconocida';
     currentBuild.textContent=tag
-      ?'Versión cargada · commit '+tag+' · app v'+assetVersion
-      :'Versión local · app v'+assetVersion;
+      ?'Version · Commit '+tag+' · app v'+assetVersion
+      :'TBA Office · Version '+assetVersion;
   }
-  const refresh=$('#refreshViewAction');if(refresh){refresh.classList.toggle('hidden',!['feed','bandeja'].includes(state.screen));refresh.textContent=state.screen==='feed'?'Actualizar Ahora':'Actualizar la Bandeja'}const d=$('#drawer');d.classList.remove('hidden');d.scrollTop=0;$('#drawerBackdrop').classList.remove('hidden');document.body.classList.add('drawer-open')}function closeDrawer(){$('#drawer').classList.add('hidden');$('#drawerBackdrop').classList.add('hidden');document.body.classList.remove('drawer-open')}function modal(title,body){$('#modalTitle').textContent=title;$('#modalBody').innerHTML=body;$('#modal').classList.remove('artifact-image-modal');$('#modal').classList.remove('hidden');$('#modalBackdrop').classList.remove('hidden')}function closeModal(){$('#modal').classList.add('hidden');$('#modal').classList.remove('artifact-image-modal');$('#modalBackdrop').classList.add('hidden')}
+  const refresh=$('#refreshViewAction');if(refresh){refresh.classList.toggle('hidden',!['feed','bandeja'].includes(state.screen));refresh.textContent=state.screen==='feed'?'Heute aktualisieren':'Eingang aktualisieren'}const d=$('#drawer');d.classList.remove('hidden');d.scrollTop=0;$('#drawerBackdrop').classList.remove('hidden');document.body.classList.add('drawer-open')}function closeDrawer(){$('#drawer').classList.add('hidden');$('#drawerBackdrop').classList.add('hidden');document.body.classList.remove('drawer-open')}function modal(title,body){$('#modalTitle').textContent=title;$('#modalBody').innerHTML=body;$('#modal').classList.remove('artifact-image-modal');$('#modal').classList.remove('hidden');$('#modalBackdrop').classList.remove('hidden')}function closeModal(){$('#modal').classList.add('hidden');$('#modal').classList.remove('artifact-image-modal');$('#modalBackdrop').classList.add('hidden')}
 function action(a){if(a==='refreshview'){if(state.screen==='feed'){window.MINDS_AHORA?.render?.({fresh:true});void renderFeed(false)}if(state.screen==='bandeja')void window.MINDS_BANDEJA?.refresh?.()}if(a==='tasks')tasksPanel();if(a==='new')newPanel();if(a==='memory')memoryPanel();if(a==='assistantprefs')assistantPreferencesPanel();if(a==='push')void pushNotificationsPanel();if(a==='permissions')void contextualAutonomyPanel();if(a==='reviews')void reviewEconomyPanel();if(a==='routines')routinesPanel();if(a==='intents')void standingIntentsPanel();if(a==='continuity')void continuityPanel();if(a==='skills')skillsPanel();if(a==='doctor')void doctorPanel();if(a==='feedprefs')feedPreferencesPanel();if(a==='artifacts')void artifactsPanel();if(a==='aiusage')void aiUsagePanel();if(a==='categories')categoriesPanel()}
 function reviewAgeCopy(hours){
   const n=Math.max(0,Number(hours||0));
@@ -3576,9 +3588,9 @@ async function continuityPanel(){
       const e=latest.get(x.id),last=x?.metadata?.last_continuity||null,projectName=x.isabella_projects?.name||null,workspace=workspaceByCommitment.get(x.id);
       const missionCount=workspace?workspaceItems.filter(i=>i.workspace_id===workspace.id).length:0;
       const workspaceState=workspace?humanSurface()?.workspace?.(workspace.status):null;
-      const workspaceTechnical=workspace?`<div class="human-tech-grid"><span>Mission Workspace</span><b>${esc(workspace.status)}</b><span>Entradas</span><b>${missionCount}</b><span>Actualizado</span><b>${new Date(workspace.updated_at).toLocaleString('es-ES')}</b></div>`:'';
+      const workspaceTechnical=workspace?`<div class="human-tech-grid"><span>Mission Workspace</span><b>${esc(workspace.status)}</b><span>Entradas</span><b>${missionCount}</b><span>Actualizado</span><b>${new Date(workspace.updated_at).toLocaleString('de-DE')}</b></div>`:'';
       const mission=workspace?`<div class="continuity-cause human-work-card">${humanStateHTML(workspaceState,workspaceTechnical)}${workspace.summary?`<p class="human-work-summary">${esc(workspace.summary)}</p>`:''}<button class="secondary" data-mission-workspace="${esc(workspace.id)}">Ver trabajo</button></div>`:'';
-      const why=last?.signal_title?`<div class="continuity-cause"><span>ÚLTIMO CAMBIO RELEVANTE</span><b>${esc(last.signal_title)}</b>${last.signal_body?`<p>${esc(last.signal_body)}</p>`:''}<small>${esc(last.reason||'')} · ${new Date(last.linked_at||last.occurred_at||x.updated_at).toLocaleString('es-ES')}</small></div>`:(e&&['reactivated','signal_linked'].includes(e.event_type)?`<div class="continuity-cause"><span>ÚLTIMO CAMBIO</span><b>${esc(e.body||e.event_type)}</b><small>${new Date(e.created_at).toLocaleString('es-ES')}</small></div>`:'');
+      const why=last?.signal_title?`<div class="continuity-cause"><span>ÚLTIMO CAMBIO RELEVANTE</span><b>${esc(last.signal_title)}</b>${last.signal_body?`<p>${esc(last.signal_body)}</p>`:''}<small>${esc(last.reason||'')} · ${new Date(last.linked_at||last.occurred_at||x.updated_at).toLocaleString('de-DE')}</small></div>`:(e&&['reactivated','signal_linked'].includes(e.event_type)?`<div class="continuity-cause"><span>ÚLTIMO CAMBIO</span><b>${esc(e.body||e.event_type)}</b><small>${new Date(e.created_at).toLocaleString('de-DE')}</small></div>`:'');
       return `<article class="commitment-card ${esc(x.status)}"><div class="commitment-card-head"><span class="commitment-status">${esc(commitmentStatusLabel(x.status))}</span><span class="commitment-project">${esc(projectName||x.scope||'global')}</span></div><h3>${esc(x.title)}</h3><p>${esc(x.objective)}</p>${x.completion_criteria?`<div class="commitment-criteria"><span>CIERRE</span>${esc(x.completion_criteria)}</div>`:''}${x.source_open_loop?'<div class="small">Nació de un open loop que tú decidiste elevar.</div>':''}${mission}${why}</article>`;
     }).join('');
     modal('Continuidad',`<div class="continuity-intro">Aquí puedes ver lo que Isabella mantiene vivo para que no tengas que recordar cada asunto abierto por tu cuenta. Nada entra en esta lista sin tu revisión y algo que hayas pausado no se reactiva por sí solo.</div><div class="commitment-list">${cards||'<div class="empty-panel">Todavía no has decidido mantener ningún asunto vivo. Puedes decirle a Isabella “esto no quiero perderlo” cuando algo merezca continuidad.</div>'}</div>`);
@@ -3608,13 +3620,13 @@ async function missionWorkspacePanel(id){
     if(wQ.error)throw wQ.error;if(iQ.error)throw iQ.error;if(rQ.error)throw rQ.error;
     const w=wQ.data,items=iQ.data||[],runs=rQ.data||[],current=runs.find(x=>['queued','running','waiting','waiting_for_user','paused'].includes(x.status))||runs[0]||null;
     const labels={plan:'Plan',finding:'Hallazgo',source:'Fuente',question:'Pregunta',decision:'Decisión propuesta',note:'Nota'};
-    const itemRows=items.map(x=>`<div class="doctor-log"><b>${esc(labels[x.kind]||x.kind)}</b><span>${esc(x.content)}</span><time>${new Date(x.created_at).toLocaleString('es-ES')}</time><details class="human-tech"><summary>Procedencia</summary><div class="small">${esc(x.status)} · ${esc(x.provenance_class)} · ${esc(x.source_kind)}</div></details></div>`).join('');
+    const itemRows=items.map(x=>`<div class="doctor-log"><b>${esc(labels[x.kind]||x.kind)}</b><span>${esc(x.content)}</span><time>${new Date(x.created_at).toLocaleString('de-DE')}</time><details class="human-tech"><summary>Procedencia</summary><div class="small">${esc(x.status)} · ${esc(x.provenance_class)} · ${esc(x.source_kind)}</div></details></div>`).join('');
     const runControls=current&&['queued','running','waiting'].includes(current.status)?`<button class="secondary" data-mission-run-action="pause" data-run-id="${esc(current.id)}">Pausar</button><button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Cancelar</button>`:current?.status==='paused'?`<button class="secondary" data-mission-run-action="resume" data-run-id="${esc(current.id)}">Reanudar</button><button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Cancelar</button>`:current?.status==='waiting_for_user'?`<button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Cancelar</button>`:'';
     const workspaceState=humanSurface()?.workspace?.(w.status);
-    const workspaceTechnical=`<div class="human-tech-grid"><span>Mission Workspace</span><b>${esc(w.status)}</b><span>Actualizado</span><b>${new Date(w.updated_at).toLocaleString('es-ES')}</b></div>`;
+    const workspaceTechnical=`<div class="human-tech-grid"><span>Mission Workspace</span><b>${esc(w.status)}</b><span>Actualizado</span><b>${new Date(w.updated_at).toLocaleString('de-DE')}</b></div>`;
     const runState=current?humanSurface()?.mission?.(current,w.title):null;
-    const waitTechnical=current?.status==='waiting'?`<span>Espera</span><b>${esc(current.wait_kind||'—')}</b>${current.wake_at?`<span>Retoma</span><b>${new Date(current.wake_at).toLocaleString('es-ES')}</b>`:''}`:'';
-    const runTechnical=current?`<div class="human-tech-grid"><span>Mission Run</span><b>${esc(current.status)}</b><span>Fase</span><b>${esc(current.phase||'—')}</b><span>Checkpoint</span><b>${Number(current.iteration||0)} / ${Number(current.max_iterations||0)}</b><span>Reintentos</span><b>${Number(current.retry_count||0)}</b>${waitTechnical}<span>Actualizado</span><b>${new Date(current.updated_at).toLocaleString('es-ES')}</b></div>`:'';
+    const waitTechnical=current?.status==='waiting'?`<span>Espera</span><b>${esc(current.wait_kind||'—')}</b>${current.wake_at?`<span>Retoma</span><b>${new Date(current.wake_at).toLocaleString('de-DE')}</b>`:''}`:'';
+    const runTechnical=current?`<div class="human-tech-grid"><span>Mission Run</span><b>${esc(current.status)}</b><span>Fase</span><b>${esc(current.phase||'—')}</b><span>Checkpoint</span><b>${Number(current.iteration||0)} / ${Number(current.max_iterations||0)}</b><span>Reintentos</span><b>${Number(current.retry_count||0)}</b>${waitTechnical}<span>Actualizado</span><b>${new Date(current.updated_at).toLocaleString('de-DE')}</b></div>`:'';
     const runPanel=current?`<div class="mission-run-card">${humanStateHTML(runState,runTechnical)}${current.last_error&&current.status==='failed'?`<div class="human-inline-error">${esc(current.last_error)}</div>`:''}${runControls?`<div class="confirm-actions">${runControls}</div>`:''}</div>`:'';
     modal('Trabajo de Isabella',`<div class="continuity-intro"><b>${esc(w.title)}</b><p>${esc(w.objective_snapshot)}</p>${w.completion_criteria_snapshot?`<div class="commitment-criteria"><span>Cuándo estará resuelto</span>${esc(w.completion_criteria_snapshot)}</div>`:''}${humanStateHTML(workspaceState,workspaceTechnical)}${w.summary?`<div class="continuity-cause"><span>Lo que sé hasta ahora</span><p>${esc(w.summary)}</p></div>`:''}${runPanel}<div class="small">Aquí conservo el trabajo intermedio para poder continuar entre conversaciones. Los hallazgos siguen siendo evidencia de trabajo, no memoria personal ni hechos confirmados; tampoco puedo ejecutar acciones externas o confirmar una decisión por mi cuenta.</div></div><div class="small section-label">Lo que he ido reuniendo</div>${itemRows||'<div class="empty-panel">Todavía no he registrado avances en este trabajo.</div>'}`);
     document.querySelectorAll('[data-mission-run-action]').forEach(b=>b.onclick=()=>void missionRunControlUI(b.dataset.runId,b.dataset.missionRunAction,id));
@@ -3673,10 +3685,10 @@ async function artifactsPanel(){
     const pending=intakeQ.data||[],rows=artifactQ.data||[];
     const pendingHtml=pending.length?`<div class=\"small section-label\">Por revisar</div><div class=\"artifact-library\">${pending.map(a=>{
       const accepted=a.status==='accepted';
-      const meta=[String(a.kind||'').toUpperCase(),Math.max(1,Math.round(Number(a.size_bytes||0)/1024))+' KB',new Date(a.created_at).toLocaleString('es-ES')].join(' · ');
+      const meta=[String(a.kind||'').toUpperCase(),Math.max(1,Math.round(Number(a.size_bytes||0)/1024))+' KB',new Date(a.created_at).toLocaleString('de-DE')].join(' · ');
       return `<div class=\"artifact-library-item\"><div class=\"continuity-cause\"><span>${accepted?'ACEPTADO · PENDIENTE DE PROMOCIÓN':'ISABELLA HA PRODUCIDO UN ARCHIVO'}</span><b>${esc(a.title||'Artefacto')}</b><p class=\"small\">${esc(meta)}</p><details class=\"human-tech\"><summary>Ver procedencia técnica</summary><div class=\"small\">SHA-256 · ${esc(String(a.sha256||''))}</div></details><div class=\"confirm-actions\"><button class=\"secondary\" data-intake-preview=\"${esc(a.id)}\">Vista previa</button>${accepted?`<button class=\"primary\" data-intake-promote=\"${esc(a.id)}\">Terminar de conservar</button>`:`<button class=\"primary\" data-intake-accept=\"${esc(a.id)}\">Conservar</button><button class=\"secondary\" data-intake-reject=\"${esc(a.id)}\">Rechazar</button>`}</div></div></div>`;
     }).join('')}</div><div id=\"artifactIntakeStatus\" class=\"small\" aria-live=\"polite\"></div>`:'';
-    const permanentHtml=rows.length?`<div class=\"small section-label\">Conservados</div><div class=\"artifact-library\">${rows.map(a=>`<div class=\"artifact-library-item\"><div class=\"artifact-library-meta\"><span>${esc(a.source_kind==='idea'?'TRABAJO':a.source_kind==='mission_runtime'?'MISSION':'CHAT')}</span><time>${new Date(a.created_at).toLocaleDateString('es-ES')}</time></div>${artifactMarkup(a)}</div>`).join('')}</div>`:'<div class=\"small\">Todavía no hay artefactos conservados.</div>';
+    const permanentHtml=rows.length?`<div class=\"small section-label\">Conservados</div><div class=\"artifact-library\">${rows.map(a=>`<div class=\"artifact-library-item\"><div class=\"artifact-library-meta\"><span>${esc(a.source_kind==='idea'?'TRABAJO':a.source_kind==='mission_runtime'?'MISSION':'CHAT')}</span><time>${new Date(a.created_at).toLocaleDateString('de-DE')}</time></div>${artifactMarkup(a)}</div>`).join('')}</div>`:'<div class=\"small\">Todavía no hay artefactos conservados.</div>';
     $('#modalBody').innerHTML=pendingHtml+permanentHtml;
     document.querySelectorAll('[data-intake-preview]').forEach(b=>b.onclick=()=>void previewArtifactIntake(b.dataset.intakePreview));
     document.querySelectorAll('[data-intake-accept]').forEach(b=>b.onclick=()=>void reviewArtifactIntake(b.dataset.intakeAccept,'accepted'));
@@ -3693,7 +3705,7 @@ async function aiUsagePanel(){
     const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sin sesión');
     const from=new Date(Date.now()-7*86400000).toISOString();
     const {data,error}=await sb.from('minds_ai_usage').select('feature,model,input_tokens,cached_input_tokens,output_tokens,total_tokens,created_at').gte('created_at',from).order('created_at',{ascending:false}).limit(1000);if(error)throw error;
-    const rows=data||[],fmt=n=>new Intl.NumberFormat('es-ES',{notation:n>=100000?'compact':'standard',maximumFractionDigits:1}).format(n||0);
+    const rows=data||[],fmt=n=>new Intl.NumberFormat('de-DE',{notation:n>=100000?'compact':'standard',maximumFractionDigits:1}).format(n||0);
     const totals=rows.reduce((a,x)=>{a.input+=Number(x.input_tokens||0);a.cached+=Number(x.cached_input_tokens||0);a.output+=Number(x.output_tokens||0);a.total+=Number(x.total_tokens||0);return a},{input:0,cached:0,output:0,total:0}),groups={};
     for(const x of rows){const k=String(x.feature||'otro');groups[k]=groups[k]||{calls:0,tokens:0};groups[k].calls++;groups[k].tokens+=Number(x.total_tokens||0)}
     const labels={isabella_chat:'Chat Isabella',isabella_background:'Procesos de Isabella',isabella_embedding:'Memoria semántica',decision_router:'Router adaptativo',memory_flush:'Checkpoint de memoria',work_file_read:'Lectura Work',situational_feed:'Feed',feed_detail:'Detalle del Feed',ideas_generation:'Ideas',idea_worker:'Trabajos de Ideas',artifact_image:'Imágenes',sofia_chat:'Chat Sofía',sofia_background:'Procesos de Sofía',research:'Investigación',routine:'Rutinas'};
@@ -3706,38 +3718,38 @@ function tasksPanel(){
   const undated=pending.filter(t=>!t.date).length;
   const groups=state.categories.map(c=>({id:'category:'+c.id,name:c.name,color:c.color||fallbackColor(c.id),count:pending.filter(t=>t.categoryId===c.id).length}));
   let body='<div class="task-groups">';
-  body+=`<button class="task-group-card smart" data-task-group="undated"><span><strong>Sin fecha</strong><small>Backlog sin programar</small></span><b>${undated}</b></button>`;
-  body+=groups.map(g=>`<button class="task-group-card" data-task-group="${esc(g.id)}" style="--group-color:${esc(g.color)}"><span><strong>${esc(g.name)}</strong><small>Lista</small></span><b>${g.count}</b></button>`).join('');
+  body+=`<button class="task-group-card smart" data-task-group="undated"><span><strong>Ohne Datum</strong><small>Noch nicht eingeplant</small></span><b>${undated}</b></button>`;
+  body+=groups.map(g=>`<button class="task-group-card" data-task-group="${esc(g.id)}" style="--group-color:${esc(g.color)}"><span><strong>${esc(g.name)}</strong><small>Liste</small></span><b>${g.count}</b></button>`).join('');
   body+='</div>';
-  modal('Tareas',body);
+  modal('Aufgaben',body);
   document.querySelectorAll('[data-task-group]').forEach(b=>b.onclick=()=>taskGroupPanel(b.dataset.taskGroup||''));
 }
 function taskGroupPanel(group){
   const all=state.tasks.filter(t=>!t.archivedAt);
   const isUndated=group==='undated',categoryId=group.startsWith('category:')?group.slice(9):null;
-  const title=isUndated?'Sin fecha':(state.categories.find(c=>c.id===categoryId)?.name||'Tareas');
+  const title=isUndated?'Ohne Datum':(state.categories.find(c=>c.id===categoryId)?.name||'Aufgaben');
   const filtered=all.filter(t=>isUndated?!t.date:t.categoryId===categoryId);
   const pending=filtered.filter(t=>!t.done).sort((a,b)=>(a.date?0:1)-(b.date?0:1)||String(a.date||'').localeCompare(String(b.date||''))||taskOrder(a,b));
   const done=filtered.filter(t=>t.done).sort((a,b)=>String(b.completedAt||'').localeCompare(String(a.completedAt||'')));
-  const row=t=>`<div class="task-list-row ${t.done?'done':''}"><button class="task-list-check ${t.done?'checked':''}" data-list-task-toggle="${t.id}" aria-label="${t.done?'Marcar pendiente':'Marcar hecha'}">${t.done?'✓':''}</button><button class="task-list-main" data-edit-task="${t.id}"><span>${esc(t.title)}</span><small>${t.date?esc(t.date):'Sin fecha'}${t.projectId?' · '+esc(project(t.projectId)):''}</small></button></div>`;
-  let body='<button class="task-list-back" id="taskListBack">‹ Listas</button>';
-  body+='<div class="small section-label">Pendientes</div>';
-  body+=pending.length?pending.map(row).join(''):'<div class="small empty-panel">No hay tareas pendientes en esta lista.</div>';
-  if(done.length){body+='<div class="small section-label task-done-label">Hechas</div>'+done.map(row).join('')}
+  const row=t=>`<div class="task-list-row ${t.done?'done':''}"><button class="task-list-check ${t.done?'checked':''}" data-list-task-toggle="${t.id}" aria-label="${t.done?'Als offen markieren':'Als erledigt markieren'}">${t.done?'✓':''}</button><button class="task-list-main" data-edit-task="${t.id}"><span>${esc(t.title)}</span><small>${t.date?esc(t.date):'Ohne Datum'}${t.projectId?' · '+esc(project(t.projectId)):''}</small></button></div>`;
+  let body='<button class="task-list-back" id="taskListBack">‹ Listen</button>';
+  body+='<div class="small section-label">Offen</div>';
+  body+=pending.length?pending.map(row).join(''):'<div class="small empty-panel">Keine offenen Aufgaben in dieser Liste.</div>';
+  if(done.length){body+='<div class="small section-label task-done-label">Erledigt</div>'+done.map(row).join('')}
   modal(title,body);
   $('#taskListBack').onclick=tasksPanel;
   document.querySelectorAll('[data-edit-task]').forEach(x=>x.onclick=()=>editItem('task',x.dataset.editTask));
   document.querySelectorAll('[data-list-task-toggle]').forEach(x=>x.onclick=e=>{e.stopPropagation();const id=x.dataset.listTaskToggle;const t=state.tasks.find(y=>y.id===id);if(!t)return;const before=clone(t);t.done=!t.done;t.completedAt=t.done?new Date().toISOString():null;mutation('task',t.done?'complete':'reopen',before,t,'manual');save();taskGroupPanel(group)});
 }
 function newPanel(presetDate=null){
-  modal('Agregar manualmente',`<div class="form">
-    <select id="newType"><option value="task">Tarea</option><option value="event">Evento</option></select>
-    <input id="newTitle" placeholder="Nombre">
-    <label>Fecha <span class="small">(opcional para tareas)</span><input id="newDate" type="date" value="${esc(presetDate||'')}"></label>
-    <label>Categoría<select id="newCat">${state.categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
-    <label>Proyecto<select id="newProject"><option value="">Sin proyecto</option>${state.projects.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
+  modal('Neu anlegen',`<div class="form">
+    <select id="newType"><option value="task">Aufgabe</option><option value="event">Termin</option></select>
+    <input id="newTitle" placeholder="Titel">
+    <label>Datum <span class="small">(bei Aufgaben optional)</span><input id="newDate" type="date" value="${esc(presetDate||'')}"></label>
+    <label>Kategorie<select id="newCat">${state.categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
+    <label>Projekt<select id="newProject"><option value="">Ohne Projekt</option>${state.projects.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
     <input id="newTime" type="time" value="09:00">
-    <button id="newSave" type="button" class="primary">Guardar</button><div id="quickTaskStatus" class="small" role="status" aria-live="polite"></div>
+    <button id="newSave" type="button" class="primary">Speichern</button><div id="quickTaskStatus" class="small" role="status" aria-live="polite"></div>
   </div>`);
   const type=$('#newType'),dateInput=$('#newDate'),timeInput=$('#newTime');
   const syncType=()=>{const event=type.value==='event';if(event&&!dateInput.value)dateInput.value=today();timeInput.classList.toggle('hidden',!event)};
@@ -3745,33 +3757,33 @@ function newPanel(presetDate=null){
   let saving=false,attempt=null;
   $('#newSave').onclick=async()=>{
     if(saving)return;
-    const title=$('#newTitle').value.trim();if(!title){$('#quickTaskStatus').textContent='Escribe un nombre para la tarea.';return}
+    const title=$('#newTitle').value.trim();if(!title){$('#quickTaskStatus').textContent='Bitte einen Titel eingeben.';return}
     const kind=type.value,date=dateInput.value||null,categoryId=$('#newCat').value,projectId=$('#newProject').value||null;
     if(kind==='task'){
       const button=$('#newSave'),status=$('#quickTaskStatus');
-      if(!window.MINDS_TASK_DETAIL?.createQuick){status.textContent='La creación no está disponible. Recarga MINDS.';return}
+      if(!window.MINDS_TASK_DETAIL?.createQuick){status.textContent='Anlegen ist gerade nicht möglich. Bitte die Seite neu laden.';return}
       const values={title,date,categoryKey:categoryId,projectKey:projectId};
       if(attempt){
         if(!Object.entries(values).every(([k,v])=>attempt[k]===v)){
-          status.textContent='El guardado anterior aún no se verificó. Reintenta con los mismos datos o abre un formulario nuevo.';
+          status.textContent='Das letzte Speichern ist noch nicht bestätigt. Bitte mit denselben Angaben erneut versuchen oder ein neues Formular öffnen.';
           return;
         }
       }else attempt={...values,clientKey:crypto.randomUUID()};
-      saving=true;button.disabled=true;button.textContent='Guardando…';
-      status.textContent='Guardando…';
+      saving=true;button.disabled=true;button.textContent='Speichere …';
+      status.textContent='Speichere …';
       try{
         const task=await window.MINDS_TASK_DETAIL.createQuick(attempt);
-        if(!task?.id||task.title!==attempt.title)throw new Error('No se pudo verificar la tarea.');
-        status.textContent='Tarea creada.';
+        if(!task?.id||task.title!==attempt.title)throw new Error('Die Aufgabe konnte nicht bestätigt werden.');
+        status.textContent='Aufgabe angelegt.';
         void Promise.resolve(window.ISABELLA_SYNC_PULL_NOW?.()).then(()=>renderCalendar()).catch(()=>{});
         setTimeout(()=>{if($('#newSave')===button)closeModal()},650);
       }catch(error){
-        status.textContent='No se pudo verificar el guardado: '+String(error?.message||error);
-        button.disabled=false;button.textContent='Guardar';
+        status.textContent='Speichern konnte nicht bestätigt werden: '+String(error?.message||error);
+        button.disabled=false;button.textContent='Speichern';
       }finally{saving=false}
       return;
     }
-    if(!date){$('#quickTaskStatus').textContent='El evento necesita una fecha.';return}
+    if(!date){$('#quickTaskStatus').textContent='Ein Termin braucht ein Datum.';return}
     const item={id:uid(),title,date,categoryId,projectId,start:timeInput.value||'09:00',duration:60};
     state.events.push(item);mutation('event','create',null,item,'manual');
     save();closeModal();renderCalendar();
@@ -3792,21 +3804,21 @@ function planTaskSession(taskId,scheduledDate=null,proposedStart='09:00'){
   const estimate=Number(task.metadata?.planning?.estimated_minutes||0);
   const remaining=estimate>0?Math.max(0,estimate-subtotal):0;
   const initial=remaining>0?Math.min(720,Math.max(15,remaining)):60;
-  modal('Reservar tiempo para la tarea',`<div class="form item-editor">
-    <p class="small">Tarea original · ${esc(task.title)}</p>
-    <p class="small">Estimación: ${estimate?esc(readable(estimate)):'aún no indicada'}. Sesiones ya reservadas: ${esc(readable(subtotal))}. ${estimate?'Pendiente de reservar: '+esc(readable(remaining))+'.':''} La tarea sigue siendo una sola en Work.</p>
-    <label>Fecha<input id="deskSessionDate" type="date" value="${esc(date)}"></label>
-    <label>Comienzo<input id="deskSessionStart" type="time" value="${esc(proposedStart)}"></label>
-    <label>Tiempo de trabajo (minutos, elegido por ti)<input id="deskSessionDuration" type="number" min="15" max="720" step="15" value="${initial}"></label>
-    <p class="small">Esto crea una sesión en el calendario vinculada a la tarea, no otra tarea. Elige y confirma una duración.</p>
-    <button type="button" class="primary" id="deskSessionSave">Reservar sesión</button>
-    <button type="button" class="secondary" id="deskSessionCancel">Cancelar</button>
+  modal('Zeit für die Aufgabe reservieren',`<div class="form item-editor">
+    <p class="small">Aufgabe · ${esc(task.title)}</p>
+    <p class="small">Schätzung: ${estimate?esc(readable(estimate)):'noch nicht angegeben'}. Bereits reserviert: ${esc(readable(subtotal))}. ${estimate?'Noch zu reservieren: '+esc(readable(remaining))+'.':''} Die Aufgabe bleibt eine einzige Aufgabe in Work.</p>
+    <label>Datum<input id="deskSessionDate" type="date" value="${esc(date)}"></label>
+    <label>Beginn<input id="deskSessionStart" type="time" value="${esc(proposedStart)}"></label>
+    <label>Arbeitszeit (Minuten)<input id="deskSessionDuration" type="number" min="15" max="720" step="15" value="${initial}"></label>
+    <p class="small">Das legt eine mit der Aufgabe verknüpfte Arbeitszeit im Kalender an, keine weitere Aufgabe.</p>
+    <button type="button" class="primary" id="deskSessionSave">Arbeitszeit reservieren</button>
+    <button type="button" class="secondary" id="deskSessionCancel">Abbrechen</button>
   </div>`);
   $('#deskSessionCancel').onclick=closeModal;
   $('#deskSessionSave').onclick=()=>{
     const d=$('#deskSessionDate').value,start=$('#deskSessionStart').value,duration=Number($('#deskSessionDuration').value);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||iso(fromIso(d))!==d||!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!Number.isInteger(duration)||duration<15||duration>720){
-      alert('Comprueba la fecha, la hora y la duración (15–720 minutos).');return;
+      alert('Bitte Datum, Uhrzeit und Dauer prüfen (15–720 Minuten).');return;
     }
     const item={id:uid(),title:task.title,date:d,start,duration,categoryId:task.categoryId,
       projectId:task.projectId,allDay:false,
@@ -3823,10 +3835,10 @@ function setTaskEstimatedMinutes(taskId){
   const existing=Number(task.metadata?.planning?.estimated_minutes||0);
   const taken=state.events.filter(e=>e.metadata?.kind==='task_work_session_v1'&&e.metadata?.task_client_key===taskId)
     .reduce((sum,e)=>sum+Math.max(0,Number(e.duration)||0),0);
-  modal('Estimar duración',`<div class="form item-editor">
-    <p class="small">${esc(task.title)} · misma tarea que aparece en Work</p>
-    <p class="small">Ya reservado en el calendario: ${Math.floor(taken/60)} h ${String(taken%60).padStart(2,'0')} min.</p>
-    <label>Duración total estimada (minutos)<input type="number" id="deskTaskEstimate" min="0" max="43200" step="15" value="${existing||''}" placeholder="Sin estimación"></label>
+  modal('Dauer schätzen',`<div class="form item-editor">
+    <p class="small">${esc(task.title)} · dieselbe Aufgabe wie in Work</p>
+    <p class="small">Bereits im Kalender reserviert: ${Math.floor(taken/60)} h ${String(taken%60).padStart(2,'0')} min.</p>
+    <label>Geschätzte Gesamtdauer (Minuten)<input type="number" id="deskTaskEstimate" min="0" max="43200" step="15" value="${existing||''}" placeholder="Keine Schätzung"></label>
     <div class="desk-estimate-presets">
       <button type="button" data-estimate-preset="30">30 min</button>
       <button type="button" data-estimate-preset="60">1 h</button>
@@ -3834,16 +3846,16 @@ function setTaskEstimatedMinutes(taskId){
       <button type="button" data-estimate-preset="240">4 h</button>
       <button type="button" data-estimate-preset="480">8 h</button>
     </div>
-    <p class="small">La estimación no reserva automáticamente tiempo, ni equivale a tiempo trabajado. Puedes distribuirla en varios días.</p>
-    <button type="button" class="primary" id="deskEstimateSave">Guardar estimación</button>
-    <button type="button" class="secondary" id="deskEstimateCancel">Cancelar</button>
+    <p class="small">Die Schätzung reserviert keine Zeit und ist keine geleistete Arbeitszeit. Sie kann auf mehrere Tage verteilt werden.</p>
+    <button type="button" class="primary" id="deskEstimateSave">Schätzung speichern</button>
+    <button type="button" class="secondary" id="deskEstimateCancel">Abbrechen</button>
   </div>`);
   document.querySelectorAll('[data-estimate-preset]').forEach(b=>b.onclick=()=>{$('#deskTaskEstimate').value=b.dataset.estimatePreset});
   $('#deskEstimateCancel').onclick=closeModal;
   $('#deskEstimateSave').onclick=()=>{
     const value=$('#deskTaskEstimate').value.trim();
     const minutes=value===''?0:Number(value);
-    if(!Number.isInteger(minutes)||minutes<0||minutes>43200){alert('Indica una duración válida de 0 a 43.200 minutos.');return;}
+    if(!Number.isInteger(minutes)||minutes<0||minutes>43200){alert('Bitte eine Dauer von 0 bis 43.200 Minuten angeben.');return;}
     const before=clone(task);
     const metadata={...(task.metadata||{})},planning={...(metadata.planning||{})};
     if(minutes>0)planning.estimated_minutes=minutes;
@@ -3860,7 +3872,7 @@ function autonomyEvidenceHTML(e){
   const fields=Object.entries(e.changed_fields||{}).map(([k,n])=>`${({date:'fecha',title:'título',category:'categoría',project:'proyecto',notes:'notas'})[k]||k}: ${n}`).join(' · ');
   const outcomeCorrections=Number(e.outcome_corrections||0);
   const human=humanSurface()?.autonomy?.(e);
-  const technical=`<div class="human-tech-grid"><span>Contexto</span><b>${esc(autonomyContextLabel(e.context_key))}</b><span>Sin cambios</span><b>${Number(e.accepted_unchanged)||0}</b><span>Editadas</span><b>${Number(e.edited)||0}</b><span>Rechazadas</span><b>${Number(e.rejected)||0}</b><span>Días revisados</span><b>${Number(e.review_days)||0}</b>${outcomeCorrections?`<span>Correcciones posteriores confirmadas</span><b>${outcomeCorrections}</b>`:''}${fields?`<span>Campos corregidos</span><b>${esc(fields)}</b>`:''}${e.last_review_at?`<span>Última revisión</span><b>${new Date(e.last_review_at).toLocaleString('es-ES')}</b>`:''}</div>`;
+  const technical=`<div class="human-tech-grid"><span>Contexto</span><b>${esc(autonomyContextLabel(e.context_key))}</b><span>Sin cambios</span><b>${Number(e.accepted_unchanged)||0}</b><span>Editadas</span><b>${Number(e.edited)||0}</b><span>Rechazadas</span><b>${Number(e.rejected)||0}</b><span>Días revisados</span><b>${Number(e.review_days)||0}</b>${outcomeCorrections?`<span>Correcciones posteriores confirmadas</span><b>${outcomeCorrections}</b>`:''}${fields?`<span>Campos corregidos</span><b>${esc(fields)}</b>`:''}${e.last_review_at?`<span>Última revisión</span><b>${new Date(e.last_review_at).toLocaleString('de-DE')}</b>`:''}</div>`;
   return `<div class="human-permission-case"><div class="human-case-title">${esc(e.action==='create_task'?'Crear tarea':e.action)} · ${esc(e.scope_label)}</div>${humanStateHTML(human,technical)}</div>`;
 }
 function counterfactualSupported(unit){
@@ -3879,7 +3891,7 @@ function counterfactualEffectCopy(row){
 function counterfactualCaseHTML(row){
   const candidate=row?.candidate||{},reviewed=row?.reviewed||{};
   const fields=(row?.changed_fields||[]).map(postActionFieldLabel).join(', ');
-  const when=row?.created_at?new Date(row.created_at).toLocaleString('es-ES'):'';
+  const when=row?.created_at?new Date(row.created_at).toLocaleString('de-DE'):'';
   const finalChanged=row?.actual_outcome==='edited'&&reviewed
     ? '<p class="small">Resultado revisado: '+esc(reviewed.title||candidate.title||'Tarea')+(reviewed.date?' · '+esc(reviewed.date):'')+'</p>'
     :'';
@@ -3997,14 +4009,14 @@ async function contextualAutonomyPanel(){
     const reviewedCorrections=candidates.filter(x=>['confirmed_correction','not_causal'].includes(x.status));
     const findPermission=e=>permissions.find(p=>p.action===e.action&&p.context_key===e.context_key&&p.scope_key===e.scope_key);
     const grants=permissions.filter(p=>p.mode==='allow');
-    const active=grants.map((p,i)=>`<div class="human-permission-case"><div class="human-case-title">${esc(p.scope_label)}</div><div class="human-state tone-complete"><b>Puedo hacerlo sin volver a preguntarte.</b><p>Este permiso dura hasta el ${new Date(p.expires_at).toLocaleDateString('es-ES')} y solo vale para este caso concreto.</p><div class="human-state-meta"><span>Tú lo autorizaste</span><span>${esc(autonomyContextLabel(p.context_key))}</span></div></div><button data-permission-revoke="${i}" class="secondary">Volver a preguntarme siempre</button></div>`).join('');
+    const active=grants.map((p,i)=>`<div class="human-permission-case"><div class="human-case-title">${esc(p.scope_label)}</div><div class="human-state tone-complete"><b>Puedo hacerlo sin volver a preguntarte.</b><p>Este permiso dura hasta el ${new Date(p.expires_at).toLocaleDateString('de-DE')} y solo vale para este caso concreto.</p><div class="human-state-meta"><span>Tú lo autorizaste</span><span>${esc(autonomyContextLabel(p.context_key))}</span></div></div><button data-permission-revoke="${i}" class="secondary">Volver a preguntarme siempre</button></div>`).join('');
     const evidence=units.map((e,i)=>{const p=findPermission(e);const enabled=p?.mode==='allow'&&p.expires_at&&new Date(p.expires_at)>new Date();const preview=counterfactualSupported(e)?`<button data-permission-counterfactual="${i}" class="secondary">Ver qué habría pasado</button>`:'';const review=e.eligibility==='eligible'&&!enabled?`<button data-permission-review="${i}" class="secondary">Revisar propuesta de permiso</button>`:'';return autonomyEvidenceHTML(e)+preview+review}).join('');
-    const history=(data?.reviews||[]).map(r=>{const p=permissions.find(p=>p.id===r.permission_id);return `<div class="doctor-log"><b>${r.decision==='allow'?'Autorizado por ti':'Revocado por ti'} · ${esc(p?.scope_label||'Permiso')}</b><time>${new Date(r.created_at).toLocaleString('es-ES')}</time></div>`}).join('');
-    const executions=(data?.executions||[]).map(r=>`<div class="doctor-log"><b>${esc(r.candidate?.title||'Tarea')}</b><span>Guardada bajo un permiso tuyo · no cuenta como aprobación nueva</span><time>${new Date(r.created_at).toLocaleString('es-ES')}</time></div>`).join('');
+    const history=(data?.reviews||[]).map(r=>{const p=permissions.find(p=>p.id===r.permission_id);return `<div class="doctor-log"><b>${r.decision==='allow'?'Autorizado por ti':'Revocado por ti'} · ${esc(p?.scope_label||'Permiso')}</b><time>${new Date(r.created_at).toLocaleString('de-DE')}</time></div>`}).join('');
+    const executions=(data?.executions||[]).map(r=>`<div class="doctor-log"><b>${esc(r.candidate?.title||'Tarea')}</b><span>Guardada bajo un permiso tuyo · no cuenta como aprobación nueva</span><time>${new Date(r.created_at).toLocaleString('de-DE')}</time></div>`).join('');
     const correctionHistory=reviewedCorrections.slice(0,12).map(r=>{
       const causal=r.status==='confirmed_correction';
       const feedback=outcomeFeedback.find(x=>x.candidate_id===r.id);
-      return `<div class="doctor-log"><b>${causal?'Corrección confirmada':'Cambio posterior'} · ${esc(postActionCandidateTitle(r))}</b><span>${causal?'Volví a pedir confirmación para ese permiso.':'No lo utilicé como aprendizaje causal.'}${feedback?.changed_fields?.length?' · '+esc(feedback.changed_fields.map(postActionFieldLabel).join(', ')):''}</span><time>${new Date(r.reviewed_at||r.created_at).toLocaleString('es-ES')}</time></div>`;
+      return `<div class="doctor-log"><b>${causal?'Corrección confirmada':'Cambio posterior'} · ${esc(postActionCandidateTitle(r))}</b><span>${causal?'Volví a pedir confirmación para ese permiso.':'No lo utilicé como aprendizaje causal.'}${feedback?.changed_fields?.length?' · '+esc(feedback.changed_fields.map(postActionFieldLabel).join(', ')):''}</span><time>${new Date(r.reviewed_at||r.created_at).toLocaleString('de-DE')}</time></div>`;
     }).join('');
     const pendingHtml=pendingCorrections.map(postActionCandidateHTML).join('');
     modal('Permisos de Isabella',`<div class="continuity-intro"><p>Isabella aprende de cómo revisas sus propuestas y, ahora, también puede preguntarte por una corrección después de una acción autónoma. Una edición posterior nunca se interpreta sola como feedback: primero solo crea una duda y tú decides si existe relación causal. Antes de autorizar una clase, puedes simular con tu historial qué habría ocurrido si ese permiso hubiera estado activo.</p><details class="human-tech"><summary>Cómo decide cuándo proponértelo</summary><p>Para permisos nuevos se exige evidencia por acción, contexto y alcance: al menos 12 revisiones sin cambios en 3 días distintos durante los últimos 30 días, ninguna corrección o rechazo y una revisión en los últimos 7 días. Después de una acción autónoma solo considero como posible corrección la primera edición manual relevante dentro de 48 horas. Confirmar causalidad reduce el permiso a “volver a preguntar”; nunca amplía autonomía.</p></details></div>${pendingHtml?`<div class="small section-label">Correcciones por revisar</div>${pendingHtml}<div id="postActionFeedbackError" class="small" role="status"></div>`:''}<div class="small section-label">Autorización de calendario</div>${directCalendarHTML}<div id="calendarModeError" class="small" role="status"></div><div class="small section-label">Lo que ya me permitiste hacer</div>${active||'<div class="empty-panel">Todavía no me has dado ningún permiso para actuar sin volver a preguntarte.</div>'}<div class="small section-label">Dónde sigo aprendiendo cómo prefieres trabajar</div>${evidence||'<div class="empty-panel">Todavía no tengo suficiente experiencia en estos casos. Seguiré preguntándote antes de actuar.</div>'}${correctionHistory?'<div class="small section-label">Revisiones posteriores a una acción</div>'+correctionHistory:''}${history?'<div class="small section-label">Tus decisiones de permiso</div>'+history:''}${executions?'<div class="small section-label">Últimas ejecuciones autorizadas</div>'+executions:''}`);
@@ -4147,14 +4159,14 @@ async function pushNotificationsPanel(){
   const active=!!subscription&&permission==='granted';
   const recent=history.map(row=>{
     const label=row.status==='sent'?'Aviso enviado':row.status==='retry'?'Volveré a intentarlo':row.status==='failed'?'No se pudo entregar':row.status==='skipped'?'Ya no era necesario':'Preparando aviso';
-    return '<div class="doctor-log"><b>'+esc(label)+'</b><time>'+new Date(row.sent_at||row.created_at).toLocaleString('es-ES')+'</time></div>';
+    return '<div class="doctor-log"><b>'+esc(label)+'</b><time>'+new Date(row.sent_at||row.created_at).toLocaleString('de-DE')+'</time></div>';
   }).join('');
   const iosHelp=env.ios&&!env.standalone?'<div class="continuity-intro"><p>En iPhone, abre esta página en Safari, usa <b>Compartir → Añadir a pantalla de inicio</b> y después abre Isabella desde su icono. Apple solo permite solicitar avisos desde una web app instalada.</p></div>':'';
   const actionButton=env.supported&&!(env.ios&&!env.standalone)
     ?'<div class="proposal-actions"><button id="pushToggle" class="'+(active?'secondary':'primary')+'">'+(active?'Desactivar avisos en este dispositivo':'Permitir avisos en este dispositivo')+'</button></div>'
     :'';
   modal('Avisos de Isabella',
-    '<div class="continuity-intro"><p><b>'+esc(active?'Avisos activados':'Avisos no activados')+'</b></p><p>'+esc(pushStatusCopy(env,permission,active))+'</p><p>Activarlos no cambia cuándo decido avisarte; solo permite que el aviso pueda llegar hasta este dispositivo cuando realmente haga falta.</p><details class="human-tech"><summary>Ver detalle técnico</summary><p>Internamente, Attention Economy sigue decidiendo si una señal debe interrumpir, esperar al briefing, aparecer en Feed o permanecer silenciosa. Delivery Layer solo transporta los interrupts ya decididos.</p></details></div>'+
+    '<div class="continuity-intro"><p><b>'+esc(active?'Avisos activados':'Avisos no activados')+'</b></p><p>'+esc(pushStatusCopy(env,permission,active))+'</p><p>Activarlos no cambia cuándo decido avisarte; solo permite que el aviso pueda llegar hasta este dispositivo cuando realmente haga falta.</p><details class="human-tech"><summary>Technische Details</summary><p>Internamente, Attention Economy sigue decidiendo si una señal debe interrumpir, esperar al briefing, aparecer en Feed o permanecer silenciosa. Delivery Layer solo transporta los interrupts ya decididos.</p></details></div>'+
     iosHelp+actionButton+
     (active?'<div class="proposal-actions"><button id="pushTest" class="secondary">Enviar aviso de prueba</button><button id="pushRenew" class="secondary">Renovar registro</button></div>':'')+
     (recent?'<div class="small section-label">Entregas recientes</div>'+recent:'')+
@@ -4209,7 +4221,7 @@ async function attentionHistoryPanel(){
       .order('created_at',{ascending:false}).limit(100);
     if(error)throw error;
     const labels={interrupt:'Te avisé en el momento',briefing:'Lo guardé para el resumen',ambient:'Lo dejé en Feed',silent:'No te interrumpí'};
-    const rows=(data||[]).map(x=>`<div class="human-permission-case"><div class="human-case-title">${esc(labels[x.route]||x.route)} · ${esc(x.title)}</div><p class="small">${esc(x.reason)}</p><details class="human-tech"><summary>Ver detalle técnico</summary><div class="human-tech-grid"><span>Ruta</span><b>${esc(x.route)}</b><span>Fuente</span><b>${esc(x.source_type)}</b><span>Estado</span><b>${esc(x.status)}</b><span>Fecha</span><b>${new Date(x.created_at).toLocaleString('es-ES')}</b></div></details></div>`).join('');
+    const rows=(data||[]).map(x=>`<div class="human-permission-case"><div class="human-case-title">${esc(labels[x.route]||x.route)} · ${esc(x.title)}</div><p class="small">${esc(x.reason)}</p><details class="human-tech"><summary>Technische Details</summary><div class="human-tech-grid"><span>Ruta</span><b>${esc(x.route)}</b><span>Fuente</span><b>${esc(x.source_type)}</b><span>Estado</span><b>${esc(x.status)}</b><span>Fecha</span><b>${new Date(x.created_at).toLocaleString('de-DE')}</b></div></details></div>`).join('');
     modal('Cómo decide Isabella avisarte',`<div class="continuity-intro">Aquí puedes ver por qué te avisé en el momento, guardé algo para más tarde, lo dejé en Feed o decidí no interrumpirte. Cada decisión conserva una razón concreta; no uso un score oculto de importancia.</div>${rows||'<div class="empty-panel">Todavía no he tenido que decidir cómo ocupar tu atención.</div>'}`);
   }catch{modal('Cómo decide Isabella avisarte','<div class="small">No pude leer las decisiones de atención ahora mismo.</div>')}
 }
@@ -4235,7 +4247,7 @@ function assistantPreferencesPanel(){
     <label class="settings-check"><input id="attentionQuietEnabled" type="checkbox" ${attention.quietHoursEnabled?'checked':''}><span>Usar horas silenciosas para avisos que pueden esperar</span></label>
     <div class="two-col"><label>Desde<input id="attentionQuietStart" type="time" value="${esc(attention.quietStart)}"></label><label>Hasta<input id="attentionQuietEnd" type="time" value="${esc(attention.quietEnd)}"></label></div>
     <button id="attentionHistory" class="secondary" type="button">Ver por qué te avisé o no te avisé</button>
-    <div><div class="small section-label">Mejoras de comportamiento adoptadas</div><div id="assistantRuleRows">${rules.length?rules.map((r,i)=>`<div class="assistant-rule-row"><span>${esc(r)}</span><button data-rule-remove="${i}" aria-label="Eliminar">×</button></div>`).join(''):'<div class="small empty-panel">Todavía no has adoptado reglas adicionales.</div>'}</div></div>
+    <div><div class="small section-label">Mejoras de comportamiento adoptadas</div><div id="assistantRuleRows">${rules.length?rules.map((r,i)=>`<div class="assistant-rule-row"><span>${esc(r)}</span><button data-rule-remove="${i}" aria-label="Löschen">×</button></div>`).join(''):'<div class="small empty-panel">Todavía no has adoptado reglas adicionales.</div>'}</div></div>
     <button id="saveAssistantPreferences" class="primary">Guardar</button>
   </div>`);
   document.querySelectorAll('[data-rule-remove]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.ruleRemove);state.assistantPreferences={...prefs,attention,behaviorRules:rules.filter((_,idx)=>idx!==i)};save();assistantPreferencesPanel()});
@@ -4268,9 +4280,9 @@ async function routinesPanel(){
     const rows=data||[];
     const body=rows.length?rows.map(r=>{
       const sch=r.schedule||{},days=sch.kind==='weekly'&&Array.isArray(sch.weekdays)?' · '+sch.weekdays.map(d=>['dom','lun','mar','mié','jue','vie','sáb'][Number(d)]||d).join(', '):'';
-      const next=r.next_run_at?new Date(r.next_run_at).toLocaleString('es-ES'):'Sin próxima ejecución';
+      const next=r.next_run_at?new Date(r.next_run_at).toLocaleString('de-DE'):'Sin próxima ejecución';
       const scheduleLabel=sch.kind==='once'?('Una vez · '+String(sch.date||'')+' · '+String(sch.time||'09:00')):(sch.kind==='weekly'?'Semanal':'Todos los días')+' · '+String(sch.time||'08:00')+days;
-      return `<div class="routine-row"><div class="row-main"><b>${esc(r.title)}</b><div class="small routine-schedule">${esc(scheduleLabel)} · ${esc(r.timezone||'')}</div><div class="small">${esc(r.instruction||'')}</div><div class="small routine-next">Próxima: ${esc(next)}</div>${r.last_error?`<div class="small danger-text">${esc(r.last_error)}</div>`:''}</div><label class="routine-toggle"><input type="checkbox" data-routine-enabled="${r.id}" ${r.enabled?'checked':''}><span></span></label><button data-routine-delete="${r.id}" aria-label="Eliminar">×</button></div>`;
+      return `<div class="routine-row"><div class="row-main"><b>${esc(r.title)}</b><div class="small routine-schedule">${esc(scheduleLabel)} · ${esc(r.timezone||'')}</div><div class="small">${esc(r.instruction||'')}</div><div class="small routine-next">Próxima: ${esc(next)}</div>${r.last_error?`<div class="small danger-text">${esc(r.last_error)}</div>`:''}</div><label class="routine-toggle"><input type="checkbox" data-routine-enabled="${r.id}" ${r.enabled?'checked':''}><span></span></label><button data-routine-delete="${r.id}" aria-label="Löschen">×</button></div>`;
     }).join(''):'<div class="small">Todavía no has programado ninguna rutina.</div>';
     modal('Rutinas',body);
     document.querySelectorAll('[data-routine-enabled]').forEach(x=>x.onchange=async()=>{await sb.from('isabella_routines').update({enabled:x.checked}).eq('id',x.dataset.routineEnabled);routinesPanel()});
@@ -4287,8 +4299,8 @@ function expectationLocalParts(row){
 function expectationDueLabel(row){
   const p=expectationLocalParts(row),d=new Date(row.due_at);
   return row.due_precision==='datetime'
-    ?d.toLocaleString('es-ES',{timeZone:p.timezone,dateStyle:'medium',timeStyle:'short'})
-    :d.toLocaleDateString('es-ES',{timeZone:p.timezone,dateStyle:'medium'});
+    ?d.toLocaleString('de-DE',{timeZone:p.timezone,dateStyle:'medium',timeStyle:'short'})
+    :d.toLocaleDateString('de-DE',{timeZone:p.timezone,dateStyle:'medium'});
 }
 function expectationStateLabel(status){
   return status==='active'?'En espera':status==='due_unconfirmed'?'Pendiente de comprobar':status==='fulfilled'?'Ocurrió':status==='not_occurred'?'No ocurrió':'Cancelada';
@@ -4380,11 +4392,11 @@ async function standingIntentsPanel(){
     const historyWatches=watches.filter(x=>['cancelled','done','expired'].includes(x.status));
 
     const cancelButton=x=>['pending','armed','fired'].includes(x.status)?`<button data-intent-cancel="${x.id}">Cancelar</button>`:'';
-    const reminderCard=x=>`<div class="intent-row ${esc(x.status)}"><div class="row-main"><b>Cuando: ${esc(x.trigger_text)}</b><div>${esc(x.reminder_text)}</div><div class="small">${x.isabella_projects?.name?esc(x.isabella_projects.name)+' · ':''}Recordatorio · visto a través de ti · ${esc(x.status)} · ${x.trigger_count||0}/${x.max_triggers||3} activaciones${x.expires_at?' · caduca '+new Date(x.expires_at).toLocaleDateString('es-ES'):''}</div><div class="small">No es vigilancia: MINDS detecta la condición cuando reaparece en la conversación.</div></div>${cancelButton(x)}</div>`;
+    const reminderCard=x=>`<div class="intent-row ${esc(x.status)}"><div class="row-main"><b>Cuando: ${esc(x.trigger_text)}</b><div>${esc(x.reminder_text)}</div><div class="small">${x.isabella_projects?.name?esc(x.isabella_projects.name)+' · ':''}Recordatorio · visto a través de ti · ${esc(x.status)} · ${x.trigger_count||0}/${x.max_triggers||3} activaciones${x.expires_at?' · caduca '+new Date(x.expires_at).toLocaleDateString('de-DE'):''}</div><div class="small">No es vigilancia: MINDS detecta la condición cuando reaparece en la conversación.</div></div>${cancelButton(x)}</div>`;
     const channelByKey=new Map(channels.map(x=>[String(x.channel_key||''),x]));
     const watchCard=x=>{
-      const last=x.last_checked_at?new Date(x.last_checked_at).toLocaleString('es-ES'):'todavía no comprobado';
-      const observed=x.last_observed_at?' · última observación '+new Date(x.last_observed_at).toLocaleString('es-ES'):'';
+      const last=x.last_checked_at?new Date(x.last_checked_at).toLocaleString('de-DE'):'todavía no comprobado';
+      const observed=x.last_observed_at?' · última observación '+new Date(x.last_observed_at).toLocaleString('de-DE'):'';
       const ch=channelByKey.get(String(x.channel_kind||''))||null;
       const coverage=ch?.available
         ?'canal disponible'
@@ -4429,9 +4441,9 @@ function doctorCards(q,now=Date.now()){
   const card=(name,keys,status,detail)=>[name,error(...keys)?'error':status,error(...keys)||detail];
   const checkpointError=chat?.metadata?.checkpoint_error;
   return [
-    card('Isabella Chat',['runsQ'],chat?.status==='error'||stale(chat)?'error':chat?.status==='running'?'warn':chat?'ok':'idle',stale(chat)?'Ejecución sin terminar en más de 10 min':chat?chat.status==='running'?'En curso':'Última ejecución '+new Date(chat.started_at).toLocaleTimeString('es-ES'):'Sin actividad en 24 h'),
+    card('Isabella Chat',['runsQ'],chat?.status==='error'||stale(chat)?'error':chat?.status==='running'?'warn':chat?'ok':'idle',stale(chat)?'Ejecución sin terminar en más de 10 min':chat?chat.status==='running'?'In Bearbeitung':'Última ejecución '+new Date(chat.started_at).toLocaleTimeString('de-DE'):'Sin actividad en 24 h'),
     card('Rutinas',['routinesQ','runsQ'],bad.length||late.length?'error':routines.length?'ok':'idle',bad.length?bad.length+' con error':late.length?late.length+' retrasadas más de 10 min':routines.length+' activas'),
-    card('Heartbeat',['runsQ','heartQ'],hb?.status==='error'||stale(hb)?'error':hb?.status==='success'&&now-new Date(hb.started_at).getTime()<45*60000?'ok':'warn',hb?'Último chequeo: '+new Date(hb.started_at).toLocaleTimeString('es-ES'):'Sin chequeo registrado'),
+    card('Heartbeat',['runsQ','heartQ'],hb?.status==='error'||stale(hb)?'error':hb?.status==='success'&&now-new Date(hb.started_at).getTime()<45*60000?'ok':'warn',hb?'Último chequeo: '+new Date(hb.started_at).toLocaleTimeString('de-DE'):'Sin chequeo registrado'),
     card('Active Memory',['embedQ','flushQ'],checkpointError?'error':rows('embedQ').length?'ok':'idle',checkpointError||rows('embedQ').length+' fragmentos · '+rows('flushQ').length+' checkpoints recientes'),
     card('Sofía',['runsQ','usageQ'],stale(latest('sofia_chat'))||latest('sofia_chat')?.status==='error'?'error':usage.some(x=>String(x.feature).startsWith('sofia_'))?'ok':'idle',usage.some(x=>String(x.feature).startsWith('sofia_'))?'Con actividad reciente':'Sin llamadas recientes; normal si no hizo falta'),
     card('Work',['filesQ','claimsQ'],'ok',rows('filesQ').length+' archivos · '+rows('claimsQ').length+' afirmaciones'),
@@ -4476,7 +4488,7 @@ async function doctorPanel(){
       working:durableRuns.filter(x=>['queued','running'].includes(x.status)).length,
       briefing:(attentionQ.data||[]).filter(x=>x.route==='briefing'&&x.status==='pending').length
     });
-    const technical=`<div class="doctor-grid">${cards.map(([name,status,detail])=>`<div class="doctor-card">${healthDot(status)}<div><b>${esc(name)}</b><div class="small">${esc(detail)}</div></div></div>`).join('')}</div>${errors.length?`<div class="small section-label">Errores recientes</div>${errors.map(x=>`<div class="doctor-log"><b>${esc(x.feature)}</b><span>${esc(x.error||'Error')}</span><time>${new Date(x.started_at).toLocaleString('es-ES')}</time></div>`).join('')}`:''}${hbEvents.length?`<div class="small section-label">Señales del heartbeat</div>${hbEvents.map(x=>`<div class="doctor-log"><b>${esc(x.title)}</b><span>${esc(x.event_type)}</span><time>${new Date(x.last_seen_at).toLocaleString('es-ES')}</time></div>`).join('')}`:''}`;
+    const technical=`<div class="doctor-grid">${cards.map(([name,status,detail])=>`<div class="doctor-card">${healthDot(status)}<div><b>${esc(name)}</b><div class="small">${esc(detail)}</div></div></div>`).join('')}</div>${errors.length?`<div class="small section-label">Errores recientes</div>${errors.map(x=>`<div class="doctor-log"><b>${esc(x.feature)}</b><span>${esc(x.error||'Error')}</span><time>${new Date(x.started_at).toLocaleString('de-DE')}</time></div>`).join('')}`:''}${hbEvents.length?`<div class="small section-label">Señales del heartbeat</div>${hbEvents.map(x=>`<div class="doctor-log"><b>${esc(x.title)}</b><span>${esc(x.event_type)}</span><time>${new Date(x.last_seen_at).toLocaleString('de-DE')}</time></div>`).join('')}`:''}`;
     modal('Estado de MINDS',`<div class="doctor-panel">${humanStateHTML(summary)}<details class="human-tech doctor-tech"><summary>Ver estado técnico de MINDS</summary>${technical}</details></div>`);
   }catch(e){modal('Estado de MINDS','<div class="small">No pude completar el diagnóstico ahora mismo.</div>')}
 }
@@ -4501,7 +4513,7 @@ async function skillsPanel(){
       const x=list[Number(b.dataset.skillHistory)];
       const {data,error}=await window.MINDS_SUPABASE.from('minds_user_skill_versions').select('version,snapshot,created_at').eq('skill_id',x.id).order('version',{ascending:false});
       if(error){say('assistant','No pude leer las versiones: '+error.message);return}
-      modal('Versiones de '+x.name,`<div class="skill-history">${(data||[]).map((v,i)=>`<details><summary>v${v.version} · ${new Date(v.created_at).toLocaleString('es-ES')}</summary><pre>${esc(v.snapshot.instructions)}</pre><button data-restore-skill="${i}" class="secondary">Revisar como nueva versión</button></details>`).join('')||'<p>Aún no hay versiones registradas.</p>'}</div>`);
+      modal('Versiones de '+x.name,`<div class="skill-history">${(data||[]).map((v,i)=>`<details><summary>v${v.version} · ${new Date(v.created_at).toLocaleString('de-DE')}</summary><pre>${esc(v.snapshot.instructions)}</pre><button data-restore-skill="${i}" class="secondary">Revisar como nueva versión</button></details>`).join('')||'<p>Aún no hay versiones registradas.</p>'}</div>`);
       $$('[data-restore-skill]').forEach(b=>b.onclick=()=>window.MINDS_PROPOSALS.edit({...data[Number(b.dataset.restoreSkill)].snapshot,kind:'skill_proposal',request_id:crypto.randomUUID()}));
     });
   }catch(e){modal('Habilidades','<p>No pude cargar las habilidades: '+esc(e.message)+'</p>')}
@@ -4615,7 +4627,7 @@ function feedFollowRow(node={}){
     <input data-follow-name value="${esc(node.name||'')}" placeholder="Nombre">
     <select data-follow-type>${types.map(([v,l])=>`<option value="${v}" ${String(node.type||'other')===v?'selected':''}>${l}</option>`).join('')}</select>
     <input data-follow-focus value="${esc(node.focus||'')}" placeholder="Qué te interesa: proyectos, exposiciones, textos…">
-    <button type="button" data-follow-remove aria-label="Eliminar">×</button>
+    <button type="button" data-follow-remove aria-label="Löschen">×</button>
   </div>`;
 }
 function feedPreferencesPanel(){
@@ -4634,11 +4646,11 @@ function feedPreferencesPanel(){
 
 
 function categoriesPanel(){
-  const rows=state.categories.map(x=>`<div class="settings-row color-row"><input type="color" data-cat-color="${x.id}" value="${esc(x.color||fallbackColor(x.id))}" aria-label="Color"><input data-cat-name="${x.id}" value="${esc(x.name)}"><button data-cat-delete="${x.id}" aria-label="Eliminar">×</button></div>`).join('');
-  const prows=state.projects.map(x=>`<div class="settings-row project-color-row"><input type="color" data-project-color="${x.id}" value="${esc(x.color||fallbackColor(x.id))}" aria-label="Color"><input data-project-name="${x.id}" value="${esc(x.name)}"><select data-project-cat="${x.id}">${state.categories.map(cat=>`<option value="${cat.id}" ${cat.id===x.categoryId?'selected':''}>${esc(cat.name)}</option>`).join('')}</select><button data-project-delete="${x.id}" aria-label="Eliminar">×</button></div>`).join('');
-  modal('Categorías y proyectos',`<div class="small section-label">Categorías</div><div id="categoryRows">${rows}</div><button id="addCategory" class="secondary settings-add">+ Categoría</button><div class="small section-label settings-projects-title">Proyectos</div><div id="projectRows">${prows}</div><button id="addProject" class="secondary settings-add">+ Proyecto</button><button id="saveTaxonomy" class="primary settings-save">Guardar cambios</button>`);
-  $('#addCategory').onclick=()=>{const id=uid();state.categories.push({id,name:'Nueva categoría',color:fallbackColor(id)});save();categoriesPanel()};
-  $('#addProject').onclick=()=>{const id=uid();state.projects.push({id,categoryId:state.categories[0]?.id||'personal',name:'Nuevo proyecto',color:fallbackColor(id)});save();categoriesPanel()};
+  const rows=state.categories.map(x=>`<div class="settings-row color-row"><input type="color" data-cat-color="${x.id}" value="${esc(x.color||fallbackColor(x.id))}" aria-label="Farbe"><input data-cat-name="${x.id}" value="${esc(x.name)}"><button data-cat-delete="${x.id}" aria-label="Löschen">×</button></div>`).join('');
+  const prows=state.projects.map(x=>`<div class="settings-row project-color-row"><input type="color" data-project-color="${x.id}" value="${esc(x.color||fallbackColor(x.id))}" aria-label="Farbe"><input data-project-name="${x.id}" value="${esc(x.name)}"><select data-project-cat="${x.id}">${state.categories.map(cat=>`<option value="${cat.id}" ${cat.id===x.categoryId?'selected':''}>${esc(cat.name)}</option>`).join('')}</select><button data-project-delete="${x.id}" aria-label="Löschen">×</button></div>`).join('');
+  modal(OFFICE?'Kategorien':'Categorías y proyectos',`<div class="small section-label">Kategorien</div><div id="categoryRows">${rows}</div><button id="addCategory" class="secondary settings-add">+ Kategorie</button><div class="small section-label settings-projects-title">Projekte</div>${OFFICE?'<p class="small">Die Projekte kommen aus dem Office: <a href="../#work">Projekte verwalten</a>.</p>':`<div id="projectRows">${prows}</div><button id="addProject" class="secondary settings-add">+ Projekt</button>`}<button id="saveTaxonomy" class="primary settings-save">Änderungen speichern</button>`);
+  $('#addCategory').onclick=()=>{const id=uid();state.categories.push({id,name:'Neue Kategorie',color:fallbackColor(id)});save();categoriesPanel()};
+  if($('#addProject'))$('#addProject').onclick=()=>{const id=uid();state.projects.push({id,categoryId:state.categories[0]?.id||'personal',name:'Neues Projekt',color:fallbackColor(id)});save();categoriesPanel()};
   $$('[data-cat-delete]').forEach(b=>b.onclick=()=>{const id=b.dataset.catDelete;if(state.categories.length<=1)return;state.categories=state.categories.filter(x=>x.id!==id);state.projects.forEach(p=>{if(p.categoryId===id)p.categoryId=state.categories[0]?.id||'personal'});state.tasks.forEach(t=>{if(t.categoryId===id)t.categoryId='personal'});state.events.forEach(e=>{if(e.categoryId===id)e.categoryId='personal'});save();categoriesPanel()});
   $$('[data-project-delete]').forEach(b=>b.onclick=()=>{const id=b.dataset.projectDelete;state.projects=state.projects.filter(x=>x.id!==id);state.tasks.forEach(t=>{if(t.projectId===id)t.projectId=null});state.events.forEach(e=>{if(e.projectId===id)e.projectId=null});save();categoriesPanel()});
   $('#saveTaxonomy').onclick=()=>{

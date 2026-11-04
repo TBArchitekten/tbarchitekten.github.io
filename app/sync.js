@@ -45,9 +45,9 @@ function startRealtime(){
     .subscribe();
 }
 async function init(){
-  if(!sb||!app){setStatus('Memoria local · Supabase no disponible');if(authButton)authButton.textContent='Memoria local';return}
+  if(!sb||!app){setStatus('Nur lokal · Office nicht erreichbar');if(authButton)authButton.textContent='Nur lokal';return}
   const {data,error}=await sb.auth.getSession();
-  if(error){setStatus('No se pudo leer la sesión');return}
+  if(error){setStatus('Anmeldung konnte nicht gelesen werden');return}
   user=data.session?.user||null;
   // Office sign-in happens on the start page; only active members with their own password get in.
   if(!user){location.replace('../');return}
@@ -55,6 +55,12 @@ async function init(){
     .select('user_id,email,display_name,role,is_active,must_change_password').eq('user_id',user.id).eq('is_active',true).maybeSingle();
   if(memberError||!member||member.must_change_password){location.replace('../');return}
   window.TBA_OFFICE_MEMBER=Object.freeze({...member});
+  // The local copy belongs to one person: a different sign-in on this browser starts from empty.
+  if(app.getState().officeOwner!==user.id){
+    hydrating=true;
+    app.replaceState({tasks:[],events:[],deletedTaskIds:[],deletedEventIds:[],messages:[],memory:[],officeOwner:user.id});
+    hydrating=false;
+  }
   try{window.dispatchEvent(new CustomEvent('office:member',{detail:{...member}}))}catch{}
   paintAuth();
   await syncNow({initial:true});
@@ -69,56 +75,12 @@ function paintAuth(){
   authButton.onclick=()=>syncNow({});
   setStatus('Office verbunden · automatische Synchronisierung');
 }
-function openLogin(){
-  location.replace('../');return;
-  // Inside the Window app the app owns the session: sign-in happens in the app.
-  if(window.WINDOW_NATIVE?.available){void window.WINDOW_NATIVE.call('session.signIn');return}
-  app.openModal('Conectar memoria',`<div class="form">
-    <input id="isabellaEmail" type="email" autocomplete="email" inputmode="email" required placeholder="tu@email.com">
-    <button id="isabellaSendCode" class="primary">Enviar código</button>
-    <div id="isabellaCodeStep" class="hidden form">
-      <input id="isabellaCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Código de acceso">
-      <button id="isabellaVerifyCode" class="primary">Entrar</button>
-    </div>
-    <div id="isabellaAuthMsg" class="small">Usa el mismo correo de MINDS. Te enviaremos un código para entrar sin salir de Isabella.</div>
-  </div>`);
-  $('#isabellaSendCode').onclick=async()=>{
-    const email=$('#isabellaEmail').value.trim(),msg=$('#isabellaAuthMsg');
-    if(!email){msg.textContent='Escribe primero tu correo.';return}
-    $('#isabellaSendCode').disabled=true;
-    msg.textContent='Enviando código…';
-    const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
-    if(error){
-      $('#isabellaSendCode').disabled=false;
-      msg.textContent=apiError(error);
-      return;
-    }
-    $('#isabellaCodeStep').classList.remove('hidden');
-    $('#isabellaEmail').disabled=true;
-    msg.textContent='Revisa tu correo e introduce aquí el código de acceso.';
-    setTimeout(()=>$('#isabellaCode')?.focus(),50);
-  };
-  $('#isabellaVerifyCode').onclick=async()=>{
-    const email=$('#isabellaEmail').value.trim(),token=$('#isabellaCode').value.trim(),msg=$('#isabellaAuthMsg');
-    if(!/^\d{6,10}$/.test(token)){msg.textContent='Introduce el código numérico completo que recibiste por correo.';return}
-    $('#isabellaVerifyCode').disabled=true;
-    msg.textContent='Verificando…';
-    const {data,error}=await sb.auth.verifyOtp({email,token,type:'email'});
-    if(error){
-      $('#isabellaVerifyCode').disabled=false;
-      msg.textContent=apiError(error);
-      return;
-    }
-    user=data.user||data.session?.user||null;
-    paintAuth();
-    app.closeModal();
-    if(user) await syncNow({initial:true});
-  };
-}
+// The office signs in on its start page (email and password); there is no sign-in inside the app.
+function openLogin(){location.replace('../')}
 async function ensureTaxonomy(state){
   const categories=(state.categories||[]).map((c,i)=>({user_id:user.id,client_key:c.id,name:c.name,color:c.color||null,sort_order:i}));
   if(categories.length){
-    const {error}=await sb.from('isabella_categories').upsert(categories,{onConflict:'client_key'});
+    const {error}=await sb.from('isabella_categories').upsert(categories,{onConflict:'user_id,client_key'});
     if(error)throw error;
   }
   const {data:cats,error:ce}=await sb.from('isabella_categories').select('id,client_key,name,color').eq('user_id',user.id);
@@ -279,7 +241,7 @@ function projectTaskRow(t,catKey,projKey){
     done:!!t.completed_at,completedAt:t.completed_at||null,
     archivedAt:t.archived_at||null,sortOrder:Number(t.sort_order||0),
     reminderTime:t.due_date&&t.reminder_time?String(t.reminder_time).slice(0,5):null,
-    categoryId:catKey.get(t.category_id)||'personal',
+    categoryId:catKey.get(t.category_id)||(t.project_id?'arbeit':'personal'),
     projectId:projKey.get(t.project_id)||null,priority:t.priority||'normal',
     recurrence:t.recurrence||{},notes:t.notes||'',metadata:t.metadata||{},
     startDate:t.start_date||null,assignee:t.assignee||null,
@@ -344,7 +306,7 @@ async function pullState(local,maps){
   const teamAllocations=(allocations||[]).map(a=>({
     taskId:taskKeys.get(a.task_id),personId:a.person_id,date:a.work_date,plannedMinutes:a.planned_minutes
   })).filter(a=>a.taskId);
-  const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||'personal',projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null}});
+  const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||(e.project_id?'arbeit':'personal'),projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null}});
   const remoteMemory=(mem||[]).map(m=>({id:m.client_key||m.id,kind:m.kind,subject:m.subject,content:m.content,status:m.status,confidence:Number(m.confidence),source:m.source,exposure_scope_key:m.exposure_scope_key||'global',provenance_class:m.provenance_class||'owner',metadata:m.metadata||{}}));
   const freshest=mergePulledEntityState(remoteTasks,remoteEvents,app.getState(),local);
   const remoteFeed=(pref?.status!=='rejected'&&pref?.value&&typeof pref.value==='object')?canonicalFeedPreferences(pref.value):canonicalFeedPreferences(freshest.feedPreferences);

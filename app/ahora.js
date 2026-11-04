@@ -13,15 +13,15 @@ let offset=0,fristen={rows:[],at:0,loading:null,ok:false},renderQueued=0;
 
 const todayKey=()=>M().dayKey(new Date());
 const cap=t=>t?t.charAt(0).toUpperCase()+t.slice(1):'';
-const shortMonth=d=>d.toLocaleDateString('es-ES',{day:'numeric',month:'short'}).replace('.','');
+const shortMonth=d=>d.toLocaleDateString('de-DE',{day:'numeric',month:'short'}).replace('.','');
 function dayWord(key,today){
   const n=dayDiff(today,key);
-  return n===0?'Hoy':n===1?'Mañana':n===-1?'Ayer':'';
+  return n===0?'Heute':n===1?'Morgen':n===-1?'Gestern':'';
 }
 function dayDiff(from,to){return Math.round((Date.parse(to+'T12:00:00Z')-Date.parse(from+'T12:00:00Z'))/864e5)}
 function dayTitle(key,today){
   const d=M().dateFromKey(key);if(!d)return key;
-  const word=dayWord(key,today),rest=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'short'}).replace(',','').replace('.','');
+  const word=dayWord(key,today),rest=d.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'short'}).replace(',','').replace('.','');
   return word?word+' · '+rest:cap(rest);
 }
 function nameOf(list,id){return (list||[]).find(x=>x.id===id)?.name||''}
@@ -35,6 +35,14 @@ function loadFristen(force=false){
   if(fristen.loading)return fristen.loading;
   if(!force&&Date.now()-fristen.at<5*60000)return Promise.resolve();
   const today=todayKey();
+  // TBA Office: Fristen are the milestones of the office's Terminpläne (office-fristen.js).
+  if(window.TBA_OFFICE_FRISTEN){
+    fristen.loading=window.TBA_OFFICE_FRISTEN.load(force).then(c=>{
+      fristen.at=Date.now();fristen.ok=!!c.ok;
+      if(c.ok)fristen.rows=c.rows.filter(r=>r.date>=today).slice(0,12);
+    },()=>{fristen.at=Date.now();fristen.ok=false}).finally(()=>{fristen.loading=null});
+    return fristen.loading;
+  }
   fristen.loading=Promise.resolve(sb.from('minds_work_memory').select('id,title,occurred_at,project_id,isabella_projects(name,client_key)')
     .eq('memory_type','deadline').eq('status','confirmed').gte('occurred_at',today).order('occurred_at',{ascending:true}).limit(12))
     .then(({data,error})=>{
@@ -55,15 +63,15 @@ function nextItems(state,today){
 }
 function nextRow(item,state,today){
   const n=dayDiff(today,item.date),d=M().dateFromKey(item.date);
-  const weekday=d?d.toLocaleDateString('es-ES',{weekday:'short'}).replace('.',''):'';
-  const when=n===0?'hoy':n===1?'mañana':weekday;
+  const weekday=d?d.toLocaleDateString('de-DE',{weekday:'short'}).replace('.',''):'';
+  const when=n===0?'heute':n===1?'morgen':weekday;
   if(item.kind==='frist'){
-    const f=item.f,big=n===0?'Hoy':String(n),small=n===0?'':n===1?'día':'días';
+    const f=item.f,big=n===0?'Heute':String(n),small=n===0?'':n===1?'Tag':'Tage';
     return '<button type="button" class="ahora-row ahora-next-row" data-ahora-frist="'+esc(f.projectKey)+'">'+
       '<span class="ahora-badge is-frist"><strong>'+esc(big)+'</strong>'+(small?'<span>'+esc(small)+'</span>':'')+'</span>'+
       '<span class="ahora-row-main"><span class="ahora-kind is-frist">Frist</span><strong>'+esc(f.title)+'</strong><small>'+esc([f.project,weekday+' '+(d?String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.':'')].filter(Boolean).join(' · '))+'</small></span></button>';
   }
-  const e=item.e,meta=[e.projectId?nameOf(state.projects,e.projectId):'',e.allDay?'Todo el día':minutesText(e.duration)].filter(Boolean).join(' · ');
+  const e=item.e,meta=[e.projectId?nameOf(state.projects,e.projectId):'',e.allDay?'Ganztägig':minutesText(e.duration)].filter(Boolean).join(' · ');
   return '<button type="button" class="ahora-row ahora-next-row" data-ahora-event="'+esc(e.id)+'">'+
     '<span class="ahora-badge is-termin"><strong>'+esc(item.time||'·')+'</strong><span>'+esc(when)+'</span></span>'+
     '<span class="ahora-row-main"><span class="ahora-kind is-termin">Termin</span><strong>'+esc(e.title||'Termin')+'</strong>'+(meta?'<small>'+esc(meta)+'</small>':'')+'</span></button>';
@@ -71,25 +79,25 @@ function nextRow(item,state,today){
 
 function taskMeta(task,state,key){
   const bits=[nameOf(state.categories,task.categoryId),task.projectId?nameOf(state.projects,task.projectId):''];
-  if(M().spansDay(task,key)){const d=M().dateFromKey(task.date);if(d)bits.push('en curso hasta '+shortMonth(d))}
-  if(task.reminderTime&&task.date===key)bits.push('Recordatorio '+task.reminderTime);
+  if(M().spansDay(task,key)){const d=M().dateFromKey(task.date);if(d)bits.push('läuft bis '+shortMonth(d))}
+  if(task.reminderTime&&task.date===key)bits.push('Erinnerung '+task.reminderTime);
   return bits.filter(Boolean).join(' · ');
 }
 function taskRow(task,sessions,state,key,today,overdue=false){
   const done=!!task.done,span=!done&&M().spansDay(task,key);
   const d=overdue?M().dateFromKey(task.date):null;
-  const label=done?'Hecha':overdue?'Vencida'+(d?' · '+String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.':''):span?'En curso':dayWord(key,today);
-  const chips=(sessions||[]).map(s=>'<span class="ahora-session">'+esc([s.start,minutesText(s.duration)?minutesText(s.duration)+' reservados':''].filter(Boolean).join(' · ')||'Tiempo reservado')+'</span>').join('');
+  const label=done?'Erledigt':overdue?'Überfällig'+(d?' · '+String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.':''):span?'In Bearbeitung':dayWord(key,today);
+  const chips=(sessions||[]).map(s=>'<span class="ahora-session">'+esc([s.start,minutesText(s.duration)?minutesText(s.duration)+' reserviert':''].filter(Boolean).join(' · ')||'Reservierte Zeit')+'</span>').join('');
   return '<div class="ahora-row ahora-task'+(done?' is-done':'')+(overdue?' is-overdue':'')+'">'+
-    '<button type="button" class="ahora-check'+(done?' is-checked':'')+'" data-ahora-toggle="'+esc(task.id)+'" aria-pressed="'+String(done)+'" aria-label="'+esc((done?'Reabrir ':'Marcar como hecha ')+(task.title||'tarea'))+'">'+(done?'<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>':'')+'</button>'+
-    '<button type="button" class="ahora-row-main" data-ahora-task="'+esc(task.id)+'" aria-label="'+esc('Abrir '+(task.title||'tarea'))+'"><strong>'+esc(task.title||'Tarea sin título')+'</strong>'+
+    '<button type="button" class="ahora-check'+(done?' is-checked':'')+'" data-ahora-toggle="'+esc(task.id)+'" aria-pressed="'+String(done)+'" aria-label="'+esc((done?'Wieder öffnen: ':'Erledigen: ')+(task.title||'Aufgabe'))+'">'+(done?'<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>':'')+'</button>'+
+    '<button type="button" class="ahora-row-main" data-ahora-task="'+esc(task.id)+'" aria-label="'+esc('Öffnen: '+(task.title||'Aufgabe'))+'"><strong>'+esc(task.title||'Aufgabe ohne Titel')+'</strong>'+
       (taskMeta(task,state,key)?'<small>'+esc(taskMeta(task,state,key))+'</small>':'')+chips+'</button>'+
     (label?'<span class="ahora-state">'+esc(label)+'</span>':'')+'</div>';
 }
 function eventRow(e,state){
   const meta=[e.projectId?nameOf(state.projects,e.projectId):nameOf(state.categories,e.categoryId),e.allDay?'':minutesText(e.duration)].filter(Boolean).join(' · ');
   return '<button type="button" class="ahora-row ahora-event" data-ahora-event="'+esc(e.id)+'">'+
-    '<span class="ahora-badge is-termin"><strong>'+esc(e.allDay?'Día':String(e.start||'·'))+'</strong></span>'+
+    '<span class="ahora-badge is-termin"><strong>'+esc(e.allDay?'Tag':String(e.start||'·'))+'</strong></span>'+
     '<span class="ahora-row-main"><strong>'+esc(e.title||'Termin')+'</strong>'+(meta?'<small>'+esc(meta)+'</small>':'')+'</span></button>';
 }
 
@@ -98,20 +106,20 @@ function bandejaLine(){
   const n=Number(window.MINDS_BANDEJA?.lastCount?.());
   if(!Number.isFinite(n)||n<=0){el.classList.add('hidden');el.innerHTML='';return}
   el.classList.remove('hidden');
-  el.innerHTML='<span><strong>'+esc(n+' por confirmar')+'</strong> en la Bandeja</span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  el.innerHTML='<span><strong>'+esc(n+' zu bestätigen')+'</strong> im Eingang</span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 
 function paint(){
   const day=$('#ahoraDay'),next=$('#ahoraNext');if(!day||!next||!M()||!APP())return;
   const state=APP().getState(),today=todayKey(),key=M().addDays(today,offset);
-  const dateEl=$('#ahoraDate');if(dateEl)dateEl.textContent=cap(new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}));
+  const dateEl=$('#ahoraDate');if(dateEl)dateEl.textContent=cap(new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'}));
   bandejaLine();
 
   const upcoming=nextItems(state,today);
   next.classList.remove('hidden');
-  next.innerHTML='<h2 id="ahoraNextTitle" class="ahora-label">Próximo</h2>'+
+  next.innerHTML='<h2 id="ahoraNextTitle" class="ahora-label">Demnächst</h2>'+
     (upcoming.length?'<div class="ahora-card">'+upcoming.map(x=>nextRow(x,state,today)).join('')+'</div>'
-      :'<p class="ahora-empty">'+(fristen.ok||!window.MINDS_SUPABASE?'Sin Fristen ni citas en los próximos 14 días.':'Sin citas en los próximos 14 días. No pude comprobar las Fristen.')+'</p>');
+      :'<p class="ahora-empty">'+(fristen.ok||!window.MINDS_SUPABASE?'Keine Fristen oder Termine in den nächsten 14 Tagen.':'Keine Termine in den nächsten 14 Tagen. Die Fristen konnten nicht geprüft werden.')+'</p>');
 
   const groups=M().monthAgendaGroups(state,key);
   const events=groups.events.filter(e=>!isSession(e));
@@ -120,11 +128,11 @@ function paint(){
     ...overdue.map(t=>taskRow(t,[],state,key,today,true)),
     ...groups.tasks.map(g=>taskRow(g.task,g.sessions,state,key,today))];
   day.innerHTML='<div class="ahora-day-head"><h2 id="ahoraDayTitle" class="ahora-label">'+esc(dayTitle(key,today))+'</h2><div class="ahora-day-nav">'+
-      (offset!==0?'<button type="button" class="ahora-text-button" data-ahora-day="today">Hoy</button>':'')+
-      '<button type="button" class="ahora-round" data-ahora-day="-1" aria-label="Día anterior"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
-      '<button type="button" class="ahora-round" data-ahora-day="1" aria-label="Día siguiente"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>'+
-    '<div class="ahora-card">'+(rows.length?rows.join(''):'<p class="ahora-empty ahora-empty-inline">'+(offset===0?'Nada para hoy en tu calendario.':'Nada para este día en tu calendario.')+'</p>')+
-      '<button type="button" class="ahora-add" data-ahora-add="'+esc(key)+'"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Añadir tarea</button></div>';
+      (offset!==0?'<button type="button" class="ahora-text-button" data-ahora-day="today">Heute</button>':'')+
+      '<button type="button" class="ahora-round" data-ahora-day="-1" aria-label="Vorheriger Tag"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
+      '<button type="button" class="ahora-round" data-ahora-day="1" aria-label="Nächster Tag"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>'+
+    '<div class="ahora-card">'+(rows.length?rows.join(''):'<p class="ahora-empty ahora-empty-inline">'+(offset===0?'Heute steht nichts im Kalender.':'An diesem Tag steht nichts im Kalender.')+'</p>')+
+      '<button type="button" class="ahora-add" data-ahora-add="'+esc(key)+'"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Aufgabe hinzufügen</button></div>';
 }
 
 async function render(options={}){

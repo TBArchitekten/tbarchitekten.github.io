@@ -1,9 +1,13 @@
 (()=>{'use strict';
+// TBA Office: Window's Work (gari01234/minds apps/isabella/work.js) for shared office projects.
+// Projects are the office's (all of them, not "mine"); Panorama shows the next 14 days and the project's
+// Terminpläne; the Akte parts, Wissen and Threads stay off until the office has them.
+const OFFICE=true;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sb=window.MINDS_SUPABASE;
 const DEFAULT_BUCKETS=['Projektorganisation','Entwurf','Genehmigung','Ausführungsplanung','Ausschreibung/Vergabe','Baustelle','Dokumentation'];
-let projectKey=localStorage.getItem('minds-work-project')||'bernried',view=localStorage.getItem('minds-work-view')||'overview',folderId=null,project=null,folders=[],files=[],buckets=[],tasks=[],threads=[],activeThreadId=null,bound=false,pendingTaskFiles=[],editingAttachments=[],draggedWorkTaskId=null,draggedWorkBucketId=null;
+let projectKey=localStorage.getItem('minds-work-project')||'',view=(()=>{const v=localStorage.getItem('minds-work-view')||'overview';return OFFICE&&['knowledge','threads','desktop'].includes(v)?'overview':v})(),folderId=null,project=null,folders=[],files=[],buckets=[],tasks=[],threads=[],activeThreadId=null,bound=false,pendingTaskFiles=[],editingAttachments=[],draggedWorkTaskId=null,draggedWorkBucketId=null;
 const workSignedCache=new Map();
 let team=[],reviewSettings=null,reviewReportLimit=20,workRenderVersion=0;
 /* Purely visual preferences and labels; no task statuses are rewritten. */
@@ -13,7 +17,7 @@ function setStatus(t=''){const el=$('#workStatus');if(el)el.textContent=t}
 function safeName(name){return String(name||'file').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,150)||'file'}
 function sourceKind(file){const n=String(file?.name||'').toLowerCase(),m=String(file?.type||'');if(n.endsWith('.eml')||n.endsWith('.msg')||m==='message/rfc822')return'email';if(m.startsWith('image/'))return'image';if(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|rtf)$/i.test(n))return'document';return'file'}
 async function getSession(){if(!sb)return null;const {data}=await sb.auth.getSession();return data?.session||null}
-async function loadProject(knownSession=null){const session=knownSession||await getSession();if(!session)return null;const {data,error}=await sb.from('isabella_projects').select('id,client_key,name').eq('user_id',session.user.id).eq('client_key',projectKey).maybeSingle();if(error)throw error;return data||null}
+async function loadProject(knownSession=null){const session=knownSession||await getSession();if(!session)return null;const {data,error}=await sb.from('isabella_projects').select('id,client_key,name,number').eq('client_key',projectKey).maybeSingle();if(error)throw error;return data||null}
 function bindStatic(){
   if(bound)return;bound=true;
   $('.work-project-switch')?.addEventListener('click',e=>{const b=e.target.closest('[data-work-project]');if(!b)return;projectKey=b.dataset.workProject;localStorage.setItem('minds-work-project',projectKey);folderId=null;activeThreadId=null;reviewReportLimit=20;void render()});
@@ -41,7 +45,7 @@ async function waitForWork(promise,stage,ms=14000){
 }
 function workBootFailure(message,switchLabel=''){
   const body=$('#workBody');
-  if(body)body.innerHTML='<div class="work-empty" role="status"><p>'+esc(message)+'</p><button type="button" data-work-retry class="secondary">Reintentar</button></div>';
+  if(body)body.innerHTML='<div class="work-empty" role="status"><p>'+esc(message)+'</p><button type="button" data-work-retry class="secondary">Erneut versuchen</button></div>';
   const switcher=$('.work-project-switch');
   if(switcher&&switchLabel)switcher.textContent=switchLabel;
 }
@@ -58,26 +62,26 @@ async function render(){
     if(!latest())return;
     if(!session){
       project=null;
-      workBootFailure('No hay una sesión activa de MINDS. Inicia sesión y vuelve a intentarlo.','Sesión no disponible');
+      workBootFailure('Keine aktive Anmeldung. Bitte anmelden und erneut versuchen.','Nicht angemeldet');
       return;
     }
     const catalog=await waitForWork(
-      sb.from('isabella_projects').select('id,client_key,name').eq('user_id',session.user.id).eq('archived',false).order('name'),
+      sb.from('isabella_projects').select('id,client_key,name,number').eq('archived',false).order('number'),
       'project catalog'
     );
     if(!latest())return;
     if(catalog.error)throw catalog.error;
     const switcher=$('.work-project-switch');
     if(switcher)switcher.innerHTML=(catalog.data||[]).length
-      ?catalog.data.map(p=>'<button data-work-project="'+esc(p.client_key)+'">'+esc(p.name)+'</button>').join('')
-      :'<span class="small">Sin proyectos disponibles</span>';
+      ?catalog.data.map(p=>'<button data-work-project="'+esc(p.client_key)+'" title="'+esc((p.number?p.number+' · ':'')+p.name)+'">'+esc(p.name)+'</button>').join('')
+      :'<span class="small">Keine Projekte vorhanden</span>';
     if(!(catalog.data||[]).some(p=>p.client_key===projectKey)&&catalog.data?.length)
       projectKey=catalog.data[0].client_key;
     const loadedProject=await waitForWork(loadProject(session),'project');
     if(!latest())return;
     project=loadedProject;
     paintChrome();
-    const settings=project?await waitForWork(
+    const settings=project&&!OFFICE?await waitForWork(
       sb.from('minds_self_review_settings').select('enabled,timezone,local_hour,code_preparation_enabled')
         .eq('project_id',project.id).eq('user_id',session.user.id).maybeSingle(),
       'project settings'
@@ -85,7 +89,7 @@ async function render(){
     if(!latest())return;
     reviewSettings=settings?.data||null;
     if(!project){
-      workBootFailure('No encontré este proyecto en MINDS.');
+      workBootFailure('Dieses Projekt wurde nicht gefunden.');
       return;
     }
     const scene=view==='overview'&&reviewSettings?renderSelfReview()
@@ -97,7 +101,7 @@ async function render(){
   }catch(e){
     if(!latest())return;
     console.error('Work initialization failed:',e);
-    workBootFailure('No pude abrir Work ahora mismo. Comprueba la conexión o tu sesión y vuelve a intentarlo.','No se pudieron cargar proyectos');
+    workBootFailure('Work konnte gerade nicht geöffnet werden. Bitte Verbindung oder Anmeldung prüfen und erneut versuchen.','Projekte konnten nicht geladen werden');
   }
 }
 async function renderSelfReview(){
@@ -128,7 +132,7 @@ async function renderSelfReview(){
     </details>`).join(''):'<p>Todavía no hay propuestas. Una revisión puede concluir sin proponer cambios.</p>'}
     <h3>Informes · ${reportsQ.count||0}</h3>
     ${reports.length?reports.map(r=>`<details class="work-thread-row" style="display:block;padding:14px"><summary><strong>${r.review_key==='baseline'?'Revisión inicial':esc(r.review_key)}</strong> · ${esc({completed:'Guardado',running:'En revisión',pending:'Pendiente',failed:'No se pudo completar'}[r.status])}</summary>
-      <p class="small">${esc(new Date(r.window_start).toLocaleString('es-ES'))} — ${esc(new Date(r.window_end).toLocaleString('es-ES'))} · ${esc(r.id)}</p>
+      <p class="small">${esc(new Date(r.window_start).toLocaleString('de-DE'))} — ${esc(new Date(r.window_end).toLocaleString('de-DE'))} · ${esc(r.id)}</p>
       ${r.status==='completed'?`${field('Evaluación',r.report.summary)}${field('Qué funcionó',r.report.what_worked)}${field('Límites de la revisión',r.report.limitations)}<p class="small">Esta evaluación es una propuesta del modelo, no una verificación independiente.</p>`:prose(r.error||'El informe aparecerá cuando termine la revisión.')}
       <details><summary>Cobertura y evidencia consultada</summary>${prose(JSON.stringify(r.coverage,null,2))}${(r.evidence||[]).map(e=>`<details><summary>${esc(e.ref)}</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(e,null,2))}</pre></details>`).join('')}</details>
     </details>`).join(''):'<p>La primera revisión está pendiente. Se conservará aquí al terminar.</p>'}
@@ -195,24 +199,24 @@ async function undoSteckbrief(id){
 }
 async function completeTaskFromPanorama(id){
   const {error}=await sb.from('isabella_tasks').update({completed_at:new Date().toISOString(),work_status:'completed',updated_at:new Date().toISOString()}).eq('id',id);
-  if(error){setStatus('No pude marcar la tarea como hecha.');return}
+  if(error){setStatus('Die Aufgabe konnte nicht als erledigt markiert werden.');return}
   await renderOverview();
 }
 // Panorama cockpit (pure markup): what needs Gari, the next 14 days, the Steckbrief, topics, register and new documents.
 let paraTiExpanded=false;
-const WORK_STATUS_LABELS=Object.freeze({not_started:'Sin empezar',in_progress:'En curso',waiting:'En espera',completed:'Completada'});
-function workStatusText(value){if(!value)return '';return Object.prototype.hasOwnProperty.call(WORK_STATUS_LABELS,value)?WORK_STATUS_LABELS[value]:'Estado sin clasificar ('+String(value)+')'}
+const WORK_STATUS_LABELS=Object.freeze({not_started:'Nicht begonnen',in_progress:'In Bearbeitung',waiting:'Warten',completed:'Erledigt'});
+function workStatusText(value){if(!value)return '';return Object.prototype.hasOwnProperty.call(WORK_STATUS_LABELS,value)?WORK_STATUS_LABELS[value]:'Unbekannter Status ('+String(value)+')'}
 const COCKPIT_DAY=864e5;
 function cockpitDayDiff(from,to){return Math.round((Date.parse(to+'T12:00:00Z')-Date.parse(from+'T12:00:00Z'))/COCKPIT_DAY)}
 function cockpitAddDays(day,n){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
-function cockpitWeekday(day){try{return new Date(day+'T12:00:00Z').toLocaleDateString('es-ES',{weekday:'short',timeZone:'UTC'}).replace('.','')}catch{return ''}}
+function cockpitWeekday(day){try{return new Date(day+'T12:00:00Z').toLocaleDateString('de-DE',{weekday:'short',timeZone:'UTC'}).replace('.','')}catch{return ''}}
 function cockpitShort(day){const m=String(day||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'.'+m[2]+'.':''}
 function cockpitAgo(iso,today){
   const day=String(iso||'').slice(0,10);if(!day)return '';
   const n=cockpitDayDiff(day,today);
-  return n<=0?'hoy':n===1?'ayer':n<14?'hace '+n+' días':n<60?'hace '+Math.round(n/7)+' semanas':'hace '+Math.round(n/30)+' meses';
+  return n<=0?'heute':n===1?'gestern':n<14?'vor '+n+' Tagen':n<60?'vor '+Math.round(n/7)+' Wochen':'vor '+Math.round(n/30)+' Monaten';
 }
-function cockpitIn(n){return n===0?'hoy':n===1?'mañana':n===-1?'ayer':n>1?'en '+n+' días':'hace '+(-n)+' días'}
+function cockpitIn(n){return n===0?'heute':n===1?'morgen':n===-1?'gestern':n>1?'in '+n+' Tagen':'vor '+(-n)+' Tagen'}
 function cockpitPflegeLine(state){
   const run=state?.projects?.[project?.id]?.letzter_lauf;if(!run)return '';
   const when=run.am?akteDate(run.am):'';
@@ -261,14 +265,14 @@ function cockpitParaTi(m){
 function cockpitTimeline(m){
   const end=cockpitAddDays(m.today,14),byDay=new Map(),add=(day,item)=>{if(!day||day<m.today||day>end)return;if(!byDay.has(day))byDay.set(day,[]);byDay.get(day).push(item)};
   for(const x of m.tasks){const status=x.work_status&&x.work_status!=='not_started'?workStatusText(x.work_status):'';
-    add(String(x.due_date||'').slice(0,10),{order:2,html:'<button type="button" class="cockpit-line" data-work-edit-task="'+esc(x.id)+'"><span class="cockpit-chip">Aufgabe</span><span class="cockpit-line-title">'+esc(x.title||'Sin título')+'</span>'+((x.assignee||status)?'<small>'+esc([x.assignee,status].filter(Boolean).join(' · '))+'</small>':'')+'</button>'})}
+    add(String(x.due_date||'').slice(0,10),{order:2,html:'<button type="button" class="cockpit-line" data-work-edit-task="'+esc(x.id)+'"><span class="cockpit-chip">Aufgabe</span><span class="cockpit-line-title">'+esc(x.title||'Ohne Titel')+'</span>'+((x.assignee||status)?'<small>'+esc([x.assignee,status].filter(Boolean).join(' · '))+'</small>':'')+'</button>'})}
   for(const r of m.proposedTasks)add(String(r.metadata?.faellig||r.occurred_at||'').slice(0,10),{order:3,html:'<div class="cockpit-line"><span class="cockpit-chip is-proposed">Propuesta</span><span class="cockpit-line-title">'+esc(r.title)+'</span></div>'});
-  for(const r of m.deadlines)add(String(r.occurred_at||'').slice(0,10),{order:0,html:'<div class="cockpit-line"><span class="cockpit-chip is-frist">Frist</span><span class="cockpit-line-title"><b>'+esc(r.title)+'</b></span>'+(r.status==='proposed'?'<small>sin confirmar</small>':(r.metadata?.quelle?'<small>'+esc(r.metadata.quelle)+'</small>':''))+'</div>'});
-  for(const e of m.events)add(String(e.starts_at||'').slice(0,10),{order:1,html:'<div class="cockpit-line"><span class="cockpit-chip is-event">Termin</span><span class="cockpit-line-title">'+esc(e.title||'Termin')+'</span>'+(e.all_day?'':'<small>'+esc(new Date(e.starts_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}))+'</small>')+'</div>'});
+  for(const r of m.deadlines)add(String(r.occurred_at||'').slice(0,10),{order:0,html:'<div class="cockpit-line"><span class="cockpit-chip is-frist">Frist</span><span class="cockpit-line-title"><b>'+esc(r.title)+'</b></span>'+(r.status==='proposed'?'<small>unbestätigt</small>':(r.metadata?.quelle?'<small>'+esc(r.metadata.quelle)+'</small>':''))+'</div>'});
+  for(const e of m.events)add(String(e.starts_at||'').slice(0,10),{order:1,html:'<div class="cockpit-line"><span class="cockpit-chip is-event">Termin</span><span class="cockpit-line-title">'+esc(e.title||'Termin')+'</span>'+(e.all_day?'':'<small>'+esc(new Date(e.starts_at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}))+'</small>')+'</div>'});
   const days=[...byDay.keys()].sort();
   const rows=days.map(day=>{const n=cockpitDayDiff(m.today,day);return '<div class="cockpit-day"><strong>'+esc(cockpitWeekday(day)+' '+cockpitShort(day))+'</strong>'+(n<=1||n%7===0||day===days[days.length-1]?'<span>'+esc(cockpitIn(n))+'</span>':'')+'</div><div class="cockpit-day-items">'+byDay.get(day).sort((a,b)=>a.order-b.order).map(x=>x.html).join('')+'</div>'}).join('');
-  return '<section class="cockpit-panel cockpit-wide" aria-labelledby="cockpitNext"><div class="cockpit-head"><h2 id="cockpitNext">Próximos 14 días</h2><button type="button" class="cockpit-link" data-work-go="planner">Abrir Planner</button></div>'+
-    (m.tasksError?'<p class="cockpit-empty">No pude consultar las tareas de este proyecto.</p>':rows?'<div class="cockpit-timeline">'+rows+'</div>':'<p class="cockpit-empty">Nada con fecha en los próximos 14 días.</p>')+'</section>';
+  return '<section class="cockpit-panel cockpit-wide" aria-labelledby="cockpitNext"><div class="cockpit-head"><h2 id="cockpitNext">Nächste 14 Tage</h2><button type="button" class="cockpit-link" data-work-go="planner">Planner öffnen</button></div>'+
+    (m.tasksError?'<p class="cockpit-empty">Die Aufgaben dieses Projekts konnten nicht geladen werden.</p>':rows?'<div class="cockpit-timeline">'+rows+'</div>':'<p class="cockpit-empty">In den nächsten 14 Tagen ist nichts terminiert.</p>')+'</section>';
 }
 function cockpitSteckbrief(m){
   const b=m.brief;
@@ -313,15 +317,32 @@ function cockpitDocs(m){
 function cockpitHeader(m){
   const f=m.brief?.metadata?.felder||{};
   const phase=f.phase||'';
-  const milestones=[...(Array.isArray(f.meilensteine)?f.meilensteine:[]).filter(x=>x&&x.datum).map(x=>({day:String(x.datum).slice(0,10),title:x.was||x.text||'',label:'Próximo hito'})),
-    ...m.deadlines.filter(r=>r.status==='confirmed'&&r.occurred_at).map(r=>({day:String(r.occurred_at).slice(0,10),title:r.title,label:'Próximo plazo'}))]
+  const milestones=[...(Array.isArray(f.meilensteine)?f.meilensteine:[]).filter(x=>x&&x.datum).map(x=>({day:String(x.datum).slice(0,10),title:x.was||x.text||'',label:'Nächster Meilenstein'})),
+    ...m.deadlines.filter(r=>r.status==='confirmed'&&r.occurred_at).map(r=>({day:String(r.occurred_at).slice(0,10),title:r.title,label:'Nächste Frist'})),
+    ...(m.plans||[]).flatMap(p=>(Array.isArray(p.state?.tasks)?p.state.tasks:[]).filter(t=>t&&t.type==='milestone'&&t.start).map(t=>({day:String(t.start).slice(0,10),title:t.name||'',label:'Nächster Meilenstein'})))]
     .filter(x=>x.day>=m.today&&x.title).sort((a,b)=>a.day.localeCompare(b.day));
   const next=milestones[0];
   const n=next?cockpitDayDiff(m.today,next.day):0;
-  return '<header class="cockpit-header"><div><span class="cockpit-eyebrow">Proyecto</span><h1>'+esc(project.name)+'</h1>'+(phase?'<p>'+esc(phase)+'</p>':'')+'</div>'+
-    (next?'<div class="cockpit-milestone"><div class="cockpit-countdown"><b>'+esc(String(n))+'</b><span>'+(n===1?'día':'días')+'</span></div><div><span class="cockpit-eyebrow">'+esc(next.label)+'</span><strong>'+esc(next.title)+'</strong><small>'+esc(cockpitWeekday(next.day)+' '+akteDate(next.day))+'</small></div></div>':'')+'</header>';
+  return '<header class="cockpit-header"><div><span class="cockpit-eyebrow">Projekt</span><h1>'+esc(project.name)+'</h1>'+(phase?'<p>'+esc(phase)+'</p>':'')+'</div>'+
+    (next?'<div class="cockpit-milestone"><div class="cockpit-countdown"><b>'+esc(String(n))+'</b><span>'+(n===1?'Tag':'Tage')+'</span></div><div><span class="cockpit-eyebrow">'+esc(next.label)+'</span><strong>'+esc(next.title)+'</strong><small>'+esc(cockpitWeekday(next.day)+' '+akteDate(next.day))+'</small></div></div>':'')+'</header>';
+}
+function officeTerminplaene(m){
+  const rows=(m.plans||[]).map(p=>{
+    const next=officeNextMilestone(p.state,m.today);
+    const sub=[String(p.phase||'').replace('LPH','LPH '),p.state?.project?.standDate?'Stand '+cockpitShort(p.state.project.standDate):'',next?'Nächster Meilenstein '+cockpitShort(next.start):''].filter(Boolean).join(' · ');
+    return '<a class="cockpit-file" href="../terminplan.html?id='+encodeURIComponent(p.id)+'"><span>'+esc(next?next.name:(p.state?.project?.name||'Terminplan'))+'</span><small>'+esc(sub)+'</small></a>';
+  }).join('');
+  return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitPlans"><div class="cockpit-head"><h2 id="cockpitPlans">Terminpläne</h2><a class="cockpit-link" href="../#project='+encodeURIComponent(project.id)+'">+ Terminplan</a></div>'+
+    (rows||'<p class="cockpit-empty">Noch kein Terminplan für dieses Projekt.</p>')+'</section></div>';
+}
+function officeNextMilestone(state,today){
+  const list=Array.isArray(state?.tasks)?state.tasks:[];
+  return list.filter(t=>t&&t.type==='milestone'&&typeof t.start==='string'&&t.start>=today).sort((a,b)=>a.start.localeCompare(b.start))[0]||null;
 }
 function cockpitMarkup(m){
+  if(OFFICE)return '<div class="work-overview work-cockpit" aria-label="Panorama '+esc(project.name)+'">'+cockpitHeader(m)+
+    '<div class="cockpit-row">'+cockpitTimeline(m)+officeTerminplaene(m)+'</div>'+
+    (m.partial?'<p class="cockpit-foot">Teilweise geladen: eine Quelle hat nicht geantwortet. Bitte das Panorama gleich noch einmal öffnen.</p>':'')+'</div>';
   return '<div class="work-overview work-cockpit" aria-label="Panorama de '+esc(project.name)+'">'+cockpitHeader(m)+cockpitPflegeLine(m.pflege)+cockpitParaTi(m)+
     '<div class="cockpit-row">'+cockpitTimeline(m)+cockpitSteckbrief(m)+'</div>'+cockpitTopics(m)+
     '<div class="cockpit-row is-top">'+cockpitRegister(m)+cockpitDocs(m)+'</div>'+
@@ -330,20 +351,22 @@ function cockpitMarkup(m){
 async function renderOverview(){
   const body=$('#workBody'),projectId=project.id;
   body.classList.add('work-overview-host');
-  body.innerHTML='<div class="work-empty">Leyendo el estado del proyecto…</div>';
+  body.innerHTML='<div class="work-empty">Lade den Projektstand …</div>';
   const today=localIso(),horizon=cockpitAddDays(today,15);
-  const [t,c,f,a,pf,th,ev]=await Promise.allSettled([
+  const none=Promise.resolve({data:[],error:null,count:0});
+  const [t,c,f,a,pf,th,ev,pl]=await Promise.allSettled([
     sb.from('isabella_tasks').select('id,title,due_date,start_date,assignee,work_status').eq('project_id',projectId).is('completed_at',null).is('archived_at',null).order('due_date',{ascending:true,nullsFirst:false}).limit(150),
-    sb.from('minds_work_claims').select('id,claim_type,status').eq('project_id',projectId).in('status',['proposed','disputed']).limit(1000),
-    sb.from('minds_work_files').select('id,name,source_kind,created_at,storage_path,metadata',{count:'exact'}).eq('project_id',projectId).order('created_at',{ascending:false}).limit(5),
-    sb.from('minds_work_memory').select('id,memory_type,title,body,status,occurred_at,confirmed_at,metadata,updated_at,created_at').eq('project_id',projectId).in('memory_type',['document_state','decision','deadline','commitment','open_question']).in('status',['proposed','confirmed']).order('created_at',{ascending:false}).limit(150),
-    sb.from('isabella_preferences').select('value').eq('preference_key','akte_pflege').limit(1),
-    sb.from('minds_work_threads').select('id,title,summary,metadata,last_activity_at,updated_at,conversation_id').eq('project_id',projectId).eq('status','active').order('updated_at',{ascending:false}).limit(12),
-    sb.from('isabella_events').select('id,title,starts_at,all_day').eq('project_id',projectId).gte('starts_at',today).lte('starts_at',horizon).order('starts_at',{ascending:true}).limit(40)
+    OFFICE?none:sb.from('minds_work_claims').select('id,claim_type,status').eq('project_id',projectId).in('status',['proposed','disputed']).limit(1000),
+    OFFICE?none:sb.from('minds_work_files').select('id,name,source_kind,created_at,storage_path,metadata',{count:'exact'}).eq('project_id',projectId).order('created_at',{ascending:false}).limit(5),
+    OFFICE?none:sb.from('minds_work_memory').select('id,memory_type,title,body,status,occurred_at,confirmed_at,metadata,updated_at,created_at').eq('project_id',projectId).in('memory_type',['document_state','decision','deadline','commitment','open_question']).in('status',['proposed','confirmed']).order('created_at',{ascending:false}).limit(150),
+    OFFICE?none:sb.from('isabella_preferences').select('value').eq('preference_key','akte_pflege').limit(1),
+    OFFICE?none:sb.from('minds_work_threads').select('id,title,summary,metadata,last_activity_at,updated_at,conversation_id').eq('project_id',projectId).eq('status','active').order('updated_at',{ascending:false}).limit(12),
+    sb.from('isabella_events').select('id,title,starts_at,all_day').eq('project_id',projectId).gte('starts_at',today).lte('starts_at',horizon).order('starts_at',{ascending:true}).limit(40),
+    OFFICE?sb.from('office_terminplan_instances').select('id,phase,state,updated_at').eq('project_id',projectId).eq('is_archived',false).order('updated_at',{ascending:false}):none
   ]);
   if(view!=='overview'||project?.id!==projectId)return;
   const ok=r=>r.status==='fulfilled'&&!r.value?.error?r.value:null;
-  const taskQ=ok(t),claimQ=ok(c),fileQ=ok(f),memQ=ok(a),pflegeQ=ok(pf),threadQ=ok(th),eventQ=ok(ev);
+  const taskQ=ok(t),claimQ=ok(c),fileQ=ok(f),memQ=ok(a),pflegeQ=ok(pf),threadQ=ok(th),eventQ=ok(ev),planQ=ok(pl);
   const mem=memQ?.data||[],tasks=taskQ?.data||[],claims=claimQ?.data||[];
   const m={today,tasks,tasksError:!taskQ,claimsError:!claimQ,
     overdue:tasks.filter(x=>x.due_date&&String(x.due_date).slice(0,10)<today),
@@ -355,7 +378,7 @@ async function renderOverview(){
     confirmed:mem.filter(r=>(r.memory_type==='decision'||r.memory_type==='deadline')&&r.status==='confirmed'),
     threads:threadQ?.data||[],events:eventQ?.data||[],files:fileQ?.data||[],fileCount:fileQ?fileQ.count??null:null,
     claimsToReview:claims.length,claimDeadlines:claims.filter(x=>x.claim_type==='deadline').length,
-    pflege:pflegeQ?.data?.[0]?.value||null,partial:[taskQ,claimQ,fileQ,memQ,threadQ].some(x=>!x)};
+    pflege:pflegeQ?.data?.[0]?.value||null,plans:planQ?.data||[],partial:(OFFICE?[taskQ,eventQ,planQ]:[taskQ,claimQ,fileQ,memQ,threadQ]).some(x=>!x)};
   body.innerHTML=cockpitMarkup(m);
   $$('[data-work-go]').forEach(button=>button.onclick=()=>document.querySelector('[data-work-view="'+button.dataset.workGo+'"]')?.click());
   $$('[data-work-edit-task]').forEach(button=>button.onclick=()=>void window.ISABELLA_APP?.openCanonicalTaskById?.(button.dataset.workEditTask));
@@ -365,7 +388,7 @@ async function renderOverview(){
   $$('[data-cockpit-done]').forEach(button=>button.onclick=()=>{button.disabled=true;void completeTaskFromPanorama(button.dataset.cockpitDone)});
   $$('[data-cockpit-more]').forEach(button=>button.onclick=()=>{paraTiExpanded=!paraTiExpanded;void renderOverview()});
   $$('[data-cockpit-thread]').forEach(button=>button.onclick=()=>{activeThreadId=button.dataset.cockpitThread;document.querySelector('[data-work-view="threads"]')?.click()});
-  $$('[data-cockpit-file]').forEach(button=>button.onclick=async()=>{const file=m.files.find(x=>x.id===button.dataset.cockpitFile);if(!file)return;const r=await sb.storage.from('minds-work').createSignedUrl(file.storage_path,900);if(r.error||!r.data?.signedUrl){setStatus('No pude abrir el archivo.');return}window.open(r.data.signedUrl,'_blank','noopener')});
+  $$('[data-cockpit-file]').forEach(button=>button.onclick=async()=>{const file=m.files.find(x=>x.id===button.dataset.cockpitFile);if(!file)return;const r=await sb.storage.from('minds-work').createSignedUrl(file.storage_path,900);if(r.error||!r.data?.signedUrl){setStatus('Die Datei konnte nicht geöffnet werden.');return}window.open(r.data.signedUrl,'_blank','noopener')});
 }
 const knowledgeStates={proposed:'Propuesto',confirmed:'Confirmado',disputed:'En disputa',superseded:'Sustituido',resolved:'Resuelto',rejected:'Descartado'};
 const provenanceNames={user:'Afirmación del usuario',project_source:'Fuente del proyecto',external:'Fuente externa',inferred:'Inferencia',system:'Sistema'};
@@ -393,7 +416,7 @@ function projectModelPanel(){
   const weakPerimeter=perimeter.filter(x=>x.observation_mode==='unobserved'||['missing','unknown'].includes(x.coverage)||['unreadable','unknown'].includes(x.readability)).slice(0,6);
   const revWhen=revision?.published_at||revision?.created_at;
   return `<section class="project-model-panel">
-    <div class="project-model-head"><div><b>Lectura de Isabella</b><p class="small">Interpretación versionada del proyecto; no sustituye decisiones ni hechos confirmados.</p></div><div class="project-model-revision">${revision?`Rev. ${esc(String(revision.id||'').slice(0,8))}${revWhen?' · '+esc(new Date(revWhen).toLocaleString('es-ES')):''}`:'Sin revisión publicada'}</div></div>
+    <div class="project-model-head"><div><b>Lectura de Isabella</b><p class="small">Interpretación versionada del proyecto; no sustituye decisiones ni hechos confirmados.</p></div><div class="project-model-revision">${revision?`Rev. ${esc(String(revision.id||'').slice(0,8))}${revWhen?' · '+esc(new Date(revWhen).toLocaleString('de-DE')):''}`:'Sin revisión publicada'}</div></div>
     <div class="project-model-grid">
       <article><strong>Qué interpreta ahora</strong>${inferred.map(x=>`<p><span class="model-badge">${esc(x.status==='disputed'?'En disputa':'Inferencia')}</span> ${esc(x.statement)}</p>`).join('')||'<p class="small">Todavía no hay inferencias estructuradas.</p>'}</article>
       <article><strong>Tensiones / Variantes</strong>${variants.filter(x=>x.status==='open').slice(0,6).map(v=>{const a=claimById.get(String(v.source_claim_id)),b=claimById.get(String(v.target_claim_id));return `<p><span class="model-badge attention">${esc(v.variant_kind)}</span> ${esc(a?.statement||'Nueva formulación')}${b?.statement?' ↔ '+esc(b.statement):''}</p>`}).join('')||'<p class="small">No hay variantes abiertas en la revisión actual.</p>'}</article>
@@ -401,7 +424,7 @@ function projectModelPanel(){
     </div>
     <details class="project-model-inspect"><summary>Inspeccionar fundamento y cobertura</summary>
       <div class="small">Trigger: ${esc(revision?.trigger_kind||'—')}${revision?.parent_revision_id?' · deriva de '+esc(String(revision.parent_revision_id).slice(0,8)):''}</div>
-      <div class="project-model-perimeter">${perimeter.map(p=>`<p><b>${esc(p.source_class)}</b> · ${esc(p.observation_mode)} · ${esc(p.coverage)} · ${esc(p.readability)}${p.last_checked_at?' · comprobado '+esc(new Date(p.last_checked_at).toLocaleString('es-ES')):''}</p>`).join('')||'<p class="small">Perimeter todavía sin declarar.</p>'}</div>
+      <div class="project-model-perimeter">${perimeter.map(p=>`<p><b>${esc(p.source_class)}</b> · ${esc(p.observation_mode)} · ${esc(p.coverage)} · ${esc(p.readability)}${p.last_checked_at?' · comprobado '+esc(new Date(p.last_checked_at).toLocaleString('de-DE')):''}</p>`).join('')||'<p class="small">Perimeter todavía sin declarar.</p>'}</div>
     </details>
   </section>`;
 }
@@ -587,27 +610,27 @@ async function loadDuplicateGroups(){
   if(error)throw error;return duplicateGroups(data);
 }
 async function duplicatesPanel(){
-  let groups=[];try{groups=await loadDuplicateGroups()}catch{setStatus('No pude buscar duplicados.');return}
+  let groups=[];try{groups=await loadDuplicateGroups()}catch{setStatus('Duplikate konnten nicht gesucht werden.');return}
   const folderName=id=>folders.find(f=>f.id===id)?.name||project.name;
   const copies=groups.flatMap(g=>g.slice(1));
-  if(!copies.length){setStatus('No hay duplicados en este proyecto.');return}
-  const html=`<div class="work-dupes"><p class="small">Se queda el archivo más antiguo de cada grupo; las copias marcadas se borran de forma permanente (archivo y texto extraído). Puedes desmarcar las que quieras conservar.</p>
-    ${groups.map(g=>`<div class="work-dupe-group"><div class="work-dupe-keep"><span>Se queda</span><strong>${esc(g[0].name)}</strong><small>${esc(folderName(g[0].folder_id))} · ${esc(akteDate(g[0].created_at))} · ${Math.max(1,Math.round(Number(g[0].size_bytes||0)/1024))} KB</small></div>
+  if(!copies.length){setStatus('Keine Duplikate in diesem Projekt.');return}
+  const html=`<div class="work-dupes"><p class="small">Die älteste Datei jeder Gruppe bleibt; die markierten Kopien werden endgültig gelöscht (Datei und extrahierter Text). Kopien, die bleiben sollen, abwählen.</p>
+    ${groups.map(g=>`<div class="work-dupe-group"><div class="work-dupe-keep"><span>Bleibt</span><strong>${esc(g[0].name)}</strong><small>${esc(folderName(g[0].folder_id))} · ${esc(akteDate(g[0].created_at))} · ${Math.max(1,Math.round(Number(g[0].size_bytes||0)/1024))} KB</small></div>
       ${g.slice(1).map(f=>`<label class="work-dupe-copy"><input type="checkbox" data-dupe="${esc(f.id)}" checked><span><strong>${esc(f.name)}</strong><small>${esc(folderName(f.folder_id))} · ${esc(akteDate(f.created_at))}</small></span></label>`).join('')}</div>`).join('')}
-    <div class="work-dupe-actions"><button type="button" class="danger" data-dupes-delete>Borrar ${copies.length} copia${copies.length===1?'':'s'}</button></div></div>`;
-  window.ISABELLA_APP?.openModal?.('Duplicados en '+project.name,html);
+    <div class="work-dupe-actions"><button type="button" class="danger" data-dupes-delete>${copies.length} Kopie${copies.length===1?'':'n'} löschen</button></div></div>`;
+  window.ISABELLA_APP?.openModal?.('Duplikate in '+project.name,html);
   const modalRoot=document.getElementById('modalBody')||document;
   const button=modalRoot.querySelector('[data-dupes-delete]');if(!button)return;
-  const update=()=>{const n=[...modalRoot.querySelectorAll('[data-dupe]:checked')].length;button.textContent=n?'Borrar '+n+' copia'+(n===1?'':'s'):'Nada seleccionado';button.disabled=!n;delete button.dataset.confirm};
+  const update=()=>{const n=[...modalRoot.querySelectorAll('[data-dupe]:checked')].length;button.textContent=n?n+' Kopie'+(n===1?'':'n')+' löschen':'Nichts ausgewählt';button.disabled=!n;delete button.dataset.confirm};
   modalRoot.querySelectorAll('[data-dupe]').forEach(x=>x.onchange=update);
   button.onclick=async()=>{
     const ids=[...modalRoot.querySelectorAll('[data-dupe]:checked')].map(x=>x.dataset.dupe);if(!ids.length)return;
     // Two taps: the first only asks for confirmation.
-    if(!button.dataset.confirm){button.dataset.confirm='1';button.textContent='¿Seguro? Borrar '+ids.length+' definitivamente';return}
-    button.disabled=true;button.textContent='Borrando…';
+    if(!button.dataset.confirm){button.dataset.confirm='1';button.textContent='Sicher? '+ids.length+' endgültig löschen';return}
+    button.disabled=true;button.textContent='Lösche …';
     const rows=copies.filter(f=>ids.includes(f.id));
     const {error}=await sb.from('minds_work_files').delete().in('id',rows.map(f=>f.id));
-    if(error){button.disabled=false;button.textContent='Reintentar';setStatus('No pude borrar los duplicados.');return}
+    if(error){button.disabled=false;button.textContent='Erneut versuchen';setStatus('Die Duplikate konnten nicht gelöscht werden.');return}
     try{await sb.storage.from('minds-work').remove(rows.map(f=>f.storage_path).filter(Boolean))}catch{}
     window.ISABELLA_APP?.closeModal?.();setStatus(rows.length+' copia'+(rows.length===1?'':'s')+' borrada'+(rows.length===1?'':'s')+'.');
     await renderDesktop();
@@ -619,13 +642,13 @@ async function renderDesktop(){
   fq=folderId?fq.eq('folder_id',folderId):fq.is('folder_id',null);
   const {data:fileRows,error:fe}=await fq;if(fe)throw fe;files=fileRows||[];
   const childFolders=folders.filter(x=>(x.parent_id||null)===(folderId||null)),trail=folderTrail(),body=$('#workBody');
-  body.innerHTML=`<div class="work-desktop-toolbar"><div class="work-breadcrumb"><button data-work-project-root>${esc(project.name)}</button>${trail.map(f=>`<span>›</span><button data-work-crumb="${f.id}">${esc(f.name)}</button>`).join('')}</div><div class="work-toolbar-actions"><button data-work-dupes hidden>Duplicados</button><button data-work-new-folder>＋ Ordner</button><button data-work-upload>↑ Dateien</button></div></div>
+  body.innerHTML=`<div class="work-desktop-toolbar"><div class="work-breadcrumb"><button data-work-project-root>${esc(project.name)}</button>${trail.map(f=>`<span>›</span><button data-work-crumb="${f.id}">${esc(f.name)}</button>`).join('')}</div><div class="work-toolbar-actions"><button data-work-dupes hidden>Duplikate</button><button data-work-new-folder>＋ Ordner</button><button data-work-upload>↑ Dateien</button></div></div>
     <div class="work-drop-hint">Dateien, PDFs, Word, Excel, Bilder oder E-Mails hierher ziehen</div>
     <div class="work-files">
       ${folderId?`<button class="work-file work-folder work-up" data-work-up><span class="work-file-icon">${workTileIcon('back')}</span><strong>Zurück</strong><small>Ordner</small></button>`:''}
       ${childFolders.map(f=>`<button class="work-file work-folder" data-work-folder="${f.id}"><span class="work-file-icon">${workTileIcon('folder')}</span><strong>${esc(f.name)}</strong><small>Ordner</small></button>`).join('')}
       ${files.map(f=>`<button class="work-file" data-work-file="${f.id}"><span class="work-file-icon">${workTileIcon(f.source_kind==='email'?'email':f.source_kind==='image'?'image':'file',f)}</span><strong>${esc(f.name)}</strong><small>${esc(workFileTypeLabel(f))} · ${Math.max(1,Math.round(Number(f.size_bytes||0)/1024))} KB · ${esc(workKnowledgeStatus(f))}</small></button>`).join('')}
-      ${!childFolders.length&&!files.length&&!folderId?'<div class="work-empty work-empty-wide">Este Desktop está vacío. Crea un Ordner o arrastra aquí tus primeros Unterlagen.</div>':''}
+      ${!childFolders.length&&!files.length&&!folderId?'<div class="work-empty work-empty-wide">Dieser Desktop ist leer. Einen Ordner anlegen oder die ersten Unterlagen hierher ziehen.</div>':''}
     </div>`;
   $('[data-work-upload]')?.addEventListener('click',()=>$('#workFileInput')?.click());
   $('[data-work-new-folder]')?.addEventListener('click',()=>void newFolder());
@@ -636,13 +659,13 @@ async function renderDesktop(){
   $$('[data-work-file]').forEach(b=>b.onclick=()=>void openFile(b.dataset.workFile));
   const dupesButton=$('[data-work-dupes]');
   if(dupesButton){dupesButton.onclick=()=>void duplicatesPanel();
-    loadDuplicateGroups().then(groups=>{const n=groups.reduce((a,g)=>a+g.length-1,0);if(n&&document.body.contains(dupesButton)){dupesButton.hidden=false;dupesButton.textContent='Duplicados · '+n}}).catch(()=>{})}
+    loadDuplicateGroups().then(groups=>{const n=groups.reduce((a,g)=>a+g.length-1,0);if(n&&document.body.contains(dupesButton)){dupesButton.hidden=false;dupesButton.textContent='Duplikate · '+n}}).catch(()=>{})}
 }
-async function newFolder(){const name=window.prompt('Nombre del Ordner');if(!name?.trim())return;setStatus('Creando Ordner…');const {error}=await sb.from('minds_work_folders').insert({project_id:project.id,parent_id:folderId,name:name.trim()});setStatus(error?'No pude crear el Ordner.':'');if(!error)await renderDesktop()}
+async function newFolder(){const name=window.prompt('Name des Ordners');if(!name?.trim())return;setStatus('Lege Ordner an …');const {error}=await sb.from('minds_work_folders').insert({project_id:project.id,parent_id:folderId,name:name.trim()});setStatus(error?'Der Ordner konnte nicht angelegt werden.':'');if(!error)await renderDesktop()}
 async function uploadFiles(list){
   const session=await getSession();if(!session||!project)return;
   const attempted=[...(list||[])],failed=[];let succeeded=0;
-  setStatus(`Subiendo ${attempted.length} archivo${attempted.length===1?'':'s'}…`);
+  setStatus(`Lade ${attempted.length} Datei${attempted.length===1?'':'en'} hoch …`);
   for(const file of attempted){
     const path=`${session.user.id}/${project.client_key}/${folderId||'root'}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName(file.name)}`;
     let stored=false;
@@ -658,11 +681,11 @@ async function uploadFiles(list){
       if(stored)try{await sb.storage.from('minds-work').remove([path])}catch{}
     }
   }
-  try{await renderDesktop()}catch(e){setStatus('La subida terminó, pero no pude actualizar Desktop. Recarga para comprobar el resultado.');return}
-  if(failed.length)setStatus(`${succeeded} archivo${succeeded===1?'':'s'} registrado${succeeded===1?'':'s'}; ${failed.length} sin guardar: ${failed.join(', ')}. Vuelve a intentarlo con los fallidos.`);
-  else setStatus(`${succeeded} archivo${succeeded===1?'':'s'} guardado${succeeded===1?'':'s'} en Desktop.`);
+  try{await renderDesktop()}catch(e){setStatus('Der Upload ist fertig, aber der Desktop konnte nicht aktualisiert werden. Bitte neu laden.');return}
+  if(failed.length)setStatus(`${succeeded} Datei${succeeded===1?'':'en'} gespeichert; ${failed.length} nicht gespeichert: ${failed.join(', ')}. Bitte diese erneut hochladen.`);
+  else setStatus(`${succeeded} Datei${succeeded===1?'':'en'} auf dem Desktop gespeichert.`);
 }
-async function openFile(id){const f=files.find(x=>x.id===id);if(!f)return;const {data,error}=await sb.storage.from('minds-work').createSignedUrl(f.storage_path,900);if(error||!data?.signedUrl){setStatus('No pude abrir el archivo.');return}window.open(data.signedUrl,'_blank','noopener')}
+async function openFile(id){const f=files.find(x=>x.id===id);if(!f)return;const {data,error}=await sb.storage.from('minds-work').createSignedUrl(f.storage_path,900);if(error||!data?.signedUrl){setStatus('Die Datei konnte nicht geöffnet werden.');return}window.open(data.signedUrl,'_blank','noopener')}
 async function loadPlanner(){
   let {data:b,error:be}=await sb.from('minds_work_buckets').select('id,name,sort_order,archived').eq('project_id',project.id).eq('archived',false).order('sort_order').order('id');if(be)throw be;
   if(!b?.length){
@@ -701,7 +724,7 @@ async function loadPlanner(){
 function localIso(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
 function taskMeta(t){
   const parts=[];if(t.priority&&t.priority!=='normal')parts.push(t.priority==='urgent'?'Dringend':t.priority==='important'?'Wichtig':'Niedrig');
-  const ids=t.assignee_person_ids||[],name=ids.length?ids.map(id=>team.find(p=>p.id===id)?.name||'Responsable').join(', '):t.assignee;
+  const ids=t.assignee_person_ids||[],name=ids.length?ids.map(id=>team.find(p=>p.id===id)?.name||'Verantwortlich').join(', '):t.assignee;
   if(name)parts.push(name);
   return parts.join(' · ')
 }
@@ -737,7 +760,7 @@ function taskCard(t){
   const priority=t.priority&&t.priority!=='normal'
     ?t.priority==='urgent'?'Dringend':t.priority==='important'?'Wichtig':'Niedrig':'';
   return `<article class="work-task-card ${t.completed_at?'is-done':''}" draggable="true" data-work-task="${t.id}" tabindex="0">
-    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''}" data-work-toggle="${t.id}" aria-label="${t.completed_at?'Reabrir':'Completar'}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
+    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''}" data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':'Erledigen'}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
     ${firstImage?`<img class="work-task-cover" loading="lazy" ${cached?`src="${esc(cached)}" data-loaded="1"`:''} data-work-task-image="${esc(firstImage.path)}" alt="${esc(firstImage.name||t.title)}">`:''}
     ${checks.length?`<div class="work-card-checks">${checks.slice(0,5).map(x=>`<div class="${x.done?'done':''}"><span class="work-subcheck" aria-hidden="true">${x.done?'✓':''}</span><span>${esc(x.text||'')}</span></div>`).join('')}${checks.length>5?`<div class="work-check-more">+${checks.length-5} weitere</div>`:''}</div>`:''}
     <footer>
@@ -760,7 +783,7 @@ async function renderPlanner(){
   await loadPlanner();team=await window.MINDS_WORK_TEAM.members(project.id);const body=$('#workBody'),unbucketed=tasks.some(t=>!t.work_bucket_id),columns=[...(unbucketed?[{id:'__none',name:'Ohne Bucket',virtual:true}]:[]),...buckets];
   // Buckets side by side by default (scroll sideways on the phone); the list is opt-in.
   const mobileList=localStorage.getItem(WORK_MOBILE_LAYOUT_KEY)==='list';
-  body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${tasks.filter(t=>!t.completed_at).length} offen · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Vista lista en iPhone">Vista lista</button><button type="button" data-work-team>Team · ${team.length}</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button></span></div>
+  body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${tasks.filter(t=>!t.completed_at).length} offen · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Liste</button><button type="button" data-work-team>Team · ${team.length}</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button></span></div>
     <div class="work-board ${mobileList?'mobile-stack':''}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
       <header class="work-bucket-header">${b.virtual
         ?`<strong>${esc(b.name)}</strong>`
@@ -885,7 +908,7 @@ async function persistWorkTaskOrder(id,bucketId,list){
     updated_at:now
   }).eq('id',taskId));
   const results=await Promise.all(writes),failed=results.find(x=>x.error);
-  if(failed){setStatus('No pude guardar el nuevo orden de las Aufgaben.');await renderPlanner();return}
+  if(failed){setStatus('Die neue Reihenfolge der Aufgaben konnte nicht gespeichert werden.');await renderPlanner();return}
   setStatus('');await renderPlanner();setTimeout(()=>window.ISABELLA_SYNC_PULL_NOW?.(),0);
 }
 function closeBucketMenus(root=document){
@@ -1037,11 +1060,11 @@ async function restoreArchivedBucket(id,button){
   await renderPlanner();setStatus('');
 }
 
-function checklistRows(items=[]){return (items||[]).map(x=>`<div class="work-check-row" data-check-id="${esc(x?.id||'')}"><input type="checkbox" data-work-check-done ${x?.done?'checked':''}><input data-work-check-text value="${esc(x?.text||'')}" placeholder="Punto de checklist"><button type="button" data-work-check-remove>×</button></div>`).join('')}
+function checklistRows(items=[]){return (items||[]).map(x=>`<div class="work-check-row" data-check-id="${esc(x?.id||'')}"><input type="checkbox" data-work-check-done ${x?.done?'checked':''}><input data-work-check-text value="${esc(x?.text||'')}" placeholder="Checklistenpunkt"><button type="button" data-work-check-remove>×</button></div>`).join('')}
 function bindChecklist(){$$('[data-work-check-remove]').forEach(b=>b.onclick=()=>b.closest('.work-check-row')?.remove())}
 function attachmentEditorMarkup(){
   const existing=editingAttachments.map((a,i)=>`<div class="work-attachment-row">${a?.path&&String(a?.mime||'').startsWith('image/')?`<img ${cachedWorkUrl(a.path)?`src="${esc(cachedWorkUrl(a.path))}" data-loaded="1"`:''} data-work-edit-image="${esc(a.path)}" alt="">`:'<span>⌕</span>'}<div><strong>${esc(a?.name||'Anlage')}</strong><small>${a?.path?'gespeichert':'Teams-Referenz · Original noch nicht importiert'}</small></div></div>`).join('');
-  const pending=pendingTaskFiles.map((f,i)=>`<div class="work-attachment-row is-pending"><span>＋</span><div><strong>${esc(f.name)}</strong><small>se guarda al guardar la Aufgabe</small></div><button type="button" data-remove-pending="${i}">×</button></div>`).join('');
+  const pending=pendingTaskFiles.map((f,i)=>`<div class="work-attachment-row is-pending"><span>＋</span><div><strong>${esc(f.name)}</strong><small>wird mit der Aufgabe gespeichert</small></div><button type="button" data-remove-pending="${i}">×</button></div>`).join('');
   return existing+pending||'<div class="work-attachment-empty">Noch keine Anlagen</div>';
 }
 function renderAttachmentEditor(){
@@ -1071,7 +1094,7 @@ function editTask(task,bucketId){
     ${task?'<button id="workDeleteTask" class="secondary danger-text">Aufgabe löschen</button>':''}
   </div>`);
   bindChecklist();renderAttachmentEditor();
-  $('#workAddCheck').onclick=()=>{const row=document.createElement('div');row.className='work-check-row';row.dataset.checkId=Math.random().toString(36).slice(2);row.innerHTML='<input type="checkbox" data-work-check-done><input data-work-check-text placeholder="Punto de checklist"><button type="button" data-work-check-remove>×</button>';$('#workChecklist').appendChild(row);bindChecklist()};
+  $('#workAddCheck').onclick=()=>{const row=document.createElement('div');row.className='work-check-row';row.dataset.checkId=Math.random().toString(36).slice(2);row.innerHTML='<input type="checkbox" data-work-check-done><input data-work-check-text placeholder="Checklistenpunkt"><button type="button" data-work-check-remove>×</button>';$('#workChecklist').appendChild(row);bindChecklist()};
   const attachmentInput=$('#workTaskAttachmentInput');$('#workAddAttachment').onclick=()=>attachmentInput.click();attachmentInput.onchange=()=>{pendingTaskFiles.push(...[...(attachmentInput.files||[])]);attachmentInput.value='';renderAttachmentEditor()};
   $('#workSaveTask').onclick=()=>void saveTask(task);
   if(task)$('#workDeleteTask').onclick=()=>void deleteWorkTask(task);
@@ -1080,7 +1103,7 @@ async function deleteWorkTask(task){
   if(!task||!window.confirm(`„${task.title}“ wirklich löschen?`))return;
   const paths=taskAttachments(task).map(a=>a?.path).filter(Boolean);
   const {error}=await sb.from('isabella_tasks').delete().eq('id',task.id);
-  if(error){setStatus('No pude eliminar la Aufgabe.');return}
+  if(error){setStatus('Die Aufgabe konnte nicht gelöscht werden.');return}
   if(paths.length)try{await sb.storage.from('minds-work').remove(paths)}catch{}
   window.ISABELLA_APP?.closeModal?.();await renderPlanner();setTimeout(()=>window.ISABELLA_SYNC_PULL_NOW?.(),0);
 }
@@ -1098,7 +1121,7 @@ async function saveTask(existing){
   let savedId=existing?.id||null,error=null;
   if(existing)({error}=await sb.from('isabella_tasks').update(row).eq('id',existing.id));
   else{const res=await sb.from('isabella_tasks').insert({...row,sort_order:tasks.length*10}).select('id').single();error=res.error;savedId=res.data?.id||null}
-  if(error||!savedId){setStatus('No pude guardar la Aufgabe.');return}
+  if(error||!savedId){setStatus('Die Aufgabe konnte nicht gespeichert werden.');return}
   if(pendingTaskFiles.length){
     const session=await getSession(),next=[...editingAttachments];
     if(session){
