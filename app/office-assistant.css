@@ -20,3 +20,12 @@
 .office-app .office-assistant-history-open[aria-current=true]{background:#f2f3f6}
 .office-app .office-assistant-history-edit{padding:9px 7px;color:#626b75}
 .office-app .office-assistant-history-row button:hover,.office-app .office-assistant-history-row button:focus-visible{background:#f2f3f6}
+
+/* Romy's review cards stay inside Window's original message surface. */
+.office-app .romy-pending-review{align-self:center;width:min(100%,540px);padding:15px 18px;margin:8px auto;border:1px solid #dce2e8;border-radius:14px;background:#f8f9fa;color:#202124}
+.office-app .romy-pending-review strong{font-size:13px}
+.office-app .romy-pending-review p{font-size:13px;line-height:1.5;color:#505a63;overflow-wrap:anywhere}
+.office-app .romy-review-actions{display:flex;gap:8px;justify-content:flex-end}
+.office-app .romy-review-actions button{padding:8px 13px;border:1px solid #d7dbe0;background:#fff;color:#262a30;border-radius:9px;cursor:pointer}
+.office-app .romy-review-actions button:first-child{background:#181818;color:#fff}
+.office-app .romy-review-actions button:disabled{opacity:.5}

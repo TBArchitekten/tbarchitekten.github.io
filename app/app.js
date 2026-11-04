@@ -4693,7 +4693,7 @@ window.ISABELLA_APP={
   },
   setOfficeMessages:(rows)=>{
     if(!OFFICE)return;
-    state.messages=(Array.isArray(rows)?rows:[]).slice(-250).map(m=>({
+    state.messages=(Array.isArray(rows)?rows:[]).map(m=>({
       id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
       text:String(m.content||m.text||''),
       at:String(m.created_at||m.at||new Date().toISOString()),

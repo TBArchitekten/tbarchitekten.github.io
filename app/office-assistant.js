@@ -8,7 +8,7 @@ const screen=document.getElementById('assistantScreen');
 const app=()=>window.ISABELLA_APP;
 if(!sb||!screen)return;
 
-let ownerId=null,threadId=null,threads=[],rows=[],busy=false,loadVersion=0,mode='standard';
+let ownerId=null,threadId=null,threads=[],rows=[],busy=false,loadVersion=0;
 const composer=screen.querySelector('.composer-wrap');
 const statusEl=document.createElement('div');
 statusEl.id='officeAssistantStatus';
@@ -48,12 +48,18 @@ async function refreshThreads(){
 async function loadThread(id,{internal=false}={}){
   if(!ownerId||!id||(busy&&!internal))return false;
   const serial=++loadVersion;
-  const {data,error}=await sb.from('office_assistant_messages')
-    .select('id,role,content,created_at').eq('conversation_id',id)
-    .order('created_at',{ascending:true}).order('id',{ascending:true}).limit(250);
-  if(serial!==loadVersion)return false;
-  if(error){status('Die Nachrichten konnten nicht geladen werden.');return false}
-  threadId=id;rows=data||[];display();status('');
+  const all=[];
+  for(let offset=0;;offset+=1000){
+    const {data,error}=await sb.from('office_assistant_messages')
+      .select('id,role,content,created_at').eq('conversation_id',id)
+      .order('created_at',{ascending:true}).order('id',{ascending:true}).range(offset,offset+999);
+    if(serial!==loadVersion)return false;
+    if(error){status('Die Nachrichten konnten nicht geladen werden.');return false}
+    all.push(...(data||[]));
+    if(!data||data.length<1000)break;
+  }
+  threadId=id;rows=all;display();status('');
+  void showPendingProposals();
   return true;
 }
 function startNew(){
@@ -97,15 +103,6 @@ function openHistory(){
   newBtn.type='button';
   newBtn.addEventListener('click',()=>{app()?.closeModal?.();startNew()});
   controls.appendChild(newBtn);
-  const label=element('label','Antwortmodus ','office-assistant-mode');
-  const select=element('select');
-  for(const [value,title] of [['standard','Schnell'],['gruendlich','Gründlich']]){
-    const option=element('option',title);option.value=value;select.appendChild(option);
-  }
-  select.value=mode;
-  select.addEventListener('change',()=>{mode=select.value});
-  label.appendChild(select);
-  controls.appendChild(label);
   body.appendChild(controls);
   if(!threads.length){
     body.appendChild(element('p','Noch keine Gespräche.','small'));
@@ -132,44 +129,87 @@ function openHistory(){
   body.appendChild(list);
 }
 function showAttachmentNotice(){
-  status('Dateianhänge im Büro-Chat sind noch nicht freigeschaltet. Text und Sprache funktionieren.');
+  status('Dateianhänge im Romy-Chat sind noch nicht freigeschaltet. Text und Sprache funktionieren.');
 }
-async function send(message,{attachments=[]}={}){
+async function showPendingProposals(){
+  if(!ownerId||!threadId)return;
+  const current=threadId;
+  const {data,error}=await sb.from('office_romy_proposals')
+    .select('id,kind,payload,status').eq('conversation_id',threadId).eq('status','pending')
+    .order('created_at',{ascending:true});
+  if(error||current!==threadId)return;
+  const target=document.getElementById('messages');
+  if(!target)return;
+  target.querySelectorAll('.romy-pending-review').forEach(x=>x.remove());
+  for(const p of data||[]){
+    const item=element('div',null,'romy-pending-review');
+    const title=p.kind==='create_event'?'Terminvorschlag':'Aufgabenvorschlag';
+    item.appendChild(element('strong',title));
+    const details=p.payload||{};
+    const when=p.kind==='create_event'
+      ?[details.starts_at,details.ends_at].filter(Boolean).join(' – ')
+      :(details.due_date||'Ohne Fälligkeitsdatum');
+    item.appendChild(element('p',String(details.title||'')+' · '+when));
+    if(details.notes)item.appendChild(element('p',String(details.notes)));
+    const actions=element('div',null,'romy-review-actions');
+    for(const [name,decision] of [['Bestätigen','apply'],['Verwerfen','reject']]){
+      const button=element('button',name);
+      button.type='button';
+      button.addEventListener('click',async()=>{
+        if(decision==='apply'&&!window.confirm('„'+String(details.title||'')+'“ in TBA Office anlegen?'))return;
+        actions.querySelectorAll('button').forEach(b=>b.disabled=true);
+        try{
+          const {data:result,error:actionError}=await sb.functions.invoke('office-assistant',{
+            body:{action:'review_proposal',proposal_id:p.id,decision}
+          });
+          if(actionError||result?.error)throw Error(result?.error||'review_failed');
+          status(decision==='apply'?'Änderung bestätigt und im Office gespeichert.':'Vorschlag verworfen.');
+          await window.ISABELLA_SYNC_PULL_NOW?.();
+          void showPendingProposals();
+        }catch(error){
+          status('Der Vorschlag konnte nicht angewendet werden. Bitte prüfen Sie die Berechtigung.');
+          actions.querySelectorAll('button').forEach(b=>b.disabled=false);
+        }
+      });
+      actions.appendChild(button);
+    }
+    item.appendChild(actions);target.appendChild(item);
+  }
+}
+async function send(message,{attachments=[],replyTo=null}={}){
   await initialized;
   if(busy)return;
   if(!ownerId){status('Bitte melden Sie sich erneut im Office an.');return}
   if(attachments.length){showAttachmentNotice();return}
   const text=String(message||'').trim();
-  if(!text||text.length>4000){status('Bitte eine Nachricht mit maximal 4000 Zeichen eingeben.');return}
+  if(!text)return;
   if(!globalThis.crypto?.randomUUID){status('Dieser Browser unterstützt keine sichere Nachrichten-ID.');return}
   busy=true;
-  const requestId=crypto.randomUUID();
-  const targetThread=threadId;
-  display([...rows,{id:requestId,role:'user',content:text,created_at:new Date().toISOString()}]);
+  const requestId=crypto.randomUUID(),targetThread=threadId;
+  const optimistic={id:requestId,role:'user',content:text,created_at:new Date().toISOString()};
+  display([...rows,optimistic]);
   const sendButton=document.getElementById('sendButton');
   if(sendButton)sendButton.disabled=true;
   let failure='';
-  status('Der Assistent antwortet …');
+  status('Romy antwortet …');
   try{
-    const {data,error}=await sb.functions.invoke('office-assistant',{
-      body:{message:text,mode,conversation_id:targetThread,request_id:requestId}
+    const result=await window.TBA_ROMY_TRANSPORT.send({
+      message:text,conversationId:targetThread,requestId,replyTo,
+      onDelta:(_delta,partial)=>display([...rows,optimistic,
+        {id:requestId+':assistant',role:'assistant',content:partial,
+          created_at:new Date().toISOString()}]),
     });
-    if(error){
-      let body={};
-      try{body=await error.context?.clone?.().json()}catch{}
-      failure=errorMessage(body?.error);
-    }else if(data?.conversation_id&&data?.reply){
-      threadId=data.conversation_id;
-    }else failure=errorMessage('invalid_reply');
-  }catch(err){
-    console.error('office_assistant_request_error',String(err?.name||'request_error'));
-    failure=errorMessage('request_unconfirmed');
+    if(result?.conversation_id&&result?.reply)threadId=result.conversation_id;
+    else failure=errorMessage('invalid_reply');
+  }catch(error){
+    console.error('romy_transport_failed',String(error?.message||'request_error'));
+    failure=errorMessage(error?.message||'request_unconfirmed');
   }finally{
     busy=false;
     if(sendButton)sendButton.disabled=false;
     await refreshThreads();
-    const toOpen=threadId||threads[0]?.id;
-    if(toOpen)await loadThread(toOpen,{internal:true});
+    const target=threadId||threads[0]?.id;
+    if(target)await loadThread(target,{internal:true});
     else{rows=[];display();}
     if(failure)status(failure);
   }
