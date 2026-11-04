@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Cierre del PR #27: adjuntos privados de Romy · ChatGPT
+- **Qué cambió y por qué:** PR #27 integrado en main (squash `ca12d910`). Picker, normalización y subida de archivos en el chat original de Window, adaptados a almacenamiento y sesiones individuales de TBA Office. Romy recibe `input_file`/`input_image` y almacena referencias privadas.
+- **Archivos:** docs/ESTADO.md y docs/BITACORA.md; código y migración del PR #27.
+- **Base de datos:** `office_romy_uploads_v1` aplicada como versión `20261104230525`; bucket privado, tres políticas de Storage y columna `attachments`.
+- **Deploy de funciones:** `office-assistant` ACTIVE v4, `verify_jwt=true`, seis archivos.
+- **Cómo se probó:** CI 108/108 PASS; SQL rollback con comprobación de propietario y usuario ajeno; Security Advisors sin avisos; referencia de frontend en `main` verificada.
+- **Quedó pendiente o sin probar:** subida y lectura reales en Safari, formatos PDF/DOCX/imagen, prueba con dos empleados, seguimiento de adjuntos entre turnos y paridad funcional completa con Isabella (artifacts, skills, memory, trabajo persistente).
+- **Riesgos o decisiones que necesitan a Gari:** no se cambia ninguna cuota ni permiso sin acuerdo; ningún documento confidencial se ha cargado durante las pruebas.
+- **PR:** #28 (solo documentación).
+
+
 ### 2026-11-04 · Adjuntos del chat de Romy reutilizados de Window · ChatGPT
 - **Qué cambió y por qué:** Gari exige recuperar las capacidades existentes de Isabella sin crear otra aplicación. Se reactiva el picker, preprocesador y uploader del chat original de Window; Romy almacena archivos en bucket privado por empleado y entrega imágenes/documentos al modelo con el mismo contrato de Window.
 - **Archivos:** app/app.js, app/office-assistant.js, app/romy-transport.js, app/index.html, supabase/functions/office-assistant/index.ts, supabase/functions/office-assistant/romy-attachments.mjs, supabase/migrations/20261104235500_office_romy_uploads_v1.sql, tests/office-romy-attachments.test.mjs y documentación.
