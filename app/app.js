@@ -757,7 +757,7 @@ function artifactMarkup(a,compact=false){
   const label=({docx:'WORD',pdf:'PDF',xlsx:'EXCEL',pptx:'POWERPOINT',csv:'CSV',zip:'ZIP',html:'HTML',txt:'TXT',json:'JSON'}[kind]||kind.toUpperCase());
   return `<a class="generated-artifact generated-file ${compact?'compact':''}" data-artifact-file="${esc(path)}" href="#" target="_blank" rel="noopener"><span>${esc(label)}</span><strong>${esc(title)}</strong><em>Abrir archivo ↗</em></a>`;
 }
-async function artifactSignedUrl(path,expires=3600){return signedAssetUrl('minds-artifacts',path,expires)}
+async function artifactSignedUrl(path,expires=3600){return signedAssetUrl(OFFICE?'office-romy-artifacts':'minds-artifacts',path,expires)}
 async function openArtifactImage(path,title='Imagen'){
   const url=await artifactSignedUrl(path,3600);if(!url)return;
   modal(title,`<div class="artifact-image-viewer"><img src="${esc(url)}" alt="${esc(title)}"></div>`);
@@ -788,7 +788,7 @@ function observeStorageImage(node,bucket,path){
 }
 async function hydrateArtifactFiles(root=document){
   const images=[...root.querySelectorAll('[data-artifact-image]')].filter(x=>!x.dataset.loaded);
-  for(const img of images)observeStorageImage(img,'minds-artifacts',img.dataset.artifactImage||'');
+  for(const img of images)observeStorageImage(img,OFFICE?'office-romy-artifacts':'minds-artifacts',img.dataset.artifactImage||'');
   const files=[...root.querySelectorAll('[data-artifact-file]')].filter(x=>!x.dataset.loaded);
   await Promise.all(files.map(async node=>{
     const path=node.dataset.artifactFile;if(!path)return;
@@ -4694,7 +4694,7 @@ window.ISABELLA_APP={
       id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
       text:String(m.content||m.text||''),
       at:String(m.created_at||m.at||new Date().toISOString()),
-      metadata:{},sources:[],attachments:Array.isArray(m.attachments)?m.attachments:[],artifacts:[],quickReplies:[]
+      metadata:m.metadata&&typeof m.metadata==='object'?m.metadata:{},sources:[],attachments:Array.isArray(m.attachments)?m.attachments:[],artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[],quickReplies:[]
     }));
     renderMessages(true);
   },
