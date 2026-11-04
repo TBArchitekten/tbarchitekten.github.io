@@ -17,6 +17,15 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Assistent: cierre de integración · ChatGPT
+- Qué cambió: PR #18 integrado en main.
+- Archivos: ESTADO.md y BITACORA.md.
+- Migración: aplicada anteriormente.
+- Deploy: función activa.
+- Pruebas: 95/95 correctas.
+- Pendiente: aceptación real con empleados, primera conversación y presupuesto definitivo.
+- PR: #19.
+
 ### 2026-11-04 · Assistent individual por miembro · ChatGPT
 - Qué cambió y por qué: se preparó un chat privado para cada cuenta activa de TBA Office, con conversaciones persistentes y modos Schnell y Gründlich. No se copia la memoria de Window ni se consultan automáticamente archivos o calendarios.
 - Archivos: app/office-assistant.js, app/office-assistant.css, app/shell.js, app/app.js, app/index.html, supabase/functions/office-assistant/index.ts, supabase/migrations/20261104220000_office_assistant_personal_v1.sql y tests.
