@@ -1,0 +1,784 @@
+/* MINDS · Calendar time grid, cards, workspace and shell · 2026-10-31
+   1 Shell: no top bar on desktop (orb removed, ••• lives under Thoughts).
+   2 Week: proportional time grid; event cards, chips and day pills share one card.
+   3 Month agenda rows, plan bars and the shared modal on the Planner language.
+   4 Ideas workspace: formatted replies and drafts; every send is the blue Chat send.
+   5 Working state: three soft "typing" dots; the send button rests while Isabella works.
+   Presentation only; markup hooks stay as the JavaScript renders them. */
+
+/* 1 · Shell ─────────────────────────────────────────────────────────────── */
+@media(min-width:950px){
+  body.desk-enabled .app{grid-template-rows:0 minmax(0,1fr)!important}
+  body.desk-enabled .topbar{display:none!important}
+  body.desk-enabled .orb-dock{display:none!important}
+  body.desk-enabled #desktopLenses .lens-menu-slot{
+    display:flex;
+    flex:0 0 auto;
+    min-height:44px;
+    margin:2px 0 0;
+    justify-content:flex-start;
+  }
+  body.desk-enabled #desktopLenses .lens-menu-slot .dots{
+    display:grid;place-items:center;
+    width:44px;height:44px;min-height:44px;
+    margin-left:2px;
+    padding:0 0 2px;
+    border:0;
+    border-radius:12px;
+    background:transparent;
+    color:#646a74;
+    font-size:16px;
+    letter-spacing:.1em;
+    line-height:1;
+    cursor:pointer;
+    transition:background-color .15s ease,color .15s ease;
+  }
+  body.desk-enabled.minds-nav-collapsed #desktopLenses .lens-menu-slot{justify-content:center}
+  body.desk-enabled.minds-nav-collapsed #desktopLenses .lens-menu-slot .dots{margin-left:0}
+  body.desk-enabled #desktopLenses .lens-menu-slot .dots:hover{background:#f5f6f8;color:#1d1d1f}
+}
+
+/* 2 · Week time grid ───────────────────────────────────────────────────── */
+body .app .calendar-content:has(.week-timegrid) .minds-native-plan-week{
+  min-width:910px;
+  padding-left:72px;padding-right:16px;
+}
+body .app .week.week-timegrid{
+  display:block;
+  min-width:910px;
+  padding:0 16px 32px;
+  gap:0;
+}
+body .app .week-timegrid :is(.wk-head,.wk-allday,.wk-body){
+  display:grid;
+  grid-template-columns:56px repeat(7,minmax(0,1fr));
+}
+body .app .week-timegrid .wk-head{
+  position:sticky;top:0;z-index:5;
+  background:#fff;
+  border-bottom:1px solid rgba(37,45,59,.09);
+}
+body .app .week-timegrid .wk-dayhead{
+  display:flex;align-items:center;gap:6px;
+  padding:10px 10px 8px;
+  border-left:1px solid transparent;
+  color:#5d626a;
+  font-size:12px;font-weight:560;
+  text-transform:capitalize;
+}
+body .app .week-timegrid .wk-dayhead strong{
+  display:grid;place-items:center;
+  min-width:28px;height:28px;
+  border-radius:50%;
+  color:#1d1d1f;
+  font-size:16px;font-weight:650;
+  font-variant-numeric:tabular-nums;
+}
+body .app .week-timegrid .wk-dayhead.is-today{color:#c33c4a}
+body .app .week-timegrid .wk-dayhead.is-today strong{
+  color:#c33c4a;
+  box-shadow:inset 0 0 0 1px rgba(195,60,74,.35);
+}
+body .app .week-timegrid .wk-allday{
+  border-bottom:1px solid rgba(37,45,59,.09);
+}
+body .app .week-timegrid .wk-allday-label{
+  padding:11px 8px 0 0;
+  text-align:right;
+  color:#8a8f98;
+  font-size:10.5px;font-weight:560;
+  line-height:1.2;
+}
+body .app .week-timegrid .wday{
+  display:flex;flex-direction:column;gap:4px;
+  min-height:42px;
+  padding:6px 5px;
+  border-left:1px solid rgba(37,45,59,.07);
+}
+body .app .week-timegrid .wday.week-drop-target{background:rgba(0,122,255,.05)}
+body .app .week-timegrid .wk-body{padding-top:8px}
+body .app .week-timegrid .wk-hours{
+  position:relative;
+  height:calc(var(--wk-hours) * var(--wk-hour));
+}
+body .app .week-timegrid .wk-hours span{
+  position:absolute;right:8px;
+  transform:translateY(-50%);
+  color:#8a8f98;
+  font-size:10.5px;font-weight:500;
+  font-variant-numeric:tabular-nums;
+}
+body .app .week-timegrid .wk-col{
+  position:relative;
+  height:calc(var(--wk-hours) * var(--wk-hour));
+  border-left:1px solid rgba(37,45,59,.07);
+  background-image:
+    linear-gradient(to bottom,rgba(37,45,59,.08) 1px,transparent 1px),
+    linear-gradient(to bottom,transparent calc(50% - .5px),rgba(37,45,59,.035) calc(50% - .5px),rgba(37,45,59,.035) calc(50% + .5px),transparent calc(50% + .5px));
+  background-size:100% var(--wk-hour);
+}
+body .app .week-timegrid .wk-col.is-today{background-color:rgba(0,122,255,.022)}
+body .app .week-timegrid .wk-now{
+  position:absolute;left:-1px;right:0;z-index:3;
+  height:0;border-top:1.5px solid #c33c4a;
+  pointer-events:none;
+}
+body .app .week-timegrid .wk-now::before{
+  content:"";position:absolute;left:-4px;top:-4.5px;
+  width:7px;height:7px;border-radius:50%;background:#c33c4a;
+}
+/* One event card for Week and Day: tinted by its category, hairline, soft shadow. */
+body .app .week-timegrid .wk-event,
+body .app .hours .event{
+  background:color-mix(in srgb,var(--item-color,#2f6fb0) 12%,#fff);
+  border:1px solid color-mix(in srgb,var(--item-color,#2f6fb0) 22%,#fff);
+  border-left:3px solid var(--item-color,#2f6fb0);
+  border-radius:8px;
+  box-shadow:0 1px 2px rgba(15,19,30,.04);
+  color:#1d1d1f;
+  transition:box-shadow .15s ease,background-color .15s ease;
+}
+body .app .week-timegrid .wk-event:hover,
+body .app .hours .event:hover{
+  background:color-mix(in srgb,var(--item-color,#2f6fb0) 18%,#fff);
+  box-shadow:0 3px 10px rgba(28,33,48,.10);
+  z-index:2;
+}
+body .app .week-timegrid .wk-event{
+  position:absolute;
+  left:calc(var(--wk-left) * 100% + 2px);
+  width:calc(var(--wk-width) * 100% - 4px);
+  display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  overflow:hidden;
+  margin:0;
+  padding:4px 7px 4px 7px;
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+body .app .week-timegrid .wk-event b,
+body .app .hours .event b{
+  font-size:12px;font-weight:620;line-height:1.3;letter-spacing:-.005em;
+  color:#1d1d1f;
+}
+body .app .week-timegrid .wk-event b{
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+body .app .week-timegrid .wk-event .wk-time{
+  color:color-mix(in srgb,var(--item-color,#2f6fb0) 45%,#5d626a);
+  font-size:11px;font-weight:500;
+  font-variant-numeric:tabular-nums;
+}
+body .app .week-timegrid .wk-event.is-compact{justify-content:center;padding-top:1px;padding-bottom:1px}
+body .app .week-timegrid .wk-event.is-compact b{
+  display:block;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:100%;
+  font-size:11.5px;
+}
+body .app .hours .event .meta{
+  color:color-mix(in srgb,var(--item-color,#2f6fb0) 45%,#5d626a);
+  font-size:11px;
+}
+/* Work sessions keep their own signal: dashed rule and a faint hatch. */
+body .app :is(.week-timegrid .wk-event,.hours .event,.wk-chip-event).is-work-session{
+  border-left-style:dashed;
+  background-image:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--item-color,#2f6fb0) 8%,transparent) 6px 8px);
+}
+/* All-day chips (Week) and pills (Day) are small Planner cards. */
+body .app .week-timegrid .wk-chip,
+body .app .day-all .pill{
+  display:flex;align-items:center;gap:6px;
+  min-height:26px;
+  margin:0;
+  padding:4px 8px 4px 7px;
+  border:1px solid rgba(25,28,36,.09);
+  border-radius:8px;
+  background:#fff;
+  color:#25262b;
+  font:inherit;
+  font-size:11.5px;font-weight:560;line-height:1.3;
+  text-align:left;
+  box-shadow:0 1px 2px rgba(20,24,35,.03);
+  cursor:pointer;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+body .app .week-timegrid .wk-chip{width:100%}
+body .app .day-all .pill{display:inline-flex;margin:3px 4px 3px 0}
+body .app .day-all>div{display:flex;flex-wrap:wrap;align-items:center}
+body .app :is(.week-timegrid .wk-chip,.day-all .pill):hover{
+  border-color:rgba(35,44,63,.16);
+  box-shadow:0 3px 10px rgba(28,33,48,.08);
+}
+body .app .week-timegrid .wk-chip-label{
+  min-width:0;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+body .app .wk-check{
+  flex:none;
+  width:11px;height:11px;
+  border:1.5px solid var(--item-color,#9ba1aa);
+  border-radius:50%;
+  background:#fff;
+}
+body .app .task-done .wk-check{background:var(--item-color,#9ba1aa);border-color:var(--item-color,#9ba1aa)}
+body .app :is(.week-timegrid .wk-chip,.day-all .pill).task-done{
+  color:#96999f;text-decoration:line-through;box-shadow:none;background:#fafbfc;
+}
+body .app .week-timegrid .wk-chip-event{
+  border-left:3px solid var(--item-color,#2f6fb0);
+  background:color-mix(in srgb,var(--item-color,#2f6fb0) 10%,#fff);
+}
+body .app .week-timegrid .minds-team-day-entry{
+  border-style:dashed;color:#6b7079;background:#fafbfc;box-shadow:none;
+}
+body .app .day-all .pill.is-span{background:#fafbfc}
+body .app .day-all .pill .pill-span{margin-left:4px;color:#8a8f98;font-size:11px;font-weight:500}
+body .app .day-all{border-bottom-color:rgba(37,45,59,.09)}
+body .app .day-all>b{display:block;margin:0 0 6px;font-size:12px;font-weight:650;color:#25262b}
+
+/* 3 · Plan bars, month agenda, modal ─────────────────────────────────────── */
+body .app .minds-native-plan-week{border-bottom-color:rgba(37,45,59,.09)}
+body .app .minds-plan-span-grid{grid-auto-rows:26px;row-gap:4px;column-gap:4px}
+body .app .minds-plan-span-bar{
+  border:1px solid color-mix(in srgb,var(--item-color,#637a9a) 26%,#fff);
+  border-radius:7px;
+  background:color-mix(in srgb,var(--item-color,#637a9a) 11%,#fff);
+  color:#25262b;
+  font-size:11.5px;font-weight:600;
+}
+body .app .minds-plan-span-label{padding:3px 7px}
+body .app .minds-plan-span-identity{font-size:10.5px;font-weight:500;color:#6b7079;opacity:1}
+body .app .minds-month-span-week .minds-plan-span-bar{border-radius:6px}
+body .app .minds-month-span-week .minds-plan-span-label{font-size:10.5px;padding:2px 6px}
+body .app .agenda-head{
+  padding:10px 0;
+  color:#8a8f98;font-size:10.5px;font-weight:650;letter-spacing:.07em;
+}
+body .app .agenda-item{
+  align-items:center;
+  padding:12px 0;
+  border-bottom-color:rgba(37,45,59,.09);
+  grid-template-columns:24px minmax(0,1fr) auto;
+  gap:11px;
+}
+body .app .agenda-item strong{font-size:14px;font-weight:625;letter-spacing:-.011em;color:#202126}
+body .app .agenda-item .meta{margin-top:2px;font-size:12px;color:#727680}
+body .app .agenda-item .adot{
+  justify-self:center;margin:0;
+  width:9px;height:9px;
+  background:var(--item-color,#9ba1aa);
+}
+body .app .agenda-item .task-check{
+  display:grid;place-items:center;
+  width:24px;height:24px;min-width:24px;
+  padding:0;
+  border:1.6px solid #9ba1aa;
+  border-radius:50%;
+  background:#fff;color:#fff;
+  font-size:13px;font-weight:750;line-height:1;
+  cursor:pointer;
+}
+body .app .agenda-item .task-check:hover{border-color:#007aff;background:#f2f8ff}
+body .app .agenda-item .task-check.checked{background:#007aff;border-color:#007aff}
+body .app .agenda-item .atime{font-size:12px;color:#6b7079;font-variant-numeric:tabular-nums}
+body .app .agenda-item.is-span .atime{color:#8a8f98}
+body .app .agenda-item .drag-handle{color:#b4b9c1;font-size:16px;letter-spacing:normal}
+body .app .agenda-item .drag-handle:hover{color:#5d626a}
+body .app .month-session-link{
+  border:1px solid rgba(25,28,36,.09);border-radius:8px;background:#fff;
+  color:#5d626a;font-size:11.5px;padding:4px 8px;
+}
+/* Shared modal and drawer: Work dialog language (system type, blue primary, soft fields). */
+#modal.modal{
+  padding:24px;
+  border:1px solid rgba(37,45,59,.06);
+  border-radius:22px;
+  box-shadow:0 28px 90px rgba(14,19,30,.19),0 4px 20px rgba(16,22,34,.07);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;
+}
+#modal .modal-title,#drawer .drawer-title{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Arial,sans-serif;
+  font-size:22px;font-weight:700;letter-spacing:-.025em;line-height:1.2;color:#17181c;
+}
+#modal .modal-head{margin-bottom:18px}
+#modal #closeModal,#drawer .drawer-head .round{
+  width:34px;height:34px;min-width:34px;min-height:34px;
+  border:0;border-radius:50%;
+  background:#f3f3f5;color:#595e67;
+  font-size:19px;line-height:1;
+}
+#modal #closeModal:hover,#drawer .drawer-head .round:hover{background:#e8eaf0;color:#151515}
+#modal .form{gap:12px}
+#modal .form label{gap:6px;font-size:12px;font-weight:560;color:#5d626a}
+#modal .form :is(input,select,textarea){
+  min-height:42px;
+  padding:10px 12px;
+  border:1px solid #dadde4;
+  border-radius:11px;
+  background:#fbfbfd;
+  color:#1d1d1f;
+  font-family:inherit;font-size:14px;
+}
+#modal .form :is(input,select,textarea):focus{
+  outline:3px solid rgba(0,122,255,.18);border-color:rgba(0,122,255,.55);background:#fff;
+}
+#modal .primary,#drawer .primary{
+  min-height:44px;
+  border:0;border-radius:12px;
+  background:#007aff;color:#fff;
+  font-family:inherit;font-size:14px;font-weight:600;
+  box-shadow:0 2px 6px rgba(0,122,255,.17);
+}
+#modal .primary:hover,#drawer .primary:hover{background:#0069db}
+#modal .secondary,#drawer .secondary{
+  min-height:44px;
+  border:0;border-radius:12px;
+  background:#f1f3f6;color:#25262b;
+  font-family:inherit;font-size:14px;font-weight:560;
+}
+#modal .secondary:hover,#drawer .secondary:hover{background:#e8ebf0}
+#modal .danger-text{color:#c32231}
+
+/* 4 · Ideas workspace and secondary composers ─────────────────────────────── */
+.app .send>.chat-ui-icon{display:block;width:18px;height:18px;pointer-events:none}
+:is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send{
+  display:grid;place-items:center;
+  border:0;border-radius:50%;
+  background:#007aff!important;
+  color:#fff!important;
+  box-shadow:none;
+}
+:is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send:hover{background:#0069db!important}
+.idea-workspace-form .send,.feed-thread-form .send{width:46px;height:46px;min-width:46px;flex:none}
+.idea-markdown-render{font-size:14px;line-height:1.62;color:#2a3039}
+.idea-markdown-artifact .idea-markdown-render{
+  padding:16px 18px;
+  border:1px solid rgba(30,33,45,.09);
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(15,19,30,.035),0 5px 16px rgba(27,32,45,.035);
+}
+.idea-message-draft{
+  margin-top:12px;
+  padding:14px 16px;
+  border:1px solid rgba(30,33,45,.09);
+  border-radius:14px;
+  background:#fafbfc;
+}
+.idea-message-draft .idea-artifact-label,.idea-markdown-artifact .idea-artifact-label{
+  margin-bottom:8px;
+  font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:#8a8f98;
+}
+.idea-draft-cut{margin:10px 0 0;font-size:12px;color:#9a5b00}
+
+/* 5 · Working state ─ Isabella "typing": three soft dots, never a spinner or colour ring.
+   Chat: the status line becomes a typing bubble where the reply will appear and the
+   send button simply rests (dimmed). Other composers show the dots inside their send. */
+.send.is-working::before,.surface-refresh.is-working::before{
+  content:none;
+  animation:none;
+  -webkit-mask:none;mask:none;
+}
+.composer .send.is-working,
+body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .composer .send.is-working,
+body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .composer .send.is-working:hover{
+  background:#9ec9ff!important;
+  color:#fff!important;
+  box-shadow:none!important;
+  cursor:default;
+}
+:is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send.is-working{color:transparent!important}
+:is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send.is-working>svg{opacity:0}
+:is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send.is-working::after{
+  content:"";
+  position:absolute;
+  left:50%;top:50%;
+  width:4px;height:4px;
+  margin:-2px 0 0 -2px;
+  border-radius:50%;
+  background:rgba(255,255,255,.4);
+  box-shadow:-7px 0 0 #fff,7px 0 0 rgba(255,255,255,.4);
+  animation:minds-dots-light 1.2s ease-in-out infinite;
+}
+.app .chat-activity:not(:empty){
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  width:max-content;
+  max-width:100%;
+  margin:8px 0 4px;
+  padding:9px 14px 9px 13px;
+  border-radius:18px;
+  background:#f2f4f7;
+  color:#6b7079;
+  font-size:12.5px;
+  line-height:1.35;
+}
+.app .chat-activity:not([hidden]):not(:empty)::before{
+  content:"";
+  flex:0 0 auto;
+  width:5px;height:5px;
+  margin-right:16px;
+  border-radius:50%;
+  background:#c3c8cf;
+  box-shadow:8px 0 0 #c3c8cf,16px 0 0 #c3c8cf;
+  opacity:1;
+  animation:minds-dots-soft 1.2s ease-in-out infinite;
+}
+.app .surface-text-action.is-working::before{
+  content:"";
+  display:inline-block;
+  width:4px;height:4px;
+  margin:0 17px 0 1px;
+  border-radius:50%;
+  background:#c3c8cf;
+  box-shadow:6px 0 0 #c3c8cf,12px 0 0 #c3c8cf;
+  vertical-align:2px;
+  animation:minds-dots-soft 1.2s ease-in-out infinite;
+}
+/* One dot lifts at a time, left to right (dot = element, then its two shadows). */
+@keyframes minds-dots-soft{
+  0%,100%{background:#7d848f;box-shadow:8px 0 0 #c3c8cf,16px 0 0 #c3c8cf}
+  33%{background:#c3c8cf;box-shadow:8px 0 0 #7d848f,16px 0 0 #c3c8cf}
+  66%{background:#c3c8cf;box-shadow:8px 0 0 #c3c8cf,16px 0 0 #7d848f}
+}
+@keyframes minds-dots-light{
+  0%,100%{box-shadow:-7px 0 0 #fff,7px 0 0 rgba(255,255,255,.4);background:rgba(255,255,255,.4)}
+  33%{box-shadow:-7px 0 0 rgba(255,255,255,.4),7px 0 0 rgba(255,255,255,.4);background:#fff}
+  66%{box-shadow:-7px 0 0 rgba(255,255,255,.4),7px 0 0 #fff;background:rgba(255,255,255,.4)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .app .chat-activity::before,.app .surface-text-action.is-working::before,
+  :is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send.is-working::after{
+    animation:none!important;
+  }
+  body .app :is(.week-timegrid .wk-event,.hours .event,.week-timegrid .wk-chip,.day-all .pill),
+  body.desk-enabled #desktopLenses .lens-menu-slot .dots{transition:none!important}
+}
+@media(prefers-contrast:more){
+  body .app :is(.week-timegrid .wk-event,.hours .event){border-color:var(--item-color,#2f6fb0)}
+  body .app .week-timegrid .wk-col{border-left-color:#9aa1ab}
+}
+
+/* Workspace and story headings use the system face like every other title. */
+.idea-workspace h1,.feed-detail h1{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Arial,sans-serif;
+  font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.15;color:#17181c;
+}
+.idea-workspace .eyebrow,.idea-workspace-status,.feed-detail-head .eyebrow{
+  font-size:10.5px;font-weight:650;letter-spacing:.07em;color:#8a8f98;
+}
+.idea-workspace-status{margin-top:4px}
+@media(max-width:520px){.idea-workspace h1,.feed-detail h1{font-size:26px}}
+
+/* 7. AI credit: Uso IA panel and the Ahora signal. Same quiet cards as Work; one accent only when it matters. */
+#modal .credit-panel{gap:22px;min-width:0}
+#modal .credit-panel>*{min-width:0}
+#modal .credit-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#modal .credit-summary>div{align-content:start;gap:4px;padding:14px 14px 13px;border:1px solid #e9ebef;border-radius:14px;background:#fff}
+#modal .credit-summary span{font-size:10px;font-weight:650;letter-spacing:.07em;color:#8a8f98}
+#modal .credit-summary strong{font-size:23px;font-weight:600;letter-spacing:-.02em;color:#17181c;font-variant-numeric:tabular-nums}
+#modal .credit-summary small{font-size:11.5px;line-height:1.4;color:#7a7f88}
+#modal .credit-summary.is-low>div:first-child{border-color:rgba(214,138,0,.35);background:#fffaf0}
+#modal .credit-summary.is-critical>div:first-child,#modal .credit-summary.is-empty>div:first-child{border-color:rgba(215,48,48,.32);background:#fff6f6}
+#modal .credit-summary.is-low>div:first-child strong{color:#a76400}
+#modal .credit-summary.is-critical>div:first-child strong,#modal .credit-summary.is-empty>div:first-child strong{color:#c32231}
+#modal .credit-form{display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
+#modal .credit-form label{font-size:12px;font-weight:560;color:#5d626a}
+#modal .credit-form-row{display:flex;gap:8px}
+#modal .credit-form input{flex:1 1 0%;width:0;min-width:0;min-height:42px;padding:10px 12px;border:1px solid #dadde4;border-radius:11px;background:#fbfbfd;color:#1d1d1f;font:500 14px/1.2 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
+#modal .credit-form input:focus{outline:3px solid rgba(0,122,255,.18);border-color:rgba(0,122,255,.55);background:#fff}
+#modal .credit-form button{min-height:42px;padding:0 18px;border:0;border-radius:11px;background:#007aff;color:#fff;font:600 14px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;cursor:pointer}
+#modal .credit-form button:hover{background:#0069db}
+#modal .credit-form small,#modal .credit-note{font-size:11.5px;line-height:1.45;color:#7a7f88}
+#modal .credit-form output{font-size:12px;color:#5d626a;min-height:0}
+#modal .credit-form output:empty{display:none}
+#modal .credit-heading{margin:0 0 10px;font-size:13px;font-weight:650;letter-spacing:-.01em;color:#25262b}
+#modal .credit-chart{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px;align-items:end;height:132px;padding:0 2px}
+#modal .credit-day{display:grid;grid-template-rows:16px 1fr 16px;gap:4px;height:100%;min-width:0;text-align:center}
+#modal .credit-day-value{font-size:9.5px;color:#6b7079;white-space:nowrap;overflow:visible;font-variant-numeric:tabular-nums;align-self:end}
+#modal .credit-day-bar{position:relative;display:block;border-radius:5px;background:#f2f3f6;overflow:hidden}
+#modal .credit-day-bar i{position:absolute;left:0;right:0;bottom:0;border-radius:5px;background:#007aff}
+#modal .credit-day-label{font-size:9.5px;color:#8a8f98;white-space:nowrap;font-variant-numeric:tabular-nums}
+#modal .credit-day-flag,#modal .credit-note b{color:#d68a00;font-weight:750;margin-left:1px}
+#modal .credit-chart-wrap .credit-note{margin:10px 0 0}
+#modal .credit-row strong{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+#modal .credit-row em{font-size:11px}
+@media(max-width:560px){
+  #modal .credit-summary{grid-template-columns:1fr}
+  #modal .credit-day-value{font-size:0}
+  #modal .credit-chart{height:104px;gap:3px}
+  #modal .credit-day-label{overflow:visible;font-size:9px}
+  #modal .credit-day:nth-last-child(even) .credit-day-label{visibility:hidden}
+}
+.app .situation-item.situation-credit{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;font:inherit;cursor:pointer;background:transparent}
+.app .situation-item.situation-credit strong::before{content:"";display:inline-block;width:7px;height:7px;margin:0 8px 1px 0;border-radius:50%;background:#d68a00;vertical-align:middle}
+.app .situation-item.situation-credit:is(.is-critical,.is-empty) strong::before{background:#d73030}
+.app .situation-item.situation-credit:hover{background:#f7f8fa}
+.app .situation-item.situation-credit:focus-visible{outline:2px solid #007aff;outline-offset:2px}
+
+/* 8. Work threads: replies Claude saved through the Window connector are signed. */
+.work-thread-message .work-thread-author{margin:0 0 4px;font-size:11px;font-weight:650;letter-spacing:.04em;color:#c96442}
+
+/* 9. No orb in the top bar on any screen size: the composer's mic starts voice, the ••• menu stays. */
+.orb-dock{visibility:hidden!important;pointer-events:none!important}
+.orb-dock *{visibility:hidden!important}
+
+/* 10. Projektakte (German): Themenblatt in a thread, Steckbrief and register in the project overview. */
+.work-thread-head .work-thread-claude{margin-left:auto;margin-right:8px;padding:7px 12px;border:1px solid rgba(201,100,66,.28);border-radius:999px;background:#fff8f4;color:#b4532f;font:600 12.5px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;text-decoration:none;white-space:nowrap}
+.work-thread-head .work-thread-claude:hover{background:#fdeee6}
+.work-themenblatt{margin:0 0 14px;border:1px solid #e9ebef;border-radius:14px;background:#fbfbfc}
+.work-themenblatt>summary{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:11px 14px;cursor:pointer;list-style:none}
+.work-themenblatt>summary::-webkit-details-marker{display:none}
+.work-themenblatt>summary span{font-size:12px;font-weight:650;letter-spacing:.04em;color:#25262b}
+.work-themenblatt>summary small{font-size:11.5px;color:#8a8f98}
+.work-themenblatt-body{max-height:38vh;overflow:auto;padding:0 14px 12px;font-size:13.5px;line-height:1.5;color:#2b2d33}
+.work-themenblatt-body h4{margin:10px 0 4px;font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:#8a8f98}
+.work-themenblatt-body ul{margin:0;padding-left:18px}
+.work-themenblatt-body li{margin:2px 0}
+.work-themenblatt-body small{color:#7a7f88}
+.work-themenblatt-body em{font-style:normal;font-size:11px;color:#a76400}
+.work-themenblatt-stand{margin:0}
+.work-akte{margin:0 0 18px}
+.work-akte-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.work-akte-brief,.work-akte-register{padding:14px 16px;border:1px solid #e9ebef;border-radius:14px;background:#fff}
+.work-akte-brief-text{white-space:pre-wrap;font-size:13.5px;line-height:1.55;color:#2b2d33}
+.work-akte-entry{padding:10px 0;border-top:1px solid #f0f1f4}
+.work-akte-entry:first-of-type{border-top:0}
+.work-akte-entry p{margin:2px 0;font-size:13.5px;line-height:1.45;color:#22242a}
+.work-akte-entry small{font-size:11.5px;color:#7a7f88}
+.work-akte-kind{font-size:10.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;color:#8a8f98}
+.work-akte-entry.is-proposed .work-akte-kind{color:#a76400}
+.work-akte-actions{display:flex;gap:8px;margin-top:8px}
+.work-akte-actions button{min-height:32px;padding:0 12px;border:0;border-radius:9px;background:#007aff;color:#fff;font:600 12.5px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;cursor:pointer}
+.work-akte-actions button.secondary{background:#f1f3f6;color:#25262b}
+
+/* 11. Work scrolling. On wide screens the Work body is fixed-height for the planner board,
+   which left Desktop folders, Conocimiento and the thread list without a scrollbar. */
+body[data-section="work"] #workBody.work-scroll-host{overflow-y:auto!important;overflow-x:hidden!important;display:block!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+/* A thread with a Themenblatt has four rows: head, Themenblatt, log, composer. */
+.work-thread-conversation:has(>.work-themenblatt){grid-template-rows:auto auto minmax(0,1fr) auto}
+.work-thread-conversation>.work-themenblatt{margin:10px 14px 0}
+.work-thread-conversation>.work-themenblatt .work-themenblatt-body{max-height:26vh}
+/* Akte-Pflege (nightly by Isabella): last run line, proposed tasks, contradictions, undo. */
+.work-akte-pflege{margin:0 0 10px;font-size:12px;color:#6b7079;line-height:1.5}
+.work-akte-pflege small{color:#9a9fa8}
+.work-akte-entry.is-conflict{border-color:#f0d9b5;background:#fffaf2}
+.work-akte-detail{display:block;white-space:pre-wrap;margin-top:3px}
+.work-akte-undo{margin-left:auto;border:0;background:transparent;color:#0a66d8;font-size:11.5px;cursor:pointer;padding:2px 0}
+.skill-pack{display:flex;gap:14px;align-items:center;border:1px solid #e3e7ee;background:#f7f9fc;border-radius:14px;padding:13px 14px;margin:0 0 12px}
+.skill-pack .row-main{flex:1;min-width:0}
+.skill-pack button{flex:none}
+/* Desktop duplicates */
+.work-dupes{display:grid;gap:12px}
+.work-dupe-group{border:1px solid #e9ebef;border-radius:12px;padding:10px 12px;display:grid;gap:6px}
+.work-dupe-keep{display:grid;gap:2px}
+.work-dupe-keep span{font-size:10.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:#1f9d55}
+.work-dupe-keep strong,.work-dupe-copy strong{font-size:13px;font-weight:560;word-break:break-word}
+.work-dupe-keep small,.work-dupe-copy small{font-size:11.5px;color:#8a8f98}
+.work-dupe-copy{display:flex;gap:9px;align-items:flex-start;padding-top:6px;border-top:1px solid #f1f2f4;cursor:pointer}
+.work-dupe-copy span{display:grid;gap:2px}
+.work-dupe-actions{display:flex;justify-content:flex-end}
+.work-dupe-actions .danger{background:#d93025;color:#fff;border:0;border-radius:999px;padding:9px 14px;font-weight:600}
+.work-dupe-actions .danger:disabled{opacity:.5}
+
+/* 12. Panorama as the project cockpit (approved design, 1 Nov 2026). */
+.work-cockpit{max-width:1280px;margin:0 auto;padding:22px 8px 56px;display:flex;flex-direction:column;gap:26px;color:#1d1d1f}
+.work-cockpit h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em}
+.cockpit-header{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;justify-content:space-between}
+.cockpit-header>div:first-child{display:flex;flex-direction:column;gap:5px;min-width:0}
+.cockpit-header h1{margin:0;font-size:40px;line-height:1.05;font-weight:700;letter-spacing:-.025em}
+.cockpit-header p{margin:0;font-size:15px;color:#4a4e57}
+.cockpit-eyebrow{font-size:11.5px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:#6b7079}
+.cockpit-milestone{display:flex;align-items:center;gap:14px;border:1px solid #e6e8ec;border-radius:16px;padding:12px 16px;background:#f7f8fa}
+.cockpit-milestone>div:last-child{display:flex;flex-direction:column;gap:2px}
+.cockpit-milestone strong{font-size:16px;font-weight:600}
+.cockpit-milestone small{font-size:13px;color:#4a4e57}
+.cockpit-countdown{display:flex;flex-direction:column;align-items:center;justify-content:center;width:58px;height:58px;border-radius:13px;background:#fff;border:1px solid #e6e8ec}
+.cockpit-countdown b{font-size:22px;line-height:1}
+.cockpit-countdown span{font-size:11px;color:#6b7079}
+.cockpit-pflege{margin:-8px 0 0;font-size:13.5px;line-height:1.5;color:#4a4e57}
+.cockpit-pflege b{color:#1d1d1f;font-weight:600}
+.cockpit-section{display:flex;flex-direction:column;gap:12px}
+.cockpit-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.cockpit-head>span{font-size:13.5px;color:#6b7079}
+.cockpit-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.cockpit-card{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:16px;border:1px solid #e6e8ec;background:#fff;min-width:0}
+.cockpit-card.is-conflict{border-color:#f0d6ad;background:#fff8ee}
+.cockpit-kind{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8a4b00}
+.cockpit-card.is-overdue .cockpit-kind{color:#b3261e}
+.cockpit-card p{margin:0;font-size:15px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.cockpit-card small{font-size:12.5px;line-height:1.45;color:#5a5e66}
+.cockpit-detail{white-space:pre-wrap}
+.cockpit-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:4px}
+.cockpit-actions button{min-height:40px;padding:0 15px;border:0;border-radius:999px;background:#0062cc;color:#fff;font-size:13.5px;font-weight:600;cursor:pointer}
+.cockpit-actions button.secondary{background:#eceef2;color:#1d1d1f}
+.cockpit-actions button:disabled{opacity:.5}
+.cockpit-more{align-self:flex-start;border:0;background:transparent;color:#0062cc;font-size:13.5px;font-weight:500;padding:6px 0;cursor:pointer}
+.cockpit-empty{margin:0;font-size:14px;line-height:1.5;color:#6b7079}
+.cockpit-row{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch}
+.cockpit-panel{display:flex;flex-direction:column;gap:6px;border:1px solid #e6e8ec;border-radius:18px;padding:18px 20px;min-width:0;background:#fff}
+.cockpit-wide{flex:999 1 560px}
+.cockpit-side{flex:1 1 320px;min-width:0}
+.cockpit-stack{display:flex;flex-direction:column;gap:18px}
+.cockpit-panel .cockpit-head{margin-bottom:6px}
+.cockpit-link{border:0;background:transparent;color:#0062cc;font-size:13.5px;font-weight:500;padding:4px 0;cursor:pointer}
+.cockpit-timeline{display:grid;grid-template-columns:96px minmax(0,1fr);column-gap:14px}
+.cockpit-day,.cockpit-day-items{padding:10px 0;border-top:1px solid #eef0f3}
+.cockpit-day strong{display:block;font-size:13.5px;text-transform:capitalize}
+.cockpit-day span{font-size:12px;color:#6b7079}
+.cockpit-day-items{display:flex;flex-direction:column;gap:6px}
+.cockpit-line{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;border:0;background:transparent;padding:0;text-align:left;font:inherit;color:inherit}
+button.cockpit-line{cursor:pointer}
+button.cockpit-line:hover .cockpit-line-title{text-decoration:underline}
+.cockpit-line-title{font-size:14.5px}
+.cockpit-line small{font-size:12.5px;color:#6b7079}
+.cockpit-chip{font-size:11.5px;font-weight:600;color:#4a4e57;background:#eef0f3;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.cockpit-chip.is-proposed{color:#8a4b00;background:#fff1dc}
+.cockpit-chip.is-frist{color:#fff;background:#b3261e}
+.cockpit-chip.is-event{color:#00449e;background:#e8f1fd}
+.cockpit-panel.cockpit-side{background:#fbfbfc}
+.cockpit-brief-block{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.cockpit-brief-block span{font-size:11.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:#6b7079}
+.cockpit-brief-block p,.cockpit-brief-text{margin:0;font-size:14px;line-height:1.6;white-space:normal}
+.cockpit-brief-text{white-space:pre-wrap}
+.cockpit-brief-block em{font-style:normal;color:#6b7079}
+.cockpit-foot{margin:auto 0 0;padding-top:8px;font-size:12px;color:#6b7079}
+.cockpit-topics{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.cockpit-topic{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:16px;border:1px solid #e6e8ec;min-width:0}
+.cockpit-topic.is-empty{border-style:dashed;background:#fbfbfc}
+.cockpit-topic-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.cockpit-topic-head button{border:0;background:transparent;padding:0;font-size:16px;font-weight:650;text-align:left;color:#1d1d1f;cursor:pointer}
+.cockpit-topic-head button:hover{text-decoration:underline}
+.cockpit-topic-head span{font-size:12px;color:#6b7079;white-space:nowrap}
+.cockpit-topic p{margin:0;font-size:13.5px;line-height:1.5;color:#3a3d44}
+.cockpit-topic.is-empty p{color:#6b7079}
+.cockpit-topic small{font-size:12.5px;color:#6b7079}
+.cockpit-claude{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;min-height:40px;border-radius:999px;border:1px solid #ecd2c4;color:#a3461f;font-size:13.5px;font-weight:600;text-decoration:none}
+.cockpit-claude:hover{background:#fdf5f1}
+.cockpit-register-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid #eef0f3}
+.cockpit-register-row p{margin:0;font-size:14px;line-height:1.4}
+.cockpit-register-row small{font-size:12px;color:#6b7079}
+.cockpit-date{font-size:12.5px;color:#6b7079;white-space:nowrap}
+.cockpit-file{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:9px 0;border:0;border-top:1px solid #eef0f3;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.cockpit-file span{font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cockpit-file small{font-size:12px;color:#6b7079;white-space:nowrap}
+.cockpit-file:hover span{text-decoration:underline}
+.cockpit-text{margin:4px 0 8px;font-size:14px;line-height:1.5;color:#3a3d44}
+.cockpit-wide-button{margin-top:auto;min-height:42px;border:0;border-radius:999px;background:#eceef2;color:#1d1d1f;font-size:13.5px;font-weight:600;cursor:pointer}
+@media(max-width:620px){.work-cockpit{padding:14px 0 40px;gap:22px}.cockpit-header h1{font-size:32px}.cockpit-timeline{grid-template-columns:78px minmax(0,1fr)}}
+
+/* 13. Conocimiento: triage by document. */
+.kn-view{max-width:1280px;margin:0 auto;padding:22px 8px 56px;display:flex;flex-direction:column;gap:18px;color:#1d1d1f}
+.kn-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.kn-header h1{margin:0 0 4px;font-size:32px;line-height:1.1;font-weight:700;letter-spacing:-.02em}
+.kn-header p{margin:0;font-size:14.5px;color:#4a4e57}
+.kn-search{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 14px;border:1px solid #d5d8de;border-radius:14px;background:#fff;color:#6b7079}
+.kn-search input{flex:1;min-width:0;border:0;outline:none;font:inherit;font-size:14.5px;color:#1d1d1f;background:transparent}
+.kn-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.kn-summary{display:flex;flex-wrap:wrap;gap:18px;padding:16px 18px;border-radius:16px;background:#f5f7fa;border:1px solid #e6e8ec}
+.kn-summary>div:first-child{flex:999 1 480px;min-width:0}
+.kn-summary>div:last-child{flex:1 1 260px;min-width:0}
+.kn-summary h2{margin:0 0 6px;font-size:14.5px;font-weight:700}
+.kn-summary p,.kn-summary li{margin:0;font-size:13.5px;line-height:1.55;color:#3a3d44}
+.kn-summary ul{margin:0;padding-left:18px}
+.kn-tech{margin-top:6px;font-size:13px}
+.kn-tech summary{color:#0062cc;cursor:pointer}
+.kn-layout{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+.kn-aside{flex:1 1 200px;max-width:240px;display:flex;flex-direction:column;gap:2px}
+.kn-label{font-size:11.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:#6b7079;padding:14px 10px 6px}
+.kn-label:first-child{padding-top:0}
+.kn-filter{display:flex;justify-content:space-between;align-items:center;min-height:38px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:#1d1d1f;font-size:13.5px;font-weight:500;cursor:pointer;text-align:left}
+.kn-filter span{color:#6b7079;font-weight:500}
+.kn-filter.is-active{background:#e8f1fd;color:#00449e;font-weight:600}
+.kn-filter.is-active span{color:#00449e}
+.kn-segment{display:flex;gap:3px;margin:0 10px;padding:3px;border-radius:10px;background:#eceef2}
+.kn-segment button{flex:1;min-height:32px;border:0;border-radius:8px;background:transparent;color:#3a3d44;font-size:12.5px;font-weight:500;cursor:pointer}
+.kn-segment button.is-active{background:#fff;color:#1d1d1f;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.kn-main{flex:999 1 600px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.kn-group{border:1px solid #e6e8ec;border-radius:16px;overflow:hidden;background:#fff}
+.kn-group-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;background:#fbfbfc}
+.kn-group-head>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.kn-group-head strong{font-size:14.5px;font-weight:650;overflow-wrap:anywhere}
+.kn-group-head span{font-size:12.5px;color:#6b7079}
+.kn-group-actions{display:flex;gap:6px;flex-wrap:wrap}
+.kn-link{min-height:36px;border:0;background:transparent;color:#0062cc;font-size:13px;font-weight:500;padding:0 8px;cursor:pointer}
+.kn-primary{min-height:36px;border:0;border-radius:999px;background:#0062cc;color:#fff;font-size:13px;font-weight:600;padding:0 14px;cursor:pointer}
+.kn-row{display:flex;gap:12px;align-items:flex-start;padding:10px 16px;border-top:1px solid #eef0f3}
+.kn-row.is-frist{background:#fffaf2}
+.kn-type{flex:none;width:104px;margin-top:2px;font-size:11.5px;font-weight:600;color:#4a4e57;background:#eef0f3;border-radius:6px;padding:3px 6px;text-align:center;box-sizing:border-box}
+.kn-type.is-frist{color:#8a4b00;background:#fff1dc}
+.kn-claim{flex:1;min-width:0}
+.kn-claim>summary{list-style:none;cursor:pointer;font-size:14.5px;line-height:1.45;padding:2px 0}
+.kn-claim>summary::-webkit-details-marker{display:none}
+.kn-claim[open]>summary{font-weight:500}
+.kn-flag{display:block;font-style:normal;font-size:12px;font-weight:600;color:#8a4b00;margin-top:2px}
+.kn-claim blockquote{margin:8px 0 0;padding:7px 10px;border-radius:9px;background:#f7f8fa;font-size:12.5px;line-height:1.5;color:#4a4e57}
+.kn-claim blockquote span{font-weight:600;color:#1d1d1f}
+.kn-more{display:flex;gap:6px;margin-top:8px}
+.kn-more button{min-height:32px;border:1px solid #d5d8de;border-radius:9px;background:#fff;font-size:12.5px;padding:0 10px;cursor:pointer}
+.kn-actions{display:flex;gap:6px;flex:none}
+.kn-icon{width:38px;height:38px;border:1px solid #d5d8de;border-radius:11px;background:#fff;color:#1e7a44;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.kn-icon.is-reject{color:#5a5e66}
+.kn-icon:hover{background:#f3f8f4}
+.kn-icon.is-reject:hover{background:#f5f5f6}
+.kn-akte{min-height:38px;border:1px solid #d5d8de;border-radius:11px;background:#fff;color:#1d1d1f;font-size:12.5px;font-weight:500;padding:0 10px;cursor:pointer;white-space:nowrap}
+.kn-row.is-frist .kn-akte{background:#0062cc;border-color:#0062cc;color:#fff;font-weight:600}
+.kn-actions button:disabled{opacity:.45}
+.kn-note{margin:0;padding:10px 16px;font-size:12.5px;color:#6b7079;border-top:1px solid #eef0f3}
+.kn-more-groups{align-self:flex-start;border:0;background:transparent;color:#0062cc;font-size:13.5px;font-weight:500;padding:6px 0;cursor:pointer}
+@media(max-width:700px){.kn-aside{max-width:none;flex-basis:100%}.kn-row{flex-wrap:wrap}.kn-type{width:auto}.kn-actions{width:100%;justify-content:flex-end}}
+.kn-origin{margin:8px 0 0;font-size:12px;color:#6b7079}
+.cockpit-row.is-top{align-items:flex-start}
+.cockpit-link{white-space:nowrap}
+
+/* 14. Phone polish (Nov 2026). */
+/* iOS zooms into any field under 16px when it gets focus, and the page stays zoomed. */
+@media (hover:none) and (pointer:coarse){
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),textarea,select{font-size:16px!important}
+}
+/* Chat on a phone: no white band for the menu. The ••• floats over the conversation, as in Claude. */
+@media (max-width:899px){
+  body[data-section="assistant"]:not(.desk-enabled) .app .topbar{
+    position:absolute!important;top:0;left:0;right:0;z-index:40;
+    height:calc(env(safe-area-inset-top,0px) + 10px)!important;min-height:0!important;padding:0!important;
+    background:linear-gradient(to bottom,rgba(255,255,255,.96) 55%,rgba(255,255,255,0))!important;
+    border:0!important;box-shadow:none!important;pointer-events:none;
+  }
+  body[data-section="assistant"]:not(.desk-enabled) .app .topbar .topbar-brand{display:none!important}
+  body[data-section="assistant"]:not(.desk-enabled) .app .topbar .top-actions{
+    position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:14px;z-index:41;pointer-events:auto;
+  }
+  body[data-section="assistant"]:not(.desk-enabled) .app .topbar .dots{
+    display:grid;place-items:center;width:44px;height:44px;padding:0;border-radius:999px;
+    background:rgba(255,255,255,.86);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);
+    box-shadow:0 0 0 1px rgba(0,0,0,.06),0 2px 10px rgba(0,0,0,.08);font-size:17px;letter-spacing:.06em;color:#1d1d1f;
+  }
+  body[data-section="assistant"]:not(.desk-enabled) .app .assistant-scroll{padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important}
+  /* No orb: the Hoy line leads the chat; keep it clear of the floating ••• button. */
+  body[data-section="assistant"]:not(.desk-enabled) .app .today-card{align-self:stretch!important;width:auto!important;max-width:none!important;margin-left:0!important;margin-right:64px!important}
+}
+/* Task checkboxes stay round: an older rule forced 20px height while min-width kept 24px. */
+.app .task-check,.app .task-list-check{flex:0 0 auto;aspect-ratio:1/1}
+body .app .agenda-item .task-check{width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important}
+/* Akte Fristen in Tiempo: read-only, red mark, tap opens the project's Panorama. */
+body .app .agenda-item.frist-item{width:100%;border:0;border-bottom:1px solid #eef0f3;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.app .frist-mark{display:inline-block;width:12px;height:12px;border-radius:3px;background:#d93025;transform:rotate(45deg);justify-self:center;flex:none}
+body .app .agenda-item.frist-item .meta{color:#b3261e}
+.app .wk-chip.frist-chip,.app .day-all .frist-chip{display:flex;align-items:center;gap:6px;border:1px solid #f3c7c3;background:#fff5f4;color:#8c1d18;cursor:pointer}
+.app .frist-chip .frist-mark{width:8px;height:8px;border-radius:2px}
+
+/* 15 · Panorama: why Isabella proposes an entry (explanation + quote from the source) */
+.cockpit-why{margin-top:2px;font-size:13.5px;color:#3d4046}
+.cockpit-why summary{cursor:pointer;min-height:32px;display:inline-flex;align-items:center;font-weight:600;color:#235c84;list-style:none}
+.cockpit-why summary::-webkit-details-marker{display:none}
+.cockpit-why summary::after{content:"›";margin-left:6px;transition:transform var(--m-motion-fast,160ms)}
+.cockpit-why[open] summary::after{transform:rotate(90deg)}
+.cockpit-why p{margin:4px 0 6px;line-height:1.45}
+.cockpit-why blockquote{margin:0;padding-left:10px;border-left:2px solid #d3d4d2;font-family:var(--m-type-reading,Georgia,serif);line-height:1.45;color:#4a4e57}
+
+/* 16 · Window iPhone app: the app draws its own tab bar; the page drops its own. */
+body.window-app-shell .app .main-nav{display:none!important}
+/* Ahora | Ideas is the app's own switch above the page. */
+body.window-app-shell .situation-tabs [data-situation-view]{display:none!important}
+

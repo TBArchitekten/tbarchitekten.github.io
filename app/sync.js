@@ -1,0 +1,532 @@
+(()=>{'use strict';
+const sb=window.MINDS_SUPABASE;
+const APP_SCOPE='isabella';
+const app=window.ISABELLA_APP;
+const $=s=>document.querySelector(s);
+const authButton=$('#authButton'),status=$('#syncStatus');
+let user=null,syncing=false,timer=null,hydrating=false,queuedSync=null,realtimeChannel=null,realtimeTimer=null;
+let queuedSyncWaiters=[];
+const pendingEntityMutations=new Set();
+const setStatus=t=>{if(status)status.textContent=t};
+const localDateTime=(date,time)=>new Date(date+'T'+(time||'09:00')+':00');
+const pad=n=>String(n).padStart(2,'0');
+const isoDate=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const timeOf=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const MEMORY_KINDS=new Set(['fact','person','routine','episodic','preference','context']);
+const MEMORY_KIND_ALIASES={schedule:'routine',habit:'routine',working_style:'preference',interaction:'preference',constraint:'context',goal:'context',priority:'context',value:'preference',project:'context',relation:'context',relationship:'person',work:'context',identity:'fact',note:'context',other:'context'};
+function normalizeMemoryKind(kind){const k=String(kind||'context').trim().toLowerCase();return MEMORY_KINDS.has(k)?k:(MEMORY_KIND_ALIASES[k]||'context')}
+function canonicalFeedPreferences(value={}){
+  const p=value&&typeof value==='object'?value:{};
+  return {mode:'situational_personal',instructions:String(p.instructions||'').trim(),weatherLocation:String(p.weatherLocation||'').trim(),topics:[],customTopics:[],following:[],followGraph:[]};
+}
+function apiError(e){return e?.message||String(e||'Error desconocido')}
+function stopRealtime(){
+  if(realtimeTimer){clearTimeout(realtimeTimer);realtimeTimer=null}
+  if(realtimeChannel){try{sb.removeChannel(realtimeChannel)}catch{}realtimeChannel=null}
+}
+function startRealtime(){
+  stopRealtime();if(!user||!sb?.channel)return;
+  realtimeChannel=sb.channel('isabella-mission-'+user.id)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'conversation_messages',filter:'user_id=eq.'+user.id},payload=>{
+      const row=payload?.new||{},source=String(row?.metadata?.source||'');
+      const runtimeAssistant=row.role==='assistant'&&['mission_runtime','attention_runtime'].includes(source);
+      const sharedSurface=source==='presence';
+      if(!runtimeAssistant&&!sharedSurface)return;
+      clearTimeout(realtimeTimer);
+      realtimeTimer=setTimeout(()=>syncNow({pullOnly:true}),120);
+    })
+    .subscribe();
+}
+async function init(){
+  if(!sb||!app){setStatus('Memoria local · Supabase no disponible');if(authButton)authButton.textContent='Memoria local';return}
+  const {data,error}=await sb.auth.getSession();
+  if(error){setStatus('No se pudo leer la sesión');return}
+  user=data.session?.user||null;
+  paintAuth();
+  if(user){await syncNow({initial:true});startRealtime()}
+  sb.auth.onAuthStateChange((_event,session)=>{stopRealtime();user=session?.user||null;paintAuth();if(user)setTimeout(async()=>{await syncNow({initial:true});startRealtime()},0)});
+  window.addEventListener('isabella:state',()=>{if(hydrating||!user)return;clearTimeout(timer);timer=setTimeout(()=>syncNow({pushOnly:true}),900)});
+  window.addEventListener('isabella:mutation',e=>{if(!user||!e.detail)return;recordActivity(e.detail)});
+  window.addEventListener('isabella:proposal-feedback',e=>{if(!user||!e.detail)return;recordProposalFeedback(e.detail)});
+}
+function paintAuth(){
+  if(!authButton)return;
+  if(user){
+    authButton.textContent='Memoria conectada';
+    authButton.onclick=()=>syncNow({});
+    setStatus('Supabase conectado · sincronización automática');
+  }else{
+    authButton.textContent='Conectar memoria';
+    authButton.onclick=openLogin;
+    setStatus('Memoria local · conecta Supabase para sincronizar');
+  }
+}
+function openLogin(){
+  // Inside the Window app the app owns the session: sign-in happens in the app.
+  if(window.WINDOW_NATIVE?.available){void window.WINDOW_NATIVE.call('session.signIn');return}
+  app.openModal('Conectar memoria',`<div class="form">
+    <input id="isabellaEmail" type="email" autocomplete="email" inputmode="email" required placeholder="tu@email.com">
+    <button id="isabellaSendCode" class="primary">Enviar código</button>
+    <div id="isabellaCodeStep" class="hidden form">
+      <input id="isabellaCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Código de acceso">
+      <button id="isabellaVerifyCode" class="primary">Entrar</button>
+    </div>
+    <div id="isabellaAuthMsg" class="small">Usa el mismo correo de MINDS. Te enviaremos un código para entrar sin salir de Isabella.</div>
+  </div>`);
+  $('#isabellaSendCode').onclick=async()=>{
+    const email=$('#isabellaEmail').value.trim(),msg=$('#isabellaAuthMsg');
+    if(!email){msg.textContent='Escribe primero tu correo.';return}
+    $('#isabellaSendCode').disabled=true;
+    msg.textContent='Enviando código…';
+    const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+    if(error){
+      $('#isabellaSendCode').disabled=false;
+      msg.textContent=apiError(error);
+      return;
+    }
+    $('#isabellaCodeStep').classList.remove('hidden');
+    $('#isabellaEmail').disabled=true;
+    msg.textContent='Revisa tu correo e introduce aquí el código de acceso.';
+    setTimeout(()=>$('#isabellaCode')?.focus(),50);
+  };
+  $('#isabellaVerifyCode').onclick=async()=>{
+    const email=$('#isabellaEmail').value.trim(),token=$('#isabellaCode').value.trim(),msg=$('#isabellaAuthMsg');
+    if(!/^\d{6,10}$/.test(token)){msg.textContent='Introduce el código numérico completo que recibiste por correo.';return}
+    $('#isabellaVerifyCode').disabled=true;
+    msg.textContent='Verificando…';
+    const {data,error}=await sb.auth.verifyOtp({email,token,type:'email'});
+    if(error){
+      $('#isabellaVerifyCode').disabled=false;
+      msg.textContent=apiError(error);
+      return;
+    }
+    user=data.user||data.session?.user||null;
+    paintAuth();
+    app.closeModal();
+    if(user) await syncNow({initial:true});
+  };
+}
+async function ensureTaxonomy(state){
+  const categories=(state.categories||[]).map((c,i)=>({user_id:user.id,client_key:c.id,name:c.name,color:c.color||null,sort_order:i}));
+  if(categories.length){
+    const {error}=await sb.from('isabella_categories').upsert(categories,{onConflict:'user_id,client_key'});
+    if(error)throw error;
+  }
+  const {data:cats,error:ce}=await sb.from('isabella_categories').select('id,client_key,name,color').eq('user_id',user.id);
+  if(ce)throw ce;
+  const catByKey=new Map((cats||[]).map(c=>[c.client_key,c]));
+  const projects=(state.projects||[]).map(p=>({user_id:user.id,client_key:p.id,name:p.name,color:p.color||null,category_id:catByKey.get(p.categoryId)?.id||null})).filter(p=>p.category_id);
+  if(projects.length){
+    const {error}=await sb.from('isabella_projects').upsert(projects,{onConflict:'user_id,client_key'});
+    if(error)throw error;
+  }
+  const {data:projs,error:pe}=await sb.from('isabella_projects').select('id,client_key,name,color,category_id').eq('user_id',user.id);
+  if(pe)throw pe;
+  return {cats:cats||[],projs:projs||[],catByKey,projByKey:new Map((projs||[]).map(p=>[p.client_key,p]))};
+}
+function taskRow(t,maps){
+  if(t.done&&!t.completedAt)t.completedAt=new Date().toISOString();
+  if(!t.done)t.completedAt=null;
+  return {user_id:user.id,client_key:t.id,title:t.title,due_date:t.date||null,completed_at:t.completedAt||null,archived_at:t.archivedAt||null,sort_order:Number(t.sortOrder||0),reminder_time:t.date?(t.reminderTime||null):null,category_id:maps.catByKey.get(t.categoryId)?.id||null,project_id:maps.projByKey.get(t.projectId)?.id||null,priority:t.priority||'normal',recurrence:t.recurrence||{},notes:t.notes||'',metadata:t.metadata||{},updated_at:t.updatedAt||new Date().toISOString()};
+}
+function eventRow(e,maps){
+  const start=localDateTime(e.date,e.start),end=new Date(start.getTime()+((e.duration||60)*60000));
+  return {user_id:user.id,client_key:e.id,title:e.title,starts_at:start.toISOString(),ends_at:end.toISOString(),all_day:!!e.allDay,category_id:maps.catByKey.get(e.categoryId)?.id||null,project_id:maps.projByKey.get(e.projectId)?.id||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updated_at:e.updatedAt||new Date().toISOString()};
+}
+function entityRevisionTime(x){
+  const n=Date.parse(String(x?.updatedAt||''));return Number.isFinite(n)?n:0;
+}
+function shouldKeepLocalEntity(kind,local,remote){
+  if(!local)return false;
+  if(pendingEntityMutations.has(kind+':'+local.id))return true;
+  const localRevision=entityRevisionTime(local),remoteRevision=entityRevisionTime(remote);
+  return localRevision>0&&localRevision>remoteRevision;
+}
+function mergeRemoteEntities(remote=[],local=[],kind='task'){
+  const localById=new Map((local||[]).filter(x=>x?.id).map(x=>[x.id,x])),seen=new Set();
+  const out=(remote||[]).map(x=>{
+    seen.add(x.id);
+    const localEntity=localById.get(x.id);
+    return shouldKeepLocalEntity(kind,localEntity,x)?localEntity:x;
+  });
+  for(const x of local||[])if(x?.id&&!seen.has(x.id))out.push(x);
+  return out;
+}
+function mergePulledEntityState(remoteTasks,remoteEvents,current,syncSnapshot){
+  const deletedTaskIds=new Set(syncSnapshot?.deletedTaskIds||[]),deletedEventIds=new Set(syncSnapshot?.deletedEventIds||[]);
+  const freshest={
+    ...current,
+    tasks:(current?.tasks||[]).filter(x=>!deletedTaskIds.has(x.id)),
+    events:(current?.events||[]).filter(x=>!deletedEventIds.has(x.id)),
+    deletedTaskIds:[...new Set([...(current?.deletedTaskIds||[]),...(syncSnapshot?.deletedTaskIds||[])])],
+    deletedEventIds:[...new Set([...(current?.deletedEventIds||[]),...(syncSnapshot?.deletedEventIds||[])])]
+  };
+  return {...freshest,tasks:mergeRemoteEntities(remoteTasks,freshest.tasks||[],'task'),events:mergeRemoteEntities(remoteEvents,freshest.events||[],'event')};
+}
+async function persistEntityMutation(detail){
+  const kind=String(detail?.entityType||'');
+  if(!['task','event'].includes(kind)||!detail?.entityKey)return;
+  const table=kind==='task'?'isabella_tasks':'isabella_events';
+  if(detail.action==='delete'){
+    const {error}=await sb.from(table).delete().eq('user_id',user.id).eq('client_key',detail.entityKey);
+    if(error)throw error;
+    return;
+  }
+  if(!detail.after)return;
+  const maps=await ensureTaxonomy(app.getState());
+  const row=kind==='task'?taskRow({...detail.after,updatedAt:detail.after.updatedAt||new Date().toISOString()},maps):eventRow({...detail.after,updatedAt:detail.after.updatedAt||new Date().toISOString()},maps);
+  const {error}=await sb.from(table).upsert(row,{onConflict:'user_id,client_key'});
+  if(error)throw error;
+}
+async function pushState(state,maps){
+  const tombstones=[
+    ...(state.deletedTaskIds||[]).map(client_key=>({user_id:user.id,entity_type:'task',client_key,deleted_at:new Date().toISOString()})),
+    ...(state.deletedEventIds||[]).map(client_key=>({user_id:user.id,entity_type:'event',client_key,deleted_at:new Date().toISOString()}))
+  ];
+  if(tombstones.length){
+    const {error}=await sb.from('isabella_deleted_items').upsert(tombstones,{onConflict:'user_id,entity_type,client_key'});
+    if(error)throw error;
+  }
+  const tasks=(state.tasks||[]).map(t=>taskRow(t,maps));
+  if(tasks.length){
+    const {error}=await sb.from('isabella_tasks').upsert(tasks,{onConflict:'user_id,client_key',ignoreDuplicates:true});
+    if(error)throw error;
+  }
+  if((state.deletedTaskIds||[]).length){
+    const {error}=await sb.from('isabella_tasks').delete().eq('user_id',user.id).in('client_key',state.deletedTaskIds);
+    if(error)throw error;
+  }
+  const events=(state.events||[]).map(e=>eventRow(e,maps));
+  if(events.length){
+    const {error}=await sb.from('isabella_events').upsert(events,{onConflict:'user_id,client_key',ignoreDuplicates:true});
+    if(error)throw error;
+  }
+  if((state.deletedEventIds||[]).length){
+    const {error}=await sb.from('isabella_events').delete().eq('user_id',user.id).in('client_key',state.deletedEventIds);
+    if(error)throw error;
+  }
+  const forgottenMemoryKeys=(state.memory||[])
+    .filter(m=>typeof m==='object'&&m.status==='deleted')
+    .map((m,i)=>String(m.id||'memory-'+i))
+    .filter(Boolean);
+  for(const clientKey of forgottenMemoryKeys){
+    const {error}=await sb.rpc('minds_forget_memory',{p_client_key:clientKey});
+    if(error)throw error;
+  }
+  const memories=(state.memory||[]).filter(m=>typeof m!=='object'||m.status!=='deleted').map((m,i)=>{
+    const obj=typeof m==='object'?m:null,source=obj?(obj.source||'conversation'):'conversation';
+    const provenance=obj?.provenance_class||(['ai_derived','assistant','agent'].includes(source)?'agent':['web','external','project_source'].includes(source)?'external':source==='system'?'system':'owner');
+    return {user_id:user.id,client_key:obj?(obj.id||'memory-'+i):'memory-'+i,kind:obj?normalizeMemoryKind(obj.kind):'context',subject:obj?(obj.subject||null):null,content:obj?(obj.content||''):String(m),status:obj&&['active','corrected','rejected','archived'].includes(String(obj.status||''))?obj.status:'active',confidence:Math.max(0,Math.min(1,Number(obj?(obj.confidence??1):1))),source,exposure_scope_key:obj?.exposure_scope_key||obj?.metadata?.exposure_scope?.key||'global',provenance_class:provenance,metadata:obj?(obj.metadata||{}):{}};
+  }).filter(x=>x.content);
+  if(memories.length){
+    const {error}=await sb.from('isabella_memories').upsert(memories,{onConflict:'user_id,client_key'});
+    if(error)throw error;
+  }
+  if(state.feedPreferences){
+    const {error}=await sb.from('isabella_preferences').upsert({
+      user_id:user.id,
+      preference_key:'feed',
+      value:canonicalFeedPreferences(state.feedPreferences),
+      status:'confirmed',
+      confidence:1,
+      evidence:[{source:'isabella_client',at:new Date().toISOString()}],
+      updated_at:new Date().toISOString()
+    },{onConflict:'user_id,preference_key'});
+    if(error)throw error;
+  }
+  if(state.assistantPreferences){
+    const {error}=await sb.from('isabella_preferences').upsert({
+      user_id:user.id,
+      preference_key:'assistant',
+      value:state.assistantPreferences,
+      status:'confirmed',
+      confidence:1,
+      evidence:[{source:'isabella_client',at:new Date().toISOString()}],
+      updated_at:new Date().toISOString()
+    },{onConflict:'user_id,preference_key'});
+    if(error)throw error;
+  }
+  await pushConversation(state.messages||[]);
+}
+async function conversationId(){
+  const {data,error}=await sb.from('conversations').select('id,metadata').eq('user_id',user.id).eq('app_scope',APP_SCOPE).order('updated_at',{ascending:false}).limit(1);
+  if(error)throw error;
+  if(data?.[0]?.id)return data[0].id;
+  const {data:created,error:ie}=await sb.from('conversations').insert({user_id:user.id,app_scope:APP_SCOPE,origin_kind:'global',origin_anchor:{type:'assistant',id:'isabella',label:'Isabella'},title:'Isabella',mode:'memory',metadata:{app:APP_SCOPE}}).select('id').single();
+  if(ie)throw ie;return created.id;
+}
+/* A client-side chat message is not eligible for the canonical scoped
+ * conversation ledger until the server has resolved its exposure scope.
+ * Keep pending turns locally; do NOT insert them as permanent legacy rows.
+ * Existing legacy history stays untouched and is never silently promoted.
+ */
+function scopedTurnReady(message){
+  const s=message?.metadata?.exposure_scope;
+  if(!s||s.version!==1||typeof s.kind!=='string'||
+    typeof s.key!=='string'||!s.key.trim()||s.key==='legacy')return false;
+  if(s.kind==='global'&&s.key!=='global')return false;
+  if(s.kind!=='global'&&(!s.ref||!String(s.ref).trim()))return false;
+  return ['user','assistant'].includes(message.role)&&
+    typeof message.text==='string'&&!!message.text.trim();
+}
+async function pushConversation(messages){
+  const approved=(messages||[]).filter(scopedTurnReady);
+  if(!approved.length)return; // no provisional, scope-unknown rows in Supabase
+  const cid=await conversationId(),now=new Date().toISOString();
+  const rows=approved.map((m,i)=>{
+    const scope=m?.metadata?.exposure_scope&&typeof m.metadata.exposure_scope==='object'?m.metadata.exposure_scope:null;
+    return {
+      user_id:user.id,conversation_id:cid,client_key:m.id||String(i).padStart(6,'0'),
+      role:['assistant','system'].includes(m.role)?m.role:'user',content:m.text||'',provisional:false,citations:[],
+      exposure_scope_version:1,
+      exposure_scope_kind:scope.kind,
+      exposure_scope_ref:scope.ref?String(scope.ref):null,
+      exposure_scope_key:scope.key,
+      metadata:{...(m.metadata&&typeof m.metadata==='object'?m.metadata:{}),app:APP_SCOPE,reaction:m.reaction||null,reply_to:m.replyTo?.id?{id:String(m.replyTo.id),role:m.replyTo.role==='assistant'?'assistant':'user',text:String(m.replyTo.text||'')}:null,sources:Array.isArray(m.sources)?m.sources.slice(0,8):[],attachments:Array.isArray(m.attachments)?m.attachments.slice(0,3):[],artifacts:Array.isArray(m.artifacts)?m.artifacts.slice(0,8):[]},
+      created_at:m.at||now
+    };
+  });
+  // Browser owner turns are canonical server records. A later client echo must
+  // never overwrite server-owned metadata such as pending clarification receipts.
+  const ownerRows=rows.filter(r=>r.role==='user');
+  const assistantRows=rows.filter(r=>r.role!=='user');
+  if(ownerRows.length){
+    const {error}=await sb.from('conversation_messages')
+      .upsert(ownerRows,{onConflict:'user_id,conversation_id,client_key',ignoreDuplicates:true});
+    if(error)throw error;
+  }
+  if(assistantRows.length){
+    const {error}=await sb.from('conversation_messages')
+      .upsert(assistantRows,{onConflict:'user_id,conversation_id,client_key'});
+    if(error)throw error;
+  }
+  await sb.from('conversations').update({updated_at:now}).eq('id',cid).eq('user_id',user.id).eq('app_scope',APP_SCOPE);
+}
+// Read-only bridge from canonical Work fields to native Tiempo/dashboard state.
+// Do NOT add Work-owned columns to taskRow(): calendar mutations must not
+// write stale assignees, status, start dates, buckets or attachments.
+function projectTaskRow(t,catKey,projKey){
+  return {
+    id:t.client_key||t.id,title:t.title,date:t.due_date||null,
+    done:!!t.completed_at,completedAt:t.completed_at||null,
+    archivedAt:t.archived_at||null,sortOrder:Number(t.sort_order||0),
+    reminderTime:t.due_date&&t.reminder_time?String(t.reminder_time).slice(0,5):null,
+    categoryId:catKey.get(t.category_id)||'personal',
+    projectId:projKey.get(t.project_id)||null,priority:t.priority||'normal',
+    recurrence:t.recurrence||{},notes:t.notes||'',metadata:t.metadata||{},
+    startDate:t.start_date||null,assignee:t.assignee||null,
+    assigneePersonId:t.assignee_person_id||null,
+    workStatus:t.work_status||'not_started',
+    workBucketId:t.work_bucket_id||null,workSortOrder:Number(t.work_sort_order||0),
+    labels:Array.isArray(t.labels)?t.labels:[],
+    checklist:Array.isArray(t.checklist)?t.checklist:[],
+    attachments:Array.isArray(t.attachments)?t.attachments:[],
+    links:Array.isArray(t.links)?t.links:[],
+    updatedAt:t.updated_at||null
+  };
+}
+async function pullState(local,maps){
+  const [{data:tasks,error:te},{data:events,error:ee},{data:mem,error:me},{data:pref,error:pre},{data:assistantPref,error:ape},
+    {data:assignees,error:asError},{data:allocations,error:alError},
+    {data:teamPeople,error:peopleError}] = await Promise.all([
+    sb.from('isabella_tasks').select('*').eq('user_id',user.id).order('due_date',{ascending:true}),
+    sb.from('isabella_events').select('*').eq('user_id',user.id).order('starts_at',{ascending:true}),
+    sb.from('isabella_memories').select('*').eq('user_id',user.id).eq('status','active').order('created_at',{ascending:true}),
+    sb.from('isabella_preferences').select('value,status,updated_at').eq('user_id',user.id).eq('preference_key','feed').maybeSingle(),
+    sb.from('isabella_preferences').select('value,status,updated_at').eq('user_id',user.id).eq('preference_key','assistant').maybeSingle(),
+    sb.from('minds_work_task_assignees').select('task_id,person_id,created_at').eq('user_id',user.id),
+    sb.from('minds_work_task_allocations').select('task_id,person_id,work_date,planned_minutes').eq('user_id',user.id),
+    sb.from('isabella_people').select('id,name').eq('user_id',user.id)
+  ]);
+  if(te)throw te;if(ee)throw ee;if(me)throw me;if(pre)throw pre;if(ape)throw ape;
+  if(asError)throw asError;if(alError)throw alError;if(peopleError)throw peopleError;
+  const catKey=new Map(maps.cats.map(c=>[c.id,c.client_key])),projKey=new Map(maps.projs.map(p=>[p.id,p.client_key]));
+  const deletedTaskIds=new Set(local.deletedTaskIds||[]);
+  const deletedEventIds=new Set(local.deletedEventIds||[]);
+  const teamIdsFor=(links,primary)=>{
+    const ids=[...new Set([...links].filter(x=>x.person_id)
+      .sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||''))||
+        String(a.person_id).localeCompare(String(b.person_id)))
+      .map(x=>x.person_id))];
+    if(primary&&ids.includes(primary)){
+      ids.splice(ids.indexOf(primary),1);ids.unshift(primary);
+    }
+    return ids;
+  };
+  const assignedByTask=new Map();
+  for(const a of assignees||[]){
+    if(!assignedByTask.has(a.task_id))assignedByTask.set(a.task_id,[]);
+    assignedByTask.get(a.task_id).push(a);
+  }
+  const remoteTasks=(tasks||[]).filter(t=>!deletedTaskIds.has(t.client_key||t.id)).map(t=>{
+    const ids=teamIdsFor(assignedByTask.get(t.id)||[],t.assignee_person_id);
+    return {...projectTaskRow(t,catKey,projKey),
+      assigneePersonIds:ids.length?ids:(t.assignee_person_id?[t.assignee_person_id]:[])};
+  });
+  const taskKeys=new Map((tasks||[]).map(t=>[t.id,t.client_key||t.id]));
+  const teamAllocations=(allocations||[]).map(a=>({
+    taskId:taskKeys.get(a.task_id),personId:a.person_id,date:a.work_date,plannedMinutes:a.planned_minutes
+  })).filter(a=>a.taskId);
+  const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||'personal',projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null}});
+  const remoteMemory=(mem||[]).map(m=>({id:m.client_key||m.id,kind:m.kind,subject:m.subject,content:m.content,status:m.status,confidence:Number(m.confidence),source:m.source,exposure_scope_key:m.exposure_scope_key||'global',provenance_class:m.provenance_class||'owner',metadata:m.metadata||{}}));
+  const remoteMessages=await pullConversation();
+  const mergedMessages=mergeConversationMessages(remoteMessages,local.messages||[]);
+  const freshest=mergePulledEntityState(remoteTasks,remoteEvents,app.getState(),local);
+  const remoteFeed=(pref?.status!=='rejected'&&pref?.value&&typeof pref.value==='object')?canonicalFeedPreferences(pref.value):canonicalFeedPreferences(freshest.feedPreferences);
+  const remoteAssistant=(assistantPref?.status!=='rejected'&&assistantPref?.value&&typeof assistantPref.value==='object')?{...(freshest.assistantPreferences||{}),...assistantPref.value}:freshest.assistantPreferences;
+  return {...freshest,teamPeople:teamPeople||[],teamAllocations,memory:remoteMemory,feedPreferences:remoteFeed,
+    assistantPreferences:remoteAssistant,messages:mergedMessages.length?mergedMessages:freshest.messages};
+}
+async function updateMessageMetadata(clientKey,patch){
+  if(!user||!clientKey||!patch||typeof patch!=='object')return false;
+  try{
+    const cid=await conversationId();
+    const {data,error}=await sb.from('conversation_messages')
+      .select('metadata')
+      .eq('user_id',user.id).eq('conversation_id',cid).eq('client_key',String(clientKey))
+      .maybeSingle();
+    if(error)throw error;
+    const next={...(data?.metadata||{}),...patch,app:APP_SCOPE};
+    const {error:ue}=await sb.from('conversation_messages')
+      .update({metadata:next})
+      .eq('user_id',user.id).eq('conversation_id',cid).eq('client_key',String(clientKey));
+    if(ue)throw ue;
+    return true;
+  }catch(e){setStatus('No pude sincronizar la reacción: '+apiError(e));return false}
+}
+function mergeConversationMessages(remote=[],local=[]){
+  const byId=new Map(),out=[];
+  for(const m of remote||[]){
+    if(!m?.id||byId.has(m.id))continue;
+    byId.set(m.id,m);out.push(m);
+  }
+  for(const m of local||[]){
+    if(!m?.id)continue;
+    const saved=byId.get(m.id);
+    if(!saved){byId.set(m.id,m);out.push(m);continue}
+    // A remote echo can predate the first durable metadata write.
+    // Preserve a local, explicit request binding without overwriting
+    // newer server-delivered status, content or provenance.
+    const requestId=m.metadata?.durable_request_id;
+    if(requestId&&!saved.metadata?.durable_request_id){
+      saved.metadata={...(saved.metadata||{}),durable_request_id:requestId,
+        ...(m.metadata?.durable_status?{durable_status:m.metadata.durable_status}:{})};
+    }
+    // A remote conversation echo can predate the confirmed review. Preserve
+    // local server-verified acknowledgement only for the SAME registered
+    // request; do not infer execution from message text or mere metadata.
+    const localReceipt=m.metadata?.review_receipt_id;
+    const localReview=m.metadata?.review_proposals;
+    const remoteReview=saved.metadata?.review_proposals;
+    if(m.metadata?.review_state==='applied_verified'&&
+       typeof localReceipt==='string'&&/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(localReceipt)&&
+       Array.isArray(localReview)&&localReview.length===1&&
+       Array.isArray(remoteReview)&&remoteReview.length===1&&
+       localReview[0]?.request_id&&
+       localReview[0].request_id===remoteReview[0]?.request_id){
+      saved.metadata={...(saved.metadata||{}),review_state:'applied_verified',
+        review_receipt_id:localReceipt};
+    }
+  }
+  out.sort((a,b)=>String(a.at||'').localeCompare(String(b.at||'')));
+  return out;
+}
+async function pullConversation(){
+  const {data,error}=await sb.from('conversations').select('id').eq('user_id',user.id).eq('app_scope',APP_SCOPE).order('updated_at',{ascending:false}).limit(1);
+  if(error||!data?.length)return[];
+  const {data:msgs,error:me}=await sb.from('conversation_messages').select('client_key,role,content,created_at,metadata,exposure_scope_version,exposure_scope_kind,exposure_scope_ref,exposure_scope_key,provenance_class,conversations!inner(app_scope)').eq('conversations.app_scope',APP_SCOPE).eq('user_id',user.id).eq('conversation_id',data[0].id).order('created_at',{ascending:true});
+  if(me)throw me;
+  return (msgs||[]).map(m=>{
+    const scope=m.exposure_scope_version===1?{version:1,kind:m.exposure_scope_kind||'global',ref:m.exposure_scope_ref||null,key:m.exposure_scope_key||'global'}:null;
+    return {id:m.client_key,role:m.role,text:m.content,at:m.created_at,reaction:m.metadata?.reaction||null,replyTo:m.metadata?.reply_to?.id?{id:String(m.metadata.reply_to.id),role:m.metadata.reply_to.role==='assistant'?'assistant':'user',text:String(m.metadata.reply_to.text||'')}:null,metadata:{...(m.metadata||{}),...(scope?{exposure_scope:scope}:{}),provenance_class:m.provenance_class||null},sources:Array.isArray(m.metadata?.sources)?m.metadata.sources:[],attachments:Array.isArray(m.metadata?.attachments)?m.metadata.attachments:[],artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[]};
+  });
+}
+async function recordProposalFeedback(detail){
+  try{
+    const proposal=detail.proposal||{};
+    await sb.from('isabella_proposal_feedback').insert({user_id:user.id,outcome:detail.outcome,proposal});
+    if(proposal.request_id&&['accepted','rejected'].includes(String(detail.outcome||''))){
+      await sb.rpc('minds_resolve_shadow_decision',{p_request_id:proposal.request_id,p_outcome:detail.outcome,p_reviewed:proposal});
+    }
+  }catch{}
+}
+async function recordActivity(detail){
+  const pendingKey=String(detail.entityType||'')+':'+String(detail.entityKey||'');
+  if(['task','event'].includes(String(detail.entityType||'')))pendingEntityMutations.add(pendingKey);
+  try{
+    const row={user_id:user.id,entity_type:detail.entityType,entity_key:detail.entityKey,action:detail.action,source:detail.source||'manual',before_state:detail.before||null,after_state:detail.after||null};
+    if(detail.action==='delete'){
+      const {error}=await sb.from('isabella_deleted_items').upsert({user_id:user.id,entity_type:detail.entityType,client_key:detail.entityKey,deleted_at:new Date().toISOString()},{onConflict:'user_id,entity_type,client_key'});
+      if(error)throw error;
+    }
+    await persistEntityMutation(detail);
+    const {error}=await sb.from('isabella_activity_log').insert(row);
+    if(error)throw error;
+  }catch(e){
+    setStatus('Cambio local guardado · sincronización pendiente: '+apiError(e));
+  }finally{
+    pendingEntityMutations.delete(pendingKey);
+  }
+}
+async function syncNow(opts={}){
+  if(!user)return false;
+  if(syncing){
+    queuedSync={...(queuedSync||{}),...opts};
+    return new Promise(resolve=>queuedSyncWaiters.push(resolve));
+  }
+  syncing=true;let succeeded=false;setStatus('Sincronizando…');
+  try{
+    const {data:deleted,error:de}=await sb.from('isabella_deleted_items').select('entity_type,client_key').eq('user_id',user.id);
+    if(de)throw de;
+    const deletedTasks=new Set((deleted||[]).filter(x=>x.entity_type==='task').map(x=>x.client_key));
+    const deletedEvents=new Set((deleted||[]).filter(x=>x.entity_type==='event').map(x=>x.client_key));
+    let local=app.getState();
+    local={
+      ...local,
+      tasks:(local.tasks||[]).filter(x=>!deletedTasks.has(x.id)),
+      events:(local.events||[]).filter(x=>!deletedEvents.has(x.id)),
+      deletedTaskIds:[...new Set([...(local.deletedTaskIds||[]),...deletedTasks])],
+      deletedEventIds:[...new Set([...(local.deletedEventIds||[]),...deletedEvents])]
+    };
+    if(opts.initial){
+      const [{data:feedPref},{data:assistantPref}]=await Promise.all([
+        sb.from('isabella_preferences').select('value,status').eq('user_id',user.id).eq('preference_key','feed').maybeSingle(),
+        sb.from('isabella_preferences').select('value,status').eq('user_id',user.id).eq('preference_key','assistant').maybeSingle()
+      ]);
+      if(feedPref?.status!=='rejected'&&feedPref?.value&&typeof feedPref.value==='object')local.feedPreferences=canonicalFeedPreferences(feedPref.value);
+      if(assistantPref?.status!=='rejected'&&assistantPref?.value&&typeof assistantPref.value==='object')local.assistantPreferences={...(local.assistantPreferences||{}),...assistantPref.value};
+    }
+    local.feedPreferences=canonicalFeedPreferences(local.feedPreferences);
+    const maps=await ensureTaxonomy(local);
+    if(opts.initial||opts.pullOnly){
+      const next=await pullState(local,maps);
+      hydrating=true;app.replaceState(next);hydrating=false;
+      if(opts.initial)await pushConversation(next.messages||[]);
+    }else{
+      await pushState(local,maps);
+      if(!opts.pushOnly){
+        const next=await pullState(local,maps);
+        hydrating=true;app.replaceState(next);hydrating=false;
+      }
+    }
+    succeeded=true;
+    setStatus('Memoria sincronizada · Supabase');
+    try{window.dispatchEvent(new CustomEvent('isabella:synced',{detail:{initial:!!opts.initial}}))}catch{}
+  }catch(e){setStatus('Error de sincronización: '+apiError(e))}
+  finally{
+    syncing=false;
+    if(queuedSync){
+      const next=queuedSync,waiters=queuedSyncWaiters.splice(0);
+      queuedSync=null;
+      setTimeout(()=>{
+        void syncNow(next).then(ok=>waiters.forEach(resolve=>resolve(ok)),()=>waiters.forEach(resolve=>resolve(false)));
+      },0);
+    }
+  }
+  return succeeded;
+}
+window.ISABELLA_SYNC_NOW=(opts={})=>syncNow(opts);
+window.ISABELLA_SYNC_PULL_NOW=()=>syncNow({pullOnly:true});
+window.ISABELLA_SYNC_MESSAGE_META=(clientKey,patch)=>updateMessageMetadata(clientKey,patch);
+init();
+})();
