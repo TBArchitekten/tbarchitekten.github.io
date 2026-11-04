@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 05.11.2026, por ChatGPT (Romy: Word/PDF de Window en PR de integración; aceptación pendiente).
+**Actualizado:** 05.11.2026, por ChatGPT (Romy: Word/PDF de Window con backend ACTIVE v6 y CI 116/116; PR #31 pendiente de merge).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -121,7 +121,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 
 **Después:** vínculo Planner↔Terminplan, Planliste, Controlling LPH/horas, Kostenschätzung/Kostenberechnung, Projektakte y Microsoft M365, según la hoja de ruta de arriba.
 
-**Documentos Romy en preparación:** generador DOCX/PDF original de Window, almacenamiento propietario en `office-romy-artifacts`, tool `create_document` y entrega mediante las tarjetas del chat. Generar un archivo no lo convierte en conocimiento confirmado de proyecto. Migración, despliegue y E2E pendientes.
+**Documentos Romy en preparación:** generador DOCX/PDF original de Window, almacenamiento propietario en `office-romy-artifacts`, tool `create_document` y entrega mediante las tarjetas del chat. Generar un archivo no lo convierte en conocimiento confirmado de proyecto. Migración aplicada como versión `20261104235735`, Edge Function `office-assistant` ACTIVE v6, CI 116/116 PASS, Security Advisors sin avisos; integración de interfaz en PR #31 pendiente de merge y E2E.
 
 **Romy y archivos adjuntos:** el código Window para elegir archivos, normalizar imágenes y subir PDF/Office está integrado desde PR #27 (`office-romy-window-attachments-v1`), con bucket privado `office-romy-uploads` y RLS estricta por empleado. El backend pasa las referencias de adjuntos al modelo siguiendo el contrato `input_image`/`input_file` de Window, con carga autorizada por JWT. La aceptación con archivos reales sigue pendiente. Migración aplicada en TBA Office como versión Supabase `20261104230525`, Edge Function `office-assistant` ACTIVE v5 con JWT. CI 108/108 PASS. Aceptación de subida y lectura en Safari autenticado pendiente; no afirmarla antes del E2E. El historial visible conserva las referencias a los adjuntos. Frontend integrado en main con PR #27, CI 108/108 PASS; aceptación autenticada con documentos aún pendiente. La lectura multimodal de documentos en turnos posteriores y el resto de la paridad con Isabella siguen pendientes.
 

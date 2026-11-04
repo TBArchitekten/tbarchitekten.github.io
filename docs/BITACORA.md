@@ -20,12 +20,12 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 ### 2026-11-05 · Romy: documentos reales reutilizando Window · ChatGPT
 - Qué cambió y por qué: se porta el generador de Word y PDF de isabella-artifact de Window para crear entregables desde Romy, sin otra interfaz. Los documentos quedan privados por empleado y vinculados a la conversación/solicitud.
 - Archivos: romy-documents.ts, romy-tools.mjs, office-assistant/index.ts, app/app.js, app/office-assistant.js, app/index.html, test nuevo y migración.
-- Base de datos: office_romy_document_artifacts_v1 preparada; simulación SQL con rollback PASS (lectura owner, sin inserción de cliente, sin lectura anónima).
-- Deploy de funciones: pendiente hasta CI.
-- Cómo se probó: prueba transaccional RLS, tests automáticos en CI pendientes.
-- Pendiente: merge, migración definitiva, deploy y aceptación auténtica en Safari. Los formatos XLSX/PPTX y el runtime general de Window aún no están portados.
+- Base de datos: `office_romy_document_artifacts_v1` aplicada como Supabase `20261104235735`. Tabla y bucket privados verificados; RLS owner-only, sin INSERT del cliente y sin lectura anónima.
+- Deploy de funciones: `office-assistant` ACTIVE v6, JWT obligatorio, 8 archivos, generadores de Window incluidos.
+- Cómo se probó: CI 116/116 PASS; prueba SQL en rollback; esquema y servicio activos comprobados; Security Advisors sin avisos. Aún no se ha generado un archivo real en Safari.
+- Pendiente: merge del PR y aceptación autenticada en Safari. Los formatos XLSX/PPTX y el runtime general de Window aún no están portados.
 - Riesgos o decisiones: no se agrega cuota ni modelo; un entregable generado no es verdad confirmada de proyecto y no se comparte automáticamente en el Desktop.
-- PR: en preparación.
+- PR: #31.
 
 
 ### 2026-11-05 · Cierre de robustez Romy v5 · ChatGPT
