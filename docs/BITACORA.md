@@ -17,6 +17,12 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Hoja de ruta completa en ESTADO · Claude
+- **Qué cambió y por qué:** `ESTADO.md` §6 solo listaba C y D. Ahora tiene las cinco etapas acordadas, lo que va después (vínculo Planner↔Terminplan, Planliste, Controlling, herramientas de costos, Projektakte, login con Microsoft) y las reglas de base de Gari. Se precisó la pregunta sobre el Desktop: fundamentos y guías de la oficina, sin datos de clientes.
+- **Archivos:** `docs/ESTADO.md`, `docs/BITACORA.md`.
+- **Base de datos / deploy:** ninguno.
+- **PR:** #15
+
 ### 2026-11-04 · Traspaso y reglas de documentación · Claude
 - **Qué cambió y por qué:** Gari trabajará con ChatGPT hasta el 06.11. Se añadieron `AGENTS.md` (reglas para cualquier agente), `CLAUDE.md`, `docs/ESTADO.md` (estado actual), esta bitácora y la plantilla de PR.
 - **Archivos:** solo documentación.

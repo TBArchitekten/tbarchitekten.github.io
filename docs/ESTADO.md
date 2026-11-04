@@ -65,10 +65,40 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Probado:** con datos simulados en escritorio y teléfono (sin errores ni textos en español), consultas RLS en transacciones revertidas, y la página publicada sin sesión (manda al inicio de sesión).
 - **No probado todavía con personas reales.** Al 04.11 solo existe la cuenta de Gari (admin) y **no hay proyectos** en la base de datos.
 
-## 6. Lo que falta (en este orden)
-1. **Gari:** crear 1–2 colegas en Mitglieder y un proyecto con un Terminplan. Probar en el navegador y en el iPhone: Heute, Kalender (Tag/Woche/Monat), Planner (bucket, tarea, asignar a un colega) y que el colega vea la tarea en su Heute. Anotar lo que falle en la bitácora.
+## 6. Lo que falta
+
+### Hoja de ruta completa (acordada con Gari)
+Las etapas para traer Window a la oficina:
+
+| # | Etapa | Estado |
+|---|---|---|
+| 1 | Diseño y estructura como Window | ✔ hecho (PR #11) |
+| 2 | Planner y Kalender | ✔ hecho (primero propio en PR #12; sustituido por la copia de Window en PR #13) |
+| 3 | Heute (como "Ahora" de Window) | ✔ hecho (PR #13) |
+| 4 | Assistent personal por persona (parecido a Isabella, con otro nombre) | pendiente = **parte D** |
+| 5 | Desktop: fundamentos y guías de la oficina | pendiente = **parte C** |
+
+La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heute), C (Desktop) y D (Assistent). **A y B están hechas.** En el orden original el Assistent (4) iba antes que el Desktop (5); Gari decide cuál va primero.
+
+**Después de las cinco etapas** (orden por decidir con Gari):
+- Vincular las tareas del Planner con las actividades del Terminplan.
+- Documentos estándar (plantillas de Planliste).
+- Controlling por proyecto: honorario por LPH → presupuesto de horas frente a horas reales. Los Projektleiter cargan horas cada semana o cada dos (las horas ya viven en otra herramienta).
+- Herramientas de costos: Kostenschätzung y Kostenberechnung.
+- Projektakte (Steckbrief, Themenblätter, decisiones y Fristen), solo cuando esté aclarado legalmente.
+- Inicio de sesión con Microsoft (M365) cuando haya acceso de admin.
+
+**Reglas de base de Gari para todo lo anterior:**
+- Nada de datos de clientes ni confidenciales en el sistema.
+- La IA propone → vista previa → la persona confirma → el servidor comprueba.
+- Las claves solo en el servidor, con límites de IA (hoy 25 consultas al día por persona en el Terminplan) y registro.
+- Pruebas y deploys manuales.
+- Vigilar el gasto de tokens.
+
+### Próximos pasos concretos (en este orden)
+1. **Gari:** crear 1–2 colegas en Mitglieder y un proyecto con un Terminplan. Probar en el navegador y en el iPhone: Heute, Kalender (Tag/Woche/Monat), Planner (bucket, tarea, asignar a un colega) y que el colega vea la tarea en su Heute. Anotar lo que falle en la bitácora. Además, revocar la clave antigua de OpenAI del asistente anterior.
 2. **Decisión antes de la parte C** (ver §8, pregunta 1).
-3. **Parte C · Desktop y adjuntos:**
+3. **Parte C · Desktop y adjuntos.** Según el plan, el Desktop es para los fundamentos y las guías de la oficina, no para documentos de clientes.
    - Copiar de Window (`gari01234/minds`, carpeta `supabase/migrations`) las tablas `minds_work_folders` y `minds_work_files`, adaptadas a `office_projects` y con RLS por pertenencia a la oficina o al proyecto.
    - Crear el bucket privado de Storage `minds-work` con políticas.
    - Las rutas que usa el código son `<user_id>/<project_id>/<folder|root|tasks>/...` (`app/work.js` líneas ~670 y ~1129, `app/task-detail.js` ~344). Leer debería permitirse a los miembros; subir, a cada persona en su carpeta.
@@ -102,7 +132,11 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Window es otra cosa** (otro repo y otro Supabase). En Window ya está hecho: Isabella usa gpt-5.6-luna para el día a día y gpt-5.6-terra para turnos complejos y análisis de documentos (PR #282, desplegado). El workflow de deploy usa `--yes` (PR #283).
 
 ## 8. Preguntas abiertas para Gari
-1. **Desktop:** ¿se pueden subir documentos de proyecto (planos, correos, PDFs de clientes) a TBA Office? Hasta ahora la regla era "nada confidencial de clientes en el sistema". Si sí, hay que decidir quién los ve (¿toda la oficina o solo el equipo del proyecto?) y el límite de tamaño.
+1. **Desktop:** el plan dice "fundamentos y guías de la oficina", y la regla es nada de datos de clientes. Entonces:
+   - ¿El Desktop se limita a documentos internos (estándares, guías, plantillas), visibles para toda la oficina?
+   - ¿Tiene además un Desktop por proyecto, y con qué documentos permitidos?
+   - ¿Qué límite de tamaño?
+   - ¿Y los adjuntos de las tareas?
 2. **Assistent en la oficina:** ¿para quién (todos o solo algunos), con qué presupuesto mensual y qué puede leer (tareas, Terminpläne, archivos)?
 3. ¿Se pueden borrar ya las tablas vacías `office_tasks` y `office_task_buckets`?
 4. ¿Quieres el clima en Heute?
