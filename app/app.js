@@ -1165,7 +1165,7 @@ window.addEventListener('message',e=>{
   document.body.classList.toggle('sofia-chat-open',open);
 });
 let pendingReplyTo=null;
-function replyAuthor(reply){return reply?.role==='assistant'?'Isabella':'Tú'}
+function replyAuthor(reply){return reply?.role==='assistant'?(OFFICE?'Romy':'Isabella'):(OFFICE?'Sie':'Tú')}
 function replySnippet(text){return String(text||'').replace(/\s+/g,' ').trim().slice(0,180)}
 function renderReplyPreview(){
   const box=$('#chatReplyPreview');if(!box)return;

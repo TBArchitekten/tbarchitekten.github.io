@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
 import { chatTurnModel, documentModel } from "./chat-model-routing.mjs";
 import { interactiveTurnContract } from "./turn-capability-contract.mjs";
+import { routeRomyTurn } from "./romy-router.mjs";
 import { ROMY_TOOLS, executeRomyTool, reviewRomyProposal } from "./romy-tools.mjs";
 
 // Office has its OWN Supabase users and records. This is a scoped adaptation of
@@ -91,8 +92,11 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,ap
  if(contract.tools!=="governed")throw new Error("capability_contract_failed");
  const env={OPENAI_MODEL:Deno.env.get("TBA_OFFICE_ASSISTANT_MODEL"),
             OPENAI_DEEP_MODEL:Deno.env.get("TBA_OFFICE_ASSISTANT_DEEP_MODEL")};
- let route=chatTurnModel({complexity:"standard",depth:"normal",background:false,env});
- let prompt=apiInput(history,message),text="",proposals=[],inTokens=0,outTokens=0;
+ const complexity=await routeRomyTurn({message,history,apiKey,
+   model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||env.OPENAI_MODEL||"gpt-5.6-luna"});
+ let route=chatTurnModel({complexity:complexity.complexity,depth:"normal",background:false,env});
+ let prompt=apiInput(history,message),text="",proposals=[],
+   inTokens=complexity.input_tokens,outTokens=complexity.output_tokens;
  for(let round=0;round<5;round++){
   const payload=await requestModel({apiKey,model:route.model,input:prompt,onDelta,
     allowTools:round<4});

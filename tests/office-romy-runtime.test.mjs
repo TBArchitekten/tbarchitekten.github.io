@@ -10,6 +10,12 @@ test('Romy reuses Window model routing and removes unsanctioned manual modes',()
  assert.equal(chatTurnModel({complexity:'light',env:{}}).tier,'fast');
  assert.equal(chatTurnModel({complexity:'deep',env:{}}).tier,'deep');
  assert.equal(documentModel({}),'gpt-5.6-terra');
+ const router=read('supabase/functions/office-assistant/romy-router.mjs');
+ assert.ok(router.includes('routeRomyTurn'));
+ assert.ok(router.includes('decision_model'));
+ assert.ok(router.includes('neutral_fallback'));
+ assert.ok(read('supabase/functions/office-assistant/index.ts').includes('routeRomyTurn({message,history,apiKey'));
+
  assert.equal(interactiveTurnContract({surface:'chat_browser'}).tools,'governed');
  const f=read('app/office-assistant.js');
  for(const removed of ['Antwortmodus',"mode='standard'",'maximal 4000'])assert.ok(!f.includes(removed));
