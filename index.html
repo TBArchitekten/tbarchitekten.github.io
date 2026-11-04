@@ -2,9 +2,9 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Titus Bernhard Architekten · Office</title>
-  <link rel="stylesheet" href="./style.css?v=2">
+  <link rel="stylesheet" href="./style.css?v=3">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
   <script src="./office-config.js?v=1"></script>
 </head>
@@ -13,8 +13,8 @@
     <section class="auth-card">
       <div class="wordmark">Titus Bernhard <strong>Architekten</strong></div>
       <p class="eyebrow">Office</p>
-      <h1>Interne Werkzeuge</h1>
-      <p class="muted">Anmeldung mit Ihrer Büro-E-Mail und Ihrem persönlichen Passwort.</p>
+      <h1>Anmelden</h1>
+      <p class="muted">Mit Ihrer Büro-E-Mail und Ihrem persönlichen Passwort.</p>
       <form id="loginForm">
         <label>E-Mail<input id="email" type="email" autocomplete="username" placeholder="name@bernhardarchitekten.com" required></label>
         <label>Passwort<input id="password" type="password" autocomplete="current-password" required></label>
@@ -43,113 +43,136 @@
   </div>
 
   <div id="appView" class="app" hidden>
-    <header class="topbar">
-      <a class="brand" href="./">Titus Bernhard <strong>Architekten</strong></a>
-      <div class="office-title">Office</div>
-      <div class="top-actions">
-        <span id="memberName"></span>
-        <button id="changePasswordBtn" class="quiet">Passwort ändern</button>
-        <button id="logoutBtn" class="quiet">Abmelden</button>
+    <nav id="lenses" class="lenses" aria-label="Office">
+      <div class="lenses-brand">Titus Bernhard <strong>Architekten</strong><small>Office</small></div>
+      <div class="lenses-heading">ANSICHTEN</div>
+      <button class="lens-nav-item active" data-view="work" aria-label="Work">
+        <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18"/></svg></span>
+        <span class="lens-copy"><strong>Work</strong><small>Projekte</small></span>
+      </button>
+      <button class="lens-nav-item" data-view="tools" aria-label="Tools">
+        <span class="lens-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="lens-copy"><strong>Tools</strong><small>Muster und Werkzeuge</small></span>
+      </button>
+      <div class="lenses-spacer"></div>
+      <div class="lens-account">
+        <button id="accountButton" class="lens-account-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu">
+          <span id="memberInitials" class="avatar" aria-hidden="true"></span>
+          <span class="lens-copy"><strong id="memberName"></strong><small id="memberRoleLabel"></small></span>
+        </button>
+        <div id="accountMenu" class="account-menu" role="menu" hidden>
+          <button class="menu-item" type="button" role="menuitem" data-view="members" data-admin-only hidden>Mitglieder</button>
+          <button id="changePasswordBtn" class="menu-item" type="button" role="menuitem">Passwort ändern</button>
+          <button id="logoutBtn" class="menu-item is-danger" type="button" role="menuitem">Abmelden</button>
+        </div>
       </div>
-    </header>
+    </nav>
 
-    <main class="shell">
-      <nav class="side">
-        <button class="nav-item active" data-view="tools">Tools</button>
-        <button class="nav-item" data-view="plans">Terminpläne</button>
-        <button class="nav-item" data-view="projects">Projekte</button>
-        <button class="nav-item" data-view="members" data-admin-only hidden>Mitglieder</button>
-      </nav>
-
-      <section class="content">
-        <div id="toolsView" class="view">
-          <div class="page-head">
-            <div>
-              <p class="eyebrow">Office Hub</p>
-              <h1>Tools</h1>
-              <p class="lead">Wiederverwendbare Werkzeuge für die Projektarbeit.</p>
-            </div>
+    <main class="content">
+      <section id="workView" class="view">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Work</p>
+            <h1>Projekte</h1>
+            <p class="lead">Jedes Werkzeug hängt an einem Projekt. Projekte legen Projektleiter und Administration an.</p>
           </div>
-          <div class="tool-grid">
-            <button class="tool-card" id="openTerminplanTool">
-              <div class="tool-index">01</div>
-              <div>
-                <h2>Terminplan</h2>
-                <p>Muster für LPH 3 und LPH 5 auswählen, projektbezogen instanziieren und fortschreiben.</p>
-              </div>
-              <span class="arrow">→</span>
-            </button>
+          <div class="page-actions"><button id="newProjectBtn" class="primary" data-lead-only hidden>+ Neues Projekt</button></div>
+        </div>
+        <div id="projectList" class="project-grid"></div>
+      </section>
+
+      <section id="projectView" class="view" hidden>
+        <div class="back-row"><button type="button" class="back" data-go="work">‹ Projekte</button></div>
+        <div class="page-head">
+          <div>
+            <p class="eyebrow" id="projectNumberLabel"></p>
+            <h1 id="projectTitle"></h1>
+          </div>
+          <div class="page-actions"><button id="projectNewPlanBtn" class="primary" type="button">+ Terminplan</button></div>
+        </div>
+        <div id="projectFacts" class="card project-facts"></div>
+        <section class="section">
+          <div class="section-title"><h2>Terminpläne</h2><span id="projectPlanCount" class="count"></span></div>
+          <div id="projectPlanList"></div>
+        </section>
+      </section>
+
+      <section id="toolsView" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Tools</p>
+            <h1>Werkzeuge</h1>
+            <p class="lead">Wiederverwendbare Werkzeuge und Office-Muster für die Projektarbeit.</p>
           </div>
         </div>
-
-        <div id="plansView" class="view" hidden>
-          <div class="page-head plans-head">
-            <div>
-              <p class="eyebrow">Tool 01</p>
-              <h1>Terminplan</h1>
-              <p class="lead">Muster auswählen oder bestehenden Projektterminplan öffnen.</p>
-            </div>
-            <button id="newPlanBtn" class="primary">+ Neuer Terminplan</button>
-          </div>
-          <section class="section">
-            <div class="section-title"><h2>Muster</h2><span>Office Standard</span></div>
-            <div id="templateGrid" class="template-grid"></div>
-          </section>
-          <section class="section">
-            <div class="section-title"><h2>Projektterminpläne</h2><span id="planCount">0</span></div>
-            <div id="planList" class="plan-list"></div>
-          </section>
+        <div class="tool-grid">
+          <button class="tool-card" id="openTerminplanTool" type="button">
+            <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M8 12h10M6 18h8"/></svg></span>
+            <span>
+              <h2>Terminplan</h2>
+              <p>Muster für LPH 3 und LPH 5 auswählen, projektbezogen instanziieren und fortschreiben.</p>
+            </span>
+            <span class="chevron" aria-hidden="true">›</span>
+          </button>
         </div>
+      </section>
 
-        <div id="projectsView" class="view" hidden>
-          <div class="page-head">
-            <div>
-              <p class="eyebrow">Office</p>
-              <h1>Projekte</h1>
-              <p class="lead">Jedes Werkzeug hängt an einem Projekt. Projekte legen Projektleiter und Administration an.</p>
-            </div>
-            <button id="newProjectBtn" class="primary" data-lead-only hidden>+ Neues Projekt</button>
+      <section id="plansView" class="view" hidden>
+        <div class="back-row"><button type="button" class="back" data-go="tools">‹ Werkzeuge</button></div>
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Tool 01</p>
+            <h1>Terminplan</h1>
+            <p class="lead">Muster auswählen oder einen bestehenden Projektterminplan öffnen.</p>
           </div>
-          <div id="projectList" class="plan-list"></div>
+          <div class="page-actions"><button id="newPlanBtn" class="primary" type="button">+ Neuer Terminplan</button></div>
         </div>
+        <section class="section">
+          <div class="section-title"><h2>Muster</h2><span class="count">Office Standard</span></div>
+          <div id="templateGrid" class="template-grid"></div>
+        </section>
+        <section class="section">
+          <div class="section-title"><h2>Projektterminpläne</h2><span id="planCount" class="count">0</span></div>
+          <div id="planList"></div>
+        </section>
+      </section>
 
-        <div id="membersView" class="view" hidden>
-          <div class="page-head">
-            <div>
-              <p class="eyebrow">Administration</p>
-              <h1>Mitglieder</h1>
-              <p class="lead">Zugänge anlegen, Rollen ändern, Passwörter zurücksetzen. Es werden keine E-Mails verschickt: Das Startpasswort geben Sie persönlich weiter.</p>
-            </div>
+      <section id="membersView" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Administration</p>
+            <h1>Mitglieder</h1>
+            <p class="lead">Zugänge anlegen, Rollen ändern, Passwörter zurücksetzen. Es werden keine E-Mails verschickt: Das Startpasswort geben Sie persönlich weiter.</p>
           </div>
-          <form id="memberForm" class="member-form">
-            <label>Büro-E-Mail<input id="memberEmail" type="email" placeholder="name@bernhardarchitekten.com" required></label>
-            <label>Name<input id="memberDisplayName" type="text" maxlength="80" required></label>
-            <label>Rolle
-              <select id="memberRole">
-                <option value="member">Mitarbeiter/in</option>
-                <option value="projektleiter">Projektleiter/in</option>
-                <option value="admin">Administration</option>
-              </select>
-            </label>
-            <button class="primary" type="submit">Zugang anlegen</button>
-          </form>
-          <div id="memberMessage" class="message" aria-live="polite"></div>
-          <div id="startPasswordBox" class="start-password" hidden role="status">
-            <div>
-              <p class="eyebrow">Startpasswort · nur jetzt sichtbar</p>
-              <p id="startPasswordFor" class="muted"></p>
-              <code id="startPasswordValue"></code>
-            </div>
-            <div class="start-password-actions">
-              <button type="button" id="copyStartPassword">Kopieren</button>
-              <button type="button" id="hideStartPassword" class="quiet">Ausblenden</button>
-            </div>
-          </div>
-          <section class="section">
-            <div class="section-title"><h2>Zugänge</h2><span id="memberCount">0</span></div>
-            <div id="memberList" class="plan-list"></div>
-          </section>
         </div>
+        <form id="memberForm" class="card member-form">
+          <label>Büro-E-Mail<input id="memberEmail" type="email" placeholder="name@bernhardarchitekten.com" required></label>
+          <label>Name<input id="memberDisplayName" type="text" maxlength="80" required></label>
+          <label>Rolle
+            <select id="memberRole">
+              <option value="member">Mitarbeiter/in</option>
+              <option value="projektleiter">Projektleiter/in</option>
+              <option value="admin">Administration</option>
+            </select>
+          </label>
+          <button class="primary" type="submit">Zugang anlegen</button>
+        </form>
+        <div id="memberMessage" class="message" aria-live="polite"></div>
+        <div id="startPasswordBox" class="card start-password" hidden role="status">
+          <div>
+            <p class="eyebrow">Startpasswort · nur jetzt sichtbar</p>
+            <p id="startPasswordFor" class="muted"></p>
+            <code id="startPasswordValue"></code>
+          </div>
+          <div class="start-password-actions">
+            <button type="button" id="copyStartPassword" class="primary">Kopieren</button>
+            <button type="button" id="hideStartPassword">Ausblenden</button>
+          </div>
+        </div>
+        <section class="section">
+          <div class="section-title"><h2>Zugänge</h2><span id="memberCount" class="count">0</span></div>
+          <div id="memberList" class="card row-list"></div>
+        </section>
       </section>
     </main>
   </div>
@@ -159,7 +182,7 @@
       <div class="dialog-head">
         <div>
           <p class="eyebrow">Terminplan</p>
-          <h2>Neuen Projektterminplan erstellen</h2>
+          <h2>Neuer Projektterminplan</h2>
         </div>
         <button value="cancel" class="icon-btn" aria-label="Schließen">×</button>
       </div>
@@ -196,7 +219,7 @@
     <form method="dialog" id="projectForm">
       <div class="dialog-head">
         <div>
-          <p class="eyebrow">Projekte</p>
+          <p class="eyebrow">Work</p>
           <h2>Neues Projekt</h2>
         </div>
         <button value="cancel" class="icon-btn" aria-label="Schließen">×</button>
@@ -214,7 +237,7 @@
     </form>
   </dialog>
 
-  <script src="./office-core.js?v=1"></script>
-  <script src="./app.js?v=2"></script>
+  <script src="./office-core.js?v=2"></script>
+  <script src="./app.js?v=3"></script>
 </body>
 </html>

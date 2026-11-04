@@ -460,12 +460,13 @@ body.read-only .editor-only{display:none!important}
   @media (max-width:900px){.assistant-columns{grid-template-columns:1fr}.assistant-body{max-height:44vh}}
 </style>
 <link rel="stylesheet" href="./assistant-surface.css">
+<link rel="stylesheet" href="./window-editor.css?v=1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>
 </head>
 <body>
 <header class="office-plan-head">
-  <a href="./">← Office / Tools / Terminplan</a>
+  <a href="./#work" id="officeBack">‹ Work</a>
   <div class="plan-label" id="officePlanLabel">Terminplan</div>
   <div class="right"><span id="officeMode"></span><span id="saveState"></span></div>
 </header>
@@ -786,6 +787,12 @@ body.read-only .editor-only{display:none!important}
     const phase=project.phase||meta.phase||'';
     $('#officePlanLabel').textContent=[title,phase].filter(Boolean).join(' · ');
     $('#officeMode').textContent=TEMPLATE_ID?'Muster · nur Ansicht':(canEdit?'Bearbeitung':'nur Ansicht');
+    // Back to where the plan lives: its project page in Work, or the Muster in Tools.
+    const back=$('#officeBack');
+    if(back){
+      if(TEMPLATE_ID){back.href='./#plans';back.textContent='‹ Muster'}
+      else if(meta.project_id){back.href='./#project='+encodeURIComponent(meta.project_id);back.textContent='‹ '+(project.projectNumber||meta.project_number||'Projekt')}
+    }
     $('#printPlanTitle').textContent=[title,'Planungsterminplan',phase].filter(Boolean).join(' · ');
     $('#printPlanSubtitle').textContent=TEMPLATE_ID
       ?'Office Muster · unveränderliche Vorlage'
