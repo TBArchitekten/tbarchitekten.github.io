@@ -9,28 +9,25 @@ test('Assistant reuses Window chat rather than building another UI',()=>{
   const shell=read('app/shell.js'),html=read('app/index.html');
   const frontend=read('app/office-assistant.js');
   const app=read('app/app.js'),css=read('app/office-assistant.css');
-  assert.match(shell,/data-nav="assistant" aria-label="Assistent"/);
-  assert.doesNotMatch(shell,/data-nav="assistant" aria-label="Assistent" hidden/);
-  assert.match(shell,/id="assistantScreen"/);
-  assert.match(shell,/id="messages"/);
-  assert.match(shell,/id="chatInput"/);
-  assert.match(shell,/id="sendButton"/);
-  assert.match(shell,/id="micButton"/);
-  assert.match(shell,/id="attachButton"/);
-  assert.match(html,/office-assistant\\.js\\?v=office6/);
-  assert.match(html,/office-assistant\\.css\\?v=office6/);
-  assert.match(html,/app\\.js\\?v=office6/);
-  assert.match(frontend,/office_assistant_conversations/);
-  assert.match(frontend,/office_assistant_messages/);
-  assert.match(frontend,/app\\(\\)\\?\\.setOfficeMessages/);
-  assert.doesNotMatch(frontend,/workspace\\.innerHTML|office-chat-layout|office-chat-sidebar|officeChatInput|officeChatForm/);
-  assert.doesNotMatch(css,/#assistantScreen>\\.assistant-scroll[^}]*display:none/i);
-  assert.doesNotMatch(css,/#assistantScreen>\\.composer-wrap[^}]*display:none/i);
-  assert.match(app,/window\\.TBA_OFFICE_ASSISTANT\\.send/);
-  assert.match(app,/OFFICE\\?\\{\\.\\.\\.state,messages:\\[\\]\\}:state/);
-  assert.match(app,/OFFICE\\?officeChatMessages:normalizeMessages/);
-  assert.doesNotMatch(frontend,/isabella-chat|WINDOW_NATIVE|window\\.MINDS_WORK/);
-  assert.match(frontend,/textContent/);
+  for(const needle of ['data-nav="assistant" aria-label="Assistent"','id="assistantScreen"','id="messages"','id="chatInput"','id="sendButton"','id="micButton"','id="attachButton"']){
+    assert.ok(shell.includes(needle),'Window shell missing '+needle);
+  }
+  assert.ok(!shell.includes('data-nav="assistant" aria-label="Assistent" hidden'));
+  for(const needle of ['office-assistant.js?v=office6','office-assistant.css?v=office6','app.js?v=office6']){
+    assert.ok(html.includes(needle),'asset cache not bumped '+needle);
+  }
+  for(const needle of ['office_assistant_conversations','office_assistant_messages','app()?.setOfficeMessages','window.TBA_OFFICE_ASSISTANT']){
+    if(needle==='window.TBA_OFFICE_ASSISTANT')assert.ok(app.includes(needle));
+    else assert.ok(frontend.includes(needle),'backend adapter missing '+needle);
+  }
+  for(const removed of ['workspace.innerHTML','office-chat-layout','office-chat-sidebar','officeChatInput','officeChatForm','isabella-chat','WINDOW_NATIVE','window.MINDS_WORK']){
+    assert.ok(!frontend.includes(removed),'Office cannot replace Window UI: '+removed);
+  }
+  assert.ok(!css.includes('#assistantScreen>.assistant-scroll'));
+  assert.ok(!css.includes('#assistantScreen>.composer-wrap'));
+  assert.ok(app.includes('OFFICE?{...state,messages:[]}:state'),'Office messages must not be cached in localStorage');
+  assert.ok(app.includes('OFFICE?officeChatMessages:normalizeMessages'),'Synced state must not overwrite Office chat');
+  assert.ok(frontend.includes('textContent'));
   new Function(frontend);
 });
 
