@@ -45,14 +45,13 @@ function status(message=''){const el=$('#officeChatStatus');if(el)el.textContent
 function errorText(error,body){
   const code=String(body?.error||'');
   const messages={
-    daily_limit:'Das Tageslimit für Ihren Assistenten ist erreicht (15 Anfragen pro UTC-Tag).',
     request_already_received:'Diese Nachricht wurde bereits empfangen. Bitte laden Sie den Verlauf erneut.',
     conversation_not_found:'Dieses Gespräch ist für Ihr Konto nicht verfügbar.',
     member_not_active:'Ihr Office-Zugang ist nicht aktiv.',
     ai_provider_unavailable:'Der KI-Dienst ist momentan nicht verfügbar.',
     ai_timeout_or_network:'Die Anfrage hat zu lange gedauert. Bitte prüfen Sie den Verlauf vor erneutem Senden.',
     assistant_not_configured:'Der Assistent ist serverseitig noch nicht vollständig eingerichtet.',
-    quota_unavailable:'Das Nutzungslimit konnte nicht geprüft werden.',
+    request_registration_unavailable:'Ihre Anfrage konnte nicht sicher erfasst werden. Bitte versuchen Sie es erneut.',
   };
   return messages[code]||'Die Nachricht konnte nicht abgeschlossen werden. Bitte prüfen Sie den Verlauf und versuchen Sie es erneut.';
 }

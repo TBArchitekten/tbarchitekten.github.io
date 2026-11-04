@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-04 · Retirada de cuota no acordada del Assistent · ChatGPT
+- Qué cambió y por qué: el límite diario de 15 consultas por miembro fue una decisión unilateral de ChatGPT, no aceptada por Gari. Se retira sin crear otra cuota arbitraria.
+- Archivos: migración office_assistant_remove_unapproved_daily_cap.sql, función office-assistant, interfaz, pruebas y documentación.
+- Base de datos: migración preparada, pendiente de aplicar en este PR.
+- Deploy de funciones: pendiente; retira la respuesta de error por cuota.
+- Cómo se probó: simulación SQL con 32 solicitudes válidas en transacción revertida; duplicados, aislamiento por usuario y no miembros siguen bloqueados. CI pendiente.
+- Quedó pendiente o sin probar: merge, deploy final y aceptación con usuarios reales.
+- Riesgos o decisiones que necesitan a Gari: el coste del proveedor sigue existiendo; presupuesto y eventuales cuotas solo mediante decisión explícita. La cuota del Terminplan no cambia.
+- PR: por abrir.
+
 ### 2026-11-04 · Assistent: cierre de integración · ChatGPT
 - Qué cambió: PR #18 integrado en main.
 - Archivos: ESTADO.md y BITACORA.md.

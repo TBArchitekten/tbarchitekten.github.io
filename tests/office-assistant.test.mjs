@@ -31,14 +31,22 @@ test('Every conversation, message and request belongs to exactly one authenticat
   assert.doesNotMatch(sql,/to anon;/);
 });
 
-test('Quota is atomic, per-user, finite, with request idempotency',()=>{
-  assert.match(sql,/pg_catalog\.pg_advisory_xact_lock/);
-  assert.match(sql,/office-personal-chat:/);
-  assert.match(sql,/if used>=15 then return 'daily_limit'/);
-  assert.match(sql,/if exists\(select 1 from public\.office_assistant_requests r/);
-  assert.match(sql,/return 'duplicate'/);
+test('Personal assistant requests are authenticated and deduplicated, not subject to an unapproved quota',()=>{
+  const migration=read('supabase/migrations/20261104223000_office_assistant_remove_unapproved_daily_cap.sql');
+  const frontend=read('app/office-assistant.js');
+  assert.match(migration,/create or replace function public\\.office_assistant_reserve/);
+  assert.match(migration,/pg_catalog\\.pg_advisory_xact_lock/);
+  assert.match(migration,/office-personal-chat:/);
+  assert.match(migration,/return 'duplicate'/);
+  assert.match(migration,/return 'reserved'/);
+  assert.match(migration,/private\\.office_is_member/);
+  assert.doesNotMatch(migration,/used\\s*>=|daily_limit|date_trunc|per-day model-call/i);
+  assert.doesNotMatch(edge,/daily_limit|quota_unavailable/);
+  assert.match(edge,/request_registration_unavailable/);
+  assert.doesNotMatch(frontend,/daily_limit|15 Anfragen|quota_unavailable/);
+  assert.match(frontend,/request_registration_unavailable/);
   assert.match(edge,/office_assistant_reserve/);
-  assert.match(edge,/response\.ok/);
+  assert.match(edge,/response\\.ok/);
   assert.match(edge,/store: false/);
   assert.match(edge,/max_output_tokens/);
 });
