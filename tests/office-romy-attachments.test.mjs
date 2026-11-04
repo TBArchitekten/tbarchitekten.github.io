@@ -18,14 +18,14 @@ test('Romy uses the existing Window attachment UI, not a new picker',()=>{
   assert.ok(app.includes("const attachments=files.length?await uploadChatFiles(files):[]"));
   assert.ok(!app.includes("if(OFFICE&&pendingChatFiles.length)"));
   assert.ok(app.includes("attachments:Array.isArray(m.attachments)?m.attachments:[]"));
-  assert.ok(assistant.includes(".select('id,role,content,attachments,created_at')"));
+  assert.ok(assistant.includes(".select('id,role,content,attachments,metadata,created_at')"));
   assert.ok(assistant.includes('replyTo,attachments,'));
   assert.ok(transport.includes('reply_to:replyTo||null,attachments'));
   assert.ok(edge.includes('loadRomyAttachments(db,uid,attachments)'));
   assert.ok(edge.includes('attachments:attached.metadata'));
   assert.ok(edge.includes('attachmentInputs:attached.inputs'));
-  assert.ok(html.includes('app.js?v=office27'));
-  assert.ok(html.includes('office-assistant.js?v=office27'));
+  assert.ok(html.includes('app.js?v=office31'));
+  assert.ok(html.includes('office-assistant.js?v=office31'));
   assert.ok(html.includes('romy-transport.js?v=office27'));
   new Function(assistant);new Function(transport);new Function(app);
 });
