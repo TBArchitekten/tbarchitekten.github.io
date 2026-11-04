@@ -71,3 +71,49 @@ test('the editor and the AI function share the edit rule: owner, admin or Projek
   const sql=read('supabase/migrations/20261104000000_office_base_v1.sql');
   assert.match(sql,/p_owner = \(select auth\.uid\(\)\) or \(select private\.office_leads_project\(p_project\)\)/);
 });
+
+test('Window design: helpers for the account avatar, the next milestone and the address bar',()=>{
+  assert.equal(C.initials('Edgar Martínez'),'EM');
+  assert.equal(C.initials('titus'),'TI');
+  assert.equal(C.initials('natalia.k@bernhardarchitekten.com'),'NK');
+  assert.equal(C.initials(''),'·');
+  const state={tasks:[{type:'milestone',name:'Alt',start:'2026-01-01'},{type:'task',name:'Arbeit',start:'2026-12-01'},
+    {type:'milestone',name:'Abgabe Entwurf',start:'2027-02-12'},{type:'milestone',name:'Kick-off',start:'2026-11-20'}]};
+  assert.equal(C.nextMilestone(state,'2026-11-04').name,'Kick-off');
+  assert.equal(C.nextMilestone(state,'2027-03-01'),null);
+  assert.equal(C.nextMilestone(null,'2026-11-04'),null);
+  const id='aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+  assert.deepEqual(C.viewFromHash('#project='+id),{view:'project',id});
+  assert.deepEqual(C.viewFromHash('#project=not-a-uuid'),{view:'work',id:null});
+  assert.deepEqual(C.viewFromHash('#members'),{view:'members',id:null});
+  assert.deepEqual(C.viewFromHash(''),{view:'work',id:null});
+  assert.equal(C.hashFor('project',id),'#project='+id);
+  assert.equal(C.hashFor('tools'),'#tools');
+});
+
+test('Window design: sidebar of views, Mitglieder in the account menu, one id per element',()=>{
+  const index=read('index.html'),css=read('style.css'),app=read('app.js');
+  const ids=[...index.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
+  assert.deepEqual(ids.filter((x,i)=>ids.indexOf(x)!==i),[],'no duplicate ids');
+  for(const view of ['work','tools'])assert.match(index,new RegExp(`class="lens-nav-item[^"]*" data-view="${view}"`));
+  assert.match(index,/<div id="accountMenu" class="account-menu" role="menu" hidden>[\s\S]*data-view="members" data-admin-only hidden[\s\S]*id="changePasswordBtn"[\s\S]*id="logoutBtn"/);
+  assert.match(index,/<section id="projectView"[\s\S]*id="projectNewPlanBtn" class="primary"/);
+  // One blue for actions, Window tokens, cards with a hairline.
+  assert.match(css,/--m-blue:#0062cc;/);
+  assert.match(css,/button\.primary\{[^}]*background:var\(--m-blue\)/);
+  assert.match(css,/--m-type:-apple-system/);
+  assert.doesNotMatch(css,/Arial,Helvetica,sans-serif\}/,'no Arial page font');
+  // Projects open their page; the dialog preselects the project.
+  assert.match(app,/card\.onclick=\(\)=>switchView\('project',\{id:p\.id\}\)/);
+  assert.match(app,/\$\('#projectNewPlanBtn'\)\.onclick=\(\)=>openCreate\('LPH3',currentProjectId\)/);
+  assert.match(app,/if\(name==='members'&&member\?\.role!=='admin'\)name='work';/);
+});
+
+test('Window design: the editor uses the same chrome and goes back to its project',()=>{
+  const editor=read('terminplan.html'),css=read('window-editor.css');
+  assert.match(editor,/<link rel="stylesheet" href="\.\/window-editor\.css\?v=1">/);
+  assert.match(editor,/<a href="\.\/#work" id="officeBack">‹ Work<\/a>/);
+  assert.match(editor,/back\.href='\.\/#project='\+encodeURIComponent\(meta\.project_id\)/);
+  assert.match(css,/--accent:#0062cc;/);
+  assert.match(css,/@media print\{html,body\{font-family:Arial,Helvetica,sans-serif\}\}/,'print layout keeps its font');
+});

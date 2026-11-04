@@ -71,6 +71,29 @@
     if(code==='reauthentication_needed')return 'Bitte melden Sie sich erneut an und ändern Sie das Passwort dann.';
     return 'Das Passwort konnte nicht gespeichert werden.';
   }
+  // Two letters for the account avatar: "Edgar Martínez" → "EM", "titus" → "TI".
+  function initials(name){
+    const parts=String(name||'').trim().replace(/@.*$/,'').split(/[\s._-]+/).filter(Boolean);
+    if(!parts.length)return '·';
+    const letters=parts.length>1?parts[0][0]+parts[parts.length-1][0]:parts[0].slice(0,2);
+    return letters.toUpperCase();
+  }
+  // The next milestone of a plan on or after today, for the project page.
+  function nextMilestone(state,today){
+    const tasks=Array.isArray(state&&state.tasks)?state.tasks:[];
+    return tasks.filter(t=>t&&t.type==='milestone'&&typeof t.start==='string'&&t.start>=today)
+      .sort((a,b)=>a.start.localeCompare(b.start)||String(a.name||'').localeCompare(String(b.name||''),'de'))[0]||null;
+  }
+  // Window-style addresses: #work, #project=<id>, #tools, #plans, #members.
+  const VIEWS=['work','project','tools','plans','members'];
+  function viewFromHash(hash){
+    const raw=String(hash||'').replace(/^#/,'');
+    const [name,value]=raw.split('=');
+    if(name==='project'&&/^[0-9a-f-]{36}$/i.test(value||''))return {view:'project',id:value.toLowerCase()};
+    return {view:VIEWS.includes(name)&&name!=='project'?name:'work',id:null};
+  }
+  function hashFor(view,id){return view==='project'&&id?'#project='+id:'#'+view}
   return {iso,parseDate,isWeekend,nextWorkday,addWorkdays,workdayOffset,formatDate,esc,todayKey,
-    cloneStateForProject,passwordProblem,ROLE_LABELS,canLead,adminErrorText,authErrorText};
+    cloneStateForProject,passwordProblem,ROLE_LABELS,canLead,adminErrorText,authErrorText,
+    initials,nextMilestone,viewFromHash,hashFor};
 });

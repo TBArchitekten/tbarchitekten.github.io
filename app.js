@@ -8,16 +8,26 @@
   const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
   const {esc,formatDate}=C;
   const views={auth:$('#authView'),password:$('#passwordView'),app:$('#appView')};
-  let member=null,user=null,templates=[],instances=[],projects=[],members=[],creating=false,passwordVoluntary=false,booting=null;
+  let member=null,user=null,templates=[],instances=[],projects=[],members=[],creating=false,passwordVoluntary=false,booting=null,currentProjectId=null;
 
   function showOnly(name){for(const [k,el] of Object.entries(views))el.hidden=k!==name}
-  function switchView(name){
+  // One view at a time; the sidebar marks its lens (Work holds the project pages, Tools the Muster).
+  const LENS_OF={work:'work',project:'work',tools:'tools',plans:'tools',members:null};
+  function switchView(name,{id=null,push=true}={}){
+    if(name==='members'&&member?.role!=='admin')name='work';
+    if(name==='project'&&!projects.some(p=>p.id===id))name='work';
     $$('.view').forEach(v=>v.hidden=true);
-    $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
-    const view=$('#'+name+'View')||$('#toolsView');
-    view.hidden=false;
+    $$('.lens-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===LENS_OF[name]));
+    ($('#'+name+'View')||$('#workView')).hidden=false;
+    closeAccountMenu();
+    if(name==='project'){currentProjectId=id;renderProjectPage()}
     if(name==='members')void loadMembers();
+    const hash=C.hashFor(name,id);
+    if(push&&location.hash!==hash)history.pushState(null,'',hash);
+    window.scrollTo(0,0);
   }
+  function routeFromHash(){const r=C.viewFromHash(location.hash);switchView(r.view,{id:r.id,push:false})}
+  window.addEventListener('popstate',routeFromHash);
 
   async function ownMembership(uid){
     const {data,error}=await sb.from('office_members')
@@ -40,9 +50,12 @@
     if(member.must_change_password){openPassword(false);return}
     showOnly('app');
     $('#memberName').textContent=member.display_name||user.email||'TBA';
+    $('#memberRoleLabel').textContent=C.ROLE_LABELS[member.role]||'';
+    $('#memberInitials').textContent=C.initials(member.display_name||user.email);
     $$('[data-admin-only]').forEach(el=>el.hidden=member.role!=='admin');
     $$('[data-lead-only]').forEach(el=>el.hidden=!C.canLead(member.role));
     await loadData();
+    routeFromHash();
   }
   // onAuthStateChange and getSession may both fire at start: boot once at a time.
   function bootSafely(session){
@@ -63,6 +76,7 @@
     for(const r of [tplRes,planRes,projRes,memRes])if(r.error)throw r.error;
     templates=tplRes.data||[];instances=planRes.data||[];projects=projRes.data||[];members=memRes.data||[];
     renderTemplates();renderPlans();renderProjects();
+    if(currentProjectId&&!$('#projectView').hidden)renderProjectPage();
   }
   const memberName=id=>members.find(m=>m.user_id===id)?.display_name||'—';
 
@@ -71,7 +85,8 @@
     if(!templates.length){host.innerHTML='<div class="empty">Noch keine Muster-Terminpläne hinterlegt.</div>';return}
     for(const tpl of templates){
       const card=document.createElement('article');card.className='template-card';
-      card.innerHTML=`<div class="top"><div><div class="badge">${esc(tpl.phase)} · Version ${esc(tpl.version)}</div><h3>${esc(tpl.title)}</h3></div><span class="badge">${esc(tpl.status||'Muster')}</span></div>
+      card.className='card template-card';
+      card.innerHTML=`<div class="top"><div><p class="eyebrow">${esc(tpl.phase)} · Version ${esc(tpl.version)}</p><h3>${esc(tpl.title)}</h3></div><span class="pill ${tpl.status==='Office Standard'?'is-blue':''}">${esc(tpl.status||'Muster')}</span></div>
         <p>${esc(tpl.description||'')}</p>
         <div class="template-actions"><button type="button" data-preview>Vorschau</button><button type="button" class="primary" data-create>Terminplan erstellen</button></div>`;
       card.querySelector('[data-preview]').onclick=()=>location.href='./terminplan.html?template='+encodeURIComponent(tpl.id);
@@ -79,26 +94,49 @@
       host.append(card);
     }
   }
-  function renderPlans(){
-    const host=$('#planList');$('#planCount').textContent=String(instances.length);host.innerHTML='';
-    if(!instances.length){host.innerHTML='<div class="empty">Noch keine Projektterminpläne. Erstelle den ersten aus einem Muster.</div>';return}
-    for(const p of instances){
-      const row=document.createElement('div');row.className='plan-row';
-      const stand=p.state?.project?.standDate||p.updated_at?.slice(0,10);
-      row.innerHTML=`<div class="number">${esc(p.project_number||'—')}</div><div class="name">${esc(p.project_name)}</div><div class="phase">${esc(p.phase)}</div><div class="date">Stand ${esc(formatDate(stand))}</div><button type="button">Öffnen →</button>`;
-      row.onclick=()=>location.href='./terminplan.html?id='+encodeURIComponent(p.id);
-      host.append(row);
-    }
+  function planRow(p,{withProject=true}={}){
+    const row=document.createElement('button');row.type='button';row.className='row';
+    const stand=p.state?.project?.standDate||p.updated_at?.slice(0,10);
+    const next=C.nextMilestone(p.state,C.todayKey());
+    const title=withProject?`${esc(p.project_number||'—')} · ${esc(p.project_name)}`:esc(p.phase.replace('LPH','LPH '));
+    const sub=[withProject?esc(p.phase.replace('LPH','LPH ')):'', 'Stand '+esc(formatDate(stand)),
+      next?'Nächster Meilenstein: '+esc(next.name||'')+' · '+esc(formatDate(next.start)):''].filter(Boolean).join(' · ');
+    row.innerHTML=`<span><div class="row-title">${title}</div><div class="row-sub">${sub}</div></span><span class="row-side">${esc(memberName(p.owner_id))}<span class="chevron" aria-hidden="true">›</span></span>`;
+    row.onclick=()=>location.href='./terminplan.html?id='+encodeURIComponent(p.id);
+    return row;
   }
+  function renderPlans(){
+    const host=$('#planList');$('#planCount').textContent=String(instances.length);host.innerHTML='';host.className=instances.length?'card row-list':'';
+    if(!instances.length){host.innerHTML='<div class="empty">Noch keine Projektterminpläne. Erstelle den ersten aus einem Muster.</div>';return}
+    for(const p of instances)host.append(planRow(p));
+  }
+  const planWord=n=>n+' '+(n===1?'Terminplan':'Terminpläne');
   function renderProjects(){
-    const host=$('#projectList');host.innerHTML='';
-    if(!projects.length){host.innerHTML='<div class="empty">Noch keine Projekte. '+(C.canLead(member.role)?'Lege das erste an.':'Projektleiter oder Administration legen Projekte an.')+'</div>';return}
+    const host=$('#projectList');host.innerHTML='';host.className=projects.length?'project-grid':'';
+    if(!projects.length){host.innerHTML='<div class="empty">Noch keine Projekte. '+(C.canLead(member.role)?'Lege das erste mit „+ Neues Projekt“ an.':'Projektleiter oder Administration legen Projekte an.')+'</div>';return}
     for(const p of projects){
       const plans=instances.filter(i=>i.project_id===p.id).length;
-      const row=document.createElement('div');row.className='plan-row project-row';
-      row.innerHTML=`<div class="number">${esc(p.number)}</div><div class="name">${esc(p.name)}</div><div class="phase">${esc(memberName(p.projektleiter_id))}</div><div class="date">${plans} ${plans===1?'Terminplan':'Terminpläne'}</div><span class="badge">${esc(p.status)}</span>`;
-      host.append(row);
+      const card=document.createElement('button');card.type='button';card.className='project-card';
+      card.innerHTML=`<p class="eyebrow">${esc(p.number)}</p><h3>${esc(p.name)}</h3>
+        <span class="meta"><span>Projektleitung: ${esc(memberName(p.projektleiter_id))}</span><span>${planWord(plans)}</span></span>
+        <span class="pill ${p.status==='aktiv'?'is-green':''}">${esc(p.status)}</span>`;
+      card.onclick=()=>switchView('project',{id:p.id});
+      host.append(card);
     }
+  }
+  function renderProjectPage(){
+    const p=projects.find(x=>x.id===currentProjectId);if(!p)return;
+    const plans=instances.filter(i=>i.project_id===p.id);
+    $('#projectNumberLabel').textContent='Projekt '+p.number;
+    $('#projectTitle').textContent=p.name;
+    $('#projectFacts').innerHTML=`<div><p class="eyebrow">Projektleitung</p><strong>${esc(memberName(p.projektleiter_id))}</strong></div>
+      <div><p class="eyebrow">Status</p><strong>${esc(p.status)}</strong></div>
+      <div><p class="eyebrow">Terminpläne</p><strong>${plans.length}</strong></div>`;
+    $('#projectPlanCount').textContent=planWord(plans.length);
+    $('#projectNewPlanBtn').hidden=p.status!=='aktiv';
+    const host=$('#projectPlanList');host.innerHTML='';host.className=plans.length?'card row-list':'';
+    if(!plans.length){host.innerHTML='<div class="empty">Noch kein Terminplan für dieses Projekt. Mit „+ Terminplan“ aus einem Office-Muster anlegen.</div>';return}
+    for(const plan of plans)host.append(planRow(plan,{withProject:false}));
   }
 
   // ── Terminplan from a Muster, always attached to an Office project ──────
@@ -117,10 +155,10 @@
     $$('[data-new-project]').forEach(el=>el.hidden=!isNew);
     $('#projectNumber').required=isNew;$('#projectName').required=isNew;
   }
-  function openCreate(phase='LPH3'){
+  function openCreate(phase='LPH3',projectId=''){
     $('#phase').value=phase;$('#projectStart').value=C.todayKey();
     $('#projectNumber').value='';$('#projectName').value='';$('#createMessage').textContent='';
-    fillProjectSelect();
+    fillProjectSelect(projectId);
     if(!projects.length&&!C.canLead(member.role))$('#createMessage').textContent='Ein Projektleiter oder die Administration muss das Projekt zuerst anlegen.';
     $('#createDialog').showModal();
   }
@@ -178,8 +216,8 @@
     e.preventDefault();
     const submit=e.currentTarget.querySelector('button[type="submit"]');submit.disabled=true;
     try{
-      await createProject($('#newProjectNumber').value.trim(),$('#newProjectName').value.trim(),$('#newProjectLead').value);
-      $('#projectDialog').close();renderProjects();
+      const project=await createProject($('#newProjectNumber').value.trim(),$('#newProjectName').value.trim(),$('#newProjectLead').value);
+      $('#projectDialog').close();renderProjects();switchView('project',{id:project.id});
     }catch(err){$('#projectMessage').textContent=err.message}
     finally{submit.disabled=false}
   });
@@ -215,11 +253,11 @@
       $('#memberCount').textContent=String(list.filter(m=>m.is_active).length);
       host.innerHTML='';
       for(const m of list){
-        const row=document.createElement('div');row.className='plan-row member-row'+(m.is_active?'':' is-inactive');
+        const row=document.createElement('div');row.className='row member-row'+(m.is_active?'':' is-inactive');
         const self=m.user_id===user.id;
-        row.innerHTML=`<div class="name">${esc(m.display_name)}<small>${esc(m.email)}</small></div>
+        row.innerHTML=`<span><div class="row-title">${esc(m.display_name)}</div><div class="row-sub">${esc(m.email)}</div></span>
           <select data-role ${self?'disabled':''} aria-label="Rolle">${Object.entries(C.ROLE_LABELS).map(([v,l])=>`<option value="${v}" ${m.role===v?'selected':''}>${l}</option>`).join('')}</select>
-          <div class="date">${m.must_change_password?'Startpasswort aktiv':m.last_sign_in_at?'Zuletzt '+esc(formatDate(m.last_sign_in_at.slice(0,10))):'Noch nicht angemeldet'}</div>
+          <div class="row-sub row-sub-date">${m.must_change_password?'Startpasswort aktiv':m.last_sign_in_at?'Zuletzt '+esc(formatDate(m.last_sign_in_at.slice(0,10))):'Noch nicht angemeldet'}</div>
           <button type="button" data-reset ${!m.is_active?'disabled':''}>Passwort zurücksetzen</button>
           <button type="button" data-active ${self?'disabled':''}>${m.is_active?'Deaktivieren':'Aktivieren'}</button>`;
         row.querySelector('[data-role]').onchange=async e=>{
@@ -280,7 +318,7 @@
     }finally{submit.disabled=false}
   });
   $('#cancelPassword').onclick=()=>{if(passwordVoluntary)showOnly('app')};
-  $('#changePasswordBtn').onclick=()=>openPassword(true);
+  $('#changePasswordBtn').onclick=()=>{closeAccountMenu();openPassword(true)};
 
   // ── Sign-in ──────────────────────────────────────────────────────────────
   $('#loginForm').addEventListener('submit',async e=>{
@@ -295,11 +333,23 @@
     }finally{submit.disabled=false}
   });
 
-  $('#logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
+  $('#logoutBtn').onclick=async()=>{await sb.auth.signOut();location.hash='';location.reload()};
   $('#openTerminplanTool').onclick=()=>switchView('plans');
   $('#newPlanBtn').onclick=()=>openCreate('LPH3');
+  $('#projectNewPlanBtn').onclick=()=>openCreate('LPH3',currentProjectId);
   $('#cancelCreate').onclick=()=>$('#createDialog').close();
-  $$('.nav-item').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+  $$('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+  $$('[data-go]').forEach(b=>b.onclick=()=>switchView(b.dataset.go));
+
+  // Account menu at the foot of the sidebar: Mitglieder (admins), password, sign-out.
+  function closeAccountMenu(){$('#accountMenu').hidden=true;$('#accountButton').setAttribute('aria-expanded','false')}
+  $('#accountButton').onclick=e=>{
+    e.stopPropagation();
+    const open=$('#accountMenu').hidden;
+    $('#accountMenu').hidden=!open;$('#accountButton').setAttribute('aria-expanded',String(open));
+  };
+  document.addEventListener('click',e=>{if(!e.target.closest('.lens-account'))closeAccountMenu()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAccountMenu()});
 
   sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT')showOnly('auth')});
   sb.auth.getSession().then(({data})=>bootSafely(data.session)).catch(console.error);
