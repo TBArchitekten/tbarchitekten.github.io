@@ -1,0 +1,506 @@
+/* MINDS UX A.4 — unified surface language.
+   This layer owns presentation; app.css continues to own behavior/layout infrastructure.
+   The ORB and its existing animations/sizing are intentionally untouched. */
+.app{
+  --ink:var(--m-ink);
+  --muted:var(--m-ink-soft);
+  --line:var(--m-border);
+  font-family:var(--m-type-system);
+  color:var(--m-ink);
+  background:var(--m-paper);
+}
+.app button:focus-visible,.app [role="button"]:focus-visible,
+.app input:focus-visible,.app textarea:focus-visible,.app select:focus-visible{
+  outline:2px solid var(--m-focus);
+  outline-offset:2px;
+}
+/* Shared chrome: one quiet top edge and one reliable location indicator at bottom. */
+.app .topbar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+  height:calc(48px + env(safe-area-inset-top,0px));
+  min-height:calc(48px + env(safe-area-inset-top,0px));
+  padding:env(safe-area-inset-top,0px) var(--m-content-gutter) 0;
+  border:0;
+  background:var(--m-paper);
+}
+.app .topbar-brand{visibility:hidden}
+.app .top-actions{justify-self:end;gap:8px}
+.app .topbar .dots{
+  min-width:var(--m-touch);
+  min-height:var(--m-touch);
+  display:grid;
+  place-items:center;
+  font-size:21px;
+  color:var(--m-ink);
+}
+.app .main-nav{
+  border:1px solid var(--m-border);
+  background:rgba(255,255,255,.98);
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+.app .main-nav-item{color:var(--m-ink-soft);transition:background var(--m-motion-fast) var(--m-ease),color var(--m-motion-fast) var(--m-ease)}
+.app .main-nav-item.active{color:var(--m-ink);background:var(--m-surface)}
+.app .nav-label{font-size:10px;letter-spacing:0}
+.app .nav-icon{font-weight:400}
+.app .composer,.app .work-thread-composer{
+  border:1px solid var(--m-border);
+  box-shadow:none;
+  background:var(--m-paper);
+}
+.app .composer textarea,.app .work-thread-composer textarea{
+  font-family:var(--m-type-system);
+  font-size:var(--m-size-body);
+  line-height:var(--m-leading-body);
+}
+.app .message,.app .work-thread-message{
+  font-size:var(--m-size-body);
+  line-height:var(--m-leading-body);
+}
+.app .message.user,.app .work-thread-message.user{
+  background:var(--m-surface)!important;
+}
+.app .message.assistant,.app .work-thread-message.assistant{
+  background:var(--m-paper)!important;
+}
+/* One state vocabulary for chat, work threads and source loading. */
+.app .chat-activity{
+  color:var(--m-ink-soft);
+  font-size:var(--m-size-meta);
+  line-height:1.45;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.app .chat-activity:not([hidden]):not(:empty)::before{
+  content:"";
+  width:7px;height:7px;flex:0 0 7px;
+  border-radius:50%;
+  background:currentColor;
+  opacity:.55;
+  animation:minds-working 1.6s ease-in-out infinite;
+}
+.app .work-thread-progress[data-phase="error"]{color:var(--m-error)}
+.app .work-thread-progress[data-phase="error"]::before{animation:none!important;opacity:1}
+.app .work-status{color:var(--m-ink-soft);font-size:var(--m-size-meta)}
+.app .work-status:empty{min-height:0;margin:0}
+@keyframes minds-working{0%,100%{opacity:.2}50%{opacity:.8}}
+/* Tight, honest chrome in every work view: active project is context, never a hero. */
+.app .work-shell{padding:8px var(--m-content-gutter) 16px}
+.app .work-head{
+  position:relative;
+  width:100%;
+  max-width:none;
+  margin:0;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  min-height:40px;
+}
+.app .work-head h1{
+  position:absolute;
+  width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);
+  white-space:nowrap;border:0;
+}
+.app .work-project-switch{gap:4px}
+.app .work-project-switch button{
+  font-family:var(--m-type-system);
+  font-size:14px;
+  font-weight:500;
+  line-height:20px;
+  min-height:40px;
+  padding:8px 13px;
+  border-radius:var(--m-radius-pill);
+  background:transparent;
+  color:var(--m-ink-soft);
+}
+.app .work-project-switch button.active{background:var(--m-ink);color:#fff}
+.app .work-tabs{
+  display:flex;
+  flex-wrap:nowrap!important;
+  gap:12px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+  width:100%;
+  max-width:none;
+  margin:3px 0 0;
+  padding:0 0 1px;
+  border-bottom:1px solid var(--m-border);
+}
+.app .work-tabs::-webkit-scrollbar{display:none}
+.app .work-tabs button{
+  flex:0 0 auto;
+  background:transparent;
+  color:var(--m-ink-soft);
+  border:0;
+  border-bottom:2px solid transparent;
+  border-radius:0;
+  font-family:var(--m-type-system);
+  font-size:13px;
+  font-weight:500;
+  min-height:44px;
+  padding:10px 2px 9px;
+  white-space:nowrap;
+}
+.app .work-tabs button.active{
+  color:var(--m-ink);
+  border-bottom-color:var(--m-ink);
+  background:transparent;
+}
+.app .work-body{max-width:none;width:100%}
+.app .work-desktop-toolbar,.app .work-planner-toolbar{padding-top:8px}
+.app .work-file{
+  border-color:var(--m-border);
+  border-radius:var(--m-radius-card);
+  min-height:100px;
+  padding:12px;
+  box-shadow:none;
+}
+.app .work-folder{background:var(--m-surface)}
+.app .work-file strong{font-size:15px;font-weight:600;line-height:1.4}
+.app .work-file small,.app .work-file-meta{font-size:var(--m-size-meta);color:var(--m-ink-soft)}
+.app .work-bucket{
+  background:var(--m-surface);
+  border-radius:var(--m-radius-card);
+  padding:10px;
+}
+.app .work-bucket header strong{font-size:14px;font-weight:600}
+.app .work-task-card{
+  background:var(--m-paper);
+  border-color:var(--m-border);
+  border-radius:var(--m-radius-card);
+  box-shadow:none;
+}
+.app .work-task-title-row strong{font-size:15px;line-height:1.45;font-weight:550}
+.app .work-planner-toolbar span,.app .work-task-card footer{font-size:var(--m-size-meta);color:var(--m-ink-soft)}
+.app .work-overview-intro h2{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.app .work-overview-intro{padding-top:4px;padding-bottom:12px}
+.app .work-overview-section h3{font-size:var(--m-size-section);font-weight:600}
+.app .work-overview-item strong{font-size:15px;font-weight:550}
+.app .work-overview-item small{font-size:var(--m-size-meta);color:var(--m-ink-soft)}
+.app .work-thread-card{border-color:var(--m-border)}
+.app .work-thread-card-main strong{font-size:16px;font-weight:600}
+.app .work-thread-card-main span{font-size:var(--m-size-meta);color:var(--m-ink-soft)}
+.app .work-toolbar-actions button,.app .work-planner-toolbar button,
+.app .work-overview-section-head button,.app .work-overview-footer button{
+  background:var(--m-surface);color:var(--m-ink);
+  border-radius:var(--m-radius-pill);
+  font-family:var(--m-type-system);font-size:13px;font-weight:500;
+  padding:9px 12px;min-height:40px;
+}
+.app .work-drop-hint{border-color:var(--m-border-strong);color:var(--m-ink-soft)}
+/* Utility views: content and current obligations, not decorative headings. */
+.app .surface-scroll{padding:8px var(--m-content-gutter) 36px}
+.app .surface-head-compact{margin-bottom:8px}
+.app .situation-ledger{margin-bottom:16px;padding-bottom:16px;border-bottom-color:var(--m-border)}
+.app .situation-kicker{display:none}
+.app .situation-heading{margin:0}
+.app .situation-heading h2{
+  position:absolute;width:1px;height:1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;
+}
+.app .situation-heading button{background:var(--m-surface);color:var(--m-ink);border-radius:var(--m-radius-pill)}
+.app .situation-coverage,.app .situation-zero,.app .situation-item small{
+  color:var(--m-ink-soft);
+  font-size:var(--m-size-meta);
+  line-height:1.5;
+}
+.app .situation-item{
+  border:0;
+  border-bottom:1px solid var(--m-border);
+  border-radius:0;
+  padding:13px 2px;
+  margin:0;
+  background:transparent;
+}
+.app .situation-item.situation-editable{border:0;border-bottom:1px solid var(--m-border);padding:13px 2px;background:transparent}
+.app .situation-item strong{font-size:15px;line-height:1.45;font-weight:600}
+.app .situation-context-label{color:var(--m-ink-soft);letter-spacing:.08em}
+.app .surface-card{border-color:var(--m-border);padding:16px 0}
+.app .surface-card h2{font-size:var(--m-size-section);line-height:1.35;font-weight:600}
+.app .surface-card p{font-size:15px;line-height:var(--m-leading-body);color:var(--m-ink-soft)}
+/* Calendar: calm, compact, functional. Category-colored dots remain untouched. */
+.app .cal-toolbar{padding:4px var(--m-content-gutter) 2px}
+.app .cal-nav{padding:2px var(--m-content-gutter) 5px}
+.app .cal-title{font-family:var(--m-type-system);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.app .round{min-width:var(--m-touch);min-height:var(--m-touch);background:var(--m-surface)}
+.app .segments{background:var(--m-surface);border-radius:var(--m-radius-control)}
+.app .segments button{font-size:14px;color:var(--m-ink-soft)}
+.app .segments button.active{box-shadow:none;color:var(--m-ink);border:1px solid var(--m-border)}
+.app .agenda{padding-left:var(--m-content-gutter);padding-right:var(--m-content-gutter)}
+.app .agenda-item{border-color:var(--m-border)}
+.app .agenda-item strong{font-weight:600}
+.app .agenda-head{color:var(--m-ink-soft);letter-spacing:.06em}
+.app .calendar-create-row button{border-color:var(--m-border);border-radius:var(--m-radius-pill);color:var(--m-ink)}
+/* Ideas uses the operational hierarchy; a production state is not a hero title. */
+.app .feed-section-title{
+  font-family:var(--m-type-system);
+  font-size:var(--m-size-section);
+  line-height:1.35;
+  letter-spacing:0;
+  font-weight:600;
+  padding:12px 0 10px;
+  border-bottom:1px solid var(--m-border);
+}
+.app .idea-workspace-cards{gap:0}
+.app .idea-workspace-card{
+  border:0;
+  border-bottom:1px solid var(--m-border);
+  border-radius:0;
+  background:transparent;
+  padding:14px 2px;
+  box-shadow:none;
+}
+.app .idea-workspace-card strong{font-size:15px;font-weight:600;line-height:1.45}
+.app .idea-workspace-card-state,.app .idea-workspace-card>span:last-child{
+  color:var(--m-ink-soft);
+  font-size:var(--m-size-meta);
+  letter-spacing:0;
+}
+.app .surface-head h1{font-family:var(--m-type-system);font-size:var(--m-size-section);font-weight:600;letter-spacing:0}
+.app .surface-empty,.app .surface-loading{color:var(--m-ink-soft);font-size:var(--m-size-meta);padding:16px 0}
+/* Sofía and Readings retain their editorial document typography. */
+.app .readings-topline{
+  height:46px;
+  padding:1px var(--m-content-gutter);
+  border-bottom:1px solid var(--m-border);
+}
+.app .readings-topline .readings-agent,.app .readings-title{display:none}
+.app .sofia-button{
+  margin-left:auto;
+  min-height:40px;
+  border-radius:var(--m-radius-pill);
+  background:var(--m-surface);
+  color:var(--m-ink);
+  font-family:var(--m-type-system);
+  font-size:13px;
+}
+/* More: a quiet settings list, not another oversized landing page. */
+.app .drawer-title{font-family:var(--m-type-system);font-size:18px;font-weight:600}
+.app .drawer>button[data-action],.app .drawer>#authButton{
+  border-top-color:var(--m-border);
+  font-size:15px;
+  line-height:1.5;
+  padding:13px 2px;
+}
+.app .drawer-note{color:var(--m-ink-soft);font-size:var(--m-size-meta)}
+.app .modal{border-radius:var(--m-radius-overlay)}
+/* Desktop is denser without inventing a different typographic hierarchy. */
+@media(min-width:1100px){
+  .app{grid-template-rows:54px minmax(0,1fr)}
+  .app .topbar{height:54px;min-height:54px;padding:0 28px!important;border-bottom:1px solid var(--m-border)}
+  .app .work-shell{padding:12px 28px 18px}
+  .app .work-head,.app .work-tabs,.app .work-status,.app .work-body{max-width:1600px;margin-left:auto;margin-right:auto}
+  .app .surface-scroll{padding:16px 36px 44px}
+}
+@media(max-width:620px){
+  .app .topbar{padding-left:var(--m-content-gutter);padding-right:var(--m-content-gutter)}
+  .app .work-shell{padding:6px var(--m-content-gutter) 12px}
+  .app .work-tabs{gap:14px}
+  .app .work-file{min-height:94px}
+  .app .work-bucket{flex:0 0 min(86vw,320px)}
+  .app .surface-scroll{padding-top:6px}
+  .app .main-nav{margin-top:4px;margin-bottom:calc(7px + var(--safe));width:calc(100% - 24px)}
+  .app .main-nav-item{height:48px}
+  .app .nav-label{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+  .app .chat-activity::before{animation:none!important;opacity:.65}
+  .app .main-nav-item{transition:none!important}
+}
+
+/* UX A.4.1 — one contextual More action, no unused global strip outside Chat. */
+body:not([data-section="assistant"]) .app .topbar{display:none!important}
+.app .minds-menu-slot{display:flex;align-items:center;justify-content:center;flex:0 0 var(--m-touch);min-height:var(--m-touch)}
+.app .minds-menu-slot .dots{display:grid;place-items:center;width:var(--m-touch);height:var(--m-touch);padding:0;font-size:21px;line-height:1;color:var(--m-ink);letter-spacing:.08em}
+.app .work-head{justify-content:center;min-height:var(--m-touch)}
+.app .work-head .minds-menu-slot{position:absolute;right:0;top:0}
+.app .surface-head.surface-head-compact{justify-content:flex-end;align-items:center}
+.app .readings-top-actions,.app .cal-toolbar-right{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.app .readings-top-actions .sofia-button{margin-left:0}
+.app .cal-toolbar{grid-template-columns:auto minmax(0,1fr) auto;gap:6px}
+.app .cal-toolbar-right{justify-self:end}
+.app .situation-clear{font-size:var(--m-size-meta);color:var(--m-ink-soft);line-height:1.5;margin:4px 0 10px}
+.app .situation-scope{font-size:var(--m-size-meta);color:var(--m-ink-soft);margin:10px 0 2px}
+.app .situation-scope summary{cursor:pointer;width:max-content;max-width:100%;padding:8px 0;list-style:revert}
+.app .situation-scope p{line-height:1.55;margin:3px 0 8px;max-width:650px}
+@media(min-width:1100px){body:not([data-section="assistant"]) .app{grid-template-rows:0px minmax(0,1fr)}}
+@media(max-width:1099px){
+  body:not([data-section="assistant"]) .app .screen.active{padding-top:env(safe-area-inset-top,0px)}
+}
+
+/* UX A.4.2 — five matching destinations, vector glyphs, and contextual Situation tabs. */
+.app .main-nav{grid-template-columns:repeat(6,minmax(0,1fr))}
+.app .nav-icon,.app .lens-glyph{display:grid;place-items:center}
+.app .nav-icon svg{width:23px;height:23px;display:block;stroke-width:2}
+.app .lens-glyph svg{width:21px;height:21px;display:block;stroke-width:2}
+.app .nav-label{font-size:11px;letter-spacing:0;font-weight:500}
+.app .situation-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:min(100%,780px);margin:0 auto 13px;min-height:var(--m-touch);
+}
+.app .situation-tabs{display:flex;flex:none;gap:15px;align-items:stretch;border-bottom:1px solid var(--m-border)}
+.app .situation-tabs button{
+  border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;
+  color:var(--m-ink-soft);font-family:var(--m-type-system);font-weight:500;
+  font-size:13px;min-height:44px;padding:10px 2px 9px;cursor:pointer;
+}
+.app .situation-tabs button.active{border-bottom-color:var(--m-ink);color:var(--m-ink)}
+.app .situation-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+.app .situation-tools .surface-refresh-status:empty{display:none}
+.app #generateIdeas{font-size:12px;white-space:nowrap;min-height:44px}
+.app .pull-refresh-indicator{
+  position:relative;z-index:3;height:0;overflow:visible;opacity:0;
+  pointer-events:none;text-align:center;transition:opacity var(--m-motion-fast) var(--m-ease);
+}
+.app .pull-refresh-indicator span{
+  display:inline-block;padding:7px 12px;background:var(--m-surface);
+  border-radius:var(--m-radius-pill);font-size:12px;color:var(--m-ink-soft);
+  transform:translateY(-40px);
+}
+.app .pull-refresh-indicator.is-pulling,.app .pull-refresh-indicator.is-refreshing{opacity:1}
+@media(max-width:620px){
+  .app .nav-label{font-size:10px}
+  .app .situation-toolbar{gap:6px}
+  .app .situation-tabs{gap:12px}
+  .app .situation-tools{gap:2px}
+  .app #generateIdeas{font-size:11px;padding:8px 4px;white-space:normal;text-align:right;line-height:1.2;max-width:138px}
+}
+@media(prefers-reduced-motion:reduce){.app .pull-refresh-indicator{transition:none}}
+
+/* UX A.4.3 — quiet, icon-only bottom navigation and weather-first Situation. */
+.app .main-nav-item{
+  height:54px;
+  min-height:var(--m-touch);
+  gap:0;
+}
+.app .nav-icon svg{width:26px;height:26px}
+.app .situation-weather{
+  width:min(100%,780px);
+  margin:3px auto 20px;
+}
+.app .situation-weather .feed-weather-section{margin:0}
+.app .situation-weather .weather-card,
+.app .situation-weather .feed-weather-placeholder{
+  border:0;
+  border-bottom:1px solid var(--m-border);
+  border-radius:0;
+  background:transparent;
+  padding:11px 2px 22px;
+  margin:0;
+  box-shadow:none;
+}
+.app .situation-weather .weather-card .surface-card-top{display:none}
+.app .situation-weather .weather-card h2{
+  font-family:var(--m-type-system);
+  font-size:16px;
+  font-weight:500;
+  letter-spacing:-.015em;
+  line-height:1.45;
+  color:var(--m-ink-soft);
+  margin:0 0 7px;
+}
+.app .situation-weather .weather-card p{
+  font-family:var(--m-type-system);
+  font-size:clamp(22px,3.5vw,29px);
+  font-weight:600;
+  line-height:1.34;
+  letter-spacing:-.025em;
+  color:var(--m-ink);
+  margin:0;
+}
+.app .situation-weather .weather-card .surface-card-actions{margin-top:6px}
+.app .situation-weather .weather-card .weather-toggle{font-size:13px;font-weight:500;color:var(--m-ink-soft);padding:10px 0;min-height:var(--m-touch)}
+.app .situation-weather .feed-weather-placeholder{align-items:center;gap:16px}
+.app .situation-weather .feed-weather-placeholder strong{font-size:17px;font-weight:600}
+.app .situation-weather .feed-weather-placeholder button{min-height:var(--m-touch);background:var(--m-surface)}
+@media(max-width:620px){
+  .app .main-nav-item{height:52px}
+  .app .situation-weather{margin-top:2px;margin-bottom:16px}
+}
+
+/* UX A.4.4 — more restrained navigation glyphs and source-derived weather cues. */
+.app .main-nav .nav-icon svg{width:20px;height:20px;stroke-width:1.9}
+.app .main-nav .main-nav-item{min-height:44px}
+.app .situation-weather .weather-location-symbol,
+.app .situation-weather .weather-condition-symbol{
+  display:inline-block;
+  width:1.45em;
+  text-align:left;
+  vertical-align:baseline;
+  font-family:var(--m-type-system);
+  font-size:.82em;
+  font-weight:400;
+  letter-spacing:0;
+}
+.app .situation-weather .weather-condition-symbol{font-size:.8em}
+
+/* UX A.4.5 — unframed navigation; the Chat composer remains the only lower capsule. */
+.app .main-nav{
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+  padding:0 4px;
+}
+.app .main-nav-item{
+  position:relative;
+  border-radius:0;
+  background:transparent;
+}
+.app .main-nav-item.active{
+  background:transparent;
+  color:var(--m-ink);
+}
+.app .main-nav-item.active::after{
+  content:"";
+  position:absolute;
+  bottom:1px;
+  left:50%;
+  width:3px;
+  height:3px;
+  border-radius:50%;
+  transform:translateX(-50%);
+  background:currentColor;
+}
+.app .main-nav-item:focus-visible{
+  outline:2px solid var(--m-ink);
+  outline-offset:-2px;
+  border-radius:var(--m-radius-control);
+}
+.app .calendar-create-after-grid{
+  justify-content:flex-end;
+  padding:12px var(--m-content-gutter) 0;
+}
+.app .calendar-create-after-grid button{
+  min-height:var(--m-touch);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* UX A.4.6: move keyboard focus indication to the composer capsule, not a blue textarea rectangle. */
+.app .composer #chatInput:focus,
+.app .composer #chatInput:focus-visible{outline:0!important;box-shadow:none!important}
+.app .composer:focus-within{border-color:var(--m-ink-soft)}
+
+/* UX A.4.7 — canonical Dear: Thoughts, not a duplicated renderer.
+ * Full available lens viewport. The only persistent chrome is MINDS navigation.
+ */
+.app .thoughts-screen{background:#fff;overflow:hidden}
+.app .thoughts-host{position:relative;width:100%;height:100%;flex:1;min-height:0;overflow:hidden;background:#fff;isolation:isolate}
+.app .thoughts-frame{position:absolute;inset:0;display:block;width:100%;height:100%;border:0;background:#fff;z-index:1}
+.app .thoughts-load-status{position:absolute;inset:0;display:grid;place-items:center;z-index:2;pointer-events:none;color:var(--m-ink-soft);font-size:13px;background:#fff}
+.app .thoughts-load-error{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;z-index:3;background:#fff;color:var(--m-ink-soft);font-size:14px;text-align:center}
+.app .thoughts-load-error a{color:var(--m-ink);text-underline-offset:3px}
+.app .thoughts-load-status.hidden,.app .thoughts-load-error.hidden{display:none!important}
+@media(max-width:359px){.app .main-nav{width:calc(100% - 10px);padding:0 2px}}

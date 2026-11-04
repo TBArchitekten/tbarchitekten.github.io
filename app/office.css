@@ -1,0 +1,14 @@
+/* TBA Office · adjustments on top of Window's styles (only what differs for the office). */
+
+/* Window's nav buttons set their own display, which beats the hidden attribute: the office hides
+   Assistent, Eingang, Lecturas and Thoughts until it has them. */
+.office-app [hidden]{display:none !important}
+
+/* The menu links to the office's own pages look like the drawer's buttons. */
+.office-app .drawer>a.drawer-link,.office-app .drawer>#officeSignOut{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--m-border,#eee);
+  background:#fff;padding:13px 2px;font:inherit;font-size:15px;line-height:1.5;color:var(--m-ink,#111);text-decoration:none;cursor:pointer}
+.office-app .drawer>#officeSignOut{color:var(--m-danger,#b42318)}
+
+/* Attachments need the office's file storage, which arrives with the Desktop (part C). */
+.office-app .minds-task-section:has(#taskDetailAddFile),
+.office-app .work-task-detail-section:has(#workAddAttachment){display:none}
