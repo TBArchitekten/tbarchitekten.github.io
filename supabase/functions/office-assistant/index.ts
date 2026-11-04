@@ -104,8 +104,7 @@ Deno.serve(async (req) => {
   const { data: reservation, error: reserveError } = await userDb.rpc("office_assistant_reserve", {
     p_request_id: requestId, p_conversation_id: conversation.id, p_mode: mode,
   });
-  if (reserveError) return answer(503, { error: "quota_unavailable" });
-  if (reservation === "daily_limit") return answer(429, { error: "daily_limit" });
+  if (reserveError) return answer(503, { error: "request_registration_unavailable" });
   if (reservation === "duplicate") return answer(409, { error: "request_already_received" });
   if (reservation !== "reserved") return answer(403, { error: "not_authorized" });
 

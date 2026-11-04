@@ -9,7 +9,7 @@ test('Assistant is present in Office navigation but not Window personal memory',
   const shell=read('app/shell.js'),html=read('app/index.html'),frontend=read('app/office-assistant.js');
   assert.match(shell,/data-nav="assistant" aria-label="Assistent"/);
   assert.doesNotMatch(shell,/data-nav="assistant" aria-label="Assistent" hidden/);
-  assert.match(html,/office-assistant\.js\?v=office4/);
+  assert.match(html,/office-assistant\.js\?v=office5/);
   assert.match(html,/office-assistant\.css\?v=office4/);
   assert.match(frontend,/office_assistant_conversations/);
   assert.match(frontend,/office_assistant_messages/);
@@ -31,16 +31,31 @@ test('Every conversation, message and request belongs to exactly one authenticat
   assert.doesNotMatch(sql,/to anon;/);
 });
 
-test('Quota is atomic, per-user, finite, with request idempotency',()=>{
-  assert.match(sql,/pg_catalog\.pg_advisory_xact_lock/);
-  assert.match(sql,/office-personal-chat:/);
-  assert.match(sql,/if used>=15 then return 'daily_limit'/);
-  assert.match(sql,/if exists\(select 1 from public\.office_assistant_requests r/);
-  assert.match(sql,/return 'duplicate'/);
-  assert.match(edge,/office_assistant_reserve/);
-  assert.match(edge,/response\.ok/);
-  assert.match(edge,/store: false/);
-  assert.match(edge,/max_output_tokens/);
+test('Personal assistant requests are authenticated and deduplicated without an unapproved quota',()=>{
+  const migration=read('supabase/migrations/20261104223000_office_assistant_remove_unapproved_daily_cap.sql');
+  const frontend=read('app/office-assistant.js');
+  for(const expected of [
+    'create or replace function public.office_assistant_reserve',
+    'pg_catalog.pg_advisory_xact_lock',
+    'office-personal-chat:',
+    "return 'duplicate'",
+    "return 'reserved'",
+    'private.office_is_member',
+    'insert into public.office_assistant_requests'
+  ])assert.ok(migration.includes(expected),'missing '+expected);
+  for(const removed of ['used>=','daily_limit','date_trunc']){
+    assert.ok(!migration.includes(removed),'unapproved cap remains: '+removed);
+  }
+  assert.ok(!edge.includes('daily_limit'));
+  assert.ok(!edge.includes('quota_unavailable'));
+  assert.ok(edge.includes('request_registration_unavailable'));
+  assert.ok(!frontend.includes('daily_limit'));
+  assert.ok(!frontend.includes('15 Anfragen'));
+  assert.ok(!frontend.includes('quota_unavailable'));
+  assert.ok(frontend.includes('request_registration_unavailable'));
+  for(const expected of ['office_assistant_reserve','response.ok','store: false','max_output_tokens']){
+    assert.ok(edge.includes(expected),'missing '+expected);
+  }
 });
 
 test('Provider calls are server-only; no project, calendar or document is read by v1',()=>{
