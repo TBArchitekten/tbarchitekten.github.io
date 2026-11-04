@@ -51,9 +51,15 @@ Deno.serve(async req=>{
     .select("role,is_active").eq("user_id",auth.user.id).eq("is_active",true).maybeSingle();
   if(memberError||!member)return respond(403,{error:"not_an_office_member"});
   const {data:plan,error:planError}=await sb.from("office_terminplan_instances")
-    .select("id,phase,owner_id,server_revision,state").eq("id",planId).maybeSingle();
+    .select("id,phase,owner_id,project_id,server_revision,state").eq("id",planId).maybeSingle();
   if(planError||!plan)return respond(404,{error:"project_plan_not_accessible"});
-  const canEdit=plan.owner_id===auth.user.id||member.role==="admin";
+  // Same rule as the database: the plan's owner, an admin, or the Projektleiter of its project.
+  let leadsProject=false;
+  if(plan.project_id&&plan.owner_id!==auth.user.id&&member.role!=="admin"){
+    const {data:project}=await sb.from("office_projects").select("projektleiter_id").eq("id",plan.project_id).maybeSingle();
+    leadsProject=project?.projektleiter_id===auth.user.id;
+  }
+  const canEdit=plan.owner_id===auth.user.id||member.role==="admin"||leadsProject;
   const secret=Deno.env.get("TBA_OFFICE_OPENAI_API_KEY")||"";
   if(action==="status")return respond(200,{
     ready:!!secret,mode:secret?"openai_structured_intent":"deterministic_only",

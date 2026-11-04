@@ -460,7 +460,8 @@ body.read-only .editor-only{display:none!important}
   @media (max-width:900px){.assistant-columns{grid-template-columns:1fr}.assistant-body{max-height:44vh}}
 </style>
 <link rel="stylesheet" href="./assistant-surface.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
+<script src="./office-config.js?v=1"></script>
 </head>
 <body>
 <header class="office-plan-head">
@@ -705,12 +706,11 @@ body.read-only .editor-only{display:none!important}
 
   const DEFAULT_COLORS = {arch:'#f28c28', fach:'#2589d8', ag:'#7c5cc4', cost:'#2f9e6f', qa:'#6b7280'};
   const DAY_MS = 86400000;
-  const SUPABASE_URL='https://mmrteayudgywutghpdev.supabase.co';
-  const SUPABASE_KEY='sb_publishable_P4lOIuijwNF7oleGDoeAuQ_7OLJOaGV';
+  const OFFICE=window.TBA_OFFICE_CONFIG;
   const params=new URLSearchParams(location.search);
   const PLAN_ID=params.get('id');
   const TEMPLATE_ID=params.get('template');
-  const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{storageKey:'tba-office-auth-v1',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  const sb=supabase.createClient(OFFICE.url,OFFICE.key,{auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   const initialData={project:{name:'Terminplan',start:'2027-01-04',end:'2027-05-28',standDate:'2027-01-04',standLabel:'Muster'},groups:[],tasks:[]};
   let data = initialData;
   let zoom = 'week';
@@ -909,7 +909,7 @@ body.read-only .editor-only{display:none!important}
     const userId=sessionData.session.user.id;
     dialogueUserId=userId;
     const {data:member,error:memberError}=await sb.from('office_members')
-      .select('role,display_name,is_active')
+      .select('role,display_name,is_active,must_change_password')
       .eq('user_id',userId)
       .eq('is_active',true)
       .maybeSingle();
@@ -917,6 +917,8 @@ body.read-only .editor-only{display:none!important}
       document.body.innerHTML='<div class="empty">Kein Zugriff auf TBA Office.</div>';
       return;
     }
+    // The start password is replaced on the Office page before any tool opens.
+    if(member.must_change_password){location.href='./';return}
 
     if(TEMPLATE_ID){
       const {data:row,error}=await sb.from('office_terminplan_templates')
@@ -931,7 +933,7 @@ body.read-only .editor-only{display:none!important}
       setPlanChrome(row);
     }else if(PLAN_ID){
       const {data:row,error}=await sb.from('office_terminplan_instances')
-        .select('id,owner_id,project_number,project_name,phase,template_version,state,updated_at,server_revision')
+        .select('id,owner_id,project_id,project_number,project_name,phase,template_version,state,updated_at,server_revision')
         .eq('id',PLAN_ID)
         .single();
       if(error)throw error;
@@ -939,7 +941,13 @@ body.read-only .editor-only{display:none!important}
       data=row.state||loadData();
       serverRevision=Number(row.server_revision);
       if(!Number.isSafeInteger(serverRevision)||serverRevision<1)throw new Error('Missing server revision');
-      canEdit=member.role==='admin'||row.owner_id===userId;
+      // Same rule as the database: the plan's owner, an admin, or the Projektleiter of its project.
+      let leadsProject=false;
+      if(row.project_id&&member.role!=='admin'&&row.owner_id!==userId){
+        const {data:project}=await sb.from('office_projects').select('projektleiter_id').eq('id',row.project_id).maybeSingle();
+        leadsProject=project?.projektleiter_id===userId;
+      }
+      canEdit=member.role==='admin'||row.owner_id===userId||leadsProject;
       setPlanChrome(row);
     }else{
       location.href='./';

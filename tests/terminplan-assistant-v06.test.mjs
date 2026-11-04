@@ -11,7 +11,7 @@ const editor=fs.readFileSync(new URL("../terminplan.html",import.meta.url),"utf8
 const css=fs.readFileSync(new URL("../assistant-surface.css",import.meta.url),"utf8");
 const edge=fs.readFileSync(new URL("../supabase/functions/office-terminplan-ai/index.ts",import.meta.url),"utf8");
 test("stronger reasoning model without MINDS runtime dependency",()=>{
- assert.equal(MODEL,"gpt-5.4");
+ assert.equal(MODEL,"gpt-6.1-terra");
  assert.ok(!edge.includes("gari01234")&&!edge.includes("isabella-chat"));
  assert.match(edge,/TBA_OFFICE_OPENAI_API_KEY/);
  assert.match(edge,/store:false/);

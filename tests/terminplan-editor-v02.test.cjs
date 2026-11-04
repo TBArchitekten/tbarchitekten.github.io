@@ -16,7 +16,7 @@ test("versioned write includes an expected server revision and failure stops aut
   assert.match(editor,/if\(saveConflict\)\{setSaveStatus/);
   assert.match(editor,/if\(inFlightSave\|\|!pendingSave\|\|!canEdit\|\|!PLAN_ID\|\|saveConflict\)return/);
   assert.match(editor,/if\(!updated\|\|updated\.length!==1\)/);
-  assert.match(editor,/id,owner_id,project_number,project_name,phase,template_version,state,updated_at,server_revision/);
+  assert.match(editor,/id,owner_id,project_id,project_number,project_name,phase,template_version,state,updated_at,server_revision/);
 });
 test("failed conditional save cannot silently overwrite and has an export/reload affordance",()=>{
   assert.match(editor,/id="conflictExport"/);
