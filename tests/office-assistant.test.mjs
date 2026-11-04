@@ -9,7 +9,7 @@ test('Assistant reuses Window chat rather than building another UI',()=>{
   const shell=read('app/shell.js'),html=read('app/index.html');
   const frontend=read('app/office-assistant.js');
   const app=read('app/app.js'),css=read('app/office-assistant.css');
-  for(const needle of ['data-nav="assistant" aria-label="Assistent"','id="assistantScreen"','id="messages"','id="chatInput"','id="sendButton"','id="micButton"','id="attachButton"']){
+  for(const needle of ['data-nav="assistant" aria-label="Romy"','id="assistantScreen"','id="messages"','id="chatInput"','id="sendButton"','id="micButton"','id="attachButton"']){
     assert.ok(shell.includes(needle),'Window shell missing '+needle);
   }
   assert.ok(!shell.includes('data-nav="assistant" aria-label="Assistent" hidden'));
