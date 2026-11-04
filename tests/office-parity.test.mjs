@@ -34,3 +34,13 @@ test('All active office members may rename and remove shared files without owner
   assert.ok(work.includes("(project?.name||'Büro')"));
   new Function(ops);new Function(work);
 });
+
+test('Storage policy scopes project files using outer objects.name, never project.name',()=>{
+  const sql=file('supabase/migrations/20261104232500_office_storage_scope_qualified_name.sql');
+  for(const policy of ['office_work_storage_read','office_work_storage_insert','office_work_storage_delete'])assert.ok(sql.includes('create policy '+policy));
+  assert.ok(sql.includes('storage.foldername(objects.name)'));
+  assert.ok(!sql.includes('storage.foldername(p.name)'));
+  assert.ok(!sql.includes('storage.foldername(name)'));
+  assert.ok(sql.includes("and (storage.foldername(objects.name))[1]=(select auth.uid())::text"));
+  assert.ok(sql.includes("p.status='aktiv'"));
+});

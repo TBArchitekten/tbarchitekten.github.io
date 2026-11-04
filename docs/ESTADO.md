@@ -52,7 +52,8 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - `20261104210000_office_desktop_v1` (aplicada con Supabase MCP como versión `20261104203250`; incluye bucket privado `minds-work`)
 - `20261104220000_office_assistant_personal_v1` (aplicada en Supabase, versión registrada `20261104205847`; 3 tablas, 7 políticas RLS).
 - `20261104223000_office_assistant_remove_unapproved_daily_cap` (aplicada como versión Supabase `20261104213325`; sustituye la función de reserva sin cuota numérica diaria).
-- `20261104232000_office_shared_desktop_edit_for_all` (PR #24; por aplicar): todos los empleados activos pueden renombrar/mover/borrar compartidos; personales aislados.
+- `20261104232000_office_shared_desktop_edit_for_all` (PR #24; **aplicada en TBA Office como 20261104221830**): todos los empleados activos pueden renombrar/mover/borrar compartidos; personales aislados.
+- `20261104232500_office_storage_scope_qualified_name` (PR #24; por aplicar): corrige variable `name` sombreada en políticas Storage de lectura/subida/borrado por proyecto.
 
 **Tablas principales:**
 - `office_members`: `role` = `admin` | `projektleiter` | `member`; además `is_active` y `must_change_password`.
