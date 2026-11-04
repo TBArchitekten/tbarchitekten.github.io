@@ -9,6 +9,7 @@ test('Office and Window Tools use the same five-icon navigation rather than swit
     assert.ok(root.includes('aria-label="'+name+'"'),'Root nav missing '+name);
   assert.ok(root.includes('id="accountButton"'));
   assert.ok(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
+  assert.ok(file('app/office.css').includes('.office-app #mainNav{grid-template-columns:repeat(5,minmax(0,1fr))}'));
   assert.ok(css.includes('.lens-account{'));
   assert.ok(shell.includes('id="toolsScreen"'));
   assert.ok(shell.includes('data-screen="tools"'));
