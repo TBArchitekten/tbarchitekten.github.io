@@ -18,9 +18,7 @@
     if(name==='members'&&member?.role!=='admin')name='work';
     if(name==='project'&&!projects.some(p=>p.id===id))name='work';
     $$('.view').forEach(v=>v.hidden=true);
-    const lens=(typeof matchMedia==='function'&&matchMedia('(max-width:900px)').matches
-      &&['work','project'].includes(name))?'tools':LENS_OF[name];
-    $('.lens-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===lens));
+    $$('.lens-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===LENS_OF[name]));
     ($('#'+name+'View')||$('#workView')).hidden=false;
     closeAccountMenu();
     if(name==='project'){currentProjectId=id;renderProjectPage()}

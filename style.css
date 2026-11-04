@@ -441,7 +441,6 @@ textarea{resize:vertical;min-height:72px;font-family:inherit}
   #appView .lens-nav-item .lens-glyph svg{width:23px;height:23px}
   #appView .lens-nav-item.active{background:#f3f3f5!important;color:#111}
   #appView .lens-nav-item.active .lens-glyph{color:#111}
-  #appView .lens-nav-item[data-view="work"]{display:none}
   #appView>.lens-account{
     top:calc(10px + env(safe-area-inset-top,0px));
     right:16px

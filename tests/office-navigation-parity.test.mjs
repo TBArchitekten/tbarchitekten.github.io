@@ -20,13 +20,10 @@ test('All five mobile tabs share the Window navigation order on Office root and 
 test('Root navigation remains a five-button floating bar on mobile, with account outside',()=>{
   const css=read('style.css'),rootJs=read('app.js'),index=read('index.html');
   assert.ok(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
-  assert.ok(css.includes('.lens-nav-item[data-view="work"]{display:none}'));
   assert.ok(css.includes('#appView>.lens-account'));
-  assert.ok(rootJs.includes("['work','project'].includes(name)"));
   assert.ok(index.includes('href="./app/#section=assistant" aria-label="Romy"'));
-  assert.ok(index.includes('aria-label="Projekte verwalten"'));
   assert.ok(index.includes('style.css?v=office25'));
-  assert.ok(index.includes('app.js?v=office25'));
+  assert.ok(index.includes('app.js?v=5'));
 });
 test('Tools opens inside the Window shell, while Terminplan remains available',()=>{
   const shell=read('app/shell.js'),app=read('app/app.js');

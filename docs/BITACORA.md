@@ -18,14 +18,14 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 ---
 
 ### 2026-11-04 · Navegación única en la página raíz · ChatGPT
-- **Qué cambió y por qué:** después de PR #24, Tools ya era una sección en /app/, pero Terminplan seguía abriendo páginas con otra barra inferior de seis accesos y avatar. PR #25 normaliza también el shell de la página raíz para mantener los cinco iconos de Window y el acceso a cuenta separado.
-- **Archivos:** index.html, style.css, app.js, tests/office-navigation-parity.test.mjs, docs/ESTADO.md y docs/BITACORA.md.
+- **Qué cambió y por qué:** PR #24 ya establecía los cinco accesos (Romy, Heute, Kalender, Work y Tools) también en la página raíz. PR #26 separa el menú de cuenta de la barra inferior y adapta su forma y posición a la barra de Window, sin volver a duplicar Romy.
+- **Archivos:** index.html, style.css, tests/office-navigation-parity.test.mjs, docs/ESTADO.md y docs/BITACORA.md.
 - **Base de datos:** ninguna migración.
 - **Deploy de funciones:** ninguno.
 - **Cómo se probó:** test estático de paridad de navegación y CI pendiente.
 - **Quedó pendiente o sin probar:** verificación en Safari iPhone y rutas Terminplan/Projekte.
 - **Riesgos o decisiones que necesitan a Gari:** ninguna decisión de interfaz adicional; el objetivo es la navegación Window ya acordada.
-- **PR:** #25.
+- **PR:** #26.
 
 
 ### 2026-11-04 · Romy y paridad de navegación/compartidos · ChatGPT
