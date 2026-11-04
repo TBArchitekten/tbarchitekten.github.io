@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 04.11.2026, por ChatGPT (migración Desktop aplicada; frontend en PR #16, aún sin publicar).
+**Actualizado:** 04.11.2026, por ChatGPT (Desktop PR #16 integrado en main; aceptación real pendiente).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -63,9 +63,9 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 - **Equipo de proyecto:** solo la dirección y los admins.
 
 ## 5. Dónde estamos (04.11.2026)
-- **Funciona y está publicado** (PR #10–#13): inicio de sesión, contraseñas, Projekte, Mitglieder, Terminplan con asistente, y la app (Heute, Kalender, Work → Panorama y Planner).
+- **Integrado en main** (PR #10–#16): inicio de sesión, contraseñas, Projekte, Mitglieder, Terminplan con asistente, y la app (Heute, Kalender, Work → Panorama, Planner y Desktop). Desktop aún no tiene aceptación autenticada con personas reales.
 - **Probado:** con datos simulados en escritorio y teléfono (sin errores ni textos en español), consultas RLS en transacciones revertidas, y la página publicada sin sesión (manda al inicio de sesión).
-- **No probado todavía con personas reales.** Al 04.11 solo existe la cuenta de Gari (admin) y **no hay proyectos** en la base de datos.
+- **Desktop no probado todavía con personas reales.** Al 04.11 solo existe la cuenta de Gari (admin) y **no hay proyectos** en la base de datos.
 
 ## 6. Lo que falta
 
@@ -78,7 +78,7 @@ Las etapas para traer Window a la oficina:
 | 2 | Planner y Kalender | ✔ hecho (primero propio en PR #12; sustituido por la copia de Window en PR #13) |
 | 3 | Heute (como "Ahora" de Window) | ✔ hecho (PR #13) |
 | 4 | Assistent personal por persona (parecido a Isabella, con otro nombre) | pendiente = **parte D** |
-| 5 | Desktop compartido de Büro y de cada proyecto, con carpetas y archivos | backend aplicado; interfaz en PR #16, aún no publicada |
+| 5 | Desktop compartido de Büro y de cada proyecto, con carpetas y archivos | integrado en main (PR #16); aceptación con usuarios pendiente |
 
 La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heute), C (Desktop) y D (Assistent). **A y B están hechas.** Gari decidió integrar Desktop (C) antes del Assistent (D) y probar el conjunto con compañeros después.
 
@@ -97,8 +97,8 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 - Pruebas y deploys manuales.
 - Vigilar el gasto de tokens.
 
-### Próximos pasos concretos (orden revisado por Gari)
-1. **Parte C · Desktop compartido** (rama `office-desktop-shared-folders-v1`, migración aplicada, pendiente de merge del PR #16): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. El autor y los admins pueden renombrar, mover y borrar. Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
+### Próximos pasos concretos (orden revisado por Gari; Desktop integrado)
+1. **Parte C · Desktop compartido (integrado; falta aceptación en navegador)** (PR #16 integrado en main; migración aplicada): un Desktop general de Büro y un Desktop dentro de cada proyecto, con carpetas, subcarpetas, archivos, renombrar, mover y eliminar con confirmación. **Todos los miembros activos pueden navegar por todos los proyectos**; el equipo de proyecto no limita la lectura. Todos pueden crear/subir. El autor y los admins pueden renombrar, mover y borrar. Archivos en bucket privado `minds-work`, nunca en el repositorio público; metadatos en `minds_work_folders` y `minds_work_files`. Los adjuntos de tareas se vuelven visibles cuando la parte C esté publicada. No hay extracción de texto automática todavía. CI: 91/91 PASS; prueba SQL en transacción revertida PASS; aceptación con usuarios pendiente.
 2. **Parte D · Assistent de oficina:** chat personal por persona, conversaciones persistentes/Threads, cuota por persona y permisos de lectura. Configuración de modelos y gasto mensual pendiente de decisión; no mezclar con Window.
 3. **Limpieza sin tocar tablas:** funciones del Planner retirado, enlace «‹ Projekte» en Terminplan y textos de interfaz en alemán. No borrar `office_tasks` ni `office_task_buckets` sin OK explícito.
 4. **Opcional:** clima en Heute (Augsburg) y revisión de mensajes MINDS heredados.
