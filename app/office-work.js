@@ -84,6 +84,10 @@ function desktop(){
     return;
   }
   html(surface.desktop({project,folders,files,plans,folderId}));
+  // Window's existing Desktop management actions, adapted to Office's own storage metadata.
+  void window.TBA_OFFICE_DESKTOP?.enhance({
+    sb:sb(),folders,files,refresh:render,projectName:project.name,office:true,projectId:project.id
+  }).catch(error=>status('Dateiaktionen konnten nicht geladen werden: '+String(error?.message||error)));
 }
 function modal(title,fields,onSubmit){
   const app=window.ISABELLA_APP;
