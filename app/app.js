@@ -464,7 +464,7 @@ function unmountThoughts(){
 function placeGlobalMenu(name){
   const button=$('#menuButton');
   const desk=!!window.matchMedia?.('(min-width: 950px)')?.matches&&!!document.querySelector('[data-menu-slot="sidebar"]');
-  const host=desk?document.querySelector('[data-menu-slot="sidebar"]'):name==='assistant'?$('.top-actions'):document.querySelector('[data-menu-slot="'+name+'"]');
+  const host=desk?document.querySelector('[data-menu-slot="sidebar"]'):name==='assistant'?$('.top-actions'):(document.querySelector('[data-menu-slot="'+name+'"]')||(OFFICE?$('.top-actions'):null));
   if(button&&host&&button.parentElement!==host)host.appendChild(button);
 }
 // Window iPhone app: the app shows its own tab bar (Chat · Ahora · Tiempo · Work · Bandeja)
