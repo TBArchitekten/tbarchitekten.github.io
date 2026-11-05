@@ -24,7 +24,7 @@ function resultObject(payload){
 }
 function nextWake(value){
  const stamp=new Date(value);
- if(!Number.isFinite(stamp.getTime())||stamp.getTime()<=Date.now()||stamp.getTime()>Date.now()+7*86400000)return null;
+ if(!Number.isFinite(stamp.getTime())||stamp.getTime()<=Date.now()||stamp.getTime()>Date.now()+365*86400000)return null;
  return stamp.toISOString();
 }
 async function runCheckpoint(m,apiKey){
@@ -78,7 +78,9 @@ Deno.serve(async req=>{
   try{
    const outcome=await runCheckpoint(mission,ai);
    const state=outcome.status==="continue"?"queued":outcome.status;
-   const wake=state==="waiting_until"?nextWake(outcome.wake_at):null;
+   // Model-generated dates cannot schedule work. Only a timestamp explicitly reviewed by the employee can.
+   const wake=state==="waiting_until"&&mission.approved_wake_at
+     ?nextWake(mission.approved_wake_at):null;
    const finalState=state==="waiting_until"&&!wake?"waiting_for_user":state;
    const {data:committed,error:finishError}=await admin.rpc("office_romy_finish_mission",{
     p_id:mission.id,p_lease:mission.lease_token,p_status:finalState,
