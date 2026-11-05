@@ -17,6 +17,15 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+
+### 2026-11-05 · Publicación de PR #35 y verificación de Pages · ChatGPT
+- Cambio: PR #35 «Office: Projekte unificados, Terminplan Terra/PDF y Romy con memoria + misiones» fusionado por squash merge en `main`, SHA `369dab63038cb49fabd7523ddc295472492e15e3`.
+- GitHub Actions: suite de «Verify Terminplan dependency audit» de `main` aprobada y «pages build and deployment» con build, report-build-status y deploy concluidos en verde.
+- Supabase TBA Office: `office-assistant` v12 JWT, `office-terminplan-ai` v5 JWT, `office-romy-mission-runner` v2 con secreto privado. pgvector y misiones aplicadas. Un ciclo real del cron responde HTTP 200 (`ok:true`, 0 trabajos reclamados).
+- Corrección final: validación UUID de Romy ahora reconoce los cinco grupos del identificador; test de regresión incluido en el PR.
+- Estado de aceptación: frontend y backend publicados, pero no se ha realizado prueba E2E autenticada con empleado real, archivo de Bernried, dos empleados, salida XLSX/PPTX ni un ciclo multidiario completo de misión. Tampoco existe todavía paridad completa de Workspace/Expectation/Attention Economy entre Romy y Window. Estos límites no se deben presentar como completados.
+- Riesgos: la base de datos es la fuente de verdad; mantener RLS, confirmación humana y segregación TBA/Window. Al iniciar la revisión conjunta, usar archivo de prueba no confidencial y contrastar navegación, Terminplan, adjuntos, conversaciones, misiones y artefactos en Safari/escritorio.
+
 ### 2026-11-05 · Revisión final de identidad y servicios para PR #35 · ChatGPT
 - Detectado y corregido un validador UUID heredado del backend de Romy que omitía un grupo de 4 dígitos y podía rechazar IDs válidos de petición y conversación. Añadido test de regresión con UUID completo.
 - Backend desplegado tras la corrección: `office-assistant` v12 con JWT; `office-terminplan-ai` v5 con JWT; `office-romy-mission-runner` v2 con secreto privado verificado por RPC.
