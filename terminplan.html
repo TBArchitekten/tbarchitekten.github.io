@@ -471,7 +471,7 @@ body.read-only .editor-only{display:none!important}
 </head>
 <body>
 <header class="office-plan-head">
-  <a href="./app/#section=projects" id="officeBack">‹ Projekte</a>
+  <a href="./app/#section=plans" id="officeBack">‹ Terminpläne</a>
   <div class="plan-label" id="officePlanLabel">Terminplan</div>
   <div class="right"><span id="officeMode"></span><span id="saveState"></span></div>
 </header>
@@ -588,9 +588,7 @@ body.read-only .editor-only{display:none!important}
           <input id="dialogueFileInput" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.png,.jpg,.jpeg,.webp" multiple hidden>
           <button id="dialogueAttach" type="button" class="dialogue-attach" title="Datei hinzufügen" aria-label="Datei hinzufügen"><span aria-hidden="true">＋</span></button>
           <textarea id="dialogueInput" maxlength="1500" rows="2" placeholder="Was möchtest du am Terminplan verändern? Wir können es zuerst gemeinsam besprechen …" aria-label="Nachricht an Terminplan Assistent"></textarea>
-          <button id="dialogueTransform" type="button" class="dialogue-rebuild" title="Sämtliche Strukturen anhand deiner Anweisung bearbeiten">Plan ändern</button>
-          <button id="dialogueRebuild" type="button" class="dialogue-rebuild" title="Den gesamten Plan aus PDF übernehmen">PDF → Plan</button>
-          <button type="submit" id="dialogueSend">Senden</button>
+           <button type="submit" id="dialogueSend">Senden</button>
         </form>
       </section>
     </div>
@@ -812,8 +810,8 @@ body.read-only .editor-only{display:none!important}
     // Back to where the plan lives: its project page in Work, or the Muster in Tools.
     const back=$('#officeBack');
     if(back){
-      if(TEMPLATE_ID){back.href='./app/#section=projects';back.textContent='‹ Muster'}
-      else if(meta.project_id){back.href='./app/#section=projects&project='+encodeURIComponent(meta.project_id);back.textContent='‹ '+(project.projectNumber||meta.project_number||'Projekt')}
+      if(TEMPLATE_ID){back.href='./app/#section=plans';back.textContent='‹ Muster'}
+      else if(meta.project_id){back.href='./app/#section=plans';back.textContent='‹ Terminpläne'}
     }
     $('#printPlanTitle').textContent=[title,'Planungsterminplan',phase].filter(Boolean).join(' · ');
     $('#printPlanSubtitle').textContent=TEMPLATE_ID
@@ -1551,8 +1549,7 @@ body.read-only .editor-only{display:none!important}
     $('#dialogueReject').disabled=dialogueWriting;
     $('#dialogueSend').disabled=dialogueWriting;
     $('#dialogueAttach').disabled=dialogueWriting||!PLAN_ID;
-    $('#dialogueRebuild').disabled=dialogueWriting||!PLAN_ID||!dialogueAIReady;
-    $('#dialogueTransform').disabled=dialogueWriting||!PLAN_ID||!dialogueAIReady;
+
   }
   async function storeDialogue(entry){
     if(!PLAN_ID||!dialogueUserId)return;
@@ -1721,30 +1718,14 @@ body.read-only .editor-only{display:none!important}
       chip.append(name,remove);host.append(chip);
     });
   }
-  async function sendDialogue(event,forcedMode=null){
+  async function sendDialogue(event){
     event?.preventDefault?.();
     if(dialogueWriting)return;
     const input=$('#dialogueInput'),files=dialogueAttachments.slice();
-    const message=input.value.trim()||(files.length?'Bitte analysiere die Dokumente.':'');
-    const requestRebuild=forcedMode==='rebuild'||
-      (/(idéntic|identic|identisch|igual al pdf|gleich.*pdf|vollständig.*pdf|komplett.*pdf|reemplaz.*pdf|replace.*pdf)/i.test(message)&&
-       (files.length||dialogueSavedSources.length));
-    const requestTransform=!requestRebuild&&(forcedMode==='transform'||/(crear grupos|crea un grupo|neue gruppe|gruppen erstellen|grupo renombr|gruppe umbenenn|borrar grupos|gruppen löschen|elimina (?:las|los) (?:tareas|actividades)|aktivitäten löschen|alle vorgänge ändern|modifica todo el plan)/i.test(message));
-    if(requestTransform&&!message){
-      addDialogue('assistant','Bitte beschreibe zuerst, welche Gruppen, Aufgaben oder Termine geändert werden sollen. Danach auf „Plan ändern“ klicken.','answer');return;
-    }
-    if(!message&&!requestRebuild&&!requestTransform)return;
-    if((requestRebuild||requestTransform)&&(!dialogueAIReady||!rebuildEngine)){
-      addDialogue('assistant','Eine vollständige PDF-Rekonstruktion benötigt die Office-KI.','warning');return;
-    }
-    if(requestRebuild&&!files.length&&!dialogueSavedSources.length){
-      addDialogue('assistant','Bitte den PDF-Terminplan einmal anhängen. Neue Dokumente werden ab jetzt privat gespeichert und können in späteren Nachrichten wiederverwendet werden.','warning');
-      return;
-    }
+    const prompt=input.value.trim()||(files.length?'Bitte analysiere die beigefügten Dokumente.':'');
+    if(!prompt)return;
     input.value='';dialogueProposal=null;dialogueWriting=true;
     const requestId=crypto.randomUUID();
-    const prompt=message||'Rekonstruiere den vollständigen Terminplan aus dem gespeicherten PDF.';
-    const planAction=requestRebuild?'rebuild':requestTransform?'transform':'discuss';
     addDialogue('user',prompt+(files.length?'\nAnhänge: '+files.map(f=>f.name).join(' · '):''),'question',requestId);
     renderDialogue();
     try{
@@ -1759,36 +1740,44 @@ body.read-only .editor-only{display:none!important}
         }
         const activeIds=[...dialogueSelectedSourceIds];
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
-          body:{action:planAction,plan_id:PLAN_ID,
+          body:{action:'auto',plan_id:PLAN_ID,
             message:prompt,source_ids:activeIds,
             selected_task_id:selectedId,expected_revision:serverRevision}
         });
         if(error||!remote||remote.error){
-          addDialogue('assistant','KI-Anfrage nicht abgeschlossen ('+(remote?.error||'ai_unavailable')+
-            '). Keine Änderung. Gespeicherte Dokumente bleiben erhalten.','warning',requestId);
+          const reason=remote?.error;
+          const message=reason==='source_document_required'
+            ?'Damit ich den vorhandenen Terminplan mit einer PDF-Vorlage vergleichen und vollständig rekonstruieren kann, füge sie bitte über + hinzu. Das Dokument bleibt danach für weitere Nachrichten gespeichert.'
+            :'Die KI-Anfrage konnte nicht abgeschlossen werden ('+(reason||'ai_unavailable')+
+              '). Keine Änderung. Bereits gespeicherte Dateien bleiben verfügbar.';
+          addDialogue('assistant',message,'warning',requestId);
           return;
         }
-        if(requestRebuild||requestTransform){
-          if(remote.version!=='office-ai-v0.6'||remote.source!=='office_ai_complete_plan_proposal'||
+        if(remote.source==='office_ai_complete_plan_proposal'){
+          const mode=remote.mode;
+          if(remote.version!=='office-ai-v0.6'||!['rebuild','transform'].includes(mode)||
              remote.base_revision!==serverRevision||!remote.result){
-            addDialogue('assistant','PDF-Entwurf ist nicht prüfbar. Keine Änderung.','warning',requestId);return;
+            addDialogue('assistant','Der Planentwurf ist nicht eindeutig verifizierbar. Es wurde nichts geändert.','warning',requestId);
+            return;
           }
-          if(!remote.result.complete||remote.result.uncertainties?.length){
-            addDialogue('assistant',(requestRebuild?'Der PDF-Plan konnte noch nicht vollständig und zweifelsfrei erfasst werden. ':'Die gewünschten Planänderungen konnten nicht eindeutig abgeleitet werden. ')+
-              String(remote.result.summary||'')+'\nUnklar: '+
+          if(!remote.result.complete){
+            addDialogue('assistant','Ich kann den vollständigen Plan noch nicht zuverlässig rekonstruieren: '+
+              String(remote.result.summary||'')+
+              '\nBitte diese unlesbaren Angaben präzisieren: '+
               (remote.result.uncertainties||[]).join(' · ')+
-              '\nDer vorhandene Terminplan bleibt unverändert.','warning',requestId);
+              '\nDer bisherige Plan bleibt unverändert.','warning',requestId);
             return;
           }
           try{
             result=rebuildEngine.preview({
               state:clone(data),result:remote.result,revision:serverRevision,
-              requestId,sourceName:remote.source_name,standDate:localIsoToday(),
-              mode:requestTransform?'transform':'rebuild'
+              requestId,sourceName:remote.source_name,
+              standDate:localIsoToday(),mode
             });
           }catch(ex){
-            addDialogue('assistant','PDF-Entwurf konnte nicht validiert werden ('+String(ex.message||ex)+
-              '). Keine Änderung.','warning',requestId);return;
+            addDialogue('assistant','Die Planänderung konnte nicht validiert werden: '+
+              String(ex.message||ex)+'. Es wurde nichts geändert.','warning',requestId);
+            return;
           }
         }else result=dialogueEngine.fromDiscussion({
           serverResponse:remote,state:clone(data),engine:auditEngine,
@@ -1797,7 +1786,8 @@ body.read-only .editor-only{display:none!important}
         remoteSources=Array.isArray(remote.sources)?remote.sources:[];
       }else{
         if(files.length||dialogueSavedSources.length){
-          addDialogue('assistant','Für die Analyse gespeicherter Quellen muss die Office-KI verfügbar sein.','warning',requestId);return;
+          addDialogue('assistant','Die Office-KI ist momentan nicht verfügbar. Das Dokument bleibt privat gespeichert, aber ich kann es jetzt nicht zuverlässig auswerten.','warning',requestId);
+          return;
         }
         result=dialogueEngine.answer({
           message:prompt,state:clone(data),engine:auditEngine,
@@ -1809,7 +1799,7 @@ body.read-only .editor-only{display:none!important}
       assistantExpanded=true;renderAssistant();
     }catch(error){
       console.error('Office dialogue error',error);
-      addDialogue('assistant','Die Anfrage konnte nicht sicher abgeschlossen werden. Gespeicherte Quellen bleiben erhalten. Keine Änderung vorgenommen.','warning',requestId);
+      addDialogue('assistant','Die Anfrage konnte nicht sicher abgeschlossen werden. Alle gespeicherten Quellen bleiben erhalten; es wurden keine Plandaten geändert.','warning',requestId);
     }finally{dialogueWriting=false;renderDialogue()}
   }
   async function approveDialogue(){
@@ -1835,6 +1825,10 @@ body.read-only .editor-only{display:none!important}
       const counts=proposal.counts;
       const isTransform=proposal.mode==='transform';
       const changes=proposal.diff;
+      const unresolved=Array.isArray(proposal.unresolved_dependencies)?proposal.unresolved_dependencies:[];
+      const dependencyWarning=unresolved.length
+        ?'\n\nACHTUNG: '+unresolved.length+' Verknüpfungen sind im PDF nicht zweifelsfrei lesbar und bleiben im Entwurf ungeklärt. Der Terminplan ist deshalb bei den Abhängigkeiten NICHT identisch mit dem PDF.\n'+unresolved.slice(0,8).join(' · ')
+        :'';
       const changeSummary=isTransform&&changes?
         '\nGruppen: '+changes.groups.created.length+' neu, '+changes.groups.deleted.length+' gelöscht, '+
         changes.groups.edited.length+' geändert.\nVorgänge: '+
@@ -1846,7 +1840,7 @@ body.read-only .editor-only{display:none!important}
         '\n\nAlter Stand: '+counts.previous_groups+' Gruppen, '+counts.previous_tasks+' Einträge.'+
         '\nNeue Fassung: '+counts.groups+' Gruppen, '+counts.tasks+' Einträge, davon '+
         counts.milestones+' Meilensteine.'+changeSummary+
-        '\nQuelle: '+proposal.source_name+
+        '\nQuelle: '+proposal.source_name+dependencyWarning+
         '\n\nDer alte Plan wird vorher als Version gesichert. Bitte die neuen Daten und Abhängigkeiten prüfen.'))return;
     }
     if(proposal.kind==='add_tasks'){
@@ -2672,8 +2666,7 @@ body.read-only .editor-only{display:none!important}
     }
   });
   $('#dialogueForm').onsubmit=sendDialogue;
-  $('#dialogueRebuild').onclick=()=>{void sendDialogue(null,'rebuild')};
-  $('#dialogueTransform').onclick=()=>{void sendDialogue(null,'transform')};
+
   $('#dialogueAttach').onclick=()=>$('#dialogueFileInput').click();
   $('#dialogueFileInput').onchange=event=>{
     const selected=[...(event.target.files||[])];

@@ -15,7 +15,7 @@ test('Office and Window Tools use the same five-icon navigation rather than swit
   assert.ok(shell.includes('data-screen="tools"'));
   assert.ok(shell.includes('data-nav="tools"'));
   assert.ok(!shell.includes('href="../#tools"'));
-  assert.ok(app.includes("'calendar','tools','projects','readings'"));
+  assert.ok(app.includes("'calendar','tools','projects','plans','readings'"));
   assert.ok(shell.includes('aria-label="Romy"'));
 });
 test('All active office members may rename and remove shared files without ownership restriction',()=>{

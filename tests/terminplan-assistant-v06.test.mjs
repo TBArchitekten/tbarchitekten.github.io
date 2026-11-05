@@ -15,7 +15,7 @@ test("stronger reasoning model without MINDS runtime dependency",()=>{
  assert.ok(!edge.includes("gari01234")&&!edge.includes("isabella-chat"));
  assert.match(edge,/TBA_OFFICE_OPENAI_API_KEY/);
  assert.match(edge,/store:false/);
- assert.match(edge,/reasoning:\{effort:\["rebuild","transform"\]\.includes\(action\)\?"low":"medium"\}/);
+ assert.match(edge,/reasoning:\{effort:\["rebuild","transform"\]\.includes\(effectiveAction\)\?"low":"medium"\}/);
 });
 test("domain lens is evidenced, phase-specific and not a mandatory template",()=>{
  assert.match(EXPERTISE_VERSION,/v0\.6/);
@@ -39,7 +39,7 @@ test("proactive review never bypasses RLS and never creates a proposal",()=>{
  assert.match(edge,/auth\.getUser\(token\)/);
  assert.match(edge,/from\("office_members"\)/);
  assert.match(edge,/from\("office_terminplan_instances"\)/);
- assert.match(edge,/if\(action==="review"&&result\.kind!=="discuss"/);
+ assert.match(edge,/if\(effectiveAction==="review"&&result\.kind!=="discuss"/);
  assert.match(edge,/office_ai_consume_request/);
  assert.match(editor,/if\(manualChange&&pendingProactiveIds\.length\)/);
  assert.match(editor,/!dialogueAIReady\|\|!PLAN_ID/);

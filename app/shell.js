@@ -104,9 +104,21 @@ document.body.innerHTML = `
         </button>
         <button type="button" class="office-tools-card office-tools-projects" id="officeToolsManage" aria-label="Projekte öffnen">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
-          <span><strong>Projekte</strong><small>Projekte anlegen und verwalten, Projektleitung zuordnen und Terminpläne öffnen.</small></span>
+          <span><strong>Projekte</strong><small>Projekte anlegen, Mitglieder gemeinsam verwalten und Terminpläne verknüpfen.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
+      </div>
+    </section>
+    <section id="plansScreen" class="screen office-projects-screen" data-screen="plans" aria-label="Terminpläne">
+      <div class="office-projects-scroll">
+        <button type="button" id="officePlansBack" class="office-projects-back">‹ Werkzeuge</button>
+        <div class="office-projects-head"><div><p>OFFICE · TERMINPLAN</p><h1>Terminpläne</h1>
+          <p>Unveränderliche LPH-Muster ansehen und Projektterminpläne unabhängig davon bearbeiten.</p></div></div>
+        <div id="officePlansStatus" class="office-projects-status" role="status" aria-live="polite"></div>
+        <h2 class="office-plan-library-heading">Muster · nur Ansicht</h2>
+        <div id="officePlansTemplates" class="office-projects-list"></div>
+        <h2 class="office-plan-library-heading">Projektterminpläne</h2>
+        <div id="officePlansInstances" class="office-projects-list"></div>
       </div>
     </section>
     <section id="projectsScreen" class="screen office-projects-screen" data-screen="projects" aria-label="Projekte">
