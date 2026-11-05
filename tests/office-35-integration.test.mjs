@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {normalizePlanAttachments} from '../supabase/functions/office-terminplan-ai/attachments.mjs';
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const doc=Buffer.from('%PDF-1.7\n1 0 obj').toString('base64');
+const photo=Buffer.from([255,216,255,224,0,16]).toString('base64');
+const entry=(name,mime,base64)=>({name,mime,size:Buffer.from(base64,'base64').length,data:'data:'+mime+';base64,'+base64});
+test('Terminplan accepts actual PDF and JPG input as distinct multimodal items',()=>{
+ const result=normalizePlanAttachments([entry('Plan.pdf','application/pdf',doc),entry('Foto.jpg','image/jpeg',photo)]);
+ assert.deepEqual(result.parts.map(x=>x.type),['input_file','input_image']);
+ assert.equal(result.parts[0].filename,'Plan.pdf');
+ assert.equal(result.sources[0].name,'Plan.pdf');
+ assert.equal(result.sources[0].size,Buffer.from(doc,'base64').length);
+});
+test('Terminplan rejects incorrectly declared input and excessive file count',()=>{
+ const a=entry('Plan.pdf','application/pdf',doc);
+ assert.throws(()=>normalizePlanAttachments([entry('fake.pdf','image/png',doc)]));
+ assert.throws(()=>normalizePlanAttachments([{...a,size:9999}]));
+ assert.throws(()=>normalizePlanAttachments([a,a,a,a]));
+ assert.throws(()=>normalizePlanAttachments([entry('Plan.pdf','application/pdf','YQ==')]));
+});
+test('Project manager is in Window shell; Terminplan is always Terra when available',()=>{
+ const shell=read('app/shell.js'),app=read('app/app.js'),root=read('app.js'),edge=read('supabase/functions/office-terminplan-ai/index.ts');
+ const ui=read('terminplan.html'),projects=read('app/office-projects.js');
+ assert.match(shell,/id="projectsScreen"/);
+ assert.match(shell,/id="officeToolsManage"/);
+ assert.doesNotMatch(shell,/href="\.\.\/#work"/);
+ assert.match(app,/name==='projects'/);
+ assert.match(root,/section=projects/);
+ assert.match(projects,/from\('office_projects'\)/);
+ assert.match(projects,/\.insert\(\{number,name,projektleiter_id:lead\}\)/);
+ assert.match(edge,/normalizePlanAttachments\(input\.attachments\)/);
+ assert.match(edge,/attachments\.parts/);
+ assert.match(edge,/model:MODEL/);
+ assert.match(ui,/id="dialogueAttach"/);
+ assert.match(ui,/Automatisch aktiv/);
+ assert.doesNotMatch(ui,/tba_office_ai_optin/);
+ assert.match(ui,/dialogueEngine\.review\(proposal,data,auditEngine,serverRevision\)/);
+});
