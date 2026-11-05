@@ -83,7 +83,7 @@ async function refresh(){
     const [pr,pl,me,tp,pm]=await Promise.all([
       sb().from('office_projects').select('id,number,name,status,projektleiter_id').order('number').limit(250),
       sb().from('office_terminplan_instances').select('id,project_id,phase,updated_at').eq('is_archived',false).limit(500),
-      sb().from('office_members').select('user_id,display_name,role,is_active').eq('is_active',true).limit(250),
+      sb().from('office_members').select('user_id,display_name,role,is_active,must_change_password').eq('is_active',true).eq('must_change_password',false).limit(250),
       sb().from('office_terminplan_templates').select('id,phase,version,state,title').eq('is_active',true).limit(50),
       sb().from('office_project_members').select('project_id,user_id').limit(1000)
     ]);
