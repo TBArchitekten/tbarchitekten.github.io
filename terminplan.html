@@ -1570,6 +1570,66 @@ body.read-only .editor-only{display:none!important}
     renderDialogue();
   }
 
+  async function loadSavedSources(){
+    if(!PLAN_ID||!dialogueUserId)return;
+    const {data:rows,error}=await sb.from('office_terminplan_sources')
+      .select('id,file_name,mime,bytes,storage_path,created_at')
+      .eq('plan_id',PLAN_ID).eq('user_id',dialogueUserId)
+      .order('created_at',{ascending:false}).limit(20);
+    if(error){console.warn('Plan source loading failed',error.message);return}
+    dialogueSavedSources=rows||[];
+    dialogueSelectedSourceIds=new Set([...dialogueSelectedSourceIds].filter(id=>dialogueSavedSources.some(s=>s.id===id)));
+    if(!dialogueSelectedSourceIds.size&&dialogueSavedSources[0])dialogueSelectedSourceIds.add(dialogueSavedSources[0].id);
+    renderSavedSources();
+  }
+  function renderSavedSources(){
+    const host=$('#dialogueSavedSources');if(!host)return;
+    host.replaceChildren();
+    if(!dialogueSavedSources.length)return;
+    const title=document.createElement('span');title.className='dialogue-saved-label';
+    title.textContent='Gespeicherte Quellen · auch bei späteren Fragen verfügbar:';host.append(title);
+    for(const source of dialogueSavedSources){
+      const chip=document.createElement('span');chip.className='dialogue-attachment-chip';
+      const select=document.createElement('button');select.type='button';
+      const selected=dialogueSelectedSourceIds.has(source.id);
+      select.className='dialogue-source-select'+(selected?' selected':'');
+      select.textContent=(selected?'✓ ':'')+source.file_name;
+      select.title='Für die nächste Anfrage '+(selected?'abwählen':'auswählen');
+      select.onclick=()=>{
+        if(selected)dialogueSelectedSourceIds.delete(source.id);
+        else if(dialogueSelectedSourceIds.size<3)dialogueSelectedSourceIds.add(source.id);
+        renderSavedSources();
+      };
+      const del=document.createElement('button');del.type='button';del.textContent='×';
+      del.title='Gespeicherte Datei entfernen';del.setAttribute('aria-label','Quelle löschen: '+source.file_name);
+      del.onclick=async()=>{
+        if(!confirm('Datei „'+source.file_name+'“ dauerhaft aus diesem Terminplan entfernen?'))return;
+        const {error:e1}=await sb.storage.from('office-plan-sources').remove([source.storage_path]);
+        if(e1){alert('Datei konnte nicht gelöscht werden: '+e1.message);return}
+        const {error:e2}=await sb.from('office_terminplan_sources').delete().eq('id',source.id).eq('plan_id',PLAN_ID);
+        if(e2){alert('Dateiregister konnte nicht aktualisiert werden.');return}
+        dialogueSelectedSourceIds.delete(source.id);await loadSavedSources();
+      };
+      chip.append(select,del);host.append(chip);
+    }
+  }
+  async function uploadPlanSource(file){
+    const mime=planFileMime(file),id=crypto.randomUUID(),name=file.name.slice(0,180);
+    const path=dialogueUserId+'/'+PLAN_ID+'/'+id+'-'+name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const {error:uploadError}=await sb.storage.from('office-plan-sources')
+      .upload(path,file,{contentType:mime,upsert:false,cacheControl:'60'});
+    if(uploadError)throw Error('Datei nicht gespeichert: '+uploadError.message);
+    const {data:row,error:recordError}=await sb.from('office_terminplan_sources').insert({
+      plan_id:PLAN_ID,user_id:dialogueUserId,storage_path:path,
+      file_name:name,mime,bytes:file.size
+    }).select('id').single();
+    if(recordError){
+      await sb.storage.from('office-plan-sources').remove([path]);
+      throw Error('Dokumentregistrierung fehlgeschlagen: '+recordError.message);
+    }
+    return row.id;
+  }
+
   async function checkAIStatus(){
     const label=$('#dialogueAIStatus');
     dialogueAIReady=false;
