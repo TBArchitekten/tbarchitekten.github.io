@@ -3,6 +3,11 @@ import { validOfficeDate, berlinDateRangeUtc, parseExplicitZonedInstant } from "
 // Queries execute with the employee's JWT and the Office RLS policies,
 // never with a shared service-role reader.
 export const ROMY_TOOLS=[
+ {type:"function",name:"list_skills",description:"List versioned procedures ported from Window; Skills teach workflows but never grant permissions.",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
+ {type:"function",name:"load_skill",description:"Load a trusted full Window Skill by exact slug. Maximum four complementary Skills per turn; it cannot authorize actions.",strict:false,parameters:{type:"object",properties:{slug:{type:"string"}},required:["slug"],additionalProperties:false}},
+ {type:"function",name:"search_personal_memory",description:"Search this employee's confirmed private memories only; not arbitrary past chat claims or model inferences.",strict:false,parameters:{type:"object",properties:{query:{type:"string"},kind:{type:"string",enum:["fact","preference"]}},additionalProperties:false}},
+ {type:"function",name:"propose_remember",description:"Propose a fact or preference to remember. Must be reviewed by this employee; cannot save accepted memory autonomously.",strict:false,parameters:{type:"object",properties:{kind:{type:"string",enum:["fact","preference"]},content:{type:"string"}},required:["kind","content"],additionalProperties:false}},
+
  {type:"function",name:"list_projects",description:"Read the office project catalog (shared with active office members).",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
  {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. Filter optionally by due date or project UUID.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments overlapping an inclusive date range in Europe/Berlin. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
@@ -39,6 +44,23 @@ async function registerProposal({admin,requestId,userId,conversationId,kind,payl
 }
 export async function executeRomyTool(name,args,{userDb,admin,userId,conversationId,requestId}){
  const a=args&&typeof args==="object"&&!Array.isArray(args)?args:{};
+ if(name==="search_personal_memory"){
+  let q=userDb.from("office_romy_memories")
+    .select("id,kind,content,created_at,source_conversation_id,source_request_id")
+    .eq("status","accepted");
+  if(a.kind&&["fact","preference"].includes(a.kind))q=q.eq("kind",a.kind);
+  if(a.query){const pattern="%"+normalized(a.query,180).replace(/[\\%_]/g,m=>"\\"+m)+"%";q=q.ilike("content",pattern);}
+  const rows=await checkedQuery(q.order("created_at",{ascending:false}).limit(80));
+  return {memories:safeArray(rows,80),scope:"confirmed_private_memory_for_employee",
+    has_more_possible:rows.length===80,provenance:"owner_reviewed_proposals"};
+ }
+ if(name==="propose_remember"){
+  const kind=String(a.kind||""),content=String(a.content||"").trim();
+  if(!["fact","preference"].includes(kind)||!content)return err("invalid_memory_proposal");
+  return await registerProposal({admin,requestId,userId,conversationId,kind:"remember",
+    payload:{memory_kind:kind,content,source_conversation_id:conversationId,
+      source_request_id:requestId}});
+ }
  if(name==="list_projects"){
   const rows=await checkedQuery(userDb.from("office_projects")
     .select("id,number,name,status,projektleiter_id").order("number").limit(150));
@@ -113,7 +135,7 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
 export async function reviewRomyProposal({userDb,admin,userId,proposalId,decision}){
  if(!validId(proposalId)||!["apply","reject"].includes(decision))return {error:"invalid_review"};
  const {data:proposal,error}=await userDb.from("office_romy_proposals")
-   .select("id,user_id,kind,payload,status").eq("id",proposalId).maybeSingle();
+   .select("id,user_id,kind,payload,status,conversation_id,request_id").eq("id",proposalId).maybeSingle();
  if(error||!proposal||proposal.user_id!==userId)return {error:"proposal_not_found"};
  if(proposal.status!=="pending")return {error:"proposal_already_reviewed"};
  const status=decision==="reject"?"rejected":"applying";
@@ -124,6 +146,23 @@ export async function reviewRomyProposal({userDb,admin,userId,proposalId,decisio
  if(decision==="reject")return {status:"rejected",proposal_id:proposalId};
  const {kind,payload:p}=proposal;
  let table,values;
+ if(kind==="remember"){
+   if(!["fact","preference"].includes(p.memory_kind)||!String(p.content||"").trim())
+     return {error:"invalid_memory_proposal"};
+   const {data:memory,error:memoryError}=await admin.from("office_romy_memories")
+     .insert({user_id:userId,kind:p.memory_kind,content:String(p.content).trim(),
+       source_conversation_id:proposal.conversation_id,source_request_id:proposal.request_id})
+     .select("id").single();
+   if(memoryError||!memory){
+     await admin.from("office_romy_proposals")
+       .update({status:"pending",reviewed_at:null}).eq("id",proposalId).eq("status","applying");
+     return {error:"memory_store_failed"};
+   }
+   const {error:receiptError}=await admin.from("office_romy_proposals")
+     .update({status:"applied",result_id:memory.id}).eq("id",proposalId).eq("status","applying");
+   if(receiptError)throw new Error("memory_receipt_unavailable");
+   return {status:"applied",proposal_id:proposalId,result_id:memory.id,kind:"remember"};
+ }
  if(kind==="create_task"){
    table="isabella_tasks";
    values={user_id:userId,title:normalized(p.title,200),due_date:p.due_date||null,

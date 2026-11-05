@@ -143,27 +143,35 @@ async function showPendingProposals(){
   target.querySelectorAll('.romy-pending-review').forEach(x=>x.remove());
   for(const p of data||[]){
     const item=element('div',null,'romy-pending-review');
-    const title=p.kind==='create_event'?'Terminvorschlag':'Aufgabenvorschlag';
+    const title=p.kind==='remember'?'Erinnerungsvorschlag':p.kind==='create_event'?'Terminvorschlag':'Aufgabenvorschlag';
     item.appendChild(element('strong',title));
     const details=p.payload||{};
-    const when=p.kind==='create_event'
-      ?[details.starts_at,details.ends_at].filter(Boolean).join(' – ')
-      :(details.due_date||'Ohne Fälligkeitsdatum');
-    item.appendChild(element('p',String(details.title||'')+' · '+when));
+    const when=p.kind==='remember'
+      ?(details.memory_kind==='preference'?'Präferenz':'Information')
+      :p.kind==='create_event'
+        ?[details.starts_at,details.ends_at].filter(Boolean).join(' – ')
+        :(details.due_date||'Ohne Fälligkeitsdatum');
+    item.appendChild(element('p',p.kind==='remember'
+      ?String(details.content||'')+' · '+when
+      :String(details.title||'')+' · '+when));
     if(details.notes)item.appendChild(element('p',String(details.notes)));
     const actions=element('div',null,'romy-review-actions');
     for(const [name,decision] of [['Bestätigen','apply'],['Verwerfen','reject']]){
       const button=element('button',name);
       button.type='button';
       button.addEventListener('click',async()=>{
-        if(decision==='apply'&&!window.confirm('„'+String(details.title||'')+'“ in TBA Office anlegen?'))return;
+        if(decision==='apply'&&!window.confirm(p.kind==='remember'
+          ?'Diese Information als persönliche Erinnerung speichern?\n\n'+String(details.content||'')
+          :'„'+String(details.title||'')+'“ in TBA Office anlegen?'))return;
         actions.querySelectorAll('button').forEach(b=>b.disabled=true);
         try{
           const {data:result,error:actionError}=await sb.functions.invoke('office-assistant',{
             body:{action:'review_proposal',proposal_id:p.id,decision}
           });
           if(actionError||result?.error)throw Error(result?.error||'review_failed');
-          status(decision==='apply'?'Änderung bestätigt und im Office gespeichert.':'Vorschlag verworfen.');
+          status(decision==='apply'
+            ?(p.kind==='remember'?'Erinnerung bestätigt und gespeichert.':'Änderung bestätigt und im Office gespeichert.')
+            :'Vorschlag verworfen.');
           await window.ISABELLA_SYNC_PULL_NOW?.();
           void showPendingProposals();
         }catch(error){
@@ -225,7 +233,45 @@ function addMenuButton(id,title,action){
   });
   signout.parentElement.insertBefore(button,signout);
 }
+async function openMemories(){
+  if(!ownerId||busy)return;
+  const {data,error}=await sb.from('office_romy_memories')
+    .select('id,kind,content,created_at,source_conversation_id')
+    .eq('status','accepted').eq('user_id',ownerId)
+    .order('created_at',{ascending:false}).limit(300);
+  if(error){status('Persönliche Erinnerungen konnten nicht geladen werden.');return}
+  app()?.openModal?.('Meine Erinnerungen','');
+  const body=document.getElementById('modalBody');
+  if(!body)return;
+  body.replaceChildren();
+  body.appendChild(element('p','Nur bestätigte Erinnerungen Ihres Kontos. Vorschläge werden erst nach Ihrer Bestätigung übernommen.','small'));
+  if(!data?.length){body.appendChild(element('p','Noch keine bestätigten Erinnerungen.','small'));return}
+  const list=element('div',null,'office-assistant-history');
+  for(const memory of data){
+    const row=element('div',null,'office-assistant-history-row');
+    const content=element('div',null,'office-memory-content');
+    content.appendChild(element('strong',memory.kind==='preference'?'Präferenz':'Information'));
+    content.appendChild(element('p',memory.content));
+    const retract=element('button','Deaktivieren','office-assistant-history-edit');
+    retract.type='button';
+    retract.setAttribute('aria-label','Erinnerung deaktivieren');
+    retract.addEventListener('click',async()=>{
+      if(!window.confirm('Diese Erinnerung deaktivieren? Sie wird Romy danach nicht mehr als gültige Erinnerung angeboten.'))return;
+      retract.disabled=true;
+      const {data:updated,error:retractError}=await sb.from('office_romy_memories')
+        .update({status:'retracted',retracted_at:new Date().toISOString()})
+        .eq('id',memory.id).eq('user_id',ownerId).eq('status','accepted')
+        .select('id').maybeSingle();
+      if(retractError||!updated){retract.disabled=false;status('Erinnerung konnte nicht deaktiviert werden.');return}
+      row.remove();
+      status('Die Erinnerung wurde deaktiviert. Der Prüfverlauf bleibt erhalten.');
+    });
+    row.append(content,retract);list.appendChild(row);
+  }
+  body.appendChild(list);
+}
 addMenuButton('officeAssistantHistory','Meine Gespräche',()=>void refreshThreads().then(openHistory));
+addMenuButton('officeAssistantMemories','Meine Erinnerungen',()=>void openMemories());
 addMenuButton('officeAssistantNew','Neues Gespräch',startNew);
 async function init(){
   const {data:{session},error}=await sb.auth.getSession();

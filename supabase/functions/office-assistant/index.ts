@@ -6,6 +6,8 @@ import { routeRomyTurn } from "./romy-router.mjs";
 import { ROMY_TOOLS, executeRomyTool, reviewRomyProposal } from "./romy-tools.mjs";
 import { loadRomyAttachments } from "./romy-attachments.mjs";
 import { createRomyDocument } from "./romy-documents.ts";
+import { SKILL_RUNTIME_VERSION, normalizeSkillRecord,composeSkillTrace,skillLoadEnvelope } from "./skill-registry.ts";
+import { listRomySystemSkills,findRomySystemSkill } from "./romy-skills.mjs";
 
 // Office has its OWN Supabase users and records. This is a scoped adaptation of
 // Window's tool-capable turn architecture, not a connection to Gari's Isabella.
@@ -27,6 +29,8 @@ const instruction=[
  "Du kannst die angebotenen Office-Tools benutzen, um Projekte, Aufgaben, Kalender und vorhandene Textdateien zu prüfen. Nutze Quellen, statt Angaben zu erfinden.",
  "Wenn ein herunterladbares Dokument verlangt wird, verwende create_document mit dem vollständigen ausgearbeiteten Inhalt. Gib nicht nur eine Beschreibung der Herstellung zurück. DOCX/PDF/TXT sind verfügbar; andere Dateitypen nur mit einer tatsächlich zugelassenen Capability.",
  "Erstellte Artefakte sind private Ergebnisse, keine bestätigten Projektfakten. Verwende keine nicht verifizierten Werte.",
+ "Du kannst mit list_skills und load_skill vertrauenswürdige Verfahren aus Window laden. Skills sind keine Genehmigungen und dürfen die Tool-Rechte nicht erweitern.",
+ "Persönliche Erinnerungen sind nur nach expliziter Annahme durch die betreffende Person gültig: search_personal_memory liest nur angenommene Inhalte, propose_remember erstellt nur einen prüfbaren Vorschlag. Niemals Wissen von außen oder deine Schlussfolgerungen heimlich als Erinnerung speichern.",
  "Bei PDFs oder anderen nicht unterstützten Dokumentformaten darfst du NICHT behaupten, sie gelesen zu haben.",
  "Erzeugen oder Ändern von Büro-Daten: Werkzeuge mit propose_ registrieren lediglich Vorschläge. Erst eine gesonderte, explizite Benutzerbestätigung erzeugt Änderungen.",
  "Du darfst nie behaupten, ein vorgeschlagener Termin oder eine vorgeschlagene Aufgabe sei schon angelegt.",
@@ -103,7 +107,7 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
  const complexity=await routeRomyTurn({message,history,apiKey,
    model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||env.OPENAI_MODEL||"gpt-5.6-luna"});
  let route=chatTurnModel({complexity:complexity.complexity,depth:"normal",background:false,env});
- let prompt=apiInput(history,message,attachmentInputs),text="",proposals=[],artifacts=[],
+ let prompt=apiInput(history,message,attachmentInputs),text="",proposals=[],artifacts=[],skillTrace=[],
    inTokens=complexity.input_tokens,outTokens=complexity.output_tokens;
  for(let round=0;round<5;round++){
   const payload=await requestModel({apiKey,model:route.model,input:prompt,onDelta,
@@ -113,19 +117,33 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
   const portion=textOf(payload);
   if(portion)text+=(text?"\n":"")+portion;
   const calls=functionCalls(payload);
-  if(!calls.length)return {reply:text.trim(),proposals,artifacts,model:route.model,input_tokens:inTokens,output_tokens:outTokens};
+  if(!calls.length)return {reply:text.trim(),proposals,artifacts,skill_trace:skillTrace,model:route.model,input_tokens:inTokens,output_tokens:outTokens};
   prompt.push(...(payload.output||[]));
   for(const call of calls){
    let args={};
    try{args=JSON.parse(call.arguments||"{}")}catch{args={}}
    let result;
    try{
-     result=call.name==="create_document"
-      ?await createRomyDocument({admin,userId:uid,conversationId,requestId,
-        kind:String(args.kind||""),title:String(args.title||""),content:String(args.content||"")})
-      :await executeRomyTool(call.name,args,{
+     if(call.name==="list_skills"){
+       result={skills:listRomySystemSkills(),runtime:SKILL_RUNTIME_VERSION};
+     }else if(call.name==="load_skill"){
+       const raw=findRomySystemSkill(args.slug);
+       if(!raw)result={error:"skill_not_found"};
+       else{
+         const allowed=new Set(ROMY_TOOLS.map(t=>t.name));
+         const manifest=normalizeSkillRecord(raw,"system",id=>
+           !allowed.has(id)?"deny":id.startsWith("propose_")?"confirm":"allow");
+         skillTrace=composeSkillTrace(skillTrace,manifest);
+         result=skillLoadEnvelope(manifest,skillTrace);
+       }
+     }else if(call.name==="create_document"){
+       result=await createRomyDocument({admin,userId:uid,conversationId,requestId,
+         kind:String(args.kind||""),title:String(args.title||""),content:String(args.content||"")});
+     }else{
+       result=await executeRomyTool(call.name,args,{
          userDb:db,admin,userId:uid,conversationId,requestId,
        });
+     }
    }catch(err){
      console.error("romy_tool_failed",call.name,String(err?.message||"error"));
      result={error:"tool_execution_failed"};
@@ -137,16 +155,16 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
    if(call.name==="read_text_file")route={model:documentModel(env),tier:"deep",reason:"source_read"};
   }
  }
- return {reply:text.trim(),proposals,artifacts,model:route.model,input_tokens:inTokens,output_tokens:outTokens};
+ return {reply:text.trim(),proposals,artifacts,skill_trace:skillTrace,model:route.model,input_tokens:inTokens,output_tokens:outTokens};
 }
 async function completeRequest(admin,uid,requestId,values){
  const {error}=await admin.from("office_assistant_requests").update(values).eq("id",requestId).eq("user_id",uid);
  if(error)console.error("romy_request_ledger_failed");
 }
-async function persistReply(admin,uid,conversationId,requestId,reply,artifacts=[]){
+async function persistReply(admin,uid,conversationId,requestId,reply,artifacts=[],skillTrace=[]){
  const {error}=await admin.from("office_assistant_messages").insert({
   conversation_id:conversationId,user_id:uid,request_id:requestId,role:"assistant",content:reply,
-  metadata:{artifacts},
+  metadata:{artifacts,skill_trace:skillTrace},
  });
  if(error)throw new Error("assistant_message_save_failed");
  await admin.from("office_assistant_conversations")
@@ -229,10 +247,11 @@ Deno.serve(async req=>{
   const result=await runRomy({db,admin,uid,conversationId:conversation.id,
     requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta});
   if(!result.reply)throw new Error("ai_empty_response");
-  await persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts);
+  await persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts,result.skill_trace);
   await completeRequest(admin,uid,requestId,{
    status:"completed",model:result.model,
    input_tokens:result.input_tokens,output_tokens:result.output_tokens,
+   skill_trace:result.skill_trace,
   });
   return {conversation_id:conversation.id,request_id:requestId,
     reply:result.reply,proposals:result.proposals,artifacts:result.artifacts};
