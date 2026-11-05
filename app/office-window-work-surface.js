@@ -51,7 +51,7 @@
  }
  function planner({project,buckets,tasks,members=[],now=new Date().toISOString().slice(0,10)}){
   const ordered=buckets.filter(b=>!b.is_archived).slice().sort((a,b)=>a.position-b.position);
-  const unbucketed=tasks.some(t=>!t.bucket_id),columns=[...(unbucketed?[{id:"__none",name:"Ohne Bucket",virtual:true}]:[]),...ordered];
+  const unbucketed=true,columns=[...(unbucketed?[{id:"__none",name:"Ohne Bucket",virtual:true}]:[]),...ordered];
   const board=columns.map((bucket,i)=>{
    const group=tasks.filter(t=>bucket.virtual?!t.bucket_id:t.bucket_id===bucket.id);
    const open=group.filter(t=>!t.completed_at),done=group.filter(t=>t.completed_at),id=esc(bucket.id);
