@@ -760,7 +760,7 @@ body.read-only .editor-only{display:none!important}
   if(assistantIsPopout)document.body.classList.add('assistant-popout');
   let assistantWindowState=null;
   try{assistantWindowState=JSON.parse(localStorage.getItem('office-plan-assistant-window-v1')||'null')}catch{}
-  let assistantFloating=false;
+  let assistantFloating=!!assistantWindowState&&!assistantIsPopout&&innerWidth>600;
   let pendingProactiveIds=[];
   let proactiveInFlight=false;
   let lastProactiveAt=0;
@@ -2607,6 +2607,7 @@ body.read-only .editor-only{display:none!important}
     assistantWide=!assistantWide;
     if(assistantFloating&&assistantWindowState){
       assistantWindowState.width=assistantWide?Math.min(950,innerWidth-24):Math.min(650,innerWidth-24);
+      $('#assistantPanel').style.width='';
       applyAssistantPosition();
     }
     renderAssistant();
@@ -2629,6 +2630,7 @@ body.read-only .editor-only{display:none!important}
     assistantWindowState={x,y,width,height};
     localStorage.setItem('office-plan-assistant-window-v1',JSON.stringify(assistantWindowState));
   }
+  if(assistantFloating)applyAssistantPosition();
   const assistantDragHead=document.querySelector('#assistantPanel .assistant-head');
   let assistantPointer=null;
   assistantDragHead.addEventListener('pointerdown',event=>{
