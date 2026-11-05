@@ -137,7 +137,7 @@
 .assistant-panel.is-floating{
  left:var(--assistant-x)!important;top:var(--assistant-y)!important;
  right:auto!important;bottom:auto!important;
- width:var(--assistant-w)!important;height:var(--assistant-h)!important;
+ width:var(--assistant-w);height:var(--assistant-h);transition:none!important;
  min-width:340px;min-height:360px;resize:both;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)
 }
 .dialogue-saved-sources{
