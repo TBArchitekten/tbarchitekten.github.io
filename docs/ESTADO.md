@@ -5,6 +5,15 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 
 ---
 
+## Integración Office #35 · estado de la rama (05.11.2026)
+Esta integración está preparada en una rama y no está publicada ni aceptada E2E. No sustituye el estado desplegado de Romy v9 ni declara paridad con Window.
+
+**Navegación:** Tools ya no debe volver a la página raíz para «Projekte verwalten»; la rama contiene una vista de proyectos dentro de /app/, con listado, creación bajo RLS, apertura de Work y acceso a planes. Los enlaces históricos #work y #project se redirigen tras autenticación. La página raíz continúa siendo necesaria para Terminplan-Muster, Mitglieder y Passwort ändern; queda pendiente verificar en navegador la experiencia integral.
+
+**Terminplan:** se elimina el checkbox de activación manual de KI-Modus, se utiliza Terra (constante de core.mjs) cuando la Edge Function está disponible y se permite adjuntar PDF/JPEG/PNG/WebP a una discusión con máximo 3 archivos, 8 MiB por archivo y 12 MiB total. Los bytes se envían en la petición del empleado, no se persisten en mensajes. El servidor valida tipo, tamaño y firma, y no habilita web_search con fuente adjunta. El modelo solo propone y sigue operando con validación determinista y revisión humana. La edición de un plan completo desde PDF requiere contrastar fechas y aceptar las propuestas; no es una importación automática.
+
+**Aceptación:** los tests automatizados y el primer E2E autenticado siguen siendo puertas separadas; antes del merge deben pasar CI, inspección del diff y revisión de RLS. Romy general_execution, DOCX/PDF/XLSX/PPTX, memoria, búsquedas y privacidad multiempleado siguen pendientes de E2E real. La memoria semántica de Window, Mission/Commitment/Expectation y la continuidad autónoma de varios días NO están portadas; esa fase implica arquitectura y migraciones adicionales, no debe simularse con el polling del navegador. No ejecutar pruebas con clientes confidenciales sin la autorización interna correspondiente.
+
 ## 1. Qué es
 - Es la página interna de Titus Bernhard Architekten: https://tbarchitekten.github.io
 - **Repositorio:** `TBArchitekten/tbarchitekten.github.io`. Es público y se publica con GitHub Pages: todo lo que entra a `main` está en línea en ~1 minuto.

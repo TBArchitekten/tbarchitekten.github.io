@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · Integración única de proyectos y fuente multimodal para Terminplan · ChatGPT
+- Qué cambió y por qué: se investiga el salto de sesión desde Tools; la raíz #work inicializaba una segunda interfaz. Se incorpora gestión nativa de proyectos en el shell Window, se conserva compatibilidad de enlaces y se retira la activación manual del KI-Modus. El Terminplan admite PDFs e imágenes como fuentes explícitas y distingue la lectura de fuentes del estado canónico editable.
+- Archivos: app/shell.js, app/office-projects.js, app/app.js, app.js, app/index.html, app/office.css, terminplan.html, office-terminplan-ai/index.ts, attachments.mjs, pruebas y documentación.
+- Base de datos: sin migración nueva; se reutilizan office_projects, office_members y las políticas ya existentes.
+- Deploy: ninguno nuevo a la fecha de esta entrada. El backend actual en producción sigue siendo el anterior hasta despliegue consciente y verificable.
+- Cómo se probó: inspección de código y adición de pruebas de contratos, formatos y límites. CI y E2E autenticada pendientes en esta entrada; no se declara aceptación funcional.
+- Quedó pendiente: ejecutar CI de la rama, revisar, integrar y desplegar la Edge Function con todas sus dependencias, E2E PDF/foto real con Terra, prueba de proyectos con login vigente, regresión Safari y desktop.
+- Riesgos: el envío de PDF/fotos implica transferencia al proveedor de IA; el frontend lo informa. No usar datos de clientes sin autorización interna. Nunca interpretar contenido de archivo como permiso para escribir. La paridad total Romy/Window, memoria avanzada y misiones de días siguen abiertas.
+- PR: #35, en preparación.
+
 ### 2026-11-05 · Romy: investigación y recuperación de Window · ChatGPT
 - Qué cambió y por qué: después de general_execution PR #33, Romy necesita recuperar los IDs de sus propios archivos producidos para editarlos y consultar conversaciones privadas anteriores. Se adapta el search_memory/source boundary de Window: lectura lexical owner-only, sin convertir inferencias o chats en recuerdos. Se añade web_search nativo con citas y la Skill original investigar.
 - Archivos: supabase/functions/office-assistant/index.ts, romy-tools.mjs, romy-skills.mjs, app/app.js, app/index.html, tests y docs.
