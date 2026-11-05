@@ -1,9 +1,18 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 05.11.2026, por ChatGPT (PR #33 integrado; PR #34 investigación/recuperación, CI 130/130 y Romy v9 activa).
+**Actualizado:** 05.11.2026, por ChatGPT (release candidate PR #35; Supabase Office: assistant v12, Terminplan AI v5 y mission runner v2).
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
+
+## Integración Office #35 · backend desplegado, frontend pendiente de merge (05.11.2026)
+La rama #35 tiene CI automatizada aprobada. **La web /app/ aún espera el merge y la aceptación funcional de empleados.** En Supabase TBA Office sí se han desplegado office-assistant v12 y office-terminplan-ai v5 (JWT obligatorio), office-romy-mission-runner v2 (sin JWT en el gateway pero protegido por un secreto privado validado mediante RPC de servicio), el índice pgvector y las migraciones de misiones y su cron cada cinco minutos. No se declara paridad total con Window ni aceptación E2E.
+
+**Navegación:** Tools ya no debe volver a la página raíz para «Projekte verwalten»; la rama contiene una vista de proyectos dentro de /app/, con listado, creación bajo RLS, apertura de Work y acceso a planes. Los enlaces históricos #work y #project se redirigen tras autenticación. La entrada de Terminplan-Muster también se resuelve ahora en la nueva sección de /app; la raíz se conserva para compatibilidad, administración de miembros y cambio de contraseña. Queda pendiente verificar en navegador la experiencia integral.
+
+**Terminplan:** se elimina el checkbox de activación manual de KI-Modus, se utiliza Terra (constante de core.mjs) cuando la Edge Function está disponible y se permite adjuntar PDF/JPEG/PNG/WebP a una discusión con máximo 3 archivos, 8 MiB por archivo y 12 MiB total. Los bytes se envían en la petición del empleado, no se persisten en mensajes. El servidor valida tipo, tamaño y firma, y no habilita web_search con fuente adjunta. El modelo solo propone y sigue operando con validación determinista y revisión humana. La edición de un plan completo desde PDF requiere contrastar fechas y aceptar las propuestas; no es una importación automática.
+
+**Aceptación:** los tests automatizados y el primer E2E autenticado siguen siendo puertas separadas; antes del merge deben pasar CI, inspección del diff y revisión de RLS. CI verificada sobre el SHA posterior a la corrección del UUID; cron comprobado con respuestas HTTP 200 sin misiones pendientes. Romy general_execution, DOCX/PDF/XLSX/PPTX, memoria, búsquedas y privacidad multiempleado siguen pendientes de E2E real. La memoria semántica está ya migrada y su función v12 desplegada; requiere E2E y backfill del historial más antiguo. El esquema de misiones persistentes y el worker están desplegados con aprobación explícita, leasing, cron, eventos y mensajes de entrega, pero su superficie es deliberadamente de análisis privado de solo lectura. No equivale todavía al ecosistema completo de Commitment/Workspace/Expectation de Isabella, ni autoriza escrituras de proyectos o envío a terceros. La integración funcional multidiaria requiere aceptación desde una cuenta de empleado. No ejecutar pruebas con clientes confidenciales sin la autorización interna correspondiente.
 
 ## 1. Qué es
 - Es la página interna de Titus Bernhard Architekten: https://tbarchitekten.github.io
@@ -23,7 +32,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 | App de la oficina (copia de Window) | `app/` y `shared/` | Heute (`ahora.js`), Kalender (`app.js`), Work con Panorama y Planner (`work.js`, `work-team.js`), ficha de tarea (`task-detail.js`, `task-team.js`), planificar tiempo (`time-plan.js`), marco y menú (`shell.js`), sincronización (`sync.js`). |
 | Ajustes de oficina en la copia | `app/office-fristen.js`, `app/office.css`; `const OFFICE=true` en `app.js` y `work.js` | Fristen = hitos de los Terminpläne. Oculta lo que la oficina todavía no tiene. |
 | Editor de Terminplan | `terminplan.html`, `terminplan-engine.js`, `terminplan-dialogue.js`, `window-editor.css` | Gantt por proyecto y fase (LPH), a partir de los Muster. Historia en `docs/TERMINPLAN-ASSISTENT-v0.1…v0.6.md`. |
-| Funciones de Supabase | `supabase/functions/office-terminplan-ai` | Asistente IA del Terminplan. Modelo `gpt-6.1-terra`; el secreto `TBA_OFFICE_OPENAI_MODEL` lo cambia sin deploy. La clave está en el secreto `TBA_OFFICE_OPENAI_API_KEY`, con cuota por persona. |
+| Funciones de Supabase | `supabase/functions/office-terminplan-ai` | Asistente IA del Terminplan. Modelo `gpt-6.1-terra` fijado en la rama #35; la versión de producción anterior todavía admite el override `TBA_OFFICE_OPENAI_MODEL` hasta desplegar la nueva Edge Function. La clave está en el secreto `TBA_OFFICE_OPENAI_API_KEY`, con cuota por persona. |
 | | `supabase/functions/office-admin` | Alta de miembros y contraseña de inicio (solo admin). |
 | | `supabase/functions/office-assistant` | Servicio personal Romy; ACTIVE v5 con JWT; historial privado por miembro, sin límite diario numérico impuesto; registro de solicitudes por empleado. |
 | Base de datos | `supabase/migrations/` | Ver §4. |
@@ -34,7 +43,7 @@ Este archivo describe el estado *de ahora*. La historia de los cambios está en 
 ## 3. Cómo funciona la app (`./app/`)
 - **Local primero:** cada persona tiene su estado en `localStorage` (`tba-office-window-v1`) y `sync.js` lo sincroniza con Supabase. Si en el mismo navegador inicia sesión otra persona, el estado local se vacía.
 - **Sesión compartida:** la página de inicio y la app usan la misma clave de sesión (`tba-office-auth-v2`). Sin sesión, la app manda a `../`. También manda ahí a quien no es miembro activo o tiene que cambiar su contraseña de inicio.
-- **Proyectos:** se leen de `isabella_projects`, una *vista* sobre `office_projects`. Se crean y editan solo en la página de inicio (Projekte).
+- **Proyectos:** se leen de `isabella_projects`, una *vista* sobre `office_projects`. En la producción actual se administran desde la página raíz; la rama #35 traslada creación y acceso a la sección Projekte de `/app/`, dejando la raíz para compatibilidad y administración.
 - **Kalender de cada persona:** sus tareas propias, las que tiene asignadas (`assignee_person_id` o lista de equipo) y sus propios Termine.
 - **Categorías:** `arbeit` y `personal` por persona. Una tarea de proyecto sin categoría propia se muestra como Arbeit.
 - **Equipo de proyecto:** se elige entre los miembros de la oficina (`isabella_people` = vista de `office_members`). Solo la dirección del proyecto y los admins lo cambian.

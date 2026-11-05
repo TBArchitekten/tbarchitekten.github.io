@@ -1,6 +1,18 @@
 (()=>{
   'use strict';
   const CFG=window.TBA_OFFICE_CONFIG,C=window.TBA_OFFICE_CORE;
+  // Legacy Office links must never initialize the second application or its auth UI.
+  // A deep link into Window still authenticates through the canonical Office session there.
+  if(location.hash&&location.hash!=='#password'){
+    const legacy=C.viewFromHash(location.hash);
+    if(['work','project','plans','tools','kalender'].includes(legacy.view)){
+      const isPlanner=legacy.view==='project'&&legacy.tab==='planner';
+      const section=isPlanner?'work':legacy.view==='kalender'?'calendar':legacy.view==='tools'?'tools':'projects';
+      const project=(legacy.view==='project'&&legacy.id)?'&project='+encodeURIComponent(legacy.id):'';
+      location.replace('./app/#section='+section+project);
+      return;
+    }
+  }
   const sb=supabase.createClient(CFG.url,CFG.key,{auth:{storageKey:CFG.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   // Sessions of the previous Office backend (Bernried Project Hub) are no longer valid here.
   try{localStorage.removeItem('tba-office-auth-v1')}catch{}
@@ -35,6 +47,11 @@
     // Old addresses of the first Kalender and Planner lead to the same screens in the app.
     if(r.view==='kalender'){location.replace('./app/#section=calendar');return}
     if(r.view==='project'&&r.tab==='planner'){location.replace('./app/#section=work&project='+encodeURIComponent(r.id));return}
+    if(r.view==='work'||r.view==='project'||r.view==='plans'||r.view==='tools'){
+      const project=r.view==='project'&&r.id?'&project='+encodeURIComponent(r.id):'';
+      const section=r.view==='tools'?'tools':'projects';
+      location.replace('./app/#section='+section+project);return;
+    }
     switchView(r.view,{id:r.id,push:false});
   }
   window.addEventListener('popstate',routeFromHash);

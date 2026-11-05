@@ -17,6 +17,37 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · Revisión final de identidad y servicios para PR #35 · ChatGPT
+- Detectado y corregido un validador UUID heredado del backend de Romy que omitía un grupo de 4 dígitos y podía rechazar IDs válidos de petición y conversación. Añadido test de regresión con UUID completo.
+- Backend desplegado tras la corrección: `office-assistant` v12 con JWT; `office-terminplan-ai` v5 con JWT; `office-romy-mission-runner` v2 con secreto privado verificado por RPC.
+- Cron `office-romy-mission-runner` cada cinco minutos, con ejecuciones reales satisfactorias y respuestas HTTP 200; sin misiones pendientes en el momento de la comprobación.
+- RLS live: las cuentas de empleado no pueden insertar misiones, ni reclamar jobs, ni escribir embeddings; pgvector activo y RPC semántica disponible bajo identidad del empleado.
+- GitHub Actions: CI del commit de UUID aprobada. Mantener separadas la CI de código, la salud del worker y la aceptación E2E con sesión autenticada de empleados.
+- Todavía no ejecutada aceptación funcional con un PDF real de Bernried ni una prueba multidiaria real con empleado, dos cuentas o generación de artefactos. No atribuir esas pruebas a la CI.
+
+### 2026-11-05 · Integración de memoria semántica y misión persistente · ChatGPT
+- Migración TBA Office: pgvector y RPC invoker `office_romy_semantic_recall` aplicadas tras corregir sintaxis de delimitador SQL y GRANT a `extensions.vector`. Verificación live: vector habilitado, RLS habilitada, SELECT autenticado sí, INSERT autenticado no, RPC permitida a empleado autenticado.
+- Misiones: migración `office_romy_persistent_work_v1` aplicada; tabla de compromisos privados y eventos RLS, aprobación de propuesta por empleado, lease token y función atomic `office_romy_finish_mission`. Reintentos limitados; el worker no tiene acceso a herramientas de escritura de Office. Migración y cron de `office_romy_mission_schedule_v1` aplicadas con secreto aleatorio de 256 bits en schema privado. Migraciones de índices FK y timeout 110 s aplicadas.
+- Versiones activas Supabase: `office-assistant` v10 JWT, `office-terminplan-ai` v5 JWT, `office-romy-mission-runner` v1 con autenticación privada independiente. El frontend continúa en el PR #35 hasta merge.
+- Pruebas: GitHub Actions en verde antes de cierre de PR; SQL live confirma RLS, privilegios y cron registrado. Security Advisors sin hallazgos.
+- Límites verificados: ninguna misión real creada aún, ningún embedding de empleado creado, sin aceptación end-to-end de PDF/fotos, XLSX/PPTX ni dos cuentas. No afirmar paridad total de Mission Workspace/Expectation de Isabella ni E2E real.
+- Riesgo vigilado: despliegue frontend requiere merge, lectura real de archivos necesita aceptación de empleado. La primera misión de prueba debe utilizar solo datos de ensayo consentidos y verificar entrega de mensaje, cancelación y reanudación.
+
+### 2026-11-05 · Revisión del PR #35: cerrar enlaces a la raíz
+- La tarjeta Terminplan y Terminplan-Muster del menú pasan a la misma sección interna de Projekte, desde donde se selecciona el Muster y se crea el plan sin montar el gestor raíz. El editor vuelve directamente a Projekte.
+- Se preserva la redirección de enlaces antiguos #plans y #tools a /app; #project con tab=planner conserva Work. La raíz sigue sirviendo a contraseña y administración.
+- Se actualizaron pruebas de enlaces. El PR continúa en borrador, con E2E autenticada pendiente.
+
+### 2026-11-05 · Integración única de proyectos y fuente multimodal para Terminplan · ChatGPT
+- Qué cambió y por qué: se investiga el salto de sesión desde Tools; la raíz #work inicializaba una segunda interfaz. Se incorpora gestión nativa de proyectos en el shell Window, se conserva compatibilidad de enlaces y se retira la activación manual del KI-Modus. El Terminplan admite PDFs e imágenes como fuentes explícitas y distingue la lectura de fuentes del estado canónico editable.
+- Archivos: app/shell.js, app/office-projects.js, app/app.js, app.js, app/index.html, app/office.css, terminplan.html, office-terminplan-ai/index.ts, attachments.mjs, pruebas y documentación.
+- Base de datos: sin migración nueva; se reutilizan office_projects, office_members y las políticas ya existentes.
+- Deploy: ninguno nuevo a la fecha de esta entrada. El backend actual en producción sigue siendo el anterior hasta despliegue consciente y verificable.
+- Cómo se probó: inspección de código y adición de pruebas de contratos, formatos y límites. CI y E2E autenticada pendientes en esta entrada; no se declara aceptación funcional.
+- Quedó pendiente: ejecutar CI de la rama, revisar, integrar y desplegar la Edge Function con todas sus dependencias, E2E PDF/foto real con Terra, prueba de proyectos con login vigente, regresión Safari y desktop.
+- Riesgos: el envío de PDF/fotos implica transferencia al proveedor de IA; el frontend lo informa. No usar datos de clientes sin autorización interna. Nunca interpretar contenido de archivo como permiso para escribir. La paridad total Romy/Window, memoria avanzada y misiones de días siguen abiertas.
+- PR: #35, en preparación.
+
 ### 2026-11-05 · Romy: investigación y recuperación de Window · ChatGPT
 - Qué cambió y por qué: después de general_execution PR #33, Romy necesita recuperar los IDs de sus propios archivos producidos para editarlos y consultar conversaciones privadas anteriores. Se adapta el search_memory/source boundary de Window: lectura lexical owner-only, sin convertir inferencias o chats en recuerdos. Se añade web_search nativo con citas y la Skill original investigar.
 - Archivos: supabase/functions/office-assistant/index.ts, romy-tools.mjs, romy-skills.mjs, app/app.js, app/index.html, tests y docs.

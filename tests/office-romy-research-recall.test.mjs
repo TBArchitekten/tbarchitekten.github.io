@@ -55,5 +55,5 @@ test('Window investigar Skill available and versioned; research never grants per
  assert.ok(registry.includes('authority:"inherits_runtime_policy"'));
  assert.ok(registry.includes('grants:[]'));
  const html=read('app/index.html');
- assert.ok(html.includes('app.js?v=office34'));
+ assert.ok(html.includes('app.js?v=office35'));
 });

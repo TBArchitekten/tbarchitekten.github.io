@@ -34,7 +34,7 @@ test('Romy reuses Window SSE parser correctly across chunks',()=>{
 test('Romy requires explicit owner review before actions, enforced by user RLS',()=>{
  const code=read('supabase/functions/office-assistant/romy-tools.mjs');
  const sql=read('supabase/migrations/20261104234500_office_romy_proposals_review_v1.sql');
- assert.equal(ROMY_TOOLS.filter(x=>x.name.startsWith('propose_')).length,3);
+ assert.equal(ROMY_TOOLS.filter(x=>x.name.startsWith('propose_')).length,5);
  for(const k of ['reviewRomyProposal','userDb.from(table).insert(values)','const status=decision==="reject"?"rejected":"applying"','eq("status","pending")']){
    assert.ok(code.includes(k),'missing '+k);
  }
@@ -52,4 +52,14 @@ test('Romy keeps original Window composer and private histories, no extra chat U
  assert.ok(front.includes('Meine Gespräche'));
  assert.ok(!front.includes('office-chat-layout'));
  new Function(front);
+});
+
+test('Romy validates full canonical UUIDs for conversation and request identity',()=>{
+ const code=read('supabase/functions/office-assistant/index.ts');
+ const literal=code.split('const UUID=')[1]?.split(';')[0];
+ assert.ok(literal,'UUID regex exists');
+ const pattern=Function('return '+literal)();
+ assert.equal(pattern.test('123e4567-e89b-42d3-a456-426614174000'),true);
+ assert.equal(pattern.test('123e4567-e89b-42d3-426614174000'),false);
+ assert.equal(pattern.test('not-a-uuid'),false);
 });
