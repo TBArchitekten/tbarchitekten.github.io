@@ -39,7 +39,7 @@ async function load(){
   if(!project)return void (buckets=[],tasks=[],folders=[],files=[],plans=[],team=[],members=[],taskAssignees=[]);
   const responses=await Promise.all([
     client.from('office_task_buckets').select('id,project_id,name,position,is_archived').eq('project_id',project.id).eq('is_archived',false).order('position'),
-    client.from('office_tasks').select('id,bucket_id,title,notes,priority,due_date,start_date,assignee_id,completed_at,position,kind').eq('project_id',project.id).order('position').limit(500),
+    client.from('office_tasks').select('id,bucket_id,title,notes,priority,due_date,start_date,assignee_id,completed_at,position,kind,work_status,labels,estimated_minutes,checklist').eq('project_id',project.id).order('position').limit(500),
     client.from('office_project_folders').select('id,name,parent_id,created_at').eq('project_id',project.id).order('name').limit(300),
     client.from('office_project_files').select('id,file_name,folder_id,storage_path,media_type,bytes,created_at').eq('project_id',project.id).order('created_at',{ascending:false}).limit(500),
     client.from('office_terminplan_instances').select('id,phase,updated_at').eq('project_id',project.id).eq('is_archived',false),
@@ -131,8 +131,10 @@ function editTask(id=null,bucketId=null){
     '<form id="officeWorkDialog" class="form work-task-form">'+
       '<label class="work-task-title-field">Titel<input name="title" required maxlength="200" value="'+esc(task?.title||'')+'"></label>'+
       '<div class="work-task-grid"><label>Bucket<select name="bucket">'+bucketOptions+'</select></label>'+
-        '<label>Status<select name="status"><option value="open">Nicht begonnen</option><option value="completed" '+
-          (task?.completed_at?'selected':'')+'>Erledigt</option></select></label></div>'+
+        '<label>Status<select name="status">'+
+          [['not_started','Nicht begonnen'],['in_progress','In Bearbeitung'],['waiting','Warten'],['completed','Erledigt']].map(([v,l])=>
+            '<option value="'+v+'" '+((task?.work_status||(task?.completed_at?'completed':'not_started'))===v?'selected':'')+'>'+l+'</option>').join('')+
+          '</select></label></div>'+
       '<div class="work-task-grid"><label>Start<input type="date" name="start" value="'+esc(task?.start_date||'')+'"></label>'+
         '<label>Fällig<input type="date" name="due" value="'+esc(task?.due_date||'')+'"></label></div>'+
       '<div class="work-task-grid"><label>Priorität<select name="priority">'+
@@ -140,6 +142,11 @@ function editTask(id=null,bucketId=null){
           '<option value="'+v+'" '+((task?.priority||'normal')===v?'selected':'')+'>'+l+'</option>').join('')+
         '</select></label><div><span class="office-task-team-label">Mitglieder</span>'+
           '<div class="office-task-people">'+memberships+'</div></div></div>'+
+      '<div class="work-task-grid"><label>Kategorie<select name="kind">'+
+        [['aufgabe','Aufgabe'],['abgabe','Abgabe']].map(([v,l])=>
+          '<option value="'+v+'" '+((task?.kind||'aufgabe')===v?'selected':'')+'>'+l+'</option>').join('')+
+        '</select></label><label>Zeitaufwand (Min.)<input type="number" name="estimate" min="0" max="100000" step="5" value="'+esc(task?.estimated_minutes??'')+'" placeholder="Keine Schätzung"></label></div>'+
+      '<label>Etiketten<input type="text" name="labels" maxlength="450" placeholder="TGA, Bauherr, Freigabe" value="'+esc((task?.labels||[]).join(', '))+'"></label>'+
       '<label>Notizen<textarea name="notes" rows="4" maxlength="4000">'+esc(task?.notes||'')+'</textarea></label>'+
       '<div class="work-task-detail-section"><div class="work-check-head"><span>Checkliste</span>'+
         '<button type="button" data-office-work="add-check">＋ Punkt</button></div>'+
@@ -182,11 +189,15 @@ function editTask(id=null,bucketId=null){
       const payload={title,bucket_id:bucketId,start_date:start,due_date:due,
         notes:String(f.get('notes')||'').slice(0,4000),priority:f.get('priority'),
         checklist:checks,assignee_id:assignees[0]||null,
-        completed_at:f.get('status')==='completed'?(task?.completed_at||new Date().toISOString()):null};
+        completed_at:f.get('status')==='completed'?(task?.completed_at||new Date().toISOString()):null,
+        work_status:f.get('status')||'not_started',
+        kind:f.get('kind')||'aufgabe',
+        labels:String(f.get('labels')||'').split(',').map(x=>x.trim()).filter(Boolean).slice(0,30),
+        estimated_minutes:f.get('estimate')===''?null:Number(f.get('estimate'))};
       const res=task
         ?await sb().from('office_tasks').update(payload).eq('id',task.id).eq('project_id',project.id).select('id').single()
         :await sb().from('office_tasks').insert({...payload,project_id:project.id,
-          kind:'aufgabe',position:tasks.length*10}).select('id').single();
+          position:tasks.length*10}).select('id').single();
       if(res.error||!res.data?.id)throw res.error||Error('Aufgabe nicht gespeichert');
       await saveAssignees(res.data.id,assignees);
       window.ISABELLA_APP?.closeModal?.();await render();
@@ -268,7 +279,8 @@ async function moveTask(taskId,bucketId){
 }
 async function toggleTask(id){
  const t=tasks.find(t=>t.id===id);if(!t)return;
- const {error}=await sb().from('office_tasks').update({completed_at:t.completed_at?null:new Date().toISOString()})
+ const {error}=await sb().from('office_tasks').update({completed_at:t.completed_at?null:new Date().toISOString(),
+   work_status:t.completed_at?'not_started':'completed'})
    .eq('id',t.id).eq('project_id',project.id);
  if(error){status('Aufgabe konnte nicht aktualisiert werden: '+error.message);return}
  await render();
