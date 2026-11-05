@@ -219,17 +219,19 @@ async function showPendingProposals(){
   target.querySelectorAll('.romy-pending-review').forEach(x=>x.remove());
   for(const p of data||[]){
     const item=element('div',null,'romy-pending-review');
-    const title=p.kind==='remember'?'Erinnerungsvorschlag':p.kind==='create_event'?'Terminvorschlag':'Aufgabenvorschlag';
+    const title=p.kind==='remember'?'Erinnerungsvorschlag':p.kind==='create_event'?'Terminvorschlag':p.kind==='start_mission'?'Fortlaufenden Auftrag prüfen':p.kind==='control_mission'?'Auftrag steuern':'Aufgabenvorschlag';
     item.appendChild(element('strong',title));
     const details=p.payload||{};
     const when=p.kind==='remember'
       ?(details.memory_kind==='preference'?'Präferenz':'Information')
       :p.kind==='create_event'
         ?[details.starts_at,details.ends_at].filter(Boolean).join(' – ')
+        :p.kind==='start_mission'?'Arbeit im Hintergrund · nur Auswertung · jederzeit abbrechbar'
+        :p.kind==='control_mission'?'Bestätigung erforderlich'
         :(details.due_date||'Ohne Fälligkeitsdatum');
     item.appendChild(element('p',p.kind==='remember'
       ?String(details.content||'')+' · '+when
-      :String(details.title||'')+' · '+when));
+      :(p.kind==='start_mission'?String(details.objective||''):String(details.title||''))+' · '+when));
     if(details.notes)item.appendChild(element('p',String(details.notes)));
     const actions=element('div',null,'romy-review-actions');
     for(const [name,decision] of [['Bestätigen','apply'],['Verwerfen','reject']]){
@@ -238,7 +240,11 @@ async function showPendingProposals(){
       button.addEventListener('click',async()=>{
         if(decision==='apply'&&!window.confirm(p.kind==='remember'
           ?'Diese Information als persönliche Erinnerung speichern?\n\n'+String(details.content||'')
-          :'„'+String(details.title||'')+'“ in TBA Office anlegen?'))return;
+          :p.kind==='start_mission'
+            ?'Diesen fortlaufenden, ausschließlich lesenden Analyseauftrag starten?\n\n'+String(details.objective||'')+'\n\nFertig wenn: '+String(details.completion_criterion||'')
+            :p.kind==='control_mission'
+              ?'Diesen Auftrag wirklich '+(details.action==='cancel'?'abbrechen':'wieder aufnehmen')+'?'
+              :'„'+String(details.title||'')+'“ in TBA Office anlegen?'))return;
         actions.querySelectorAll('button').forEach(b=>b.disabled=true);
         try{
           const {data:result,error:actionError}=await sb.functions.invoke('office-assistant',{
@@ -246,7 +252,7 @@ async function showPendingProposals(){
           });
           if(actionError||result?.error)throw Error(result?.error||'review_failed');
           status(decision==='apply'
-            ?(p.kind==='remember'?'Erinnerung bestätigt und gespeichert.':'Änderung bestätigt und im Office gespeichert.')
+            ?(p.kind==='remember'?'Erinnerung bestätigt und gespeichert.':p.kind==='start_mission'?'Auftrag bestätigt. Die Ausführung ist vorgesehen, noch nicht abgeschlossen.':p.kind==='control_mission'?'Auftragsstatus bestätigt.':'Änderung bestätigt und im Office gespeichert.')
             :'Vorschlag verworfen.');
           await window.ISABELLA_SYNC_PULL_NOW?.();
           void showPendingProposals();
