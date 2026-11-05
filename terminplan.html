@@ -1655,7 +1655,7 @@ body.read-only .editor-only{display:none!important}
       if(dialogueAIReady&&PLAN_ID){
         // Uploaded bytes are sent only with this authenticated request, never persisted to the dialogue.
         const attachments=await Promise.all(files.map(async file=>({
-          name:file.name,mime:planFileMime(file),size:file.size,data:await readPlanFile(file)
+          name:file.name,mime:planFileMime(file),size:file.size,data:(await readPlanFile(file)).replace(/^data:[^;,]*;base64,/, 'data:'+planFileMime(file)+';base64,')
         })));
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
           body:{action:'discuss',plan_id:PLAN_ID,message,attachments,
