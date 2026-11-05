@@ -471,7 +471,7 @@ function placeGlobalMenu(name){
 // and one shared page. The app chooses the section through the URL fragment
 // (#section=…); a section that belongs to another tab is opened by the app.
 const WINDOW_TAB_FOR={assistant:'chat',feed:'ahora',calendar:'tiempo',work:'work',bandeja:'bandeja',ideas:'bandeja'};
-const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','tools','projects','readings','thoughts'];
+const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','tools','projects','plans','readings','thoughts'];
 let windowShell=false,windowShellTab='chat',windowShellCaps=[];
 function show(name,options={}){
   if(windowShell){
@@ -527,7 +527,7 @@ function showSection(name,options={}){
   state.screen=name;
   $$('.screen').forEach(x=>x.classList.toggle('active',x.dataset.screen===name));
   document.querySelectorAll('.main-nav-item, .lens-nav-item').forEach(x=>{
-    const active=x.dataset.nav===name||(name==='projects'&&x.dataset.nav==='tools');
+    const active=x.dataset.nav===name||(['projects','plans'].includes(name)&&x.dataset.nav==='tools');
     x.classList.toggle('active',active);
     if(active)x.setAttribute('aria-current','page');
     else x.removeAttribute('aria-current');
@@ -548,6 +548,7 @@ function showSection(name,options={}){
   if(name==='bandeja')whenLoaded(()=>{if(state.screen==='bandeja')window.MINDS_BANDEJA?.show?.(options.view)});
   if(name==='work')setTimeout(()=>window.MINDS_WORK?.render?.(),0);
   if(name==='projects')whenLoaded(()=>{if(state.screen==='projects')window.TBA_OFFICE_PROJECTS?.render?.()});
+  if(name==='plans')whenLoaded(()=>{if(state.screen==='plans')window.TBA_OFFICE_PROJECTS?.render?.()});
   if(name==='readings')ensureReadings();
   if(name==='thoughts')mountThoughts();
 }
