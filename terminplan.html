@@ -1795,8 +1795,10 @@ body.read-only .editor-only{display:none!important}
     if(!canEdit||!PLAN_ID||!dialogueProposal||!dialogueEngine||!auditEngine||
       saveConflict||dialogueWriting||dialogueApproved)return;
     const proposal=dialogueProposal;
-    const review=dialogueEngine.review(proposal,data,auditEngine,serverRevision);
-    if(!review.ok){
+    const review=proposal.kind==='replace_plan'
+      ?rebuildEngine?.review(proposal,data,serverRevision)
+      :dialogueEngine.review(proposal,data,auditEngine,serverRevision);
+    if(!review?.ok){
       dialogueProposal=null;
       addDialogue('assistant','Vorschlag veraltet: '+review.reason+'. Bitte erneut anfragen.','warning',proposal.request_id);
       return;
@@ -1808,6 +1810,14 @@ body.read-only .editor-only{display:none!important}
     const task=review.state.tasks.find(t=>t.id===proposal.task_id);
     if(task?.protectedDate&&task.end>task.protectedDate&&
        !confirm('Geschützter Abgabetermin '+task.protectedDate+' wird überschritten. Trotzdem übernehmen?'))return;
+    if(proposal.kind==='replace_plan'){
+      const counts=proposal.counts;
+      if(!confirm('PDF-Terminplan vollständig ersetzen?\n\nAlter Stand: '+
+        counts.previous_groups+' Gruppen, '+counts.previous_tasks+' Einträge.\nNeue Fassung: '+
+        counts.groups+' Gruppen, '+counts.tasks+' Einträge, davon '+
+        counts.milestones+' Meilensteine.\nQuelle: '+proposal.source_name+
+        '\n\nDer alte Plan wird vorher als Version gesichert. Bitte Termine und Abhängigkeiten mit dem Original vergleichen.'))return;
+    }
     if(proposal.kind==='add_tasks'){
       const summary=proposal.created_tasks.map(t=>t.name+' ('+t.start+' – '+t.end+')').join('\n');
       const warning=proposal.new_issue_codes.length?'\nAchtung: '+proposal.new_issue_codes.length+' neue Regelhinweise.':'';
@@ -1838,6 +1848,16 @@ body.read-only .editor-only{display:none!important}
         dialogueProposal=null;
         addDialogue('assistant','Nicht ausgeführt: Serverstand geändert oder nicht lesbar.','warning',proposal.request_id);
         return;
+      }
+      if(proposal.kind==='replace_plan'){
+        const {error:snapshotError}=await sb.from('office_terminplan_versions').insert({
+          instance_id:PLAN_ID,label:'Vor PDF-Übernahme · '+localIsoToday()+' · Revision '+serverRevision,
+          state:clone(data),created_by:dialogueUserId
+        });
+        if(snapshotError){
+          addDialogue('assistant','Sicherung der bisherigen Version fehlgeschlagen. Keine Änderung vorgenommen.','warning',proposal.request_id);
+          return;
+        }
       }
       dialogueProposal=null;
       dialogueApproved={
