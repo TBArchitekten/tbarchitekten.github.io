@@ -17,6 +17,14 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · Revisión final de identidad y servicios para PR #35 · ChatGPT
+- Detectado y corregido un validador UUID heredado del backend de Romy que omitía un grupo de 4 dígitos y podía rechazar IDs válidos de petición y conversación. Añadido test de regresión con UUID completo.
+- Backend desplegado tras la corrección: `office-assistant` v12 con JWT; `office-terminplan-ai` v5 con JWT; `office-romy-mission-runner` v2 con secreto privado verificado por RPC.
+- Cron `office-romy-mission-runner` cada cinco minutos, con ejecuciones reales satisfactorias y respuestas HTTP 200; sin misiones pendientes en el momento de la comprobación.
+- RLS live: las cuentas de empleado no pueden insertar misiones, ni reclamar jobs, ni escribir embeddings; pgvector activo y RPC semántica disponible bajo identidad del empleado.
+- GitHub Actions: CI del commit de UUID aprobada. Mantener separadas la CI de código, la salud del worker y la aceptación E2E con sesión autenticada de empleados.
+- Todavía no ejecutada aceptación funcional con un PDF real de Bernried ni una prueba multidiaria real con empleado, dos cuentas o generación de artefactos. No atribuir esas pruebas a la CI.
+
 ### 2026-11-05 · Integración de memoria semántica y misión persistente · ChatGPT
 - Migración TBA Office: pgvector y RPC invoker `office_romy_semantic_recall` aplicadas tras corregir sintaxis de delimitador SQL y GRANT a `extensions.vector`. Verificación live: vector habilitado, RLS habilitada, SELECT autenticado sí, INSERT autenticado no, RPC permitida a empleado autenticado.
 - Misiones: migración `office_romy_persistent_work_v1` aplicada; tabla de compromisos privados y eventos RLS, aprobación de propuesta por empleado, lease token y función atomic `office_romy_finish_mission`. Reintentos limitados; el worker no tiene acceso a herramientas de escritura de Office. Migración y cron de `office_romy_mission_schedule_v1` aplicadas con secreto aleatorio de 256 bits en schema privado. Migraciones de índices FK y timeout 110 s aplicadas.
