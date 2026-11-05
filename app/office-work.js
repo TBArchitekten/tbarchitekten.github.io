@@ -216,13 +216,21 @@ function newFolder(){
     if(error)throw error;
   });
 }
-async function uploadFiles(){
+async function uploadFiles(preselected=null){
   if(!project)return;
   const input=$('#workFileInput');if(!input)return;
+  if(Array.isArray(preselected)&&preselected.length){
+    await writeOfficeFiles(preselected);return;
+  }
   input.accept='.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.txt';
   input.onchange=async()=>{
     const selected=[...(input.files||[])];input.value='';
     if(!selected.length)return;
+    await writeOfficeFiles(selected);
+  };
+  input.click();
+}
+async function writeOfficeFiles(selected){
     busy=true;status('Dateien werden gespeichert …');
     try{
       for(const file of selected){
@@ -243,8 +251,6 @@ async function uploadFiles(){
       await render();
     }catch(error){status('Datei konnte nicht gespeichert werden: '+String(error.message||error))}
     finally{busy=false}
-  };
-  input.click();
 }
 async function downloadFile(id){
   const f=files.find(x=>x.id===id);if(!f)return;
@@ -260,32 +266,116 @@ async function moveTask(taskId,bucketId){
   if(error)status('Aufgabe nicht verschoben: '+error.message);
   else void render();
 }
+async function toggleTask(id){
+ const t=tasks.find(t=>t.id===id);if(!t)return;
+ const {error}=await sb().from('office_tasks').update({completed_at:t.completed_at?null:new Date().toISOString()})
+   .eq('id',t.id).eq('project_id',project.id);
+ if(error){status('Aufgabe konnte nicht aktualisiert werden: '+error.message);return}
+ await render();
+}
+async function shiftBucket(id,direction){
+ const order=[...buckets].sort((a,b)=>a.position-b.position),i=order.findIndex(b=>b.id===id);
+ const j=i+(direction==='left'?-1:1);
+ if(i<0||j<0||j>=order.length)return;
+ const a=order[i],b=order[j];
+ // Optimistic order is only visual; any failure triggers fresh readback.
+ const results=await Promise.all([
+   sb().from('office_task_buckets').update({position:b.position}).eq('id',a.id).eq('project_id',project.id),
+   sb().from('office_task_buckets').update({position:a.position}).eq('id',b.id).eq('project_id',project.id)
+ ]);
+ if(results.some(r=>r.error))status('Reihenfolge konnte nicht vollständig aktualisiert werden.');
+ await render();
+}
+async function archiveBucket(id){
+ const bucket=buckets.find(x=>x.id===id);if(!bucket)return;
+ const n=tasks.filter(t=>t.bucket_id===id).length;
+ if(!confirm('Bucket „'+bucket.name+'“ archivieren?'+
+   (n?'\n'+n+' Aufgaben werden zu „Ohne Bucket“ verschoben.':'') ))return;
+ if(n){
+   const {error}=await sb().from('office_tasks').update({bucket_id:null}).eq('project_id',project.id).eq('bucket_id',id);
+   if(error){status(error.message);return}
+ }
+ const {error}=await sb().from('office_task_buckets').update({is_archived:true}).eq('project_id',project.id).eq('id',id);
+ if(error)status(error.message);
+ await render();
+}
+async function archivedBuckets(){
+ const {data,error}=await sb().from('office_task_buckets').select('id,name').eq('project_id',project.id).eq('is_archived',true).order('updated_at',{ascending:false});
+ if(error){status(error.message);return}
+ const rows=(data||[]).map(b=>'<div class="office-work-archive-row"><span>'+esc(b.name)+'</span> '+
+   '<button type="button" data-restore-office-bucket="'+esc(b.id)+'">Wiederherstellen</button></div>').join('');
+ window.ISABELLA_APP?.openModal?.('Archivierte Buckets',
+   '<div class="work-bucket-archive">'+(rows||'<p>Keine archivierten Buckets.</p>')+'</div>');
+ document.querySelectorAll('[data-restore-office-bucket]').forEach(btn=>btn.onclick=async()=>{
+   const {error:e}=await sb().from('office_task_buckets').update({is_archived:false})
+     .eq('id',btn.dataset.restoreOfficeBucket).eq('project_id',project.id);
+   if(e){status(e.message);return}
+   window.ISABELLA_APP?.closeModal?.();await render();
+ });
+}
 function bind(){
   if(bound)return;bound=true;
-  $('.work-project-switch')?.addEventListener('click',e=>{const x=e.target.closest('[data-office-project]');if(x)setProject(x.dataset.officeProject)});
+  $('.work-project-switch')?.addEventListener('click',e=>{
+    const x=e.target.closest('[data-office-project]');if(x)setProject(x.dataset.officeProject);
+  });
   document.querySelectorAll('[data-work-view]').forEach(x=>x.onclick=()=>setView(x.dataset.workView));
-  $('#workBody')?.addEventListener('click',e=>{
+  const body=$('#workBody');
+  body?.addEventListener('click',e=>{
     const projectButton=e.target.closest('[data-office-project]');
     if(projectButton){setProject(projectButton.dataset.officeProject);return}
-    const action=e.target.closest('[data-office-work]')?.dataset.officeWork;
+    const element=e.target.closest('[data-office-work]');
+    const action=element?.dataset.officeWork;
     if(!action||busy)return;
+    if(action==='root'){folderId=null;desktop();return}
     if(action==='open-planner')return setView('planner');
     if(action==='new-bucket')return newBucket();
     if(action==='new-folder')return newFolder();
     if(action==='upload-files')return uploadFiles();
+    if(action==='team'){
+      window.TBA_OFFICE_PROJECTS?.open?.();
+      history.replaceState(null,'','#section=projects&project='+encodeURIComponent(project.id));
+      return;
+    }
+    if(action==='bucket-archive')return void archivedBuckets();
     if(action==='folder-up'){folderId=folders.find(f=>f.id===folderId)?.parent_id||null;desktop();return}
-    const [verb,id]=action.split(':');
-    if(verb==='folder'){folderId=id;desktop()}
-    if(verb==='rename-bucket')renameBucket(id);
-    if(verb==='new-task')editTask(null,id);
-    if(verb==='edit-task')editTask(id);
-    if(verb==='download')void downloadFile(id);
+    const i=action.indexOf(':'),verb=i<0?action:action.slice(0,i),id=i<0?'':action.slice(i+1);
+    if(verb==='folder'){folderId=id;desktop();return}
+    if(verb==='bucket-menu'){
+      const menu=body.querySelector('[data-office-menu="'+id+'"]');
+      if(!menu)return;
+      body.querySelectorAll('[data-office-menu]').forEach(x=>{if(x!==menu)x.hidden=true});
+      menu.hidden=!menu.hidden;return;
+    }
+    if(verb==='rename-bucket')return renameBucket(id);
+    if(verb==='shift-left'||verb==='shift-right')return void shiftBucket(id,verb==='shift-left'?'left':'right');
+    if(verb==='archive-bucket')return void archiveBucket(id);
+    if(verb==='new-task')return editTask(null,id);
+    if(verb==='toggle-task')return void toggleTask(id);
+    if(verb==='edit-task')return editTask(id);
+    if(verb==='download')return void downloadFile(id);
   });
   let dragged=null;
-  $('#workBody')?.addEventListener('dragstart',e=>{dragged=e.target.closest('[data-drag-task]')?.dataset.dragTask||null});
-  $('#workBody')?.addEventListener('dragover',e=>{if(dragged&&e.target.closest('[data-drop-bucket]'))e.preventDefault()});
-  $('#workBody')?.addEventListener('drop',e=>{const bucket=e.target.closest('[data-drop-bucket]')?.dataset.dropBucket;if(dragged&&bucket){e.preventDefault();void moveTask(dragged,bucket)}dragged=null});
-  $('#workBody')?.addEventListener('dragend',()=>{dragged=null});
+  body?.addEventListener('dragstart',e=>{
+    dragged=e.target.closest('[data-drag-task]')?.dataset.dragTask||null;
+  });
+  body?.addEventListener('dragover',e=>{
+    if((dragged&&e.target.closest('[data-drop-bucket]'))||
+       (view==='desktop'&&e.dataTransfer?.types?.includes('Files')))e.preventDefault();
+  });
+  body?.addEventListener('drop',e=>{
+    const bucket=e.target.closest('[data-drop-bucket]')?.dataset.dropBucket;
+    if(dragged&&bucket){e.preventDefault();void moveTask(dragged,bucket);dragged=null;return}
+    if(view==='desktop'&&project&&e.dataTransfer?.files?.length){
+      e.preventDefault();void uploadFiles([...e.dataTransfer.files]);}
+    dragged=null;
+  });
+  body?.addEventListener('dragend',()=>{dragged=null});
+  body?.addEventListener('keydown',e=>{
+    const row=e.target.closest('[data-office-work^="edit-task:"]');
+    if(row&&(e.key==='Enter'||e.key===' ')&&row===e.target){
+      e.preventDefault();editTask(row.dataset.officeWork.slice('edit-task:'.length));
+    }
+  });
 }
 async function render(){
   const current=++seq;bind();status('');html('<p class="surface-loading">Work wird geladen …</p>');
