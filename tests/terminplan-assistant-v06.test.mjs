@@ -15,7 +15,7 @@ test("stronger reasoning model without MINDS runtime dependency",()=>{
  assert.ok(!edge.includes("gari01234")&&!edge.includes("isabella-chat"));
  assert.match(edge,/TBA_OFFICE_OPENAI_API_KEY/);
  assert.match(edge,/store:false/);
- assert.match(edge,/reasoning:\{effort:action==="rebuild"\?"low":"medium"\}/);
+ assert.match(edge,/reasoning:\{effort:\["rebuild","transform"\]\.includes\(action\)\?"low":"medium"\}/);
 });
 test("domain lens is evidenced, phase-specific and not a mandatory template",()=>{
  assert.match(EXPERTISE_VERSION,/v0\.6/);
