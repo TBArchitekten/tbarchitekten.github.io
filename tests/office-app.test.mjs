@@ -97,5 +97,5 @@ test('Start page: an empty address opens the app, #password changes the own pass
   assert.match(root,/if\(!location\.hash\|\|location\.hash==='#'\)\{location\.replace\('\.\/app\/'\);return\}/);
   assert.match(root,/if\(location\.hash==='#password'\)\{openPassword\(true\);return\}/);
   const shell=src('shell.js');
-  for(const href of ['../#work','../#plans','../#members','../#password'])assert.ok(shell.includes(`href="${href}"`),href);
+  for(const href of ['#section=projects','../#plans','../#members','../#password'])assert.ok(shell.includes(`href="${href}"`),href);
 });
