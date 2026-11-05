@@ -1723,6 +1723,9 @@ body.read-only .editor-only{display:none!important}
       (/(idéntic|identic|identisch|igual al pdf|gleich.*pdf|vollständig.*pdf|komplett.*pdf|reemplaz.*pdf|replace.*pdf)/i.test(message)&&
        (files.length||dialogueSavedSources.length));
     const requestTransform=!requestRebuild&&(forcedMode==='transform'||/(crear grupos|crea un grupo|neue gruppe|gruppen erstellen|grupo renombr|gruppe umbenenn|borrar grupos|gruppen löschen|elimina (?:las|los) (?:tareas|actividades)|aktivitäten löschen|alle vorgänge ändern|modifica todo el plan)/i.test(message));
+    if(requestTransform&&!message){
+      addDialogue('assistant','Bitte beschreibe zuerst, welche Gruppen, Aufgaben oder Termine geändert werden sollen. Danach auf „Plan ändern“ klicken.','answer');return;
+    }
     if(!message&&!requestRebuild&&!requestTransform)return;
     if((requestRebuild||requestTransform)&&(!dialogueAIReady||!rebuildEngine)){
       addDialogue('assistant','Eine vollständige PDF-Rekonstruktion benötigt die Office-KI.','warning');return;
@@ -1764,7 +1767,7 @@ body.read-only .editor-only{display:none!important}
             addDialogue('assistant','PDF-Entwurf ist nicht prüfbar. Keine Änderung.','warning',requestId);return;
           }
           if(!remote.result.complete||remote.result.uncertainties?.length){
-            addDialogue('assistant','Der PDF-Plan konnte noch nicht vollständig und zweifelsfrei erfasst werden. '+
+            addDialogue('assistant',(requestRebuild?'Der PDF-Plan konnte noch nicht vollständig und zweifelsfrei erfasst werden. ':'Die gewünschten Planänderungen konnten nicht eindeutig abgeleitet werden. ')+
               String(remote.result.summary||'')+'\nUnklar: '+
               (remote.result.uncertainties||[]).join(' · ')+
               '\nDer vorhandene Terminplan bleibt unverändert.','warning',requestId);
