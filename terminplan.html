@@ -464,7 +464,7 @@ body.read-only .editor-only{display:none!important}
   .bar.audit-affected,.milestone.audit-affected{outline:2px solid #bb9252;outline-offset:2px}
   @media (max-width:900px){.assistant-columns{grid-template-columns:1fr}.assistant-body{max-height:44vh}}
 </style>
-<link rel="stylesheet" href="./assistant-surface.css">
+<link rel="stylesheet" href="./assistant-surface.css?v=office37">
 <link rel="stylesheet" href="./window-editor.css?v=1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>
@@ -539,6 +539,7 @@ body.read-only .editor-only{display:none!important}
       <button type="button" id="assistantToggle" class="assistant-toggle" aria-expanded="false" aria-controls="assistantBody">▸ Terminplan Assistent <span id="assistantSummary" class="assistant-summary">Regelprüfung wird geladen …</span></button>
       <span class="assistant-caption">Office · Planung</span>
       <button class="assistant-window-action" id="assistantWide" type="button" aria-label="Fenster vergrößern" title="Fenster vergrößern">⤢</button>
+      <button class="assistant-window-action" id="assistantPopout" type="button" aria-label="Eigenes Fenster öffnen" title="Eigenes Fenster öffnen">↗</button>
       <button class="assistant-window-action" id="assistantClose" type="button" aria-label="Assistent schließen" title="Schließen">×</button>
     </div>
     <div id="assistantBody" class="assistant-body" hidden>
@@ -752,8 +753,13 @@ body.read-only .editor-only{display:none!important}
   let auditReport=null;
   let auditChange=null;
   let auditHighlightIds=new Set();
-  let assistantExpanded=false;
+  let assistantExpanded=new URLSearchParams(location.search).get('assistant')==='window';
   let assistantWide=false;
+  const assistantIsPopout=assistantExpanded;
+  if(assistantIsPopout)document.body.classList.add('assistant-popout');
+  let assistantWindowState=null;
+  try{assistantWindowState=JSON.parse(localStorage.getItem('office-plan-assistant-window-v1')||'null')}catch{}
+  let assistantFloating=false;
   let pendingProactiveIds=[];
   let proactiveInFlight=false;
   let lastProactiveAt=0;
@@ -1889,6 +1895,7 @@ body.read-only .editor-only{display:none!important}
   function renderAssistant(){
     $('#assistantPanel').classList.toggle('is-open',assistantExpanded);
     $('#assistantPanel').classList.toggle('is-wide',assistantExpanded&&assistantWide);
+    $('#assistantPanel').classList.toggle('is-floating',assistantExpanded&&assistantFloating&&!assistantIsPopout);
     $('#assistantWide').textContent=assistantWide?'⤡':'⤢';
     $('#assistantWide').setAttribute('aria-label',assistantWide?'Fenster verkleinern':'Fenster vergrößern');
     const summary=$('#assistantSummary');
@@ -2570,7 +2577,67 @@ body.read-only .editor-only{display:none!important}
   $('#jsonFile').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);
   $('#assistantToggle').onclick=()=>{assistantExpanded=!assistantExpanded;renderAssistant()};
   $('#assistantClose').onclick=()=>{assistantExpanded=false;renderAssistant()};
-  $('#assistantWide').onclick=()=>{assistantWide=!assistantWide;renderAssistant()};
+  $('#assistantWide').onclick=()=>{
+    assistantWide=!assistantWide;
+    if(assistantFloating&&assistantWindowState){
+      assistantWindowState.width=assistantWide?Math.min(950,innerWidth-24):Math.min(650,innerWidth-24);
+      applyAssistantPosition();
+    }
+    renderAssistant();
+  };
+  $('#assistantPopout').onclick=()=>{
+    const url=new URL(location.href);url.searchParams.set('assistant','window');
+    window.open(url.href,'tba-terminplan-assistant-'+(PLAN_ID||'muster'),
+      'popup=yes,width=920,height=780,scrollbars=yes');
+  };
+  function applyAssistantPosition(){
+    const panel=$('#assistantPanel');
+    if(!panel||!assistantWindowState||assistantIsPopout)return;
+    const box=assistantWindowState;
+    const width=Math.min(Math.max(340,Number(box.width)||650),Math.max(340,innerWidth-24));
+    const height=Math.min(Math.max(360,Number(box.height)||690),Math.max(360,innerHeight-24));
+    const x=Math.max(8,Math.min(Number(box.x)||8,Math.max(8,innerWidth-width-8)));
+    const y=Math.max(8,Math.min(Number(box.y)||8,Math.max(8,innerHeight-height-8)));
+    Object.assign(panel.style,{'--assistant-x':x+'px','--assistant-y':y+'px',
+      '--assistant-w':width+'px','--assistant-h':height+'px'});
+    assistantWindowState={x,y,width,height};
+    localStorage.setItem('office-plan-assistant-window-v1',JSON.stringify(assistantWindowState));
+  }
+  const assistantDragHead=$('#assistantPanel .assistant-head');
+  let assistantPointer=null;
+  assistantDragHead.addEventListener('pointerdown',event=>{
+    if(!assistantExpanded||assistantIsPopout||matchMedia('(max-width:600px)').matches||
+       event.button!==0||event.target.closest('button'))return;
+    const panel=$('#assistantPanel'),rect=panel.getBoundingClientRect();
+    assistantFloating=true;
+    assistantWindowState={x:rect.left,y:rect.top,width:rect.width,height:rect.height};
+    applyAssistantPosition();renderAssistant();
+    assistantPointer={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top};
+    assistantDragHead.setPointerCapture(event.pointerId);
+    panel.classList.add('is-dragging');
+    event.preventDefault();
+  });
+  assistantDragHead.addEventListener('pointermove',event=>{
+    if(!assistantPointer||event.pointerId!==assistantPointer.id)return;
+    assistantWindowState.x=assistantPointer.left+event.clientX-assistantPointer.x;
+    assistantWindowState.y=assistantPointer.top+event.clientY-assistantPointer.y;
+    applyAssistantPosition();
+  });
+  function endAssistantMove(){
+    if(!assistantPointer)return;
+    assistantPointer=null;$('#assistantPanel').classList.remove('is-dragging');
+  }
+  assistantDragHead.addEventListener('pointerup',endAssistantMove);
+  assistantDragHead.addEventListener('pointercancel',endAssistantMove);
+  new ResizeObserver(()=>{
+    if(!assistantFloating||assistantPointer||!assistantExpanded||assistantIsPopout)return;
+    const rect=$('#assistantPanel').getBoundingClientRect();
+    if(Math.abs(rect.width-assistantWindowState.width)>2||Math.abs(rect.height-assistantWindowState.height)>2){
+      assistantWindowState.width=rect.width;assistantWindowState.height=rect.height;
+      applyAssistantPosition();
+    }
+  }).observe($('#assistantPanel'));
+  window.addEventListener('resize',()=>{if(assistantFloating)applyAssistantPosition()});
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape'&&assistantExpanded&&!taskDialog.open&&!groupDialog.open){
       assistantExpanded=false;renderAssistant();
