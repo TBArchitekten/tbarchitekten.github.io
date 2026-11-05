@@ -226,7 +226,7 @@ async function showPendingProposals(){
       ?(details.memory_kind==='preference'?'Präferenz':'Information')
       :p.kind==='create_event'
         ?[details.starts_at,details.ends_at].filter(Boolean).join(' – ')
-        :p.kind==='start_mission'?'Arbeit im Hintergrund · nur Auswertung · jederzeit abbrechbar'
+        :p.kind==='start_mission'?'Arbeit im Hintergrund · nur Auswertung'+(details.approved_wake_at?' · Wiederaufnahme '+details.approved_wake_at:'')
         :p.kind==='control_mission'?'Bestätigung erforderlich'
         :(details.due_date||'Ohne Fälligkeitsdatum');
     item.appendChild(element('p',p.kind==='remember'
