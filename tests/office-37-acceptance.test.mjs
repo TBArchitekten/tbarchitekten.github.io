@@ -53,6 +53,59 @@ test('Model uncertainties, invalid dependencies and changed revision reject repl
  assert.equal(builder.review(p.proposal,template,6).ok,false);
  assert.equal(builder.stable(template),original);
 });
+
+test('Structural edits preserve old task identity, progress, protected dates and notes',()=>{
+ const before={
+  project:{projectNumber:'2401',projectName:'Bernried',phase:'LPH3',
+   start:'2026-07-01',end:'2027-05-31',standDate:'2026-11-05',sourceFileName:'Source.pdf'},
+  groups:[{id:'g-a',wbs:'01',name:'Alte Gruppe',category:'arch',collapsed:true}],
+  tasks:[{id:'t-a',group:'g-a',name:'Bestehende Planung',type:'task',
+   start:'2026-09-01',end:'2026-09-30',owner:'ARC',category:'arch',
+   status:'In Bearbeitung',progress:70,critical:true,
+   protectedDate:'2026-09-30',note:'Bestehende freigegebene Notiz',
+   pred:'',rel:'EA',dependencies:[]}]
+ };
+ const edited={
+  source_version:'Planänderung',complete:true,summary:'Gruppe umbenannt und Meilenstein angelegt',
+  uncertainties:[],expected_counts:{groups:1,activities:1,milestones:1},
+  groups:[{code:'g-a',wbs:'01',name:'Neue Gruppenbezeichnung',category:'arch'}],
+  tasks:[
+   {row_id:'t-a',group_code:'g-a',name:'Bestehende Planung',type:'task',
+    start:'2026-09-01',end:'2026-09-30',owner:'ARC',category:'arch',note:'',
+    predecessors:[]},
+   {row_id:'new-final',group_code:'g-a',name:'Meilenstein Freigabe',type:'milestone',
+    start:'2026-12-18',end:'2026-12-18',owner:'AG',category:'ag',note:'',
+    predecessors:[{row_id:'t-a',relation:'EA',lag_workdays:0}]}
+  ]
+ };
+ const sourceFingerprint=builder.stable(before);
+ const draft=builder.preview({state:before,result:edited,revision:9,
+  requestId:'r9',sourceName:'Bestätigte Plananweisung',standDate:'2026-11-05',mode:'transform'});
+ assert.equal(draft.kind,'proposal');
+ assert.equal(draft.proposal.diff.groups.edited.length,1);
+ assert.equal(draft.proposal.diff.groups.created.length,0);
+ assert.equal(draft.proposal.diff.tasks.created.length,1);
+ assert.equal(draft.proposal.diff.tasks.edited.length,0);
+ assert.equal(draft.proposal.mode,'transform');
+ assert.equal(draft.preview.state.groups[0].id,'g-a');
+ assert.equal(draft.preview.state.groups[0].collapsed,true);
+ assert.equal(draft.preview.state.tasks[0].id,'t-a');
+ assert.equal(draft.preview.state.tasks[0].progress,70);
+ assert.equal(draft.preview.state.tasks[0].critical,true);
+ assert.equal(draft.preview.state.tasks[0].status,'In Bearbeitung');
+ assert.equal(draft.preview.state.tasks[0].protectedDate,'2026-09-30');
+ assert.equal(draft.preview.state.tasks[0].note,'Bestehende freigegebene Notiz');
+ assert.equal(draft.preview.state.tasks[1].dependencies[0].pred,'t-a');
+ assert.equal(draft.preview.state.project.sourceFileName,'Source.pdf');
+ assert.equal(draft.preview.state.project.start,'2026-07-01');
+ assert.equal(draft.preview.state.project.end,'2027-05-31');
+ assert.equal(builder.review(draft.proposal,before,9).ok,true);
+ assert.equal(builder.review(draft.proposal,before,10).ok,false);
+ assert.equal(builder.stable(before),sourceFingerprint);
+ const misleading={...edited,tasks:[{...edited.tasks[0],row_id:'misidentified-old'},edited.tasks[1]]};
+ assert.throws(()=>builder.convert(before,misleading,'Instruction','2026-11-05','transform'),/unrecognized_new_task_row/);
+});
+
 test('Office Work connects to Office schema only and can create real buckets and folders',()=>{
  const index=read('app/index.html'),work=read('app/office-work.js'),projects=read('app/office-projects.js');
  assert.match(index,/office-work\.js\?v=office37/);
