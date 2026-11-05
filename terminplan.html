@@ -575,6 +575,7 @@ body.read-only .editor-only{display:none!important}
             <small class="ai-warning">Bei jeder Anfrage werden Terminplandaten und ausdrücklich angehängte PDFs oder Fotos an den externen Office-KI-Anbieter gesendet. Änderungen nur nach Freigabe.</small>
           </div>
         </div>
+        <div id="dialogueSavedSources" class="dialogue-saved-sources" aria-label="Gespeicherte Planunterlagen"></div>
         <div id="dialogueStream" class="dialogue-stream" role="log" aria-live="polite" aria-relevant="additions"></div>
         <div id="dialogueProposal" class="dialogue-action" hidden>
           <span id="dialogueProposalText">Änderungsvorschlag – noch nicht übernommen.</span>
@@ -584,8 +585,9 @@ body.read-only .editor-only{display:none!important}
         <div id="dialogueAttachmentPreview" class="dialogue-attachment-preview" aria-live="polite"></div>
         <form id="dialogueForm" class="dialogue-input">
           <input id="dialogueFileInput" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.png,.jpg,.jpeg,.webp" multiple hidden>
-          <button id="dialogueAttach" type="button" class="dialogue-attach" title="PDF oder Foto anhängen">+ PDF / Foto</button>
+          <button id="dialogueAttach" type="button" class="dialogue-attach" title="Datei hinzufügen" aria-label="Datei hinzufügen"><span aria-hidden="true">＋</span></button>
           <textarea id="dialogueInput" maxlength="1500" rows="2" placeholder="Was möchtest du am Terminplan verändern? Wir können es zuerst gemeinsam besprechen …" aria-label="Nachricht an Terminplan Assistent"></textarea>
+          <button id="dialogueRebuild" type="button" class="dialogue-rebuild" title="Den gesamten Plan aus PDF übernehmen">PDF → Plan</button>
           <button type="submit" id="dialogueSend">Senden</button>
         </form>
       </section>
@@ -708,7 +710,8 @@ body.read-only .editor-only{display:none!important}
 <div class="toast" id="toast"></div>
 
 <script src="./terminplan-engine.js"></script>
-<script src="./terminplan-dialogue.js"></script>
+<script src="./terminplan-dialogue.js?v=office37"></script>
+<script src="./terminplan-rebuild.js?v=office37"></script>
 <script>
 (function(){
   'use strict';
@@ -741,6 +744,9 @@ body.read-only .editor-only{display:none!important}
   let dialogueWriting=false;
   let dialogueAIReady=false;
   let dialogueAttachments=[];
+  let dialogueSavedSources=[];
+  let dialogueSelectedSourceIds=new Set();
+  const rebuildEngine=window.TBATerminplanRebuild||null;
   let dialogueApproved=null;
   let lastAuditedState=null;
   let auditReport=null;
@@ -977,6 +983,7 @@ body.read-only .editor-only{display:none!important}
     lastSavedSignature=JSON.stringify(data);
     remoteReady=true;
     await loadDialogue();
+    await loadSavedSources();
     await checkAIStatus();
   }
 
@@ -1506,11 +1513,17 @@ body.read-only .editor-only{display:none!important}
     host.scrollTop=host.scrollHeight;
     const action=$('#dialogueProposal');
     const valid=!!dialogueProposal&&!!dialogueEngine&&
-      dialogueEngine.review(dialogueProposal,data,auditEngine,serverRevision).ok;
+      (dialogueProposal.kind==='replace_plan'
+        ?!!rebuildEngine&&rebuildEngine.review(dialogueProposal,data,serverRevision).ok
+        :dialogueEngine.review(dialogueProposal,data,auditEngine,serverRevision).ok);
     action.hidden=!dialogueProposal;
     $('#dialogueProposalText').textContent=!dialogueProposal?'':!valid?
       'Vorschlag ist nicht mehr aktuell. Bitte erneut anfragen.':
-      dialogueProposal.kind==='add_tasks'
+      dialogueProposal.kind==='replace_plan'
+        ? 'PDF-Rekonstruktion: '+dialogueProposal.counts.groups+' Gruppen, '+
+           (dialogueProposal.counts.tasks-dialogueProposal.counts.milestones)+' Vorgänge, '+
+           dialogueProposal.counts.milestones+' Meilensteine. Vor Freigabe wird die alte Version gesichert.'
+      :dialogueProposal.kind==='add_tasks'
         ? 'Vorschlag: '+dialogueProposal.created_tasks.length+' neue Aufgaben. '+dialogueProposal.created_tasks.map(t=>t.name).join(' · ')+
           '. '+dialogueProposal.new_issue_codes.length+' zusätzliche Regelhinweise. Erst nach Freigabe gespeichert.'
         : dialogueProposal.kind==='edit_tasks'
@@ -1524,6 +1537,7 @@ body.read-only .editor-only{display:none!important}
     $('#dialogueReject').disabled=dialogueWriting;
     $('#dialogueSend').disabled=dialogueWriting;
     $('#dialogueAttach').disabled=dialogueWriting||!PLAN_ID;
+    $('#dialogueRebuild').disabled=dialogueWriting||!PLAN_ID||!dialogueAIReady;
   }
   async function storeDialogue(entry){
     if(!PLAN_ID||!dialogueUserId)return;
@@ -2463,6 +2477,7 @@ body.read-only .editor-only{display:none!important}
     }
   });
   $('#dialogueForm').onsubmit=sendDialogue;
+  $('#dialogueRebuild').onclick=()=>{void sendDialogue(null,'rebuild')};
   $('#dialogueAttach').onclick=()=>$('#dialogueFileInput').click();
   $('#dialogueFileInput').onchange=event=>{
     const selected=[...(event.target.files||[])];
