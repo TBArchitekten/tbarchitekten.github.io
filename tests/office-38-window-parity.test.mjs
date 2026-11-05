@@ -112,6 +112,22 @@ test('Complete PDF rows can be proposed with unresolved arrows but never called 
  assert.throws(()=>rebuild.convert(original,source,'Instruction','2026-11-05','transform'),/source_not_completely_verified/);
 });
 
+test('Window unbucketed Planner column is always available and accepts dropped tasks',()=>{
+ const board=surface.planner({project:{name:'Bernried'},buckets:[{id:'b',name:'Grundrisse',position:1}],tasks:[],members:[]});
+ assert.match(board,/Ohne Bucket/);
+ assert.match(board,/data-drop-bucket=""/);
+ const adapter=read('app/office-work.js');
+ assert.match(adapter,/const target=e\.target\.closest\('\[data-drop-bucket\]'\)/);
+ assert.match(adapter,/moveTask\(dragged,target\.dataset\.dropBucket\|\|null\)/);
+});
+test('Office file actions are authorized for project teammates, with immutable storage identity',()=>{
+ const sql=read('supabase/migrations/20261105152000_office_work_multi_assignees_v1.sql');
+ assert.match(sql,/office_project_files_team_update/);
+ assert.match(sql,/office_project_files_team_delete/);
+ assert.match(sql,/office_file_identity_guard/);
+ assert.match(sql,/new\.storage_path/);
+ assert.match(sql,/office_project_members/);
+});
 test('Office Desktop exposes Window rename, move and delete on Office tables, without breaking Window',()=>{
  const html=read('app/index.html'),adapter=read('app/office-work.js'),
   operations=read('app/office-desktop-ops.js');
