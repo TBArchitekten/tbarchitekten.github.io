@@ -67,14 +67,14 @@ test("backend requires real user authorization, plan RLS, and separate secret",(
  assert.match(src,/sb\.rpc\("office_ai_consume_request"/);
  assert.doesNotMatch(src,/SERVICE_ROLE|isabella|minds[_-]/i);
 });
-test("browser exposes active, opt-in mode, preserving rules fallback",()=>{
+test("browser exposes automatic AI and safe fallback",()=>{
  const html=fs.readFileSync(new URL("../terminplan.html",import.meta.url),"utf8");
  for(const m of html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g))new Function(m[1]);
- assert.match(html,/id="dialogueAI"/);
+ assert.match(html,/id="dialogueAIStatus"/);
  assert.match(html,/office-terminplan-ai/);
  assert.match(html,/fromDiscussion/);
- assert.match(html,/if\(dialogueAIReady&&/);
- assert.match(html,/#dialogueAI/);
+ assert.match(html,/if\(dialogueAIReady&&PLAN_ID\)/);
+ assert.match(html,/#dialogueAttach/);
  assert.match(html,/dialogueEngine\.review\(proposal,data,auditEngine,serverRevision\)/);
 });
 test("bounded size and identity validation",()=>{

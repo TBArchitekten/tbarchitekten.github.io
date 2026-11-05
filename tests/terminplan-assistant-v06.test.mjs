@@ -42,7 +42,7 @@ test("proactive review never bypasses RLS and never creates a proposal",()=>{
  assert.match(edge,/if\(action==="review"&&result\.kind!=="discuss"/);
  assert.match(edge,/office_ai_consume_request/);
  assert.match(editor,/if\(manualChange&&pendingProactiveIds\.length\)/);
- assert.match(editor,/!dialogueAIReady\|\|!\$\('#dialogueAI'\)\.checked/);
+ assert.match(editor,/!dialogueAIReady\|\|!PLAN_ID/);
  assert.match(editor,/if\(Date\.now\(\)-lastProactiveAt<120000\)return/);
 });
 test("floating window does not resize the Gantt and supports collapsed/wide modes",()=>{
