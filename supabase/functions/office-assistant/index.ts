@@ -8,6 +8,7 @@ import { loadRomyAttachments } from "./romy-attachments.mjs";
 import { createRomyDocument } from "./romy-documents.ts";
 import { SKILL_RUNTIME_VERSION, normalizeSkillRecord,composeSkillTrace,skillLoadEnvelope } from "./skill-registry.ts";
 import { listRomySystemSkills,findRomySystemSkill } from "./romy-skills.mjs";
+import { startRomyCapability,romyCapabilityStatus,romyCapabilityCancel } from "./romy-capability-service.ts";
 
 // Office has its OWN Supabase users and records. This is a scoped adaptation of
 // Window's tool-capable turn architecture, not a connection to Gari's Isabella.
@@ -27,7 +28,9 @@ const instruction=[
  "Gespräche und persönliche Kalender sind kontogebunden. Du liest ausschließlich Daten, die der JWT-gebundene Office-Zugriff freigibt.",
  "Projektdokumente und Projektaufgaben sind im Büro unter aktiven Mitgliedern geteilt; private Unterhaltungen, Kalender und persönliche Aufgaben nicht.",
  "Du kannst die angebotenen Office-Tools benutzen, um Projekte, Aufgaben, Kalender und vorhandene Textdateien zu prüfen. Nutze Quellen, statt Angaben zu erfinden.",
- "Wenn ein herunterladbares Dokument verlangt wird, verwende create_document mit dem vollständigen ausgearbeiteten Inhalt. Gib nicht nur eine Beschreibung der Herstellung zurück. DOCX/PDF/TXT sind verfügbar; andere Dateitypen nur mit einer tatsächlich zugelassenen Capability.",
+ "Für einfache DOCX/PDF/TXT aus bereits vollständig formuliertem Text verwende create_document. Für XLSX/PPTX, strukturierte Tabellen oder vorhandene Quelldateien verwende execute_artifact_task: den echten Window Capability Runtime, nicht einen Textvorschlag.",
+ "Eine gestartete asynchrone Ausführung ist noch KEINE fertige Datei. Benenne den Status und die Lauf-ID; sage erst nach status completed mit gespeicherten Artefakten, dass das Ergebnis vorliegt.",
+ "Artefakte können aus Office Desktop oder eigenen generierten Dateien als konkret referenzierte Inputdateien verarbeitet werden. Teile keine nicht freigegebenen privaten Daten.",
  "Erstellte Artefakte sind private Ergebnisse, keine bestätigten Projektfakten. Verwende keine nicht verifizierten Werte.",
  "Du kannst mit list_skills und load_skill vertrauenswürdige Verfahren aus Window laden. Skills sind keine Genehmigungen und dürfen die Tool-Rechte nicht erweitern.",
  "Persönliche Erinnerungen sind nur nach expliziter Annahme durch die betreffende Person gültig: search_personal_memory liest nur angenommene Inhalte, propose_remember erstellt nur einen prüfbaren Vorschlag. Niemals Wissen von außen oder deine Schlussfolgerungen heimlich als Erinnerung speichern.",
@@ -136,6 +139,16 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
          skillTrace=composeSkillTrace(skillTrace,manifest);
          result=skillLoadEnvelope(manifest,skillTrace);
        }
+     }else if(call.name==="execute_artifact_task"){
+       result=await startRomyCapability({
+         admin,userDb:db,userId:uid,conversationId,requestId,
+         callId:String(call.call_id||""),args,
+         uploads:attachmentInputs,skillTrace,apiKey
+       });
+     }else if(call.name==="check_artifact_task"){
+       result=await romyCapabilityStatus({
+         admin,userId:uid,runId:args.run_id,apiKey
+       });
      }else if(call.name==="create_document"){
        result=await createRomyDocument({admin,userId:uid,conversationId,requestId,
          kind:String(args.kind||""),title:String(args.title||""),content:String(args.content||"")});
@@ -197,6 +210,22 @@ Deno.serve(async req=>{
    input=JSON.parse(await req.text());
  }catch{return json(400,{error:"invalid_json"});}
  const admin=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+ if(input?.action==="capability_status"){
+  const result=await romyCapabilityStatus({admin,userId:uid,
+    runId:input.run_id,apiKey:key});
+  return json(result.error?404:200,result);
+ }
+ if(input?.action==="capability_cancel"){
+  const result=await romyCapabilityCancel({admin,userId:uid,
+    runId:input.run_id,apiKey:key});
+  return json(result.error?409:200,result);
+ }
+ if(input?.action==="capability_list"){
+  const {data,error}=await db.from("office_romy_capability_runs")
+    .select("id,conversation_id,request_id,title,status,summary,error,created_at,updated_at")
+    .eq("user_id",uid).order("created_at",{ascending:false}).limit(80);
+  return json(error?503:200,error?{error:"capability_list_unavailable"}:{runs:data||[]});
+ }
  if(input?.action==="review_proposal"){
   const result=await reviewRomyProposal({userDb:db,admin,userId:uid,
    proposalId:input.proposal_id,decision:input.decision});

@@ -20,6 +20,21 @@ export const ROMY_TOOLS=[
    title:{type:"string"},
    content:{type:"string",description:"Complete document content written for the employee, with Markdown headings and paragraphs; not a brief description."}
  },required:["kind","title","content"],additionalProperties:false}},
+ {type:"function",name:"execute_artifact_task",
+ description:"Use Window's real general_execution Capability Runtime and Code Interpreter to create a final usable XLSX/PPTX/PDF/DOCX/CSV/ZIP or other supported file. The job is private and asynchronous; no shared Office or project changes. Returns a durable run_id for later status.",
+ strict:false,parameters:{type:"object",properties:{
+  objective:{type:"string",description:"The complete user-requested deliverable task."},
+  title:{type:"string"},
+  desired_outputs:{type:"array",items:{type:"string",enum:["docx","pdf","xlsx","pptx","csv","zip","html","txt","json","image","markdown"]}},
+  input_files:{type:"array",items:{type:"object",properties:{
+    source:{type:"string",enum:["work_file","artifact"]},
+    id:{type:"string"}
+   },required:["source","id"],additionalProperties:false},
+   description:"Optional precise UUID references to Office Desktop files or this employee's generated artifacts. Current chat attachments are included automatically."}
+ },required:["objective"],additionalProperties:false}},
+ {type:"function",name:"check_artifact_task",
+ description:"Retrieve the status and actual output metadata of a previously started private Romy general_execution task by its run UUID. Never claim it completed until the provider and stored artifacts confirm it.",
+ strict:false,parameters:{type:"object",properties:{run_id:{type:"string"}},required:["run_id"],additionalProperties:false}},
  {type:"function",name:"propose_create_task",description:"Register a proposal to CREATE a task, not an actual change. It will be applied only after the employee explicitly approves it.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},due_date:{type:"string"},project_id:{type:"string"},notes:{type:"string"}},required:["title"],additionalProperties:false}},
  {type:"function",name:"propose_create_event",description:"Register a proposal to CREATE an appointment in the user's personal calendar. It is NOT written until the employee explicitly confirms.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},starts_at:{type:"string",description:"ISO-8601 with explicit UTC Z or timezone offset for Europe/Berlin (e.g. +01:00/+02:00); never infer an ungrounded clock time."},ends_at:{type:"string",description:"ISO-8601 with explicit UTC Z or timezone offset for Europe/Berlin."},project_id:{type:"string"},notes:{type:"string"}},required:["title","starts_at","ends_at"],additionalProperties:false}},
 ];
