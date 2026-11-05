@@ -80,7 +80,8 @@ begin
      coalesce(m.next_wake_at,now())<=now())
     or (m.status='running' and m.lease_until<now()))
   order by m.created_at
-  for update of m skip locked limit least(greatest(p_limit,1),3)
+  limit least(greatest(p_limit,1),3)
+  for update of m skip locked
  loop
   update public.office_romy_missions
    set status='running',iteration=iteration+1,lease_token=gen_random_uuid(),
