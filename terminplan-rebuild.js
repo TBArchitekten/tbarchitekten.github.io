@@ -126,16 +126,20 @@
   return out;
  }
  const structuralPropsGroup=["wbs","name","category"];
- const structuralPropsTask=["group","name","type","start","end","owner","category","note","pred","rel","dependencies"];
+ const structuralPropsTask=["group","name","type","start","end","owner","category","note","dependencies"];
  function summaryDiff(before,after){
   function changed(beforeRows,afterRows,fields){
    const previous=new Map(beforeRows.map(x=>[x.id,x]));
    const current=new Map(afterRows.map(x=>[x.id,x]));
    const created=afterRows.filter(x=>!previous.has(x.id)).map(x=>x.name);
    const deleted=beforeRows.filter(x=>!current.has(x.id)).map(x=>x.name);
+   const canonicalDeps=x=>Array.isArray(x?.dependencies)?x.dependencies:
+      x?.pred?[{pred:x.pred,rel:x.rel||"EA",lagDays:0}]:[];
    const edited=afterRows.filter(x=>{
     const old=previous.get(x.id);
-    return old&&fields.some(field=>stable(old[field])!==stable(x[field]));
+    return old&&fields.some(field=>field==="dependencies"
+      ?stable(canonicalDeps(old))!==stable(canonicalDeps(x))
+      :stable(old[field])!==stable(x[field]));
    }).map(x=>x.name);
    return {created,deleted,edited};
   }
