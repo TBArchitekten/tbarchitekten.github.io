@@ -126,6 +126,10 @@
     sourceVersion:clean(extraction.source_version,160)};
   return out;
  }
+ const countLinks=state=>(state?.tasks||[]).reduce((sum,t)=>
+    sum+(Array.isArray(t.dependencies)?t.dependencies.length:(t.pred?1:0)),0);
+ const ambiguousArrowEvidence=uncertainties=>Array.isArray(uncertainties)&&
+   uncertainties.some(x=>/verknüpf|pfeil|verbindung|abhängig|flecha|enlace|dependenc|arrow|relation/i.test(x));
  const structuralPropsGroup=["wbs","name","category"];
  const structuralPropsTask=["group","name","type","start","end","owner","category","note","dependencies"];
  function summaryDiff(before,after){
@@ -153,6 +157,9 @@
   const oldGroups=state.groups.length,oldTasks=state.tasks.length;
   const oldMilestones=state.tasks.filter(t=>t.type==="milestone").length;
   const diff=mode==="transform"?summaryDiff(state,candidate):null;
+  const oldLinks=countLinks(state),candidateLinks=countLinks(candidate);
+  const graphNotTranscribed=mode==="rebuild"&&candidateLinks===0&&
+    ambiguousArrowEvidence(result.uncertainties);
   const proposal={
    request_id:requestId,kind:"replace_plan",status:"proposed",
    mode,source:mode==="transform"?"office_ai_structural_transformation":"office_ai_pdf_full_reconstruction",
@@ -160,7 +167,10 @@
    base_revision:revision,base_fingerprint:stable(state),candidate_fingerprint:stable(candidate),
    extraction:clone(result),stand_date:standDate,diff,
    unresolved_dependencies:mode==="rebuild"?result.uncertainties.slice():[],
+   graph_not_transcribed:graphNotTranscribed,
+   lost_existing_links:Math.max(0,oldLinks-candidateLinks),
    counts:{groups:candidate.groups.length,tasks:candidate.tasks.length,
+     links:candidateLinks,previous_links:oldLinks,
      milestones:candidate.tasks.filter(t=>t.type==="milestone").length,
      previous_groups:oldGroups,previous_tasks:oldTasks,previous_milestones:oldMilestones},
    requires_confirmation:true
@@ -178,9 +188,12 @@
       "Die bisherige Version wird vor dem Übernehmen gesichert; erst deine Freigabe schreibt den Entwurf."};
   }
   return {kind:"proposal",proposal,preview:{state:candidate},
-   text:"Vollständiger Terminplan-Entwurf aus „"+proposal.source_name+"“: "+
+   text:(graphNotTranscribed?"WARNUNG: Der PDF-Plan enthält gezeichnete Beziehungen, aber keine wurde strukturiert übernommen. Dieser Entwurf darf nicht als vollständiger Ersatz gespeichert werden. ":"")+
+     "Terminplan-Entwurf aus „"+proposal.source_name+"“: "+
      candidate.groups.length+" Gruppen, "+(candidate.tasks.length-proposal.counts.milestones)+
      " Vorgänge, "+proposal.counts.milestones+" Meilensteine. "+
+     "Verknüpfungen: "+candidateLinks+" im Entwurf, "+oldLinks+" vorher. "+
+     (proposal.lost_existing_links?"ACHTUNG: "+proposal.lost_existing_links+" bereits gespeicherte Verknüpfungen würden verloren gehen. ":"")+
      "Der bisherige Plan enthält "+oldGroups+" Gruppen und "+oldTasks+
      " Einträge. Alle Gruppen und Vorgänge werden beim Übernehmen ersetzt. "+
      (proposal.unresolved_dependencies.length?
