@@ -20,12 +20,12 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 ### 2026-11-05 · Skills de Window y recuerdos confirmados para Romy · ChatGPT
 - Qué cambió y por qué: se reutiliza el registro de Skills de Window sin ampliar su autoridad, junto con cinco procedimientos existentes adaptados exclusivamente a las herramientas disponibles de Office. Se incorpora memoria autobiográfica confirmada por cada empleado, con procedencia y sin aceptación silenciosa.
 - Archivos: skill-registry.ts (copiado de Window), romy-skills.mjs (procedimientos de Window con notas de capacidades), romy-tools.mjs, office-assistant/index.ts, app/office-assistant.js, app/index.html, tests y migración.
-- Base de datos: migración office_romy_skills_memory_v1 preparada; simulación RLS con rollback PASS: sin inserción del cliente, sin lectura anónima, sin eliminación de registros, propietario con lectura y retractación controlada.
-- Deploy de funciones: pendiente de CI. No se cambian cuotas ni modelos.
-- Cómo se probó: simulación SQL transaccional, tests de Skills/memoria añadidos, CI pendiente.
-- Quedó pendiente: CI, migración definitiva, despliegue, merge y aceptación autenticada. La memoria semántica avanzada y el trabajo persistente de Window aún no están portados.
+- Base de datos: migración office_romy_skills_memory_v1 aplicada como `20261105001450`; simulación RLS con rollback PASS: sin inserción del cliente, sin lectura anónima, sin eliminación de registros, propietario con lectura y retractación controlada.
+- Deploy de funciones: `office-assistant` ACTIVE v7 con JWT. No se cambian cuotas ni modelos.
+- Cómo se probó: CI 120/120 PASS, políticas activas verificadas (SELECT solo owner, sin INSERT/DELETE de clientes ni lectura anónima), 0 recuerdos iniciales, Security Advisors sin advertencias.
+- Quedó pendiente: merge y aceptación autenticada con empleados. La memoria semántica avanzada y el trabajo persistente de Window aún no están portados.
 - Riesgos o decisiones: Skills solo orientan procedimientos. Un recuerdo requiere propuesta y revisión explícita del empleado; se conserva la fuente, no se reutiliza la memoria personal de Isabella.
-- PR: por abrir.
+- PR: #32.
 
 
 ### 2026-11-05 · Romy: documentos reales reutilizando Window · ChatGPT
