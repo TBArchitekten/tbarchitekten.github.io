@@ -7,7 +7,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const uid=s=>String(s||'').trim();
 const root='__office__';
 let projectId=localStorage.getItem('office-work-project')||root,view=localStorage.getItem('office-work-view')||'desktop';
-let catalog=[],project=null,buckets=[],tasks=[],folders=[],files=[],plans=[],team=[],members=[],folderId=null,userId=null,bound=false,seq=0,busy=false;
+let catalog=[],project=null,buckets=[],tasks=[],folders=[],files=[],plans=[],team=[],members=[],taskAssignees=[],folderId=null,userId=null,bound=false,seq=0,busy=false;
 const selected=()=>projectId===root?null:project;
 const status=message=>{const x=$('#workStatus');if(x)x.textContent=message||''};
 const html=s=>{const x=$('#workBody');if(x)x.innerHTML=s};
@@ -36,7 +36,7 @@ async function load(){
   catalog=p.data||[];
   project=catalog.find(x=>x.id===projectId)||null;
   if(!project&&projectId!==root){projectId=root;localStorage.setItem('office-work-project',root)}
-  if(!project)return void (buckets=[],tasks=[],folders=[],files=[],plans=[],team=[],members=[]);
+  if(!project)return void (buckets=[],tasks=[],folders=[],files=[],plans=[],team=[],members=[],taskAssignees=[]);
   const responses=await Promise.all([
     client.from('office_task_buckets').select('id,project_id,name,position,is_archived').eq('project_id',project.id).eq('is_archived',false).order('position'),
     client.from('office_tasks').select('id,bucket_id,title,notes,priority,due_date,start_date,assignee_id,completed_at,position,kind').eq('project_id',project.id).order('position').limit(500),
@@ -44,11 +44,14 @@ async function load(){
     client.from('office_project_files').select('id,file_name,folder_id,storage_path,media_type,bytes,created_at').eq('project_id',project.id).order('created_at',{ascending:false}).limit(500),
     client.from('office_terminplan_instances').select('id,phase,updated_at').eq('project_id',project.id).eq('is_archived',false),
     client.from('office_project_members').select('user_id').eq('project_id',project.id),
-    client.from('office_members').select('user_id,display_name').eq('is_active',true)
+    client.from('office_members').select('user_id,display_name').eq('is_active',true),
+    client.from('office_task_assignees').select('task_id,user_id').eq('project_id',project.id).limit(1200)
   ]);
   const err=responses.find(x=>x.error)?.error;
   if(err)throw err;
-  [buckets,tasks,folders,files,plans,team,members]=responses.map(x=>x.data||[]);
+  [buckets,tasks,folders,files,plans,team,members,taskAssignees]=responses.map(x=>x.data||[]);
+  for(const task of tasks){const links=taskAssignees.filter(a=>a.task_id===task.id).map(a=>a.user_id);
+    task.assignee_ids=links.length?links:(task.assignee_id?[task.assignee_id]:[])}
 }
 function overview(){
   const today=new Date().toISOString().slice(0,10);
@@ -61,35 +64,26 @@ function overview(){
     '<h3>Terminpläne</h3>'+(plans.length?plans.map(p=>'<a class="office-work-file" href="../terminplan.html?id='+encodeURIComponent(p.id)+'">'+esc(p.phase)+' · '+esc((p.updated_at||'').slice(0,10))+'</a>').join(''):'<p>Noch kein Terminplan.</p>')+'</div>');
 }
 function planner(){
-  const board=buckets.map(b=>'<section class="work-bucket office-work-bucket" data-bucket-id="'+esc(b.id)+'">'+
-    '<div class="work-bucket-header"><strong>'+esc(b.name)+'</strong>'+button('⋯','rename-bucket:'+b.id,'office-work-more')+'</div>'+
-    '<div class="office-work-bucket-body" data-drop-bucket="'+esc(b.id)+'">'+tasks.filter(t=>t.bucket_id===b.id).map(t=>
-      '<div class="office-work-task" draggable="true" data-drag-task="'+esc(t.id)+'">'+
-      '<button type="button" data-office-work="edit-task:'+esc(t.id)+'">'+esc(t.title)+'</button>'+
-      '<small>'+esc(t.due_date||'Ohne Termin')+(t.completed_at?' · Erledigt':'')+'</small></div>').join('')+
-    '</div>'+button('+ Aufgabe','new-task:'+b.id,'office-work-add')+'</section>').join('');
-  html('<div class="office-work-wrap"><div class="office-work-heading"><h2>Planner · '+esc(project.name)+'</h2>'+button('+ Bucket','new-bucket')+'</div>'+
-    '<p>Ziehe Aufgaben in einen anderen Bucket. Änderungen werden unter deinem Office-Zugang gespeichert.</p>'+
-    '<div class="office-work-board">'+board+'<div class="office-work-bucket office-work-bucket-empty">'+button('+ Bucket','new-bucket')+'</div></div>'+
-    (buckets.length?'':'<p>Noch keine Buckets. Mit „+ Bucket“ beginnst du die Planung.</p>')+'</div>');
+  const surface=window.TBA_WINDOW_WORK_SURFACE;
+  if(!surface){status('Window Work Oberfläche konnte nicht geladen werden.');return}
+  html(surface.planner({project,buckets,tasks,members:members.filter(m=>team.some(t=>t.user_id===m.user_id))}));
+  const body=$('#workBody');body.classList.remove('work-scroll-host');
+  body.classList.remove('work-overview-host');
 }
 function desktop(){
+  const surface=window.TBA_WINDOW_WORK_SURFACE;
+  if(!surface){status('Window Desktop Oberfläche konnte nicht geladen werden.');return}
+  const body=$('#workBody');body.classList.add('work-scroll-host');body.classList.remove('work-overview-host');
   if(!project){
-    html('<div class="office-work-wrap"><h2>Projekte</h2><p>Wähle ein Projekt, um Ordner, Dateien und Terminpläne zu sehen.</p>'+
-      catalog.map(p=>'<button class="office-work-file" data-office-project="'+esc(p.id)+'">📁 '+esc(p.number+' · '+p.name)+'</button>').join('')+
-      (!catalog.length?'<p>Keine Projekte angelegt. Erstelle eines unter Tools → Projekte.</p>':'')+'</div>');return;
+    html('<div class="work-desktop-toolbar"><div class="work-breadcrumb"><strong>Büro</strong></div></div>'+
+      '<div class="work-drop-hint">Projekte auswählen, um Ordner und Dateien zu verwalten.</div>'+
+      '<div class="work-files">'+catalog.map(p=>'<button type="button" class="work-file work-folder" data-office-project="'+esc(p.id)+'">'+
+        '<span class="work-file-icon">'+surface.tileIcon('folder')+'</span><strong>'+esc(p.name)+'</strong>'+
+        '<small>'+esc(p.number)+' · Projekt</small></button>').join('')+
+        (!catalog.length?'<div class="work-empty">Noch keine Projekte angelegt.</div>':'')+'</div>');
+    return;
   }
-  const current=folders.find(f=>f.id===folderId);
-  const children=folders.filter(f=>(f.parent_id||null)===(folderId||null));
-  const documents=files.filter(f=>(f.folder_id||null)===(folderId||null));
-  html('<div class="office-work-wrap"><div class="office-work-heading"><h2>Desktop · '+esc(project.name)+(current?' / '+esc(current.name):'')+'</h2>'+
-    button('+ Ordner','new-folder')+button('Datei hinzufügen','upload-files')+'</div>'+
-    (folderId?button('‹ Zurück','folder-up'):'')+
-    '<div class="office-work-files">'+children.map(f=>'<button class="office-work-file" data-office-work="folder:'+esc(f.id)+'">📁 '+esc(f.name)+'</button>').join('')+
-    documents.map(f=>'<button class="office-work-file" data-office-work="download:'+esc(f.id)+'">📄 '+esc(f.file_name)+' <small>'+Math.round(f.bytes/1024)+' KB</small></button>').join('')+
-    (!children.length&&!documents.length?'<p>Dieser Ordner ist leer.</p>':'')+'</div>'+
-    (!folderId&&plans.length?'<h3>Terminpläne</h3>'+plans.map(p=>'<a class="office-work-file" href="../terminplan.html?id='+encodeURIComponent(p.id)+'">📅 '+esc(p.phase)+'</a>').join(''):'')+
-    '</div>');
+  html(surface.desktop({project,folders,files,plans,folderId}));
 }
 function modal(title,fields,onSubmit){
   const app=window.ISABELLA_APP;
@@ -120,24 +114,98 @@ function renameBucket(id){
   });
 }
 function editTask(id=null,bucketId=null){
-  const task=tasks.find(x=>x.id===id),b=bucketId||task?.bucket_id||buckets[0]?.id;
-  if(!b){status('Bitte zuerst einen Bucket erstellen');return}
-  const options='<option value="">— keine Zuordnung —</option>'+
-    members.filter(x=>team.some(t=>t.user_id===x.user_id)).map(m=>'<option value="'+esc(m.user_id)+'" '+(task?.assignee_id===m.user_id?'selected':'')+'>'+esc(m.display_name)+'</option>').join('');
-  const which='<label>Bucket<select name="bucket">'+buckets.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===b?'selected':'')+'>'+esc(x.name)+'</option>').join('')+'</select></label>';
-  modal(task?'Aufgabe bearbeiten':'Neue Aufgabe',
-    '<label>Aufgabe<input name="title" required maxlength="200" value="'+esc(task?.title||'')+'"></label>'+
-    which+'<label>Fällig<input name="due" type="date" value="'+esc(task?.due_date||'')+'"></label>'+
-    '<label>Mitglied<select name="assignee">'+options+'</select></label>',
-    async f=>{
-      const payload={title:String(f.get('title')||'').trim(),
-        bucket_id:String(f.get('bucket')),due_date:f.get('due')||null,
-        assignee_id:f.get('assignee')||null};
-      if(!payload.title)throw Error('Titel fehlt');
-      const q=task?sb().from('office_tasks').update(payload).eq('id',task.id).eq('project_id',project.id):
-        sb().from('office_tasks').insert({...payload,project_id:project.id,kind:'aufgabe',position:tasks.length});
-      const {error}=await q;if(error)throw error;
-    });
+  const task=tasks.find(x=>x.id===id)||null;
+  const bucketIdChoice=bucketId||task?.bucket_id||null;
+  const availableMembers=members.filter(x=>team.some(t=>t.user_id===x.user_id));
+  const selected=new Set(task?.assignee_ids||[task?.assignee_id].filter(Boolean));
+  const memberships=availableMembers.map(m=>'<label class="office-task-person"><input name="person" type="checkbox" value="'+esc(m.user_id)+'" '+
+    (selected.has(m.user_id)?'checked':'')+'><span>'+esc(m.display_name)+'</span></label>').join('');
+  const checklist=Array.isArray(task?.checklist)?task.checklist:[];
+  const checklistRow=(c={})=>'<div class="work-check-row" data-check-id="'+esc(c.id||crypto.randomUUID())+'">'+
+    '<input type="checkbox" name="checkdone" '+(c.done?'checked':'')+' aria-label="Erledigt">'+
+    '<input type="text" name="checktext" maxlength="240" value="'+esc(c.text||'')+'" placeholder="Checklistenpunkt">'+
+    '<button type="button" data-office-work="remove-check" aria-label="Checklistenpunkt entfernen">×</button></div>';
+  const bucketOptions='<option value="">Ohne Bucket</option>'+
+    buckets.map(b=>'<option value="'+esc(b.id)+'" '+(b.id===bucketIdChoice?'selected':'')+'>'+esc(b.name)+'</option>').join('');
+  window.ISABELLA_APP?.openModal?.(task?'Aufgabe':'Neue Aufgabe',
+    '<form id="officeWorkDialog" class="form work-task-form">'+
+      '<label class="work-task-title-field">Titel<input name="title" required maxlength="200" value="'+esc(task?.title||'')+'"></label>'+
+      '<div class="work-task-grid"><label>Bucket<select name="bucket">'+bucketOptions+'</select></label>'+
+        '<label>Status<select name="status"><option value="open">Nicht begonnen</option><option value="completed" '+
+          (task?.completed_at?'selected':'')+'>Erledigt</option></select></label></div>'+
+      '<div class="work-task-grid"><label>Start<input type="date" name="start" value="'+esc(task?.start_date||'')+'"></label>'+
+        '<label>Fällig<input type="date" name="due" value="'+esc(task?.due_date||'')+'"></label></div>'+
+      '<div class="work-task-grid"><label>Priorität<select name="priority">'+
+        [['niedrig','Niedrig'],['normal','Normal'],['hoch','Wichtig']].map(([v,l])=>
+          '<option value="'+v+'" '+((task?.priority||'normal')===v?'selected':'')+'>'+l+'</option>').join('')+
+        '</select></label><div><span class="office-task-team-label">Mitglieder</span>'+
+          '<div class="office-task-people">'+memberships+'</div></div></div>'+
+      '<label>Notizen<textarea name="notes" rows="4" maxlength="4000">'+esc(task?.notes||'')+'</textarea></label>'+
+      '<div class="work-task-detail-section"><div class="work-check-head"><span>Checkliste</span>'+
+        '<button type="button" data-office-work="add-check">＋ Punkt</button></div>'+
+        '<div id="officeWorkChecklist">'+checklist.map(checklistRow).join('')+'</div></div>'+
+      '<p id="officeWorkDialogError" role="alert" class="small"></p>'+
+      '<button class="primary" type="submit">Speichern</button>'+
+      (task?'<button type="button" class="secondary danger-text" data-office-work="delete-task:'+esc(task.id)+'">Aufgabe löschen</button>':'')+
+    '</form>');
+  const form=$('#officeWorkDialog');if(!form){status('Editor konnte nicht geöffnet werden');return}
+  form.onclick=e=>{
+    const el=e.target.closest('[data-office-work]');if(!el)return;
+    if(el.dataset.officeWork==='add-check'){
+      const list=$('#officeWorkChecklist');const wrap=document.createElement('div');
+      wrap.innerHTML=checklistRow();list.append(wrap.firstElementChild);
+    }
+    if(el.dataset.officeWork==='remove-check')el.closest('.work-check-row')?.remove();
+    if(el.dataset.officeWork.startsWith('delete-task:')){
+      if(!confirm('Aufgabe „'+task.title+'“ wirklich löschen?'))return;
+      void (async()=>{
+        const {error}=await sb().from('office_tasks').delete().eq('id',task.id).eq('project_id',project.id);
+        if(error){$('#officeWorkDialogError').textContent=error.message;return}
+        window.ISABELLA_APP?.closeModal?.();await render();
+      })();
+    }
+  };
+  form.onsubmit=async e=>{
+    e.preventDefault();const save=form.querySelector('[type="submit"]');save.disabled=true;
+    try{
+      const f=new FormData(form);
+      const title=String(f.get('title')||'').trim();
+      const due=f.get('due')||null,start=f.get('start')||null;
+      if(!title)throw Error('Titel fehlt');
+      if(start&&due&&start>due)throw Error('Der Start darf nicht nach dem Fälligkeitsdatum liegen.');
+      const bucketId=f.get('bucket')||null;
+      const assignees=[...form.querySelectorAll('input[name="person"]:checked')].map(x=>x.value);
+      const checks=[...form.querySelectorAll('#officeWorkChecklist .work-check-row')].map(el=>({
+        id:el.dataset.checkId,text:el.querySelector('[name="checktext"]').value.trim(),
+        done:el.querySelector('[name="checkdone"]').checked
+      })).filter(x=>x.text).slice(0,40);
+      const payload={title,bucket_id:bucketId,start_date:start,due_date:due,
+        notes:String(f.get('notes')||'').slice(0,4000),priority:f.get('priority'),
+        checklist:checks,assignee_id:assignees[0]||null,
+        completed_at:f.get('status')==='completed'?(task?.completed_at||new Date().toISOString()):null};
+      const res=task
+        ?await sb().from('office_tasks').update(payload).eq('id',task.id).eq('project_id',project.id).select('id').single()
+        :await sb().from('office_tasks').insert({...payload,project_id:project.id,
+          kind:'aufgabe',position:tasks.length*10}).select('id').single();
+      if(res.error||!res.data?.id)throw res.error||Error('Aufgabe nicht gespeichert');
+      await saveAssignees(res.data.id,assignees);
+      window.ISABELLA_APP?.closeModal?.();await render();
+    }catch(error){$('#officeWorkDialogError').textContent='Speichern nicht abgeschlossen: '+String(error.message||error);save.disabled=false}
+  };
+}
+async function saveAssignees(taskId,ids){
+  const existing=taskAssignees.filter(x=>x.task_id===taskId).map(x=>x.user_id);
+  const old=new Set(existing),next=new Set(ids);
+  const add=[...next].filter(x=>!old.has(x)),remove=existing.filter(x=>!next.has(x));
+  if(add.length){
+    const {error}=await sb().from('office_task_assignees').insert(add.map(user_id=>({
+      task_id:taskId,project_id:project.id,user_id,assigned_by:userId})));
+    if(error)throw error;
+  }
+  for(const user_id of remove){
+    const {error}=await sb().from('office_task_assignees').delete().eq('task_id',taskId).eq('user_id',user_id);
+    if(error)throw error;
+  }
 }
 function newFolder(){
   if(!project)return;
