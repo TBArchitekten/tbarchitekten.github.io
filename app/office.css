@@ -92,3 +92,39 @@
 .office-app .office-project-team input{accent-color:#1769d4}
 .office-app .office-project-team-list{font-size:12px;color:#5b6470}
 @media(max-width:680px){.office-app .office-work-wrap{padding:12px}.office-app .office-work-board{width:100%;scroll-snap-type:x mandatory}.office-app .office-work-bucket{scroll-snap-align:start}}
+
+
+/* Office #38: same Window Work components and layout; data is resolved only by Office adapter. */
+.office-app[data-section="work"] .work-body{min-width:0;width:100%;max-width:none}
+.office-app[data-section="work"] .work-body .work-board{display:flex;align-items:stretch;gap:14px;overflow-x:auto;padding:5px 4px 20px}
+.office-app[data-section="work"] .work-body .work-bucket{flex:0 0 328px;min-width:288px;max-width:380px}
+.office-app[data-section="work"] .work-body .work-bucket-scroll{min-height:20px;max-height:calc(100dvh - 260px);overflow:auto}
+.office-app[data-section="work"] .work-body .work-planner-toolbar{display:flex;align-items:center;justify-content:space-between}
+.office-app[data-section="work"] .work-body .work-files{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:12px}
+.office-app[data-section="work"] .work-body .work-file{min-width:0;text-decoration:none}
+.office-app[data-section="work"] .work-body .work-plans-inline{margin-top:28px}
+.office-app[data-section="work"] .work-body .work-plans-inline h3{font-size:14px;margin:0 0 13px}
+.office-app .office-plan-library-heading{margin:30px 0 15px;font-size:17px;font-weight:700;letter-spacing:-.015em}
+.office-app .office-plan-library-card{margin:0}
+.office-app .office-plan-library-link{display:inline-flex;border:1px solid #e1e5ea;border-radius:9px;
+ padding:8px 13px;text-decoration:none;color:#3d5872;background:#fff;font-size:13px}
+.office-app .office-plan-library-link:hover{background:#f1f5fa;border-color:#b9c9dd}
+.office-app .office-plan-create{margin:15px 0 0}
+.office-app .office-plan-library-heading+.office-projects-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px;align-items:start}
+.office-app .work-task-form .office-task-team-label{display:block;font-size:12px;margin-bottom:6px;color:#5e6570;font-weight:600}
+.office-app .office-task-people{display:flex;gap:5px;flex-wrap:wrap;padding-top:4px}
+.office-app .office-task-person{display:inline-flex;align-items:center;gap:7px;border:1px solid #dce4ef;border-radius:9px;
+ padding:8px 10px;background:#f6f8fc;font-size:12px}
+.office-app .office-task-person input{width:15px;height:15px;accent-color:#007aff}
+.office-app .office-work-archive-row{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:10px;border-bottom:1px solid #eee}
+.office-app .office-work-archive-row button{background:#eef4fb;border-radius:9px;border:1px solid #dce5ee;padding:8px 12px}
+.office-app[data-section="calendar"] #calendarScreen .cal-toolbar{width:100%;max-width:none;display:grid;
+ grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:4px}
+.office-app[data-section="calendar"] #calendarScreen .cal-toolbar>.segments{grid-column:2;justify-self:center}
+.office-app[data-section="calendar"] #calendarScreen .cal-toolbar>.cal-toolbar-right{grid-column:3;justify-self:end}
+.office-app[data-section="calendar"] #calendarScreen .cal-nav{width:100%;max-width:none}
+@media(max-width:700px){
+ .office-app[data-section="work"] .work-body .work-bucket{flex-basis:300px}
+ .office-app[data-section="work"] .work-body .work-bucket-scroll{max-height:calc(100dvh - 250px)}
+ .office-app .office-plan-library-heading+.office-projects-list{grid-template-columns:1fr}
+}
