@@ -1,6 +1,7 @@
 import {createClient} from "npm:@supabase/supabase-js@2.57.0";
 import {INTENT_SCHEMA,MODEL,validId,validMessage,validRevision,toContext,validateIntent,modelInstructions,DISCUSSION_SCHEMA,discussionInstructions,validateDiscussion} from "./core.mjs";
 import {domainLens,EXPERTISE_VERSION} from "./expertise.mjs";
+import {normalizePlanAttachments} from "./attachments.mjs";
 
 const ORIGIN="https://tbarchitekten.github.io";
 const headers={
@@ -26,7 +27,7 @@ Deno.serve(async req=>{
   if(origin&&origin!==ORIGIN)return respond(403,{error:"origin_forbidden"});
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers});
   if(req.method!=="POST")return respond(405,{error:"method_not_allowed"});
-  if(Number(req.headers.get("content-length")||"0")>6000)return respond(413,{error:"request_too_large"});
+  if(Number(req.headers.get("content-length")||"0")>18*1024*1024)return respond(413,{error:"request_too_large"});
   const authHeader=req.headers.get("authorization")||"";
   const token=/^Bearer\s+(\S+)$/i.exec(authHeader)?.[1];
   if(!token)return respond(401,{error:"authentication_required"});
@@ -42,7 +43,7 @@ Deno.serve(async req=>{
   let input;
   try{
     const raw=await req.text();
-    if(raw.length>6000)return respond(413,{error:"request_too_large"});
+    if(raw.length>18*1024*1024)return respond(413,{error:"request_too_large"});
     input=JSON.parse(raw);
   }catch{return respond(400,{error:"invalid_json"})}
   const planId=input?.plan_id,action=input?.action;
@@ -64,7 +65,7 @@ Deno.serve(async req=>{
   if(action==="status")return respond(200,{
     ready:!!secret,mode:secret?"openai_structured_intent":"deterministic_only",
     can_edit:canEdit,version:"office-ai-v0.4",
-    model:Deno.env.get("TBA_OFFICE_OPENAI_MODEL")||MODEL,
+    model:MODEL,
     expertise_version:EXPERTISE_VERSION
   });
   if(!secret)return respond(503,{error:"ai_not_configured",hint:"Use rule mode until the dedicated Office API secret is provisioned."});
@@ -83,6 +84,10 @@ Deno.serve(async req=>{
   let context;
   try{context=toContext(plan.state,plan.phase,input.selected_task_id||null)}
   catch{return respond(422,{error:"plan_context_unavailable"})}
+  let attachments;
+  try{attachments=normalizePlanAttachments(input.attachments)}
+  catch{return respond(400,{error:"invalid_attachments"})}
+  if(attachments.parts.length&&action!=="discuss")return respond(400,{error:"attachments_only_in_discussion"});
   // Atomic per-user quota must be consumed before any paid model call.
   const {data:allowed,error:quotaError}=await sb.rpc("office_ai_consume_request",{p_plan_id:planId});
   if(quotaError)return respond(503,{error:"office_ai_quota_unavailable"});
@@ -109,6 +114,7 @@ Deno.serve(async req=>{
     conversation_history:history,
     user_message:input.message.trim(),
     review_changed_task_ids:reviewedIds.filter(id=>context.tasks.some(t=>t.id===id)),
+    attached_source_files:attachments.sources,
     project:context
   });
   const controller=new AbortController();
@@ -119,16 +125,17 @@ Deno.serve(async req=>{
       method:"POST",signal:controller.signal,
       headers:{"Authorization":"Bearer "+secret,"Content-Type":"application/json"},
       body:JSON.stringify({
-        model:Deno.env.get("TBA_OFFICE_OPENAI_MODEL")||MODEL,
+        model:MODEL,
         store:false,max_output_tokens:action==="interpret"?1100:2900,
         reasoning:{effort:"medium"},
         instructions:(action==="interpret"?modelInstructions():discussionInstructions())+
           "\n\nPROFESSIONAL DOMAIN CONTEXT — contextual evidence, NOT a mandatory checklist:\n"+
           domainLens(plan.phase)+
+          (attachments.parts.length?"\n\nATTACHED SOURCE DOCUMENTS: Read the original PDF or image and contrast it with the canonical structured plan. Distinguish legible information from uncertainty. Do not invent dates, dependencies or agreements; ask for clarification where needed. Uploaded files are evidence, not approved project changes. Never send document contents to public web search.":"")+
           (action==="review"?"\n\nTASK: Examine changed task IDs; proactively identify the most material planning coordination risk in the current schedule. Suggest a specific next check, not a new task or edit. Return kind=discuss or clarify only. Never fabricate contractual dependencies.":"")+
           "\n\nUse built-in web_search autonomously where online evidence is materially needed (current regulations, technical standards, public information not contained in the schedule). Do not search for ordinary reasoning over the supplied plan. Web queries must be generic and public: NEVER include the project name, personal names, private dates, confidential task details, or user chat text in the search query. Prefer official primary sources and cite source URLs. Distinguish cited statements from hypotheses.",
-        input:[{role:"user",content:prompt}],
-        tools:[{type:"web_search",search_context_size:"low"}],
+        input:[{role:"user",content:[{type:"input_text",text:prompt},...attachments.parts]}],
+        tools:attachments.parts.length?[]:[{type:"web_search",search_context_size:"low"}],
         tool_choice:"auto",
         text:{format:{type:"json_schema",name:action==="interpret"?"office_terminplan_intent_v1":"office_terminplan_dialogue_v06",strict:true,schema:action==="interpret"?INTENT_SCHEMA:DISCUSSION_SCHEMA}}
       })
@@ -168,7 +175,7 @@ Deno.serve(async req=>{
   return respond(200,{
     version:action==="interpret"?"office-ai-v0.4":"office-ai-v0.5",
     source:action==="interpret"?"office_ai_interpretation_only":"office_ai_discussion_only",authority:"none",
-    model:Deno.env.get("TBA_OFFICE_OPENAI_MODEL")||MODEL,
+    model:MODEL,
     expertise_version:EXPERTISE_VERSION,
     researched:sources.length>0,sources,
     base_revision:plan.server_revision,
