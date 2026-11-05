@@ -12,12 +12,29 @@ alter table public.office_project_members enable row level security;
 grant select,insert,delete on public.office_project_members to authenticated;
 create policy office_project_members_read on public.office_project_members for select to authenticated
  using ((select private.office_is_member()));
+-- The team is collaborative, but membership itself is a consequential permission.
+-- Avoid RLS recursion by keeping the authorization check inside the unexposed private schema.
+create function private.office_can_manage_project_team(p_project_id uuid)
+returns boolean language sql stable security definer set search_path=''
+as $
+ select (select private.office_is_member()) and (
+   (select private.office_is_admin())
+   or exists(select 1 from public.office_projects p
+     where p.id=p_project_id and p.created_by=(select auth.uid()))
+   or exists(select 1 from public.office_project_members pm
+     where pm.project_id=p_project_id and pm.user_id=(select auth.uid()))
+ );
+$;
+revoke all on function private.office_can_manage_project_team(uuid) from public,anon;
+grant execute on function private.office_can_manage_project_team(uuid) to authenticated;
+
 create policy office_project_members_add on public.office_project_members for insert to authenticated
  with check ((select private.office_is_member()) and added_by=(select auth.uid())
+   and (select private.office_can_manage_project_team(project_id))
    and exists(select 1 from public.office_projects p where p.id=project_id and p.status='aktiv')
    and exists(select 1 from public.office_members m where m.user_id=office_project_members.user_id and m.is_active and not m.must_change_password));
 create policy office_project_members_remove on public.office_project_members for delete to authenticated
- using ((select private.office_is_member()));
+ using ((select private.office_is_member()) and (select private.office_can_manage_project_team(project_id)));
 
 -- Team membership is descriptive and collaborative; roles remain office-wide.
 -- Any signed-in active Office colleague can create an active shared project.
