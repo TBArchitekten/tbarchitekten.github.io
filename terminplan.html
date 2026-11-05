@@ -1706,70 +1706,90 @@ body.read-only .editor-only{display:none!important}
       chip.append(name,remove);host.append(chip);
     });
   }
-  async function sendDialogue(event){
-    event.preventDefault();
+  async function sendDialogue(event,forcedMode=null){
+    event?.preventDefault?.();
     if(dialogueWriting)return;
-    const input=$('#dialogueInput');
-    const message=input.value.trim()||(dialogueAttachments.length?'Bitte analysiere die angehängten Dateien und vergleiche sie mit dem bestehenden Terminplan.':'');
-    if(!message)return;
-    input.value='';
-    dialogueProposal=null;
-    const requestId=crypto.randomUUID();
-    const files=dialogueAttachments.slice();
-    addDialogue('user',message+(files.length?'\nAnhänge: '+files.map(f=>f.name).join(' · '):''),'question',requestId);
-    if(!dialogueEngine||!auditEngine){
-      addDialogue('assistant','Regel- oder Dialogmodul ist nicht verfügbar; keine Änderung.', 'warning',requestId);
+    const input=$('#dialogueInput'),files=dialogueAttachments.slice();
+    const message=input.value.trim()||(files.length?'Bitte analysiere die Dokumente.':'');
+    const requestRebuild=forcedMode==='rebuild'||
+      (/(idéntic|identic|identisch|igual al pdf|gleich.*pdf|vollständig.*pdf|komplett.*pdf|reemplaz.*pdf|replace.*pdf)/i.test(message)&&
+       (files.length||dialogueSavedSources.length));
+    if(!message&&!requestRebuild)return;
+    if(requestRebuild&&(!dialogueAIReady||!rebuildEngine)){
+      addDialogue('assistant','Eine vollständige PDF-Rekonstruktion benötigt die Office-KI.','warning');return;
+    }
+    if(requestRebuild&&!files.length&&!dialogueSavedSources.length){
+      addDialogue('assistant','Bitte den PDF-Terminplan einmal anhängen. Neue Dokumente werden ab jetzt privat gespeichert und können in späteren Nachrichten wiederverwendet werden.','warning');
       return;
     }
-    dialogueWriting=true;
+    input.value='';dialogueProposal=null;dialogueWriting=true;
+    const requestId=crypto.randomUUID();
+    const prompt=message||'Rekonstruiere den vollständigen Terminplan aus dem gespeicherten PDF.';
+    addDialogue('user',prompt+(files.length?'\nAnhänge: '+files.map(f=>f.name).join(' · '):''),'question',requestId);
     renderDialogue();
     try{
-      let result;
-      let remoteSources=[];
+      let result,remoteSources=[];
       if(dialogueAIReady&&PLAN_ID){
-        // Uploaded bytes are sent only with this authenticated request, never persisted to the dialogue.
-        const attachments=await Promise.all(files.map(async file=>({
-          name:file.name,mime:planFileMime(file),size:file.size,data:(await readPlanFile(file)).replace(/^data:[^;,]*;base64,/, 'data:'+planFileMime(file)+';base64,')
-        })));
+        const newIds=[];
+        for(const file of files)newIds.push(await uploadPlanSource(file));
+        if(newIds.length){
+          dialogueSelectedSourceIds=new Set(newIds);
+          dialogueAttachments=[];$('#dialogueFileInput').value='';
+          renderPlanFilePreview();await loadSavedSources();
+        }
+        const activeIds=[...dialogueSelectedSourceIds];
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
-          body:{action:'discuss',plan_id:PLAN_ID,message,attachments,
+          body:{action:requestRebuild?'rebuild':'discuss',plan_id:PLAN_ID,
+            message:prompt,source_ids:activeIds,
             selected_task_id:selectedId,expected_revision:serverRevision}
         });
         if(error||!remote||remote.error){
-          const code=remote?.error||'ai_unavailable';
-          addDialogue('assistant','KI-Anfrage nicht abgeschlossen ('+code+
-            '). Keine Änderung. Der Regelmodus bleibt verfügbar.','warning',requestId);
+          addDialogue('assistant','KI-Anfrage nicht abgeschlossen ('+(remote?.error||'ai_unavailable')+
+            '). Keine Änderung. Gespeicherte Dokumente bleiben erhalten.','warning',requestId);
           return;
         }
-        result=dialogueEngine.fromDiscussion({
+        if(requestRebuild){
+          if(remote.version!=='office-ai-v0.6'||remote.source!=='office_ai_complete_plan_proposal'||
+             remote.base_revision!==serverRevision||!remote.result){
+            addDialogue('assistant','PDF-Entwurf ist nicht prüfbar. Keine Änderung.','warning',requestId);return;
+          }
+          if(!remote.result.complete||remote.result.uncertainties?.length){
+            addDialogue('assistant','Der PDF-Plan konnte noch nicht vollständig und zweifelsfrei erfasst werden. '+
+              String(remote.result.summary||'')+'\nUnklar: '+
+              (remote.result.uncertainties||[]).join(' · ')+
+              '\nDer vorhandene Terminplan bleibt unverändert.','warning',requestId);
+            return;
+          }
+          try{
+            result=rebuildEngine.preview({
+              state:clone(data),result:remote.result,revision:serverRevision,
+              requestId,sourceName:remote.source_name,standDate:localIsoToday()
+            });
+          }catch(ex){
+            addDialogue('assistant','PDF-Entwurf konnte nicht validiert werden ('+String(ex.message||ex)+
+              '). Keine Änderung.','warning',requestId);return;
+          }
+        }else result=dialogueEngine.fromDiscussion({
           serverResponse:remote,state:clone(data),engine:auditEngine,
           revision:serverRevision,requestId
         });
-        dialogueAttachments=[];$('#dialogueFileInput').value='';renderPlanFilePreview();
         remoteSources=Array.isArray(remote.sources)?remote.sources:[];
       }else{
-        if(files.length){
-          addDialogue('assistant','Für PDF- und Bildanalysen muss die Office-KI verfügbar sein. Bitte später erneut versuchen. Keine Änderung vorgenommen.','warning',requestId);
-          return;
+        if(files.length||dialogueSavedSources.length){
+          addDialogue('assistant','Für die Analyse gespeicherter Quellen muss die Office-KI verfügbar sein.','warning',requestId);return;
         }
         result=dialogueEngine.answer({
-          message,state:clone(data),engine:auditEngine,selectedTaskId:selectedId,
-          revision:serverRevision,requestId
+          message:prompt,state:clone(data),engine:auditEngine,
+          selectedTaskId:selectedId,revision:serverRevision,requestId
         });
-        if(result.kind==='answer'&&result.text.startsWith('Diese Anfrage kann ich noch nicht'))
-          result.text='Die Office-KI ist derzeit nicht verfügbar. Bis dahin sind nur vordefinierte Regelprüfungen möglich.';
       }
       if(result.kind==='proposal')dialogueProposal=result.proposal;
       addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId,remoteSources);
-      assistantExpanded=true;
-      renderAssistant();
+      assistantExpanded=true;renderAssistant();
     }catch(error){
       console.error('Office dialogue error',error);
-      addDialogue('assistant','Die Anfrage konnte nicht sicher abgeschlossen werden. Keine Änderung vorgenommen.','warning',requestId);
-    }finally{
-      dialogueWriting=false;
-      renderDialogue();
-    }
+      addDialogue('assistant','Die Anfrage konnte nicht sicher abgeschlossen werden. Gespeicherte Quellen bleiben erhalten. Keine Änderung vorgenommen.','warning',requestId);
+    }finally{dialogueWriting=false;renderDialogue()}
   }
   async function approveDialogue(){
     if(!canEdit||!PLAN_ID||!dialogueProposal||!dialogueEngine||!auditEngine||
