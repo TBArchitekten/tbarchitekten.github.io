@@ -105,7 +105,7 @@ function modal(title,fields,onSubmit){
 }
 function newBucket(){
   if(!project)return;
-  modal('Neuer Bucket','<label>Name<input name="name" required maxlength="160" autocomplete="off"></label>',async f=>{
+  modal('Neuer Bucket','<label>Name<input name="name" required maxlength="80" autocomplete="off"></label>',async f=>{
     const name=String(f.get('name')||'').trim();
     if(!name)throw Error('Name fehlt');
     const {error}=await sb().from('office_task_buckets').insert({project_id:project.id,name,position:buckets.length});
@@ -114,7 +114,7 @@ function newBucket(){
 }
 function renameBucket(id){
   const b=buckets.find(x=>x.id===id);if(!b)return;
-  modal('Bucket bearbeiten','<label>Name<input name="name" required maxlength="160" value="'+esc(b.name)+'"></label>',async f=>{
+  modal('Bucket bearbeiten','<label>Name<input name="name" required maxlength="80" value="'+esc(b.name)+'"></label>',async f=>{
     const {error}=await sb().from('office_task_buckets').update({name:String(f.get('name')||'').trim()}).eq('id',id).eq('project_id',project.id);
     if(error)throw error;
   });
@@ -126,7 +126,7 @@ function editTask(id=null,bucketId=null){
     members.filter(x=>team.some(t=>t.user_id===x.user_id)).map(m=>'<option value="'+esc(m.user_id)+'" '+(task?.assignee_id===m.user_id?'selected':'')+'>'+esc(m.display_name)+'</option>').join('');
   const which='<label>Bucket<select name="bucket">'+buckets.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===b?'selected':'')+'>'+esc(x.name)+'</option>').join('')+'</select></label>';
   modal(task?'Aufgabe bearbeiten':'Neue Aufgabe',
-    '<label>Aufgabe<input name="title" required maxlength="250" value="'+esc(task?.title||'')+'"></label>'+
+    '<label>Aufgabe<input name="title" required maxlength="200" value="'+esc(task?.title||'')+'"></label>'+
     which+'<label>Fällig<input name="due" type="date" value="'+esc(task?.due_date||'')+'"></label>'+
     '<label>Mitglied<select name="assignee">'+options+'</select></label>',
     async f=>{
