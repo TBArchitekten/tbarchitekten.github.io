@@ -513,6 +513,7 @@ body.read-only .editor-only{display:none!important}
     <span>Projektzeitraum: <strong id="rangeLabel"></strong></span>
     <span>Vorgänge: <strong id="taskCount"></strong></span>
     <span>Meilensteine: <strong id="milestoneCount"></strong></span>
+    <span id="pdfLinkSummary">Verknüpfungen: <strong id="linkCount"></strong></span>
   </div>
 
   <main class="workspace">
@@ -711,7 +712,7 @@ body.read-only .editor-only{display:none!important}
 
 <script src="./terminplan-engine.js"></script>
 <script src="./terminplan-dialogue.js?v=office37"></script>
-<script src="./terminplan-rebuild.js?v=office37"></script>
+<script src="./terminplan-rebuild.js?v=office39"></script>
 <script>
 (function(){
   'use strict';
@@ -1522,7 +1523,9 @@ body.read-only .editor-only{display:none!important}
         ?!!rebuildEngine&&rebuildEngine.review(dialogueProposal,data,serverRevision).ok
         :dialogueEngine.review(dialogueProposal,data,auditEngine,serverRevision).ok);
     action.hidden=!dialogueProposal;
-    $('#dialogueProposalText').textContent=!dialogueProposal?'':!valid?
+    const missingGraph=dialogueProposal?.kind==='replace_plan'&&!!dialogueProposal.graph_not_transcribed;
+    $('#dialogueProposalText').textContent=!dialogueProposal?'':missingGraph?
+      'Nicht freigabefähig: Die PDF-Pfeile wurden nicht als Vorgängerbeziehungen erkannt. Der Plan wird nicht überschrieben.':!valid?
       'Vorschlag ist nicht mehr aktuell. Bitte erneut anfragen.':
       dialogueProposal.kind==='replace_plan'&&dialogueProposal.mode==='transform'
         ? 'Planänderung: '+dialogueProposal.diff.groups.created.length+' Gruppen neu, '+
@@ -1545,7 +1548,7 @@ body.read-only .editor-only{display:none!important}
         : 'Vorschlag für '+(data.tasks.find(t=>t.id===dialogueProposal.task_id)?.name||dialogueProposal.task_id)+
           ': '+dialogueProposal.before.start+' → '+dialogueProposal.after.start+
           ' · '+dialogueProposal.affected_ids.length+' verknüpfte Nachfolger. Erst nach Freigabe wird gespeichert.';
-    $('#dialogueApprove').disabled=!valid||!canEdit||!!TEMPLATE_ID||saveConflict||!!dialogueApproved||dialogueWriting;
+    $('#dialogueApprove').disabled=missingGraph||!valid||!canEdit||!!TEMPLATE_ID||saveConflict||!!dialogueApproved||dialogueWriting;
     $('#dialogueReject').disabled=dialogueWriting;
     $('#dialogueSend').disabled=dialogueWriting;
     $('#dialogueAttach').disabled=dialogueWriting||!PLAN_ID;
@@ -1745,7 +1748,17 @@ body.read-only .editor-only{display:none!important}
             selected_task_id:selectedId,expected_revision:serverRevision}
         });
         if(error||!remote||remote.error){
-          const reason=remote?.error;
+          // FunctionHttpError carries the actual structured 4xx/5xx response.
+          // Do not replace useful backend validation with generic ai_unavailable.
+          let reason=remote?.error||'';
+          if(!reason&&error?.context){
+            try{
+              const response=error.context.clone?error.context.clone():error.context;
+              const providerBody=await response.json();
+              reason=typeof providerBody?.error==='string'?providerBody.error:'';
+            }catch{/* non-JSON transport failure */}
+          }
+          if(!reason)reason=error?.name||'ai_unavailable';
           const message=reason==='source_document_required'
             ?'Damit ich den vorhandenen Terminplan mit einer PDF-Vorlage vergleichen und vollständig rekonstruieren kann, füge sie bitte über + hinzu. Das Dokument bleibt danach für weitere Nachrichten gespeichert.'
             :'Die KI-Anfrage konnte nicht abgeschlossen werden ('+(reason||'ai_unavailable')+
@@ -1822,6 +1835,10 @@ body.read-only .editor-only{display:none!important}
     if(task?.protectedDate&&task.end>task.protectedDate&&
        !confirm('Geschützter Abgabetermin '+task.protectedDate+' wird überschritten. Trotzdem übernehmen?'))return;
     if(proposal.kind==='replace_plan'){
+      if(proposal.graph_not_transcribed){
+        addDialogue('assistant','Nicht übernommen: Im PDF sind Pfeile sichtbar, aber keine ihrer Beziehungen wurde übertragen. Ein vollständiger Ersatz würde die Verknüpfungen verlieren.','warning',proposal.request_id);
+        return;
+      }
       const counts=proposal.counts;
       const isTransform=proposal.mode==='transform';
       const changes=proposal.diff;
@@ -1839,7 +1856,9 @@ body.read-only .editor-only{display:none!important}
       if(!confirm((isTransform?'Strukturelle Planänderungen übernehmen?':'PDF-Terminplan vollständig ersetzen?')+
         '\n\nAlter Stand: '+counts.previous_groups+' Gruppen, '+counts.previous_tasks+' Einträge.'+
         '\nNeue Fassung: '+counts.groups+' Gruppen, '+counts.tasks+' Einträge, davon '+
-        counts.milestones+' Meilensteine.'+changeSummary+
+        counts.milestones+' Meilensteine, '+(counts.links||0)+' Verknüpfungen.'+
+        (proposal.lost_existing_links?'\nACHTUNG: '+proposal.lost_existing_links+
+         ' bisherige Verknüpfungen würden entfernt. ':'')+changeSummary+
         '\nQuelle: '+proposal.source_name+dependencyWarning+
         '\n\nDer alte Plan wird vorher als Version gesichert. Bitte die neuen Daten und Abhängigkeiten prüfen.'))return;
     }
@@ -1998,6 +2017,12 @@ body.read-only .editor-only{display:none!important}
     $('#rangeLabel').textContent=fmtDate(data.project.start)+' – '+fmtDate(data.project.end);
     $('#taskCount').textContent=data.tasks.filter(t=>t.type!=='milestone').length;
     $('#milestoneCount').textContent=data.tasks.filter(t=>t.type==='milestone').length;
+    const linkCount=data.tasks.reduce((n,t)=>n+taskDependencies(t).length,0);
+    $('#linkCount').textContent=String(linkCount);
+    const evidence=data.project?.pdfLinkRecovery;
+    $('#pdfLinkSummary').title=evidence?.reviewRequired
+      ?'Original-PDF: '+evidence.vectorPaths+' gezeichnete Beziehungen. Beziehungstyp aus Pfeil-Endpunkten, Arbeitstage-Versatz aus Datumswerten berechnet. Vor verbindlicher Verwendung prüfen.'
+      :'Nur die eingetragenen Vorgängerbeziehungen werden angezeigt.';
   }
 
   function taskDependencies(task){
