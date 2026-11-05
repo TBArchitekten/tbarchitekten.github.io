@@ -33,7 +33,7 @@ export function toContext(state,phase,selectedId){
   });
   const groups=(Array.isArray(state?.groups)?state.groups:[]).slice(0,45).map(g=>({
     id:String(g.id||"").slice(0,90),name:String(g.name||"").slice(0,160),
-    category:String(g.category||"").slice(0,30)
+    wbs:String(g.wbs||"").slice(0,28),category:String(g.category||"").slice(0,30)
   }));
   const result={phase:String(phase||"").slice(0,18),groups,
     project_horizon:{start:String(state?.project?.start||"").slice(0,10),end:String(state?.project?.end||"").slice(0,10)},
