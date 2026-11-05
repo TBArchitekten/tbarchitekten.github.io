@@ -111,3 +111,21 @@ test('Complete PDF rows can be proposed with unresolved arrows but never called 
  assert.equal(original.groups[0].id,'existing');
  assert.throws(()=>rebuild.convert(original,source,'Instruction','2026-11-05','transform'),/source_not_completely_verified/);
 });
+
+test('Office Desktop exposes Window rename, move and delete on Office tables, without breaking Window',()=>{
+ const html=read('app/index.html'),adapter=read('app/office-work.js'),
+  operations=read('app/office-desktop-ops.js');
+ assert.match(html,/office-desktop-ops\.js\?v=office38/);
+ assert.match(adapter,/TBA_OFFICE_DESKTOP\?\.enhance/);
+ assert.match(adapter,/office:true,projectId:project\.id/);
+ assert.match(operations,/office_project_folders/);
+ assert.match(operations,/office_project_files/);
+ assert.match(operations,/const folderTable=office\?/);
+ assert.match(operations,/const fileNameField=office\?/);
+ assert.match(operations,/data-office-work\^="folder:/);
+ assert.match(operations,/data-office-work\^="download:/);
+ assert.match(operations,/create\('Umbenennen'/);
+ assert.match(operations,/create\('Verschieben'/);
+ assert.match(operations,/create\('Löschen'/);
+ new Function(operations);new Function(adapter);
+});
