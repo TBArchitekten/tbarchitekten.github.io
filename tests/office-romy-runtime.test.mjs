@@ -53,3 +53,13 @@ test('Romy keeps original Window composer and private histories, no extra chat U
  assert.ok(!front.includes('office-chat-layout'));
  new Function(front);
 });
+
+test('Romy validates full canonical UUIDs for conversation and request identity',()=>{
+ const code=read('supabase/functions/office-assistant/index.ts');
+ const literal=code.split('const UUID=')[1]?.split(';')[0];
+ assert.ok(literal,'UUID regex exists');
+ const pattern=Function('return '+literal)();
+ assert.equal(pattern.test('123e4567-e89b-42d3-a456-426614174000'),true);
+ assert.equal(pattern.test('123e4567-e89b-42d3-426614174000'),false);
+ assert.equal(pattern.test('not-a-uuid'),false);
+});

@@ -20,7 +20,7 @@ const HEADERS={
  "Cache-Control":"no-store","Vary":"Origin",
 };
 const json=(status,body)=>new Response(JSON.stringify(body),{status,headers:{...HEADERS,"Content-Type":"application/json; charset=utf-8"}});
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid=x=>typeof x==="string"&&UUID.test(x);
 const instruction=[
  "Du bist Romy, die persönliche Arbeitsassistentin des jeweils angemeldeten Mitarbeiters oder der Mitarbeiterin bei Titus Bernhard Architekten.",
