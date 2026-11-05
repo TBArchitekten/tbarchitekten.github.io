@@ -67,3 +67,6 @@
 .office-app .office-project-plans a{display:block;margin:8px 0;color:#355d99;font-size:14px}
 .office-app .office-project-empty{color:#7c838a;padding:22px;background:white;border:1px solid #e4e6e9;border-radius:14px}
 @media(max-width:680px){.office-app .office-projects-head{align-items:flex-start;flex-direction:column}.office-app .office-projects-new{width:100%}}
+
+.office-app .office-tools-card + .office-tools-card{margin-top:16px}
+.office-app .office-tools-projects .office-tools-symbol{background:#eef1f2;color:#596674}

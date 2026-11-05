@@ -102,7 +102,11 @@ document.body.innerHTML = `
           <span><strong>Terminplan</strong><small>Projekt auswählen, LPH 3 oder LPH 5 als Muster instanziieren und fortschreiben.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
-        <button type="button" id="officeToolsManage" class="office-tools-manage">Projekte verwalten</button>
+        <button type="button" class="office-tools-card office-tools-projects" id="officeToolsManage" aria-label="Projekte öffnen">
+          <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
+          <span><strong>Projekte</strong><small>Projekte anlegen und verwalten, Projektleitung zuordnen und Terminpläne öffnen.</small></span>
+          <span class="office-tools-arrow" aria-hidden="true">›</span>
+        </button>
       </div>
     </section>
     <section id="projectsScreen" class="screen office-projects-screen" data-screen="projects" aria-label="Projekte">
