@@ -1526,8 +1526,15 @@ body.read-only .editor-only{display:none!important}
     action.hidden=!dialogueProposal;
     $('#dialogueProposalText').textContent=!dialogueProposal?'':!valid?
       'Vorschlag ist nicht mehr aktuell. Bitte erneut anfragen.':
-      dialogueProposal.kind==='replace_plan'
-        ? 'Vollständige Planbearbeitung: '+dialogueProposal.counts.groups+' Gruppen, '+
+      dialogueProposal.kind==='replace_plan'&&dialogueProposal.mode==='transform'
+        ? 'Planänderung: '+dialogueProposal.diff.groups.created.length+' Gruppen neu, '+
+           dialogueProposal.diff.groups.deleted.length+' entfernt, '+
+           dialogueProposal.diff.groups.edited.length+' bearbeitet; '+
+           dialogueProposal.diff.tasks.created.length+' Vorgänge neu, '+
+           dialogueProposal.diff.tasks.deleted.length+' entfernt, '+
+           dialogueProposal.diff.tasks.edited.length+' bearbeitet. Keine Änderung ohne Freigabe.'
+      : dialogueProposal.kind==='replace_plan'
+        ? 'PDF-Rekonstruktion: '+dialogueProposal.counts.groups+' Gruppen, '+
            (dialogueProposal.counts.tasks-dialogueProposal.counts.milestones)+' Vorgänge, '+
            dialogueProposal.counts.milestones+' Meilensteine. Vor Freigabe wird die alte Version gesichert.'
       :dialogueProposal.kind==='add_tasks'
@@ -1776,7 +1783,8 @@ body.read-only .editor-only{display:none!important}
           try{
             result=rebuildEngine.preview({
               state:clone(data),result:remote.result,revision:serverRevision,
-              requestId,sourceName:remote.source_name,standDate:localIsoToday()
+              requestId,sourceName:remote.source_name,standDate:localIsoToday(),
+              mode:requestTransform?'transform':'rebuild'
             });
           }catch(ex){
             addDialogue('assistant','PDF-Entwurf konnte nicht validiert werden ('+String(ex.message||ex)+
@@ -1825,11 +1833,21 @@ body.read-only .editor-only{display:none!important}
        !confirm('Geschützter Abgabetermin '+task.protectedDate+' wird überschritten. Trotzdem übernehmen?'))return;
     if(proposal.kind==='replace_plan'){
       const counts=proposal.counts;
-      if(!confirm('PDF-Terminplan vollständig ersetzen?\n\nAlter Stand: '+
-        counts.previous_groups+' Gruppen, '+counts.previous_tasks+' Einträge.\nNeue Fassung: '+
-        counts.groups+' Gruppen, '+counts.tasks+' Einträge, davon '+
-        counts.milestones+' Meilensteine.\nQuelle: '+proposal.source_name+
-        '\n\nDer alte Plan wird vorher als Version gesichert. Bitte Termine und Abhängigkeiten mit dem Original vergleichen.'))return;
+      const isTransform=proposal.mode==='transform';
+      const changes=proposal.diff;
+      const changeSummary=isTransform&&changes?
+        '\nGruppen: '+changes.groups.created.length+' neu, '+changes.groups.deleted.length+' gelöscht, '+
+        changes.groups.edited.length+' geändert.\nVorgänge: '+
+        changes.tasks.created.length+' neu, '+changes.tasks.deleted.length+' gelöscht, '+
+        changes.tasks.edited.length+' geändert.'+
+        '\nBetroffene: '+[...changes.groups.created,...changes.groups.deleted,...changes.groups.edited,
+          ...changes.tasks.created,...changes.tasks.deleted,...changes.tasks.edited].slice(0,20).join(' · '):'';
+      if(!confirm((isTransform?'Strukturelle Planänderungen übernehmen?':'PDF-Terminplan vollständig ersetzen?')+
+        '\n\nAlter Stand: '+counts.previous_groups+' Gruppen, '+counts.previous_tasks+' Einträge.'+
+        '\nNeue Fassung: '+counts.groups+' Gruppen, '+counts.tasks+' Einträge, davon '+
+        counts.milestones+' Meilensteine.'+changeSummary+
+        '\nQuelle: '+proposal.source_name+
+        '\n\nDer alte Plan wird vorher als Version gesichert. Bitte die neuen Daten und Abhängigkeiten prüfen.'))return;
     }
     if(proposal.kind==='add_tasks'){
       const summary=proposal.created_tasks.map(t=>t.name+' ('+t.start+' – '+t.end+')').join('\n');
@@ -1864,7 +1882,8 @@ body.read-only .editor-only{display:none!important}
       }
       if(proposal.kind==='replace_plan'){
         const {error:snapshotError}=await sb.from('office_terminplan_versions').insert({
-          instance_id:PLAN_ID,label:'Vor PDF-Übernahme · '+localIsoToday()+' · Revision '+serverRevision,
+          instance_id:PLAN_ID,label:(proposal.mode==='transform'?'Vor Planänderung · ':'Vor PDF-Übernahme · ')+
+            localIsoToday()+' · Revision '+serverRevision,
           state:clone(data),created_by:dialogueUserId
         });
         if(snapshotError){
