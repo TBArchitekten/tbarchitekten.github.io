@@ -16,7 +16,7 @@ create policy office_project_members_read on public.office_project_members for s
 -- Avoid RLS recursion by keeping the authorization check inside the unexposed private schema.
 create function private.office_can_manage_project_team(p_project_id uuid)
 returns boolean language sql stable security definer set search_path=''
-as $
+as $$
  select (select private.office_is_member()) and (
    (select private.office_is_admin())
    or exists(select 1 from public.office_projects p
@@ -24,7 +24,7 @@ as $
    or exists(select 1 from public.office_project_members pm
      where pm.project_id=p_project_id and pm.user_id=(select auth.uid()))
  );
-$;
+$$;
 revoke all on function private.office_can_manage_project_team(uuid) from public,anon;
 grant execute on function private.office_can_manage_project_team(uuid) to authenticated;
 
