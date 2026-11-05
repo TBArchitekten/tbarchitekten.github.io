@@ -11,7 +11,7 @@ export const INTENT_SCHEMA={
 };
 export const MODEL="gpt-6.1-terra";
 export function validId(id){return typeof id==="string"&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)}
-export function validMessage(message){return typeof message==="string"&&message.trim().length>=2&&message.length<=1200}
+export function validMessage(message){return typeof message==="string"&&message.trim().length>=2&&message.length<=1500}
 export function validRevision(v){return Number.isSafeInteger(v)&&v>0}
 export function toContext(state,phase,selectedId){
   const tasks=Array.isArray(state?.tasks)?state.tasks:[];

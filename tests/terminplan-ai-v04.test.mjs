@@ -81,5 +81,5 @@ test("bounded size and identity validation",()=>{
  assert.equal(validId("db9f4a37-8ac9-491d-920c-40a566858cb4"),true);
  assert.equal(validId("../../anything"),false);
  assert.equal(validRevision(3),true);assert.equal(validRevision(0),false);
- assert.equal(validMessage("bitte auswerten"),true);assert.equal(validMessage("x".repeat(1201)),false);
+ assert.equal(validMessage("bitte auswerten"),true);assert.equal(validMessage("x".repeat(1500)),true);assert.equal(validMessage("x".repeat(1501)),false);
 });

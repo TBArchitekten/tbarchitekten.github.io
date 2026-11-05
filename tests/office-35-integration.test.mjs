@@ -10,6 +10,8 @@ test('Terminplan accepts actual PDF and JPG input as distinct multimodal items',
  const result=normalizePlanAttachments([entry('Plan.pdf','application/pdf',doc),entry('Foto.jpg','image/jpeg',photo)]);
  assert.deepEqual(result.parts.map(x=>x.type),['input_file','input_image']);
  assert.equal(result.parts[0].filename,'Plan.pdf');
+ assert.equal(result.parts[0].detail,'high');
+ assert.equal(result.parts[1].detail,'high');
  assert.equal(result.sources[0].name,'Plan.pdf');
  assert.equal(result.sources[0].size,Buffer.from(doc,'base64').length);
 });

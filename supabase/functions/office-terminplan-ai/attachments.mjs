@@ -23,7 +23,7 @@ export function normalizePlanAttachments(raw){
     if(mime==='image/jpeg'&&!(bytes.charCodeAt(0)===255&&bytes.charCodeAt(1)===216&&bytes.charCodeAt(2)===255))throw Error('invalid_image_signature');
     if(mime==='image/png'&&!(bytes.charCodeAt(0)===137&&bytes.slice(1,4)==='PNG'))throw Error('invalid_image_signature');
     if(mime==='image/webp'&&!(bytes.startsWith('RIFF')&&bytes.slice(8,12)==='WEBP'))throw Error('invalid_image_signature');
-    parts.push(mime==='application/pdf'?{type:'input_file',filename:name,file_data:data}:{type:'input_image',image_url:data,detail:'auto'});
+    parts.push(mime==='application/pdf'?{type:'input_file',filename:name,file_data:data,detail:'high'}:{type:'input_image',image_url:data,detail:'high'});
     sources.push({name,mime,size:bytes.length});
   }
   return {parts,sources};
