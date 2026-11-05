@@ -29,6 +29,7 @@ test('Project manager is in Window shell; Terminplan is always Terra when availa
  assert.match(shell,/id="officeToolsManage"/);
  assert.doesNotMatch(shell,/href="\.\.\/#work"/);
  assert.match(app,/name==='projects'/);
+ assert.match(app,/OFFICE\?\$\('\.top-actions'\):null/); // one reachable mobile menu
  assert.match(root,/const section=r\.view==='tools'\?'tools':'projects'/);
  assert.match(projects,/from\('office_projects'\)/);
  assert.match(projects,/\.insert\(\{number,name,projektleiter_id:lead\}\)/);
