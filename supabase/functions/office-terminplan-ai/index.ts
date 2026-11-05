@@ -108,7 +108,7 @@ Deno.serve(async req=>{
       .eq("plan_id",planId).eq("user_id",auth.user.id)
       .order("created_at",{ascending:false}).limit(12);
     if(sourceError)return respond(503,{error:"source_index_unavailable"});
-    const chosen=(refs&&refs.length?refs.map(id=>(stored||[]).find(x=>x.id===id)):(stored||[]).slice(0,3));
+    const chosen=refs===undefined?(stored||[]).slice(0,3):refs.map(id=>(stored||[]).find(x=>x.id===id));
     if(chosen.some(x=>!x))return respond(404,{error:"source_not_accessible"});
     const selected=[];let total=0;
     for(const source of chosen){
