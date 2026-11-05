@@ -63,7 +63,8 @@ test("backend requires real user authorization, plan RLS, and separate secret",(
  assert.match(src,/TBA_OFFICE_OPENAI_API_KEY/);
  assert.match(src,/store:false/);
  assert.match(src,/modelInstructions\(\)/);
- assert.match(src,/validateIntent\(JSON\.parse\(text\),context,canEdit\)/);
+ assert.match(src,/validateIntent\(parsed,context,canEdit\)/);
+  assert.match(src,/validateRebuild\(parsed\)/);
  assert.match(src,/sb\.rpc\("office_ai_consume_request"/);
  assert.doesNotMatch(src,/SERVICE_ROLE|isabella|minds[_-]/i);
 });

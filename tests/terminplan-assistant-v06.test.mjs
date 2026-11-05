@@ -15,7 +15,7 @@ test("stronger reasoning model without MINDS runtime dependency",()=>{
  assert.ok(!edge.includes("gari01234")&&!edge.includes("isabella-chat"));
  assert.match(edge,/TBA_OFFICE_OPENAI_API_KEY/);
  assert.match(edge,/store:false/);
- assert.match(edge,/reasoning:\{effort:"medium"\}/);
+ assert.match(edge,/reasoning:\{effort:action==="rebuild"\?"low":"medium"\}/);
 });
 test("domain lens is evidenced, phase-specific and not a mandatory template",()=>{
  assert.match(EXPERTISE_VERSION,/v0\.6/);
@@ -50,7 +50,7 @@ test("floating window does not resize the Gantt and supports collapsed/wide mode
  assert.match(css,/\.assistant-panel\.is-open/);
  assert.match(css,/\.assistant-panel\.is-wide/);
  assert.match(css,/@media print\{\.assistant-panel\{display:none!important\}\}/);
- assert.match(editor,/href="\.\/assistant-surface\.css"/);
+ assert.match(editor,/href="\.\/assistant-surface\.css\?v=office37"/);
  assert.match(editor,/id="assistantWide"/);
  assert.match(editor,/id="assistantClose"/);
  assert.match(editor,/classList\.toggle\('is-open',assistantExpanded\)/);
