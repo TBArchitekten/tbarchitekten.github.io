@@ -6,9 +6,9 @@ import {ROMY_TOOLS} from '../supabase/functions/office-assistant/romy-tools.mjs'
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('Romy reuses Window Skills with versioned inspectable procedures',()=>{
- const slugs=['organizar-dia','preparar-reunion','comunicacion-de-es','seguimiento','recordar-contexto'];
+ const slugs=['investigar','organizar-dia','preparar-reunion','comunicacion-de-es','seguimiento','recordar-contexto'];
  assert.deepEqual(listRomySystemSkills().map(x=>x.slug),slugs);
- assert.equal(ROMY_SYSTEM_SKILLS.length,5);
+ assert.equal(ROMY_SYSTEM_SKILLS.length,6);
  assert.equal(findRomySystemSkill('preparar-reunion')?.version,2);
  for(const skill of ROMY_SYSTEM_SKILLS){
    assert.ok(skill.instructions.length>100,skill.slug);
