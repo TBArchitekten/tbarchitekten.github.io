@@ -32,7 +32,8 @@ test('Project manager is in Window shell; Terminplan is always Terra when availa
  assert.match(app,/OFFICE\?\$\('\.top-actions'\):null/); // one reachable mobile menu
  assert.match(root,/const section=r\.view==='tools'\?'tools':'projects'/);
  assert.match(projects,/from\('office_projects'\)/);
- assert.match(projects,/\.insert\(\{number,name,projektleiter_id:lead\}\)/);
+ assert.match(projects,/projektleiter_id:null/);
+ assert.match(projects,/office_project_members/);
  assert.match(edge,/normalizePlanAttachments\(input\.attachments\)/);
  assert.match(edge,/attachments\.parts/);
  assert.match(edge,/model:MODEL/);

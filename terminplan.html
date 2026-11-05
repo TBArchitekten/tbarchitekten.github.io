@@ -464,7 +464,7 @@ body.read-only .editor-only{display:none!important}
   .bar.audit-affected,.milestone.audit-affected{outline:2px solid #bb9252;outline-offset:2px}
   @media (max-width:900px){.assistant-columns{grid-template-columns:1fr}.assistant-body{max-height:44vh}}
 </style>
-<link rel="stylesheet" href="./assistant-surface.css">
+<link rel="stylesheet" href="./assistant-surface.css?v=office37">
 <link rel="stylesheet" href="./window-editor.css?v=1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>
@@ -539,6 +539,7 @@ body.read-only .editor-only{display:none!important}
       <button type="button" id="assistantToggle" class="assistant-toggle" aria-expanded="false" aria-controls="assistantBody">▸ Terminplan Assistent <span id="assistantSummary" class="assistant-summary">Regelprüfung wird geladen …</span></button>
       <span class="assistant-caption">Office · Planung</span>
       <button class="assistant-window-action" id="assistantWide" type="button" aria-label="Fenster vergrößern" title="Fenster vergrößern">⤢</button>
+      <button class="assistant-window-action" id="assistantPopout" type="button" aria-label="Eigenes Fenster öffnen" title="Eigenes Fenster öffnen">↗</button>
       <button class="assistant-window-action" id="assistantClose" type="button" aria-label="Assistent schließen" title="Schließen">×</button>
     </div>
     <div id="assistantBody" class="assistant-body" hidden>
@@ -575,6 +576,7 @@ body.read-only .editor-only{display:none!important}
             <small class="ai-warning">Bei jeder Anfrage werden Terminplandaten und ausdrücklich angehängte PDFs oder Fotos an den externen Office-KI-Anbieter gesendet. Änderungen nur nach Freigabe.</small>
           </div>
         </div>
+        <div id="dialogueSavedSources" class="dialogue-saved-sources" aria-label="Gespeicherte Planunterlagen"></div>
         <div id="dialogueStream" class="dialogue-stream" role="log" aria-live="polite" aria-relevant="additions"></div>
         <div id="dialogueProposal" class="dialogue-action" hidden>
           <span id="dialogueProposalText">Änderungsvorschlag – noch nicht übernommen.</span>
@@ -584,8 +586,10 @@ body.read-only .editor-only{display:none!important}
         <div id="dialogueAttachmentPreview" class="dialogue-attachment-preview" aria-live="polite"></div>
         <form id="dialogueForm" class="dialogue-input">
           <input id="dialogueFileInput" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.png,.jpg,.jpeg,.webp" multiple hidden>
-          <button id="dialogueAttach" type="button" class="dialogue-attach" title="PDF oder Foto anhängen">+ PDF / Foto</button>
+          <button id="dialogueAttach" type="button" class="dialogue-attach" title="Datei hinzufügen" aria-label="Datei hinzufügen"><span aria-hidden="true">＋</span></button>
           <textarea id="dialogueInput" maxlength="1500" rows="2" placeholder="Was möchtest du am Terminplan verändern? Wir können es zuerst gemeinsam besprechen …" aria-label="Nachricht an Terminplan Assistent"></textarea>
+          <button id="dialogueTransform" type="button" class="dialogue-rebuild" title="Sämtliche Strukturen anhand deiner Anweisung bearbeiten">Plan ändern</button>
+          <button id="dialogueRebuild" type="button" class="dialogue-rebuild" title="Den gesamten Plan aus PDF übernehmen">PDF → Plan</button>
           <button type="submit" id="dialogueSend">Senden</button>
         </form>
       </section>
@@ -708,7 +712,8 @@ body.read-only .editor-only{display:none!important}
 <div class="toast" id="toast"></div>
 
 <script src="./terminplan-engine.js"></script>
-<script src="./terminplan-dialogue.js"></script>
+<script src="./terminplan-dialogue.js?v=office37"></script>
+<script src="./terminplan-rebuild.js?v=office37"></script>
 <script>
 (function(){
   'use strict';
@@ -741,13 +746,21 @@ body.read-only .editor-only{display:none!important}
   let dialogueWriting=false;
   let dialogueAIReady=false;
   let dialogueAttachments=[];
+  let dialogueSavedSources=[];
+  let dialogueSelectedSourceIds=new Set();
+  const rebuildEngine=window.TBATerminplanRebuild||null;
   let dialogueApproved=null;
   let lastAuditedState=null;
   let auditReport=null;
   let auditChange=null;
   let auditHighlightIds=new Set();
-  let assistantExpanded=false;
+  let assistantExpanded=new URLSearchParams(location.search).get('assistant')==='window';
   let assistantWide=false;
+  const assistantIsPopout=assistantExpanded;
+  if(assistantIsPopout)document.body.classList.add('assistant-popout');
+  let assistantWindowState=null;
+  try{assistantWindowState=JSON.parse(localStorage.getItem('office-plan-assistant-window-v1')||'null')}catch{}
+  let assistantFloating=!!assistantWindowState&&!assistantIsPopout&&innerWidth>600;
   let pendingProactiveIds=[];
   let proactiveInFlight=false;
   let lastProactiveAt=0;
@@ -977,6 +990,7 @@ body.read-only .editor-only{display:none!important}
     lastSavedSignature=JSON.stringify(data);
     remoteReady=true;
     await loadDialogue();
+    await loadSavedSources();
     await checkAIStatus();
   }
 
@@ -1506,11 +1520,24 @@ body.read-only .editor-only{display:none!important}
     host.scrollTop=host.scrollHeight;
     const action=$('#dialogueProposal');
     const valid=!!dialogueProposal&&!!dialogueEngine&&
-      dialogueEngine.review(dialogueProposal,data,auditEngine,serverRevision).ok;
+      (dialogueProposal.kind==='replace_plan'
+        ?!!rebuildEngine&&rebuildEngine.review(dialogueProposal,data,serverRevision).ok
+        :dialogueEngine.review(dialogueProposal,data,auditEngine,serverRevision).ok);
     action.hidden=!dialogueProposal;
     $('#dialogueProposalText').textContent=!dialogueProposal?'':!valid?
       'Vorschlag ist nicht mehr aktuell. Bitte erneut anfragen.':
-      dialogueProposal.kind==='add_tasks'
+      dialogueProposal.kind==='replace_plan'&&dialogueProposal.mode==='transform'
+        ? 'Planänderung: '+dialogueProposal.diff.groups.created.length+' Gruppen neu, '+
+           dialogueProposal.diff.groups.deleted.length+' entfernt, '+
+           dialogueProposal.diff.groups.edited.length+' bearbeitet; '+
+           dialogueProposal.diff.tasks.created.length+' Vorgänge neu, '+
+           dialogueProposal.diff.tasks.deleted.length+' entfernt, '+
+           dialogueProposal.diff.tasks.edited.length+' bearbeitet. Keine Änderung ohne Freigabe.'
+      : dialogueProposal.kind==='replace_plan'
+        ? 'PDF-Rekonstruktion: '+dialogueProposal.counts.groups+' Gruppen, '+
+           (dialogueProposal.counts.tasks-dialogueProposal.counts.milestones)+' Vorgänge, '+
+           dialogueProposal.counts.milestones+' Meilensteine. Vor Freigabe wird die alte Version gesichert.'
+      :dialogueProposal.kind==='add_tasks'
         ? 'Vorschlag: '+dialogueProposal.created_tasks.length+' neue Aufgaben. '+dialogueProposal.created_tasks.map(t=>t.name).join(' · ')+
           '. '+dialogueProposal.new_issue_codes.length+' zusätzliche Regelhinweise. Erst nach Freigabe gespeichert.'
         : dialogueProposal.kind==='edit_tasks'
@@ -1524,6 +1551,8 @@ body.read-only .editor-only{display:none!important}
     $('#dialogueReject').disabled=dialogueWriting;
     $('#dialogueSend').disabled=dialogueWriting;
     $('#dialogueAttach').disabled=dialogueWriting||!PLAN_ID;
+    $('#dialogueRebuild').disabled=dialogueWriting||!PLAN_ID||!dialogueAIReady;
+    $('#dialogueTransform').disabled=dialogueWriting||!PLAN_ID||!dialogueAIReady;
   }
   async function storeDialogue(entry){
     if(!PLAN_ID||!dialogueUserId)return;
@@ -1554,6 +1583,66 @@ body.read-only .editor-only{display:none!important}
       sources:Array.isArray(x.event_data?.cited_sources)?x.event_data.cited_sources:[]
     }));
     renderDialogue();
+  }
+
+  async function loadSavedSources(){
+    if(!PLAN_ID||!dialogueUserId)return;
+    const {data:rows,error}=await sb.from('office_terminplan_sources')
+      .select('id,file_name,mime,bytes,storage_path,created_at')
+      .eq('plan_id',PLAN_ID).eq('user_id',dialogueUserId)
+      .order('created_at',{ascending:false}).limit(20);
+    if(error){console.warn('Plan source loading failed',error.message);return}
+    dialogueSavedSources=rows||[];
+    dialogueSelectedSourceIds=new Set([...dialogueSelectedSourceIds].filter(id=>dialogueSavedSources.some(s=>s.id===id)));
+    if(!dialogueSelectedSourceIds.size&&dialogueSavedSources[0])dialogueSelectedSourceIds.add(dialogueSavedSources[0].id);
+    renderSavedSources();
+  }
+  function renderSavedSources(){
+    const host=$('#dialogueSavedSources');if(!host)return;
+    host.replaceChildren();
+    if(!dialogueSavedSources.length)return;
+    const title=document.createElement('span');title.className='dialogue-saved-label';
+    title.textContent='Gespeicherte Quellen · auch bei späteren Fragen verfügbar:';host.append(title);
+    for(const source of dialogueSavedSources){
+      const chip=document.createElement('span');chip.className='dialogue-attachment-chip';
+      const select=document.createElement('button');select.type='button';
+      const selected=dialogueSelectedSourceIds.has(source.id);
+      select.className='dialogue-source-select'+(selected?' selected':'');
+      select.textContent=(selected?'✓ ':'')+source.file_name;
+      select.title='Für die nächste Anfrage '+(selected?'abwählen':'auswählen');
+      select.onclick=()=>{
+        if(selected)dialogueSelectedSourceIds.delete(source.id);
+        else if(dialogueSelectedSourceIds.size<3)dialogueSelectedSourceIds.add(source.id);
+        renderSavedSources();
+      };
+      const del=document.createElement('button');del.type='button';del.textContent='×';
+      del.title='Gespeicherte Datei entfernen';del.setAttribute('aria-label','Quelle löschen: '+source.file_name);
+      del.onclick=async()=>{
+        if(!confirm('Datei „'+source.file_name+'“ dauerhaft aus diesem Terminplan entfernen?'))return;
+        const {error:e1}=await sb.storage.from('office-plan-sources').remove([source.storage_path]);
+        if(e1){alert('Datei konnte nicht gelöscht werden: '+e1.message);return}
+        const {error:e2}=await sb.from('office_terminplan_sources').delete().eq('id',source.id).eq('plan_id',PLAN_ID);
+        if(e2){alert('Dateiregister konnte nicht aktualisiert werden.');return}
+        dialogueSelectedSourceIds.delete(source.id);await loadSavedSources();
+      };
+      chip.append(select,del);host.append(chip);
+    }
+  }
+  async function uploadPlanSource(file){
+    const mime=planFileMime(file),id=crypto.randomUUID(),name=file.name.slice(0,180);
+    const path=dialogueUserId+'/'+PLAN_ID+'/'+id+'-'+name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const {error:uploadError}=await sb.storage.from('office-plan-sources')
+      .upload(path,file,{contentType:mime,upsert:false,cacheControl:'60'});
+    if(uploadError)throw Error('Datei nicht gespeichert: '+uploadError.message);
+    const {data:row,error:recordError}=await sb.from('office_terminplan_sources').insert({
+      plan_id:PLAN_ID,user_id:dialogueUserId,storage_path:path,
+      file_name:name,mime,bytes:file.size
+    }).select('id').single();
+    if(recordError){
+      await sb.storage.from('office-plan-sources').remove([path]);
+      throw Error('Dokumentregistrierung fehlgeschlagen: '+recordError.message);
+    }
+    return row.id;
   }
 
   async function checkAIStatus(){
@@ -1632,77 +1721,105 @@ body.read-only .editor-only{display:none!important}
       chip.append(name,remove);host.append(chip);
     });
   }
-  async function sendDialogue(event){
-    event.preventDefault();
+  async function sendDialogue(event,forcedMode=null){
+    event?.preventDefault?.();
     if(dialogueWriting)return;
-    const input=$('#dialogueInput');
-    const message=input.value.trim()||(dialogueAttachments.length?'Bitte analysiere die angehängten Dateien und vergleiche sie mit dem bestehenden Terminplan.':'');
-    if(!message)return;
-    input.value='';
-    dialogueProposal=null;
-    const requestId=crypto.randomUUID();
-    const files=dialogueAttachments.slice();
-    addDialogue('user',message+(files.length?'\nAnhänge: '+files.map(f=>f.name).join(' · '):''),'question',requestId);
-    if(!dialogueEngine||!auditEngine){
-      addDialogue('assistant','Regel- oder Dialogmodul ist nicht verfügbar; keine Änderung.', 'warning',requestId);
+    const input=$('#dialogueInput'),files=dialogueAttachments.slice();
+    const message=input.value.trim()||(files.length?'Bitte analysiere die Dokumente.':'');
+    const requestRebuild=forcedMode==='rebuild'||
+      (/(idéntic|identic|identisch|igual al pdf|gleich.*pdf|vollständig.*pdf|komplett.*pdf|reemplaz.*pdf|replace.*pdf)/i.test(message)&&
+       (files.length||dialogueSavedSources.length));
+    const requestTransform=!requestRebuild&&(forcedMode==='transform'||/(crear grupos|crea un grupo|neue gruppe|gruppen erstellen|grupo renombr|gruppe umbenenn|borrar grupos|gruppen löschen|elimina (?:las|los) (?:tareas|actividades)|aktivitäten löschen|alle vorgänge ändern|modifica todo el plan)/i.test(message));
+    if(requestTransform&&!message){
+      addDialogue('assistant','Bitte beschreibe zuerst, welche Gruppen, Aufgaben oder Termine geändert werden sollen. Danach auf „Plan ändern“ klicken.','answer');return;
+    }
+    if(!message&&!requestRebuild&&!requestTransform)return;
+    if((requestRebuild||requestTransform)&&(!dialogueAIReady||!rebuildEngine)){
+      addDialogue('assistant','Eine vollständige PDF-Rekonstruktion benötigt die Office-KI.','warning');return;
+    }
+    if(requestRebuild&&!files.length&&!dialogueSavedSources.length){
+      addDialogue('assistant','Bitte den PDF-Terminplan einmal anhängen. Neue Dokumente werden ab jetzt privat gespeichert und können in späteren Nachrichten wiederverwendet werden.','warning');
       return;
     }
-    dialogueWriting=true;
+    input.value='';dialogueProposal=null;dialogueWriting=true;
+    const requestId=crypto.randomUUID();
+    const prompt=message||'Rekonstruiere den vollständigen Terminplan aus dem gespeicherten PDF.';
+    const planAction=requestRebuild?'rebuild':requestTransform?'transform':'discuss';
+    addDialogue('user',prompt+(files.length?'\nAnhänge: '+files.map(f=>f.name).join(' · '):''),'question',requestId);
     renderDialogue();
     try{
-      let result;
-      let remoteSources=[];
+      let result,remoteSources=[];
       if(dialogueAIReady&&PLAN_ID){
-        // Uploaded bytes are sent only with this authenticated request, never persisted to the dialogue.
-        const attachments=await Promise.all(files.map(async file=>({
-          name:file.name,mime:planFileMime(file),size:file.size,data:(await readPlanFile(file)).replace(/^data:[^;,]*;base64,/, 'data:'+planFileMime(file)+';base64,')
-        })));
+        const newIds=[];
+        for(const file of files)newIds.push(await uploadPlanSource(file));
+        if(newIds.length){
+          dialogueSelectedSourceIds=new Set(newIds);
+          dialogueAttachments=[];$('#dialogueFileInput').value='';
+          renderPlanFilePreview();await loadSavedSources();
+        }
+        const activeIds=[...dialogueSelectedSourceIds];
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
-          body:{action:'discuss',plan_id:PLAN_ID,message,attachments,
+          body:{action:planAction,plan_id:PLAN_ID,
+            message:prompt,source_ids:activeIds,
             selected_task_id:selectedId,expected_revision:serverRevision}
         });
         if(error||!remote||remote.error){
-          const code=remote?.error||'ai_unavailable';
-          addDialogue('assistant','KI-Anfrage nicht abgeschlossen ('+code+
-            '). Keine Änderung. Der Regelmodus bleibt verfügbar.','warning',requestId);
+          addDialogue('assistant','KI-Anfrage nicht abgeschlossen ('+(remote?.error||'ai_unavailable')+
+            '). Keine Änderung. Gespeicherte Dokumente bleiben erhalten.','warning',requestId);
           return;
         }
-        result=dialogueEngine.fromDiscussion({
+        if(requestRebuild||requestTransform){
+          if(remote.version!=='office-ai-v0.6'||remote.source!=='office_ai_complete_plan_proposal'||
+             remote.base_revision!==serverRevision||!remote.result){
+            addDialogue('assistant','PDF-Entwurf ist nicht prüfbar. Keine Änderung.','warning',requestId);return;
+          }
+          if(!remote.result.complete||remote.result.uncertainties?.length){
+            addDialogue('assistant',(requestRebuild?'Der PDF-Plan konnte noch nicht vollständig und zweifelsfrei erfasst werden. ':'Die gewünschten Planänderungen konnten nicht eindeutig abgeleitet werden. ')+
+              String(remote.result.summary||'')+'\nUnklar: '+
+              (remote.result.uncertainties||[]).join(' · ')+
+              '\nDer vorhandene Terminplan bleibt unverändert.','warning',requestId);
+            return;
+          }
+          try{
+            result=rebuildEngine.preview({
+              state:clone(data),result:remote.result,revision:serverRevision,
+              requestId,sourceName:remote.source_name,standDate:localIsoToday(),
+              mode:requestTransform?'transform':'rebuild'
+            });
+          }catch(ex){
+            addDialogue('assistant','PDF-Entwurf konnte nicht validiert werden ('+String(ex.message||ex)+
+              '). Keine Änderung.','warning',requestId);return;
+          }
+        }else result=dialogueEngine.fromDiscussion({
           serverResponse:remote,state:clone(data),engine:auditEngine,
           revision:serverRevision,requestId
         });
-        dialogueAttachments=[];$('#dialogueFileInput').value='';renderPlanFilePreview();
         remoteSources=Array.isArray(remote.sources)?remote.sources:[];
       }else{
-        if(files.length){
-          addDialogue('assistant','Für PDF- und Bildanalysen muss die Office-KI verfügbar sein. Bitte später erneut versuchen. Keine Änderung vorgenommen.','warning',requestId);
-          return;
+        if(files.length||dialogueSavedSources.length){
+          addDialogue('assistant','Für die Analyse gespeicherter Quellen muss die Office-KI verfügbar sein.','warning',requestId);return;
         }
         result=dialogueEngine.answer({
-          message,state:clone(data),engine:auditEngine,selectedTaskId:selectedId,
-          revision:serverRevision,requestId
+          message:prompt,state:clone(data),engine:auditEngine,
+          selectedTaskId:selectedId,revision:serverRevision,requestId
         });
-        if(result.kind==='answer'&&result.text.startsWith('Diese Anfrage kann ich noch nicht'))
-          result.text='Die Office-KI ist derzeit nicht verfügbar. Bis dahin sind nur vordefinierte Regelprüfungen möglich.';
       }
       if(result.kind==='proposal')dialogueProposal=result.proposal;
       addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId,remoteSources);
-      assistantExpanded=true;
-      renderAssistant();
+      assistantExpanded=true;renderAssistant();
     }catch(error){
       console.error('Office dialogue error',error);
-      addDialogue('assistant','Die Anfrage konnte nicht sicher abgeschlossen werden. Keine Änderung vorgenommen.','warning',requestId);
-    }finally{
-      dialogueWriting=false;
-      renderDialogue();
-    }
+      addDialogue('assistant','Die Anfrage konnte nicht sicher abgeschlossen werden. Gespeicherte Quellen bleiben erhalten. Keine Änderung vorgenommen.','warning',requestId);
+    }finally{dialogueWriting=false;renderDialogue()}
   }
   async function approveDialogue(){
     if(!canEdit||!PLAN_ID||!dialogueProposal||!dialogueEngine||!auditEngine||
       saveConflict||dialogueWriting||dialogueApproved)return;
     const proposal=dialogueProposal;
-    const review=dialogueEngine.review(proposal,data,auditEngine,serverRevision);
-    if(!review.ok){
+    const review=proposal.kind==='replace_plan'
+      ?rebuildEngine?.review(proposal,data,serverRevision)
+      :dialogueEngine.review(proposal,data,auditEngine,serverRevision);
+    if(!review?.ok){
       dialogueProposal=null;
       addDialogue('assistant','Vorschlag veraltet: '+review.reason+'. Bitte erneut anfragen.','warning',proposal.request_id);
       return;
@@ -1714,6 +1831,24 @@ body.read-only .editor-only{display:none!important}
     const task=review.state.tasks.find(t=>t.id===proposal.task_id);
     if(task?.protectedDate&&task.end>task.protectedDate&&
        !confirm('Geschützter Abgabetermin '+task.protectedDate+' wird überschritten. Trotzdem übernehmen?'))return;
+    if(proposal.kind==='replace_plan'){
+      const counts=proposal.counts;
+      const isTransform=proposal.mode==='transform';
+      const changes=proposal.diff;
+      const changeSummary=isTransform&&changes?
+        '\nGruppen: '+changes.groups.created.length+' neu, '+changes.groups.deleted.length+' gelöscht, '+
+        changes.groups.edited.length+' geändert.\nVorgänge: '+
+        changes.tasks.created.length+' neu, '+changes.tasks.deleted.length+' gelöscht, '+
+        changes.tasks.edited.length+' geändert.'+
+        '\nBetroffene: '+[...changes.groups.created,...changes.groups.deleted,...changes.groups.edited,
+          ...changes.tasks.created,...changes.tasks.deleted,...changes.tasks.edited].slice(0,20).join(' · '):'';
+      if(!confirm((isTransform?'Strukturelle Planänderungen übernehmen?':'PDF-Terminplan vollständig ersetzen?')+
+        '\n\nAlter Stand: '+counts.previous_groups+' Gruppen, '+counts.previous_tasks+' Einträge.'+
+        '\nNeue Fassung: '+counts.groups+' Gruppen, '+counts.tasks+' Einträge, davon '+
+        counts.milestones+' Meilensteine.'+changeSummary+
+        '\nQuelle: '+proposal.source_name+
+        '\n\nDer alte Plan wird vorher als Version gesichert. Bitte die neuen Daten und Abhängigkeiten prüfen.'))return;
+    }
     if(proposal.kind==='add_tasks'){
       const summary=proposal.created_tasks.map(t=>t.name+' ('+t.start+' – '+t.end+')').join('\n');
       const warning=proposal.new_issue_codes.length?'\nAchtung: '+proposal.new_issue_codes.length+' neue Regelhinweise.':'';
@@ -1745,6 +1880,17 @@ body.read-only .editor-only{display:none!important}
         addDialogue('assistant','Nicht ausgeführt: Serverstand geändert oder nicht lesbar.','warning',proposal.request_id);
         return;
       }
+      if(proposal.kind==='replace_plan'){
+        const {error:snapshotError}=await sb.from('office_terminplan_versions').insert({
+          instance_id:PLAN_ID,label:(proposal.mode==='transform'?'Vor Planänderung · ':'Vor PDF-Übernahme · ')+
+            localIsoToday()+' · Revision '+serverRevision,
+          state:clone(data),created_by:dialogueUserId
+        });
+        if(snapshotError){
+          addDialogue('assistant','Sicherung der bisherigen Version fehlgeschlagen. Keine Änderung vorgenommen.','warning',proposal.request_id);
+          return;
+        }
+      }
       dialogueProposal=null;
       dialogueApproved={
         requestId:proposal.request_id,
@@ -1775,6 +1921,7 @@ body.read-only .editor-only{display:none!important}
   function renderAssistant(){
     $('#assistantPanel').classList.toggle('is-open',assistantExpanded);
     $('#assistantPanel').classList.toggle('is-wide',assistantExpanded&&assistantWide);
+    $('#assistantPanel').classList.toggle('is-floating',assistantExpanded&&assistantFloating&&!assistantIsPopout);
     $('#assistantWide').textContent=assistantWide?'⤡':'⤢';
     $('#assistantWide').setAttribute('aria-label',assistantWide?'Fenster verkleinern':'Fenster vergrößern');
     const summary=$('#assistantSummary');
@@ -2456,13 +2603,77 @@ body.read-only .editor-only{display:none!important}
   $('#jsonFile').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);
   $('#assistantToggle').onclick=()=>{assistantExpanded=!assistantExpanded;renderAssistant()};
   $('#assistantClose').onclick=()=>{assistantExpanded=false;renderAssistant()};
-  $('#assistantWide').onclick=()=>{assistantWide=!assistantWide;renderAssistant()};
+  $('#assistantWide').onclick=()=>{
+    assistantWide=!assistantWide;
+    if(assistantFloating&&assistantWindowState){
+      assistantWindowState.width=assistantWide?Math.min(950,innerWidth-24):Math.min(650,innerWidth-24);
+      $('#assistantPanel').style.width='';
+      applyAssistantPosition();
+    }
+    renderAssistant();
+  };
+  $('#assistantPopout').onclick=()=>{
+    const url=new URL(location.href);url.searchParams.set('assistant','window');
+    window.open(url.href,'tba-terminplan-assistant-'+(PLAN_ID||'muster'),
+      'popup=yes,width=920,height=780,scrollbars=yes');
+  };
+  function applyAssistantPosition(){
+    const panel=$('#assistantPanel');
+    if(!panel||!assistantWindowState||assistantIsPopout)return;
+    const box=assistantWindowState;
+    const width=Math.min(Math.max(340,Number(box.width)||650),Math.max(340,innerWidth-24));
+    const height=Math.min(Math.max(360,Number(box.height)||690),Math.max(360,innerHeight-24));
+    const x=Math.max(8,Math.min(Number(box.x)||8,Math.max(8,innerWidth-width-8)));
+    const y=Math.max(8,Math.min(Number(box.y)||8,Math.max(8,innerHeight-height-8)));
+    Object.assign(panel.style,{'--assistant-x':x+'px','--assistant-y':y+'px',
+      '--assistant-w':width+'px','--assistant-h':height+'px'});
+    assistantWindowState={x,y,width,height};
+    localStorage.setItem('office-plan-assistant-window-v1',JSON.stringify(assistantWindowState));
+  }
+  if(assistantFloating)applyAssistantPosition();
+  const assistantDragHead=document.querySelector('#assistantPanel .assistant-head');
+  let assistantPointer=null;
+  assistantDragHead.addEventListener('pointerdown',event=>{
+    if(!assistantExpanded||assistantIsPopout||matchMedia('(max-width:600px)').matches||
+       event.button!==0||event.target.closest('button'))return;
+    const panel=$('#assistantPanel'),rect=panel.getBoundingClientRect();
+    assistantFloating=true;
+    assistantWindowState={x:rect.left,y:rect.top,width:rect.width,height:rect.height};
+    applyAssistantPosition();renderAssistant();
+    assistantPointer={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top};
+    assistantDragHead.setPointerCapture(event.pointerId);
+    panel.classList.add('is-dragging');
+    event.preventDefault();
+  });
+  assistantDragHead.addEventListener('pointermove',event=>{
+    if(!assistantPointer||event.pointerId!==assistantPointer.id)return;
+    assistantWindowState.x=assistantPointer.left+event.clientX-assistantPointer.x;
+    assistantWindowState.y=assistantPointer.top+event.clientY-assistantPointer.y;
+    applyAssistantPosition();
+  });
+  function endAssistantMove(){
+    if(!assistantPointer)return;
+    assistantPointer=null;$('#assistantPanel').classList.remove('is-dragging');
+  }
+  assistantDragHead.addEventListener('pointerup',endAssistantMove);
+  assistantDragHead.addEventListener('pointercancel',endAssistantMove);
+  new ResizeObserver(()=>{
+    if(!assistantFloating||assistantPointer||!assistantExpanded||assistantIsPopout)return;
+    const rect=$('#assistantPanel').getBoundingClientRect();
+    if(Math.abs(rect.width-assistantWindowState.width)>2||Math.abs(rect.height-assistantWindowState.height)>2){
+      assistantWindowState.width=rect.width;assistantWindowState.height=rect.height;
+      applyAssistantPosition();
+    }
+  }).observe($('#assistantPanel'));
+  window.addEventListener('resize',()=>{if(assistantFloating)applyAssistantPosition()});
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape'&&assistantExpanded&&!taskDialog.open&&!groupDialog.open){
       assistantExpanded=false;renderAssistant();
     }
   });
   $('#dialogueForm').onsubmit=sendDialogue;
+  $('#dialogueRebuild').onclick=()=>{void sendDialogue(null,'rebuild')};
+  $('#dialogueTransform').onclick=()=>{void sendDialogue(null,'transform')};
   $('#dialogueAttach').onclick=()=>$('#dialogueFileInput').click();
   $('#dialogueFileInput').onchange=event=>{
     const selected=[...(event.target.files||[])];
