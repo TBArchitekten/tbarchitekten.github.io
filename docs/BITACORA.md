@@ -17,6 +17,11 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · Revisión del PR #35: cerrar enlaces a la raíz
+- La tarjeta Terminplan y Terminplan-Muster del menú pasan a la misma sección interna de Projekte, desde donde se selecciona el Muster y se crea el plan sin montar el gestor raíz. El editor vuelve directamente a Projekte.
+- Se preserva la redirección de enlaces antiguos #plans y #tools a /app; #project con tab=planner conserva Work. La raíz sigue sirviendo a contraseña y administración.
+- Se actualizaron pruebas de enlaces. El PR continúa en borrador, con E2E autenticada pendiente.
+
 ### 2026-11-05 · Integración única de proyectos y fuente multimodal para Terminplan · ChatGPT
 - Qué cambió y por qué: se investiga el salto de sesión desde Tools; la raíz #work inicializaba una segunda interfaz. Se incorpora gestión nativa de proyectos en el shell Window, se conserva compatibilidad de enlaces y se retira la activación manual del KI-Modus. El Terminplan admite PDFs e imágenes como fuentes explícitas y distingue la lectura de fuentes del estado canónico editable.
 - Archivos: app/shell.js, app/office-projects.js, app/app.js, app.js, app/index.html, app/office.css, terminplan.html, office-terminplan-ai/index.ts, attachments.mjs, pruebas y documentación.

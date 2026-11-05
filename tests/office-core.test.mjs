@@ -115,7 +115,7 @@ test('Window design: sidebar of views, Mitglieder in the account menu, one id pe
 test('Window design: the editor uses the same chrome and goes back to its project',()=>{
   const editor=read('terminplan.html'),css=read('window-editor.css');
   assert.match(editor,/<link rel="stylesheet" href="\.\/window-editor\.css\?v=1">/);
-  assert.match(editor,/<a href="\.\/#work" id="officeBack">‹ Work<\/a>/);
+  assert.match(editor,/<a href="\.\/app\/#section=projects" id="officeBack">‹ Projekte<\/a>/);
   assert.match(editor,/back\.href='\.\/app\/#section=projects&project='\+encodeURIComponent\(meta\.project_id\)/);
   assert.match(css,/--accent:#0062cc;/);
   assert.match(css,/@media print\{html,body\{font-family:Arial,Helvetica,sans-serif\}\}/,'print layout keeps its font');
