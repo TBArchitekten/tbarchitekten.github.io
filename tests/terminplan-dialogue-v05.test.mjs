@@ -80,7 +80,7 @@ test("editor prioritizes discussion and preserves existing reviewed save",()=>{
  const html=fs.readFileSync(new URL("../terminplan.html",import.meta.url),"utf8");
  for(const m of html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g))new Function(m[1]);
  assert.match(html,/action:planAction/);
- assert.match(html,/requestTransform/);
+ assert.match(html,/action:'auto'/);
  assert.match(html,/dialogueEngine\.fromDiscussion/);
  assert.match(html,/dialogueProposal\.kind==='add_tasks'/);
  assert.match(html,/Technische Terminprüfung und Kalender/);
