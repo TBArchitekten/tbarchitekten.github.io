@@ -16,7 +16,8 @@
   if(!original||!original.project||!Array.isArray(original.tasks)||!Array.isArray(original.groups))
    throw Error("invalid_current_plan");
   if(!["rebuild","transform"].includes(mode))throw Error("invalid_mode");
-  if(!extraction||extraction.complete!==true||!Array.isArray(extraction.uncertainties)||extraction.uncertainties.length)
+  if(!extraction||extraction.complete!==true||!Array.isArray(extraction.uncertainties)||
+     (mode==="transform"&&extraction.uncertainties.length))
    throw Error("source_not_completely_verified");
   const groupsInput=extraction.groups,taskInput=extraction.tasks;
   if(!Array.isArray(groupsInput)||groupsInput.length<1||groupsInput.length>80||
@@ -158,6 +159,7 @@
    source_name:clean(sourceName,180),
    base_revision:revision,base_fingerprint:stable(state),candidate_fingerprint:stable(candidate),
    extraction:clone(result),stand_date:standDate,diff,
+   unresolved_dependencies:mode==="rebuild"?result.uncertainties.slice():[],
    counts:{groups:candidate.groups.length,tasks:candidate.tasks.length,
      milestones:candidate.tasks.filter(t=>t.type==="milestone").length,
      previous_groups:oldGroups,previous_tasks:oldTasks,previous_milestones:oldMilestones},
@@ -181,6 +183,10 @@
      " Vorgänge, "+proposal.counts.milestones+" Meilensteine. "+
      "Der bisherige Plan enthält "+oldGroups+" Gruppen und "+oldTasks+
      " Einträge. Alle Gruppen und Vorgänge werden beim Übernehmen ersetzt. "+
+     (proposal.unresolved_dependencies.length?
+       "ACHTUNG: "+proposal.unresolved_dependencies.length+" gezeichnete Abhängigkeiten konnten nicht eindeutig gelesen werden und sind NICHT vollständig übernommen. "+
+       "Unklare Beziehungen: "+proposal.unresolved_dependencies.slice(0,8).join(" · ")+". "+
+       "Dieser Entwurf ist bezüglich der Verknüpfungen NICHT identisch mit dem PDF. ":"")+
      "Die bisherige Fassung wird vorher als Version gesichert. "+
      "Bitte Namen, Datumsangaben und gezeichnete Abhängigkeiten vor Bestätigung mit dem PDF vergleichen."};
  }
