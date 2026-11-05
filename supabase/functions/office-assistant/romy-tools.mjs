@@ -18,6 +18,13 @@ export const ROMY_TOOLS=[
  strict:false,parameters:{type:"object",properties:{query:{type:"string"},kind:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"propose_remember",description:"Propose a fact or preference to remember. Must be reviewed by this employee; cannot save accepted memory autonomously.",strict:false,parameters:{type:"object",properties:{kind:{type:"string",enum:["fact","preference"]},content:{type:"string"}},required:["kind","content"],additionalProperties:false}},
 
+ {type:"function",name:"list_missions",description:"Read this employee's own persistent commitments and states. A queued/running mission is not completed. Deliveries remain in the originating conversation.",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
+ {type:"function",name:"propose_start_mission",
+ description:"Propose a persistent, read-only research/planning objective that may continue for several checkpoints after explicit employee review. It cannot write project data, send messages externally, modify calendar/tasks, or accept memories. Requires a grounded completion criterion.",
+ strict:false,parameters:{type:"object",properties:{
+  objective:{type:"string"},completion_criterion:{type:"string"}
+ },required:["objective","completion_criterion"],additionalProperties:false}},
+ {type:"function",name:"propose_control_mission",description:"Request employee approval to resume or cancel their own mission. It must be reviewed; no silent control.",strict:false,parameters:{type:"object",properties:{mission_id:{type:"string"},action:{type:"string",enum:["resume","cancel"]}},required:["mission_id","action"],additionalProperties:false}},
  {type:"function",name:"list_projects",description:"Read the office project catalog (shared with active office members).",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
  {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. Filter optionally by due date or project UUID.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments overlapping an inclusive date range in Europe/Berlin. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
@@ -110,6 +117,28 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
   return await registerProposal({admin,requestId,userId,conversationId,kind:"remember",
     payload:{memory_kind:kind,content,source_conversation_id:conversationId,
       source_request_id:requestId}});
+ }
+ if(name==="list_missions"){
+  const rows=await checkedQuery(userDb.from("office_romy_missions")
+    .select("id,objective,completion_criterion,status,iteration,max_iterations,summary,blocker_question,next_wake_at,created_at,updated_at")
+    .order("updated_at",{ascending:false}).limit(50));
+  return {missions:safeArray(rows,50),scope:"employee_private_confirmed_objectives",writes_authorized:false};
+ }
+ if(name==="propose_start_mission"){
+  const objective=normalized(a.objective,6001),completion=normalized(a.completion_criterion,2401);
+  if(objective.length<5||objective.length>6000||!completion||completion.length>2400)return err("invalid_mission_objective");
+  return await registerProposal({admin,requestId,userId,conversationId,kind:"start_mission",
+    payload:{title:objective.slice(0,100),objective,completion_criterion:completion,
+      consent_scope:"read_only_private_mission",max_iterations:5}});
+ }
+ if(name==="propose_control_mission"){
+  if(!validId(a.mission_id)||!["resume","cancel"].includes(a.action))return err("invalid_mission_control");
+  const {data,error}=await userDb.from("office_romy_missions")
+    .select("id,status,objective").eq("id",a.mission_id).maybeSingle();
+  if(error||!data)return err("mission_not_accessible");
+  return await registerProposal({admin,requestId,userId,conversationId,kind:"control_mission",
+    payload:{mission_id:data.id,action:a.action,title:a.action+" · "+data.objective.slice(0,80),
+      current_status:data.status}});
  }
  if(name==="list_projects"){
   const rows=await checkedQuery(userDb.from("office_projects")
@@ -214,6 +243,70 @@ export async function reviewRomyProposal({userDb,admin,userId,proposalId,decisio
      .update({status:"applied",result_id:memory.id}).eq("id",proposalId).eq("status","applying");
    if(receiptError)throw new Error("memory_receipt_unavailable");
    return {status:"applied",proposal_id:proposalId,result_id:memory.id,kind:"remember"};
+ }
+ if(kind==="start_mission"){
+   const objective=String(p.objective||"").trim(),criterion=String(p.completion_criterion||"").trim();
+   if(objective.length<5||objective.length>6000||!criterion||criterion.length>2400){
+     await admin.from("office_romy_proposals").update({status:"rejected"})
+      .eq("id",proposalId).eq("status","applying");
+     return {error:"invalid_mission_proposal"};
+   }
+   const {data:mission,error:missionError}=await admin.from("office_romy_missions").insert({
+     user_id:userId,conversation_id:proposal.conversation_id,request_id:proposal.request_id,
+     proposal_id:proposalId,objective,completion_criterion:criterion,
+     max_iterations:5,status:"queued"
+   }).select("id").single();
+   if(missionError||!mission){
+     await admin.from("office_romy_proposals").update({status:"pending",reviewed_at:null})
+      .eq("id",proposalId).eq("status","applying");
+     return {error:"mission_create_failed"};
+   }
+   await admin.from("office_romy_mission_events").insert({
+     mission_id:mission.id,user_id:userId,iteration:0,event_type:"created",
+     summary:"Approved by employee"
+   });
+   const {error:receiptError}=await admin.from("office_romy_proposals")
+     .update({status:"applied",result_id:mission.id})
+     .eq("id",proposalId).eq("status","applying");
+   if(receiptError)return {error:"mission_receipt_unavailable"};
+   return {status:"applied",kind:"start_mission",proposal_id:proposalId,
+     result_id:mission.id,mission_id:mission.id};
+ }
+ if(kind==="control_mission"){
+   const action=String(p.action||""),missionId=String(p.mission_id||"");
+   if(!validId(missionId)||!["resume","cancel"].includes(action)){
+     await admin.from("office_romy_proposals").update({status:"rejected"})
+      .eq("id",proposalId).eq("status","applying");
+     return {error:"invalid_mission_control"};
+   }
+   const {data:current}=await userDb.from("office_romy_missions")
+     .select("id,status,iteration").eq("id",missionId).maybeSingle();
+   if(!current||!["queued","running","waiting_for_user","waiting_until"].includes(current.status)||
+      (action==="resume"&&!["waiting_for_user","waiting_until"].includes(current.status))){
+     await admin.from("office_romy_proposals").update({status:"pending",reviewed_at:null})
+      .eq("id",proposalId).eq("status","applying");
+     return {error:"mission_state_conflict"};
+   }
+   const patch=action==="cancel"?
+    {status:"cancelled",lease_token:null,lease_until:null,next_wake_at:null,updated_at:new Date().toISOString()}:
+    {status:"queued",lease_token:null,lease_until:null,next_wake_at:null,
+     max_iterations:Math.min(8,Number(current.iteration)+3),updated_at:new Date().toISOString()};
+   const {data:modified,error:updateError}=await admin.from("office_romy_missions")
+     .update(patch).eq("id",missionId).eq("user_id",userId).eq("status",current.status)
+     .select("id,status").maybeSingle();
+   if(updateError||!modified){
+     await admin.from("office_romy_proposals").update({status:"pending",reviewed_at:null})
+      .eq("id",proposalId).eq("status","applying");
+     return {error:"mission_state_conflict"};
+   }
+   await admin.from("office_romy_mission_events").insert({
+     mission_id:missionId,user_id:userId,iteration:Number(current.iteration),
+     event_type:action==="cancel"?"cancelled":"resumed",summary:"Confirmed by employee"
+   });
+   await admin.from("office_romy_proposals").update({status:"applied",result_id:missionId})
+    .eq("id",proposalId).eq("status","applying");
+   return {status:"applied",kind:"control_mission",mission_id:missionId,
+     mission_status:modified.status,proposal_id:proposalId};
  }
  if(kind==="create_task"){
    table="isabella_tasks";
