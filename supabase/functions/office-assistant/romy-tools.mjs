@@ -22,7 +22,7 @@ export const ROMY_TOOLS=[
  {type:"function",name:"propose_start_mission",
  description:"Propose a persistent, read-only research/planning objective that may continue for several checkpoints after explicit employee review. It cannot write project data, send messages externally, modify calendar/tasks, or accept memories. Requires a grounded completion criterion.",
  strict:false,parameters:{type:"object",properties:{
-  objective:{type:"string"},completion_criterion:{type:"string"}
+  objective:{type:"string"},completion_criterion:{type:"string"},wake_at:{type:"string",description:"Optional user-agreed future date/time with explicit UTC Z or time zone offset; never invent a deadline."}
  },required:["objective","completion_criterion"],additionalProperties:false}},
  {type:"function",name:"propose_control_mission",description:"Request employee approval to resume or cancel their own mission. It must be reviewed; no silent control.",strict:false,parameters:{type:"object",properties:{mission_id:{type:"string"},action:{type:"string",enum:["resume","cancel"]}},required:["mission_id","action"],additionalProperties:false}},
  {type:"function",name:"list_projects",description:"Read the office project catalog (shared with active office members).",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
@@ -127,9 +127,11 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
  if(name==="propose_start_mission"){
   const objective=normalized(a.objective,6001),completion=normalized(a.completion_criterion,2401);
   if(objective.length<5||objective.length>6000||!completion||completion.length>2400)return err("invalid_mission_objective");
+  const wake=a.wake_at?parseExplicitZonedInstant(a.wake_at):null;
+  if(a.wake_at&&(!wake||new Date(wake).getTime()<=Date.now()))return err("mission_wake_requires_explicit_future_instant");
   return await registerProposal({admin,requestId,userId,conversationId,kind:"start_mission",
     payload:{title:objective.slice(0,100),objective,completion_criterion:completion,
-      consent_scope:"read_only_private_mission",max_iterations:5}});
+      approved_wake_at:wake,consent_scope:"read_only_private_mission",max_iterations:5}});
  }
  if(name==="propose_control_mission"){
   if(!validId(a.mission_id)||!["resume","cancel"].includes(a.action))return err("invalid_mission_control");
@@ -254,7 +256,7 @@ export async function reviewRomyProposal({userDb,admin,userId,proposalId,decisio
    const {data:mission,error:missionError}=await admin.from("office_romy_missions").insert({
      user_id:userId,conversation_id:proposal.conversation_id,request_id:proposal.request_id,
      proposal_id:proposalId,objective,completion_criterion:criterion,
-     max_iterations:5,status:"queued"
+     approved_wake_at:p.approved_wake_at||null,max_iterations:5,status:"queued"
    }).select("id").single();
    if(missionError||!mission){
      await admin.from("office_romy_proposals").update({status:"pending",reviewed_at:null})
