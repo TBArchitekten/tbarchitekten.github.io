@@ -1605,6 +1605,14 @@ body.read-only .editor-only{display:none!important}
     finally{proactiveInFlight=false}
   }
 
+  // Safari and file-provider PDFs can have an empty or generic MIME type.
+  // Only the extension is inferred here; the server independently checks binary signatures.
+  function planFileMime(file){
+    const mime=String(file.type||'').toLowerCase();
+    if(['application/pdf','image/jpeg','image/png','image/webp'].includes(mime))return mime;
+    const extension=String(file.name||'').split('.').pop().toLowerCase();
+    return ({pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'})[extension]||'';
+  }
   function readPlanFile(file){
     return new Promise((resolve,reject)=>{
       const reader=new FileReader();
@@ -1647,7 +1655,7 @@ body.read-only .editor-only{display:none!important}
       if(dialogueAIReady&&PLAN_ID){
         // Uploaded bytes are sent only with this authenticated request, never persisted to the dialogue.
         const attachments=await Promise.all(files.map(async file=>({
-          name:file.name,mime:file.type,size:file.size,data:await readPlanFile(file)
+          name:file.name,mime:planFileMime(file),size:file.size,data:await readPlanFile(file)
         })));
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
           body:{action:'discuss',plan_id:PLAN_ID,message,attachments,
@@ -2460,7 +2468,7 @@ body.read-only .editor-only{display:none!important}
     const selected=[...(event.target.files||[])];
     const allowed=['application/pdf','image/jpeg','image/png','image/webp'];
     const combined=[...dialogueAttachments,...selected];
-    if(combined.length>3||selected.some(f=>!allowed.includes(f.type)||!f.size||f.size>8*1024*1024)||
+    if(combined.length>3||selected.some(f=>!allowed.includes(planFileMime(f))||!f.size||f.size>8*1024*1024)||
        combined.reduce((sum,f)=>sum+f.size,0)>12*1024*1024){
       toast('Maximal 3 PDF-/Bilddateien: je 8 MiB und zusammen 12 MiB. Unterstützt: PDF, JPG, PNG und WebP.');
       event.target.value='';return;
