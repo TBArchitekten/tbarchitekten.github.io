@@ -32,7 +32,8 @@
  };
  function card(task,members,now){
   const checks=Array.isArray(task.checklist)?task.checklist:[],completed=checks.filter(x=>x?.done).length;
-  const name=members.find(x=>x.user_id===task.assignee_id)?.display_name||"";
+  const ids=task.assignee_ids||[task.assignee_id].filter(Boolean);
+  const name=[...new Set(ids)].map(id=>members.find(x=>x.user_id===id)?.display_name||"").filter(Boolean).join(", ");
   const initials=name.split(/[\s,]+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join("");
   const done=!!task.completed_at;
   const due=task.due_date?new Date(task.due_date+"T12:00:00").toLocaleDateString("de-DE",{day:"numeric",month:"short"}):"";
