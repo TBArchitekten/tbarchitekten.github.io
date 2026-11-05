@@ -129,7 +129,9 @@ test('Private uploaded files can be reused in subsequent Terminplan requests',()
  assert.match(edge,/saved_source_unavailable/);
  assert.match(html,/loadSavedSources/);
  assert.match(html,/uploadPlanSource/);
- assert.match(html,/id="dialogueRebuild"/);
+ assert.doesNotMatch(html,/id="dialogueRebuild"/);
+ assert.doesNotMatch(html,/id="dialogueTransform"/);
+ assert.match(html,/action:'auto'/);
  assert.match(html,/office_terminplan_versions/);
  assert.match(migration,/enable row level security/);
  assert.match(migration,/user_id=\(select auth\.uid\(\)\)/);
