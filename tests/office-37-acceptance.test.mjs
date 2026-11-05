@@ -108,7 +108,7 @@ test('Structural edits preserve old task identity, progress, protected dates and
 
 test('Office Work connects to Office schema only and can create real buckets and folders',()=>{
  const index=read('app/index.html'),work=read('app/office-work.js'),projects=read('app/office-projects.js');
- assert.match(index,/office-work\.js\?v=office37/);
+ assert.match(index,/office-work\.js\?v=office38/);
  assert.doesNotMatch(index,/src="\.\/work\.js/);
  for(const name of ['office_projects','office_tasks','office_task_buckets','office_project_files','office_project_folders'])
   assert.match(work,new RegExp(name));
