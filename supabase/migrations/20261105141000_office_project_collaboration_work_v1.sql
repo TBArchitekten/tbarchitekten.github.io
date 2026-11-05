@@ -82,3 +82,27 @@ create policy office_instances_team_update on public.office_terminplan_instances
    select 1 from public.office_project_members pm where pm.project_id=office_terminplan_instances.project_id and pm.user_id=(select auth.uid())));
 
 comment on table public.office_project_members is 'Non-hierarchical project team. Office roles and RLS remain independent.';
+
+-- Existing projects gain their creator and legacy lead as ordinary team members.
+insert into public.office_project_members(project_id,user_id,added_by)
+select p.id,p.created_by,p.created_by from public.office_projects p
+join public.office_members m on m.user_id=p.created_by and m.is_active
+where p.created_by is not null
+on conflict do nothing;
+insert into public.office_project_members(project_id,user_id,added_by)
+select p.id,p.projektleiter_id,coalesce(p.created_by,p.projektleiter_id)
+from public.office_projects p
+join public.office_members m on m.user_id=p.projektleiter_id and m.is_active
+where p.projektleiter_id is not null
+on conflict do nothing;
+
+create policy office_buckets_team_update on public.office_task_buckets for update to authenticated
+ using ((select private.office_is_member()) and exists(
+  select 1 from public.office_project_members pm where pm.project_id=office_task_buckets.project_id and pm.user_id=(select auth.uid())))
+ with check ((select private.office_is_member()) and exists(
+  select 1 from public.office_project_members pm where pm.project_id=office_task_buckets.project_id and pm.user_id=(select auth.uid())));
+create policy office_tasks_team_update on public.office_tasks for update to authenticated
+ using ((select private.office_is_member()) and exists(
+  select 1 from public.office_project_members pm where pm.project_id=office_tasks.project_id and pm.user_id=(select auth.uid())))
+ with check ((select private.office_is_member()) and exists(
+  select 1 from public.office_project_members pm where pm.project_id=office_tasks.project_id and pm.user_id=(select auth.uid())));
