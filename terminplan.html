@@ -471,7 +471,7 @@ body.read-only .editor-only{display:none!important}
 </head>
 <body>
 <header class="office-plan-head">
-  <a href="./app/#section=projects" id="officeBack">‹ Projekte</a>
+  <a href="./app/#section=plans" id="officeBack">‹ Terminpläne</a>
   <div class="plan-label" id="officePlanLabel">Terminplan</div>
   <div class="right"><span id="officeMode"></span><span id="saveState"></span></div>
 </header>
@@ -812,8 +812,8 @@ body.read-only .editor-only{display:none!important}
     // Back to where the plan lives: its project page in Work, or the Muster in Tools.
     const back=$('#officeBack');
     if(back){
-      if(TEMPLATE_ID){back.href='./app/#section=projects';back.textContent='‹ Muster'}
-      else if(meta.project_id){back.href='./app/#section=projects&project='+encodeURIComponent(meta.project_id);back.textContent='‹ '+(project.projectNumber||meta.project_number||'Projekt')}
+      if(TEMPLATE_ID){back.href='./app/#section=plans';back.textContent='‹ Muster'}
+      else if(meta.project_id){back.href='./app/#section=plans';back.textContent='‹ Terminpläne'}
     }
     $('#printPlanTitle').textContent=[title,'Planungsterminplan',phase].filter(Boolean).join(' · ');
     $('#printPlanSubtitle').textContent=TEMPLATE_ID
