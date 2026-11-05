@@ -49,3 +49,49 @@ from public.office_tasks t
 join public.office_project_members m on m.project_id=t.project_id and m.user_id=t.assignee_id
 where t.project_id is not null and t.assignee_id is not null
 on conflict(task_id,user_id) do nothing;
+
+
+-- Work file tiles expose Window's rename, relocate and delete actions.
+-- Project membership, not global Office authentication, authorizes file edits.
+-- Preserve the immutable storage identity when the display name or folder changes.
+create policy office_project_files_team_update on public.office_project_files
+for update to authenticated
+using ((select private.office_is_member())
+  and exists(select 1 from public.office_project_members pm
+    where pm.project_id=office_project_files.project_id
+      and pm.user_id=(select auth.uid())))
+with check ((select private.office_is_member())
+  and exists(select 1 from public.office_project_members pm
+    where pm.project_id=office_project_files.project_id
+      and pm.user_id=(select auth.uid()))
+  and exists(select 1 from public.office_projects p
+    where p.id=office_project_files.project_id and p.status='aktiv')
+  and split_part(storage_path,'/',2)=project_id::text
+  and (folder_id is null or exists(
+    select 1 from public.office_project_folders f
+    where f.id=office_project_files.folder_id and f.project_id=office_project_files.project_id)));
+
+create policy office_project_files_team_delete on public.office_project_files
+for delete to authenticated
+using ((select private.office_is_member())
+  and exists(select 1 from public.office_project_members pm
+    where pm.project_id=office_project_files.project_id
+      and pm.user_id=(select auth.uid())));
+
+create or replace function private.office_file_identity_guard()
+returns trigger language plpgsql security invoker set search_path=''
+as $guard$
+begin
+  if current_user='authenticated' and
+    (new.project_id,new.storage_path,new.created_by,new.bytes,new.media_type)
+    is distinct from
+    (old.project_id,old.storage_path,old.created_by,old.bytes,old.media_type)
+  then
+    raise exception 'immutable_office_file_identity' using errcode='23514';
+  end if;
+  return new;
+end;
+$guard$;
+revoke all on function private.office_file_identity_guard() from public,anon;
+create trigger office_file_identity_guard before update on public.office_project_files
+for each row execute function private.office_file_identity_guard();
