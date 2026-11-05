@@ -50,7 +50,7 @@ test('Romy can generate real documents through the governed tool path',()=>{
    'call.name==="create_document"',
    'await createRomyDocument({admin,userId:uid,conversationId,requestId',
    'metadata:{artifacts,skill_trace:skillTrace,sources}',
-   'persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts,result.skill_trace)'
+   'persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts,result.skill_trace,result.sources)'
  ])assert.ok(edge.includes(needle),'Romy server missing '+needle);
  assert.ok(edge.includes('reviewRomyProposal'));
  assert.ok(edge.includes('getUser(token)'));

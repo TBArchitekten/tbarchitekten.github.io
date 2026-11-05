@@ -81,10 +81,10 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
   const pattern="%"+query.replace(/[\\%_]/g,m=>"\\"+m)+"%";
   const rows=await checkedQuery(userDb.from("office_assistant_messages")
     .select("id,conversation_id,role,content,created_at")
-    .ilike("content",pattern).order("created_at",{ascending:false}).limit(60));
-  return {messages:safeArray(rows,60),scope:"only_current_employee_via_message_RLS",
+    .ilike("content",pattern).order("created_at",{ascending:false}).limit(30));
+  return {messages:safeArray(rows,30).map(row=>({...row,content:String(row.content||"").slice(0,2000),truncated:String(row.content||"").length>2000})),scope:"only_current_employee_via_message_RLS",
     provenance:"historic_conversation_not_accepted_memory",
-    has_more_possible:rows.length===60};
+    has_more_possible:rows.length===30};
  }
  if(name==="search_generated_artifacts"){
   let q=userDb.from("office_romy_artifacts")
