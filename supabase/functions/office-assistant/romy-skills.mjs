@@ -2,6 +2,14 @@
 // Office adapters only state actual tool availability and employee context.
 export const ROMY_SYSTEM_SKILLS=Object.freeze([
   {
+    "slug": "investigar",
+    "name": "investigar",
+    "description": "Investiga, verifica o explica temas que requieren información actual, varias fuentes o una síntesis profunda.",
+    "version": 1,
+    "instructions": "# Investigar un tema\\n\\n1. Decide qué requiere web y qué puede resolverse con conocimiento general.\\n2. Verifica afirmaciones actuales con fuentes fiables.\\n3. Si hay desacuerdo, explica las diferencias.\\n4. Respuesta directa primero; evidencia después.\\n5. Incluye fuentes útiles sin saturar.\\n6. Si se pide profundidad, compara perspectivas.\\n7. Usa memoria personal solo cuando sea pertinente.\\n8. Prioriza estructura clara y legible.\\n\\nOffice adapter: web_search es una herramienta nativa de consulta de OpenAI; no puede escribir Office. Las fuentes externas no son memoria ni acuerdos confirmados.",
+    "preferred_tools": ["web_search","search_conversation_history","search_personal_memory"]
+  },
+  {
     "slug": "organizar-dia",
     "name": "organizar-dia",
     "description": "Organiza, prioriza o reordena el día o la semana, encuentra huecos y resuelve conflictos.",
@@ -62,6 +70,7 @@ export const ROMY_SYSTEM_SKILLS=Object.freeze([
     "instructions": "# Recordar contexto personal\n\n1. Busca memoria cuando la conversación actual no baste.\n2. Si hay fechas o acciones, consulta también agenda.\n3. Busca por entidades y relaciones, no solo por palabras idénticas.\n4. Distingue recuerdo explícito, inferencia e incertidumbre.\n5. Ante contradicciones, favorece lo más reciente o explica el conflicto.\n6. No conviertas conocimiento externo en memoria personal.\n7. Guarda relaciones estables útiles cuando emerjan.\n8. No obligues al usuario a repetir información ya disponible.\n\nOffice adapter: search_personal_memory returns only owner-reviewed memories, not semantic search across all prior turns. Cite the actual source and gaps.",
     "preferred_tools": [
       "search_personal_memory",
+      "search_conversation_history",
       "list_calendar",
       "list_projects"
     ]

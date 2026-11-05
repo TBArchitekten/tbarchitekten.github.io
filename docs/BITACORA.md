@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · Romy: investigación y recuperación de Window · ChatGPT
+- Qué cambió y por qué: después de general_execution PR #33, Romy necesita recuperar los IDs de sus propios archivos producidos para editarlos y consultar conversaciones privadas anteriores. Se adapta el search_memory/source boundary de Window: lectura lexical owner-only, sin convertir inferencias o chats en recuerdos. Se añade web_search nativo con citas y la Skill original investigar.
+- Archivos: supabase/functions/office-assistant/index.ts, romy-tools.mjs, romy-skills.mjs, app/app.js, app/index.html, tests y docs.
+- Base de datos: sin migración; respeta RLS existente para office_assistant_messages, office_romy_artifacts y minds_work_files.
+- Deploy de funciones: pendiente; sin modelos, cuotas ni permisos nuevos.
+- Cómo se probó: tests de privacidad/provenance y UI añadidos; CI pendiente.
+- Quedó pendiente: deploy, CI, aceptación de búsquedas web y recuperación autenticadas; memoria semántica no implementada y misiones de días no portadas.
+- Riesgos: no enviar datos privados de empleados ni documentos confidenciales como consultas web; los resultados web son fuentes externas, no memoria aceptada.
+- PR: #34 en preparación.
+
+
 ### 2026-11-05 · General execution Window → Romy · ChatGPT
 - Qué cambió y por qué: port del Window Capability Runtime (Code Interpreter, artifact output scanning, input files, background Responses) al control plane y RLS de TBA Office, sin crear otro asistente. La aplicación utiliza sus tarjetas y chat existentes; los trabajos se recuperan por identificador y no se anuncian finalizados hasta conservar archivos reales.
 - Archivos: supabase/functions/office-assistant/romy-capability-runtime.ts, romy-capability-inputs.ts, romy-capability-service.ts, index.ts, romy-tools.mjs, romy-skills.mjs, app/office-assistant.js, app/index.html, tests y migración.

@@ -6,12 +6,18 @@ export const ROMY_TOOLS=[
  {type:"function",name:"list_skills",description:"List versioned procedures ported from Window; Skills teach workflows but never grant permissions.",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
  {type:"function",name:"load_skill",description:"Load a trusted full Window Skill by exact slug. Maximum four complementary Skills per turn; it cannot authorize actions.",strict:false,parameters:{type:"object",properties:{slug:{type:"string"}},required:["slug"],additionalProperties:false}},
  {type:"function",name:"search_personal_memory",description:"Search this employee's confirmed private memories only; not arbitrary past chat claims or model inferences.",strict:false,parameters:{type:"object",properties:{query:{type:"string"},kind:{type:"string",enum:["fact","preference"]}},additionalProperties:false}},
+ {type:"function",name:"search_conversation_history",
+ description:"Search the current employee's prior private conversations, with message provenance and dates. Results are historical conversation, not accepted autobiographical memory. Never use other employees' conversations.",
+ strict:false,parameters:{type:"object",properties:{query:{type:"string"}},required:["query"],additionalProperties:false}},
+ {type:"function",name:"search_generated_artifacts",
+ description:"Find private output files previously generated for this employee, by exact UUID, title, format and creation date. Returns safe artifact IDs for execute_artifact_task input_files; generated files are deliverables, not confirmed project facts.",
+ strict:false,parameters:{type:"object",properties:{query:{type:"string"},kind:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"propose_remember",description:"Propose a fact or preference to remember. Must be reviewed by this employee; cannot save accepted memory autonomously.",strict:false,parameters:{type:"object",properties:{kind:{type:"string",enum:["fact","preference"]},content:{type:"string"}},required:["kind","content"],additionalProperties:false}},
 
  {type:"function",name:"list_projects",description:"Read the office project catalog (shared with active office members).",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
  {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. Filter optionally by due date or project UUID.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments overlapping an inclusive date range in Europe/Berlin. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
- {type:"function",name:"list_files",description:"List filenames and metadata in the shared Office or project Desktop. project_id can be omitted for the shared Büro root.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},search:{type:"string"}},additionalProperties:false}},
+ {type:"function",name:"list_files",description:"List filenames and metadata in the shared Office or project Desktop. project_id can be omitted for the shared Büro root.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},search:{type:"string"},scope:{type:"string",enum:["office","project","all"]}},additionalProperties:false}},
  {type:"function",name:"read_text_file",description:"Read text/markdown/CSV/JSON source material from a shared Desktop file by exact file UUID. Other formats may require an attachment; do not pretend to read them.",strict:false,parameters:{type:"object",properties:{file_id:{type:"string"}},required:["file_id"],additionalProperties:false}},
  {type:"function",name:"create_document",
  description:"Produce an actual downloadable DOCX, PDF or TXT document from drafted content, using the original Window artifact makers. The document is privately stored for this employee; it is not automatically project truth or shared with Office Desktop.",
@@ -69,6 +75,28 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
   return {memories:safeArray(rows,80),scope:"confirmed_private_memory_for_employee",
     has_more_possible:rows.length===80,provenance:"owner_reviewed_proposals"};
  }
+ if(name==="search_conversation_history"){
+  const query=normalized(a.query,160);
+  if(!query)return err("search_query_required");
+  const pattern="%"+query.replace(/[\\%_]/g,m=>"\\"+m)+"%";
+  const rows=await checkedQuery(userDb.from("office_assistant_messages")
+    .select("id,conversation_id,role,content,created_at")
+    .ilike("content",pattern).order("created_at",{ascending:false}).limit(60));
+  return {messages:safeArray(rows,60),scope:"only_current_employee_via_message_RLS",
+    provenance:"historic_conversation_not_accepted_memory",
+    has_more_possible:rows.length===60};
+ }
+ if(name==="search_generated_artifacts"){
+  let q=userDb.from("office_romy_artifacts")
+    .select("id,kind,title,mime_type,size_bytes,created_at,conversation_id")
+    .order("created_at",{ascending:false}).limit(80);
+  if(a.kind)q=q.eq("kind",normalized(a.kind,30));
+  if(a.query)q=q.ilike("title","%"+normalized(a.query,130).replace(/[\\%_]/g,m=>"\\"+m)+"%");
+  const rows=await checkedQuery(q);
+  return {artifacts:safeArray(rows,80),scope:"only_current_employee_owned_artifacts",
+    source_for_execute_artifact_task:"artifact",verified_project_fact:false,
+    has_more_possible:rows.length===80};
+ }
  if(name==="propose_remember"){
   const kind=String(a.kind||""),content=String(a.content||"").trim();
   if(!["fact","preference"].includes(kind)||!content)return err("invalid_memory_proposal");
@@ -108,10 +136,12 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
   if(a.project_id&&!validId(a.project_id))return err("invalid_project_id");
   let q=userDb.from("minds_work_files")
     .select("id,project_id,folder_id,name,mime_type,size_bytes,created_at");
-  q=a.project_id?q.eq("project_id",a.project_id):q.is("project_id",null);
-  if(a.search)q=q.ilike("name","%"+normalized(a.search,100)+"%");
+  const scope=String(a.scope||"");
+  if(scope==="all")q=q;
+  else q=a.project_id?q.eq("project_id",a.project_id):q.is("project_id",null);
+  if(a.search)q=q.ilike("name","%"+normalized(a.search,100).replace(/[\\%_]/g,m=>"\\"+m)+"%");
   const rows=await checkedQuery(q.order("name").limit(200));
-  return {files:safeArray(rows,200),scope:a.project_id||"Büro",content_read:false};
+  return {files:safeArray(rows,200),scope:a.scope==="all"?"all_office_projects":a.project_id||"Büro",content_read:false,has_more_possible:rows.length===200};
  }
  if(name==="read_text_file"){
   if(!validId(a.file_id))return err("invalid_file_id");
