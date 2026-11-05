@@ -5,7 +5,7 @@
 .office-app [hidden]{display:none !important}
 
 /* The menu links to the office's own pages look like the drawer's buttons. */
-.office-app .drawer>a.drawer-link,.office-app .drawer>#officeSignOut{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--m-border,#eee);
+.office-app .drawer>a.drawer-link,.office-app .drawer>button.drawer-link,.office-app .drawer>#officeSignOut{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--m-border,#eee);
   background:#fff;padding:13px 2px;font:inherit;font-size:15px;line-height:1.5;color:var(--m-ink,#111);text-decoration:none;cursor:pointer}
 .office-app .drawer>#officeSignOut{color:var(--m-danger,#b42318)}
 
@@ -26,6 +26,7 @@
 .office-app .office-tools-head h1{font-size:34px;letter-spacing:-.035em;margin:0 0 14px}
 .office-app .office-tools-head>p:last-child{font-size:16px;color:#686e77;line-height:1.55;max-width:600px;margin:0}
 .office-app .office-tools-card{
+ width:100%;font:inherit;text-align:left;cursor:pointer;
  display:flex;align-items:center;gap:17px;padding:22px;max-width:620px;
  text-decoration:none;color:#191919;background:#fff;border:1px solid #e4e6e9;
  border-radius:18px;box-shadow:0 4px 12px rgba(0,0,0,.04)

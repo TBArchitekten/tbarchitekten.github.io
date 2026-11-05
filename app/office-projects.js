@@ -168,6 +168,10 @@ qs('#officeProjectsBack').addEventListener('click',()=>{
   history.replaceState(null,'','#section=tools');
 });
 document.getElementById('officeToolsManage')?.addEventListener('click',openProjects);
+document.getElementById('officeToolsPlans')?.addEventListener('click',openProjects);
+document.getElementById('officePlansDrawer')?.addEventListener('click',()=>{
+  document.getElementById('closeDrawer')?.click();openProjects();
+});
 document.getElementById('officeProjectsDrawer')?.addEventListener('click',event=>{
   event.preventDefault();
   document.getElementById('closeDrawer')?.click();
