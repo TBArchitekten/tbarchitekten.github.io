@@ -37,10 +37,14 @@ export async function resolveRomyInputFiles(sb:any,userId:string,refs:any[]){
     let row:any=null,bucket="",name="",mime="";
     if(ref.source==="artifact"){
       const {data}=await sb.from("office_romy_artifacts")
-        .select("id,user_id,title,mime_type,storage_path")
+        .select("id,user_id,title,kind,mime_type,storage_path")
         .eq("id",ref.id).eq("user_id",userId).maybeSingle();
       if(!data)throw new Error("input_artifact_not_found");
-      row=data;bucket="office-romy-artifacts";name=safeFilename(data.title||"artifact");mime=String(data.mime_type||"application/octet-stream");
+      row=data;bucket="office-romy-artifacts";
+      const preferredExt=data.kind==="markdown"?"md":data.kind==="image"?"png":String(data.kind||"");
+      const base=safeFilename(data.title||"artifact");
+      name=INPUT_EXTENSIONS.has(extension(base))?base:safeFilename(base+"."+preferredExt);
+      mime=String(data.mime_type||"application/octet-stream");
     }else{
       const {data}=await sb.from("minds_work_files")
         .select("id,user_id,project_id,name,mime_type,size_bytes,storage_path")
@@ -69,10 +73,12 @@ export async function resolveRomyInputFiles(sb:any,userId:string,refs:any[]){
 export function appendCurrentTurnUploads(files:any[],loaded:any[]){
  const out=[...files];
  for(const item of Array.isArray(loaded)?loaded:[]){
-  if(item?.type!=="input_file")continue;
-  const name=safeFilename(item.filename||"chat-upload"),ext=extension(name);
+  if(item?.type!=="input_file"&&item?.type!=="input_image")continue;
+  const imageMime=String(item?.image_url||"").match(/^data:(image\/(?:png|jpeg|webp));base64,/i)?.[1]||"";
+  const imageExt=imageMime==="image/jpeg"?"jpg":imageMime==="image/webp"?"webp":"png";
+  const name=safeFilename(item.type==="input_image"?"chat-image."+imageExt:item.filename||"chat-upload"),ext=extension(name);
   if(!INPUT_EXTENSIONS.has(ext))continue;
-  const file_data=String(item.file_data||"");
+  const file_data=String(item.type==="input_image"?item.image_url:item.file_data||"");
   if(!file_data.startsWith("data:")||file_data.length>17*1024*1024)continue;
   if(out.length>=6)break;
   out.push({source:"chat_attachment",id:null,name,mime:INPUT_MIME_BY_EXT[ext]||"application/octet-stream",

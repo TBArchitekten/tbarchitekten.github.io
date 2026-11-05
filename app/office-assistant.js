@@ -8,7 +8,7 @@ const screen=document.getElementById('assistantScreen');
 const app=()=>window.ISABELLA_APP;
 if(!sb||!screen)return;
 
-let ownerId=null,threadId=null,threads=[],rows=[],busy=false,loadVersion=0;
+let ownerId=null,threadId=null,threads=[],rows=[],busy=false,loadVersion=0,capabilityTimer=null,capabilityPollBusy=false;
 const composer=screen.querySelector('.composer-wrap');
 const statusEl=document.createElement('div');
 statusEl.id='officeAssistantStatus';
@@ -45,7 +45,7 @@ async function refreshThreads(){
   threads=data||[];
   return true;
 }
-async function loadThread(id,{internal=false}={}){
+async function loadThread(id,{internal=false,skipRuns=false}={}){
   if(!ownerId||!id||(busy&&!internal))return false;
   const serial=++loadVersion;
   const all=[];
@@ -60,11 +60,12 @@ async function loadThread(id,{internal=false}={}){
   }
   threadId=id;rows=all;display();status('');
   void showPendingProposals();
+  if(!skipRuns)void checkCapabilityRuns(id);
   return true;
 }
 function startNew(){
   if(busy)return;
-  ++loadVersion;threadId=null;rows=[];display();status('');
+  ++loadVersion;clearTimeout(capabilityTimer);capabilityTimer=null;threadId=null;rows=[];display();status('');
   document.getElementById('chatInput')?.focus();
 }
 async function renameThread(thread){
@@ -127,6 +128,81 @@ function openHistory(){
     line.append(open,rename,remove);list.appendChild(line);
   }
   body.appendChild(list);
+}
+
+async function checkCapabilityRuns(conversationId){
+ if(!ownerId||!conversationId||threadId!==conversationId||capabilityPollBusy)return;
+ clearTimeout(capabilityTimer);capabilityTimer=null;
+ capabilityPollBusy=true;
+ const owner=ownerId;
+ try{
+  const {data,error}=await sb.from('office_romy_capability_runs')
+    .select('id,status,metadata').eq('user_id',owner)
+    .eq('conversation_id',conversationId).order('updated_at',{ascending:false}).limit(35);
+  if(error||ownerId!==owner||threadId!==conversationId)return;
+  const outstanding=(data||[]).filter(run=>
+    ['queued','in_progress'].includes(run.status)||
+    (run.status==='completed'&&!run.metadata?.delivered_to_chat)).slice(0,5);
+  let changed=false,pending=false;
+  for(const run of outstanding){
+   if(ownerId!==owner||threadId!==conversationId)return;
+   try{
+    const {data:result,error:queryError}=await sb.functions.invoke('office-assistant',{
+      body:{action:'capability_status',run_id:run.id}
+    });
+    if(queryError||result?.error){pending=true;continue}
+    if(result?.status==='completed'){changed=true;continue}
+    if(['queued','in_progress'].includes(result?.status)){pending=true;continue}
+    if(result?.status!==run.status)changed=true;
+   }catch{pending=true}
+  }
+  if(changed&&ownerId===owner&&threadId===conversationId)
+    await loadThread(conversationId,{internal:true,skipRuns:true});
+  if(pending&&ownerId===owner&&threadId===conversationId){
+    capabilityTimer=setTimeout(()=>void checkCapabilityRuns(conversationId),15000);
+  }
+ }finally{capabilityPollBusy=false}
+}
+async function openCapabilityRuns(){
+ if(!ownerId||busy)return;
+ const owner=ownerId;
+ const {data,error}=await sb.from('office_romy_capability_runs')
+   .select('id,conversation_id,title,status,summary,error,created_at')
+   .eq('user_id',owner).order('created_at',{ascending:false}).limit(50);
+ if(error||owner!==ownerId){status('Die Arbeitsaufträge konnten nicht geladen werden.');return}
+ app()?.openModal?.('Meine Arbeitsaufträge','');
+ const body=document.getElementById('modalBody');if(!body)return;
+ body.replaceChildren();
+ body.appendChild(element('p','Ausführungen bleiben Ihrem Konto zugeordnet. Fertige Dateien erscheinen im jeweiligen Gespräch.','small'));
+ const list=element('div',null,'office-assistant-history');
+ for(const run of data||[]){
+  const row=element('div',null,'office-assistant-history-row');
+  const details=element('div',null,'office-memory-content');
+  details.appendChild(element('strong',run.title||'Arbeitsauftrag'));
+  details.appendChild(element('p',run.status==='completed'?'Abgeschlossen':run.status==='in_progress'?'In Bearbeitung':run.status==='queued'?'Eingereiht':run.status==='cancelled'?'Abgebrochen':'Fehlgeschlagen'));
+  if(run.summary)details.appendChild(element('p',run.summary.slice(0,400)));
+  const open=element('button','Gespräch','office-assistant-history-edit');
+  open.type='button';
+  open.addEventListener('click',async()=>{app()?.closeModal?.();await loadThread(run.conversation_id)});
+  row.append(details,open);
+  if(['queued','in_progress'].includes(run.status)){
+   const cancel=element('button','Abbrechen','office-assistant-history-edit');
+   cancel.type='button';
+   cancel.addEventListener('click',async()=>{
+    if(!window.confirm('Diesen laufenden Arbeitsauftrag abbrechen?'))return;
+    cancel.disabled=true;
+    const {data:result,error:cancelError}=await sb.functions.invoke('office-assistant',{
+      body:{action:'capability_cancel',run_id:run.id}
+    });
+    if(cancelError||result?.error){status('Abbruch nicht bestätigt.');cancel.disabled=false;return}
+    void openCapabilityRuns();
+   });
+   row.appendChild(cancel);
+  }
+  list.appendChild(row);
+ }
+ if(!data?.length)list.appendChild(element('p','Noch keine Arbeitsaufträge.','small'));
+ body.appendChild(list);
 }
 function showAttachmentNotice(){
   status('Dieses Dateiformat ist noch nicht verfügbar. PDF, Office-Dokumente, Text und Bilder werden unterstützt.');
@@ -272,6 +348,7 @@ async function openMemories(){
 }
 addMenuButton('officeAssistantHistory','Meine Gespräche',()=>void refreshThreads().then(openHistory));
 addMenuButton('officeAssistantMemories','Meine Erinnerungen',()=>void openMemories());
+addMenuButton('officeAssistantRuns','Meine Arbeitsaufträge',()=>void openCapabilityRuns());
 addMenuButton('officeAssistantNew','Neues Gespräch',startNew);
 async function init(){
   const {data:{session},error}=await sb.auth.getSession();
@@ -288,6 +365,7 @@ async function init(){
 const initialized=init();
 sb.auth.onAuthStateChange?.((_event,session)=>{
   if(ownerId&&session?.user?.id!==ownerId){
+    clearTimeout(capabilityTimer);capabilityTimer=null;
     ownerId=null;threadId=null;threads=[];rows=[];display();
   }
 });

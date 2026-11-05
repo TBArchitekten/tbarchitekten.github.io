@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · General execution Window → Romy · ChatGPT
+- Qué cambió y por qué: port del Window Capability Runtime (Code Interpreter, artifact output scanning, input files, background Responses) al control plane y RLS de TBA Office, sin crear otro asistente. La aplicación utiliza sus tarjetas y chat existentes; los trabajos se recuperan por identificador y no se anuncian finalizados hasta conservar archivos reales.
+- Archivos: supabase/functions/office-assistant/romy-capability-runtime.ts, romy-capability-inputs.ts, romy-capability-service.ts, index.ts, romy-tools.mjs, romy-skills.mjs, app/office-assistant.js, app/index.html, tests y migración.
+- Base de datos: migración office_romy_capability_runtime_v1 preparada; prueba en transacción revertida PASS (SELECT owner-only, sin INSERT/UPDATE de cliente ni SELECT anónimo).
+- Deploy de funciones: pendiente de CI; no se añaden cuotas, privilegios ni otra instancia de OpenAI asistente.
+- Cómo se probó: tests de privacidad, input file scope y contratos Window en preparación; CI y E2E pendientes.
+- Quedó pendiente: migración definitiva, CI, deploy, aceptación con empleado y continuidad plenamente autónoma durante días (Window Missions/Commitments).
+- Riesgos o decisiones: se reutiliza el modelo de ejecución de Window, con consumo real de OpenAI. No se comparten archivos privados automáticamente. No confundir background provider con seguimiento recurrente de objetivos.
+- PR: #33 en preparación.
+
+
 ### 2026-11-05 · Skills de Window y recuerdos confirmados para Romy · ChatGPT
 - Qué cambió y por qué: se reutiliza el registro de Skills de Window sin ampliar su autoridad, junto con cinco procedimientos existentes adaptados exclusivamente a las herramientas disponibles de Office. Se incorpora memoria autobiográfica confirmada por cada empleado, con procedencia y sin aceptación silenciosa.
 - Archivos: skill-registry.ts (copiado de Window), romy-skills.mjs (procedimientos de Window con notas de capacidades), romy-tools.mjs, office-assistant/index.ts, app/office-assistant.js, app/index.html, tests y migración.
