@@ -276,7 +276,7 @@ async function downloadFile(id){
   a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 async function moveTask(taskId,bucketId){
-  if(!tasks.some(t=>t.id===taskId)||!buckets.some(b=>b.id===bucketId))return;
+  if(!tasks.some(t=>t.id===taskId)||(bucketId&&!buckets.some(b=>b.id===bucketId)))return;
   const {error}=await sb().from('office_tasks').update({bucket_id:bucketId}).eq('id',taskId).eq('project_id',project.id);
   if(error)status('Aufgabe nicht verschoben: '+error.message);
   else void render();
@@ -379,8 +379,8 @@ function bind(){
        (view==='desktop'&&e.dataTransfer?.types?.includes('Files')))e.preventDefault();
   });
   body?.addEventListener('drop',e=>{
-    const bucket=e.target.closest('[data-drop-bucket]')?.dataset.dropBucket;
-    if(dragged&&bucket){e.preventDefault();void moveTask(dragged,bucket);dragged=null;return}
+    const target=e.target.closest('[data-drop-bucket]');
+    if(dragged&&target){e.preventDefault();void moveTask(dragged,target.dataset.dropBucket||null);dragged=null;return}
     if(view==='desktop'&&project&&e.dataTransfer?.files?.length){
       e.preventDefault();void uploadFiles([...e.dataTransfer.files]);}
     dragged=null;
