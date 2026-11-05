@@ -408,6 +408,11 @@ body.read-only .editor-only{display:none!important}
   .ai-mode input{accent-color:#18231d}
   .ai-mode .ai-warning{font-weight:500;color:#6d6048}
   .ai-mode small{color:var(--muted)}
+  .dialogue-attachment-preview{display:flex;gap:6px;flex-wrap:wrap;padding:0 8px}
+  .dialogue-attachment-chip{display:inline-flex;gap:8px;align-items:center;max-width:100%;border:1px solid #dce0e4;background:#f7f8fa;border-radius:9px;padding:5px 9px;font-size:12px}
+  .dialogue-attachment-chip>span{max-width:220px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+  .dialogue-attachment-chip button{cursor:pointer;border:0;background:none;font-size:18px;line-height:1}
+  .dialogue-attach{white-space:nowrap;padding:8px 10px;border:1px solid #d6dbe0;border-radius:9px;background:white;cursor:pointer}
 
   .assistant-caption{white-space:nowrap}
   @media(max-width:900px){.dialogue-label{align-items:start;flex-direction:column}.dialogue-input{align-items:stretch}}
@@ -564,10 +569,10 @@ body.read-only .editor-only{display:none!important}
         <div class="dialogue-label">
           <strong>Terminplan Gespräch</strong>
           <small>Nur dieser Terminplan · persönliche Verlaufsspeicherung · keine Daten aus MINDS</small>
-          <div class="ai-mode">
-            <label><input type="checkbox" id="dialogueAI" disabled> KI-Modus</label>
+          <div class="ai-mode" role="status">
+            <strong>KI-Assistent</strong>
             <span id="dialogueAIStatus">Prüfe Verfügbarkeit …</span>
-            <small class="ai-warning">Bei Aktivierung werden ausschließlich Terminplandaten an einen externen KI-Anbieter übermittelt.</small>
+            <small class="ai-warning">Bei jeder Anfrage werden Terminplandaten und ausdrücklich angehängte PDFs oder Fotos an den externen Office-KI-Anbieter gesendet. Änderungen nur nach Freigabe.</small>
           </div>
         </div>
         <div id="dialogueStream" class="dialogue-stream" role="log" aria-live="polite" aria-relevant="additions"></div>
@@ -576,7 +581,10 @@ body.read-only .editor-only{display:none!important}
           <button id="dialogueApprove" type="button">Prüfen und übernehmen</button>
           <button id="dialogueReject" type="button" class="secondary">Verwerfen</button>
         </div>
+        <div id="dialogueAttachmentPreview" class="dialogue-attachment-preview" aria-live="polite"></div>
         <form id="dialogueForm" class="dialogue-input">
+          <input id="dialogueFileInput" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.png,.jpg,.jpeg,.webp" multiple hidden>
+          <button id="dialogueAttach" type="button" class="dialogue-attach" title="PDF oder Foto anhängen">+ PDF / Foto</button>
           <textarea id="dialogueInput" maxlength="1500" rows="2" placeholder="Was möchtest du am Terminplan verändern? Wir können es zuerst gemeinsam besprechen …" aria-label="Nachricht an Terminplan Assistent"></textarea>
           <button type="submit" id="dialogueSend">Senden</button>
         </form>
@@ -732,6 +740,7 @@ body.read-only .editor-only{display:none!important}
   let dialogueProposal=null;
   let dialogueWriting=false;
   let dialogueAIReady=false;
+  let dialogueAttachments=[];
   let dialogueApproved=null;
   let lastAuditedState=null;
   let auditReport=null;
@@ -1463,7 +1472,7 @@ body.read-only .editor-only{display:none!important}
     if(!dialogueEvents.length){
       const intro=document.createElement('div');
       intro.className='dialogue-message';
-      intro.textContent='Wir können den Terminplan gemeinsam entwickeln: Fachplanung aufteilen, Abgaben und Abhängigkeiten besprechen oder Termine prüfen. Für die freie Unterhaltung bitte KI-Modus einschalten. Ich ändere nichts ohne eine von dir geprüfte Freigabe.';
+      intro.textContent='Wir können den Terminplan gemeinsam entwickeln: Fachplanung aufteilen, Abgaben und Abhängigkeiten besprechen oder Termine prüfen. Die KI ist bei Verfügbarkeit automatisch aktiv. Du kannst PDF-Dokumente oder Fotos als Quelle hochladen. Ich ändere nichts ohne eine von dir geprüfte Freigabe.';
       host.append(intro);
     }
     for(const entry of dialogueEvents.slice(-60)){
@@ -1514,7 +1523,7 @@ body.read-only .editor-only{display:none!important}
     $('#dialogueApprove').disabled=!valid||!canEdit||!!TEMPLATE_ID||saveConflict||!!dialogueApproved||dialogueWriting;
     $('#dialogueReject').disabled=dialogueWriting;
     $('#dialogueSend').disabled=dialogueWriting;
-    $('#dialogueAI').disabled=!dialogueAIReady||dialogueWriting;
+    $('#dialogueAttach').disabled=dialogueWriting||!PLAN_ID;
   }
   async function storeDialogue(entry){
     if(!PLAN_ID||!dialogueUserId)return;
@@ -1550,7 +1559,6 @@ body.read-only .editor-only{display:none!important}
   async function checkAIStatus(){
     const label=$('#dialogueAIStatus');
     dialogueAIReady=false;
-    $('#dialogueAI').checked=false;
     if(!PLAN_ID){
       label.textContent='Muster: KI deaktiviert (nur Ansicht).';
       renderDialogue();
@@ -1561,25 +1569,24 @@ body.read-only .editor-only{display:none!important}
         body:{action:'status',plan_id:PLAN_ID}
       });
       if(error||!status||status.version!=='office-ai-v0.4'||!status.ready){
-        label.textContent='Keine eigene Office-KI konfiguriert · Regelmodus verfügbar.';
+        label.textContent='KI zurzeit nicht verfügbar · Regelprüfung möglich.';
       }else{
         dialogueAIReady=true;
-        label.textContent='Expertenmodus · '+String(status.model||'GPT-5.4'); 
-        $('#dialogueAI').checked=localStorage.getItem('tba_office_ai_optin_'+dialogueUserId)==='yes';
+        label.textContent='Automatisch aktiv · '+String(status.model||'gpt-6.1-terra');
       }
     }catch(error){
       console.warn('Office AI availability check',String(error?.message||error));
-      label.textContent='KI nicht erreichbar · Regelmodus verfügbar.';
+      label.textContent='KI nicht erreichbar · Regelprüfung möglich.';
     }
     renderDialogue();
   }
 
 
-  // Only after an explicitly enabled AI mode and a successful human edit save.
+  // After an explicitly reviewed and saved edit, request read-only AI feedback when available.
   // An advisory has no tool/write authority. Throttle repeated costly provider calls.
   async function requestProactiveReview(ids){
     if(proactiveInFlight||dialogueWriting||dialogueProposal||saveConflict||
-       !dialogueAIReady||!$('#dialogueAI').checked||!PLAN_ID||!ids.length)return;
+       !dialogueAIReady||!PLAN_ID||!ids.length)return;
     if(Date.now()-lastProactiveAt<120000)return;
     lastProactiveAt=Date.now();proactiveInFlight=true;
     try{
@@ -1598,15 +1605,36 @@ body.read-only .editor-only{display:none!important}
     finally{proactiveInFlight=false}
   }
 
+  function readPlanFile(file){
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>typeof reader.result==='string'?resolve(reader.result):reject(Error('Ungültige Datei'));
+      reader.onerror=()=>reject(Error('Datei nicht lesbar'));
+      reader.readAsDataURL(file);
+    });
+  }
+  function renderPlanFilePreview(){
+    const host=$('#dialogueAttachmentPreview');host.replaceChildren();
+    dialogueAttachments.forEach((file,index)=>{
+      const chip=document.createElement('span');chip.className='dialogue-attachment-chip';
+      const name=document.createElement('span');name.textContent=file.name;
+      const remove=document.createElement('button');remove.type='button';remove.textContent='×';
+      remove.setAttribute('aria-label','Anhang entfernen: '+file.name);
+      remove.onclick=()=>{dialogueAttachments.splice(index,1);renderPlanFilePreview()};
+      chip.append(name,remove);host.append(chip);
+    });
+  }
   async function sendDialogue(event){
     event.preventDefault();
     if(dialogueWriting)return;
-    const input=$('#dialogueInput'),message=input.value.trim();
+    const input=$('#dialogueInput');
+    const message=input.value.trim()||(dialogueAttachments.length?'Bitte analysiere die angehängten Dateien und vergleiche sie mit dem bestehenden Terminplan.':'');
     if(!message)return;
     input.value='';
     dialogueProposal=null;
     const requestId=crypto.randomUUID();
-    addDialogue('user',message,'question',requestId);
+    const files=dialogueAttachments.slice();
+    addDialogue('user',message+(files.length?'\nAnhänge: '+files.map(f=>f.name).join(' · '):''),'question',requestId);
     if(!dialogueEngine||!auditEngine){
       addDialogue('assistant','Regel- oder Dialogmodul ist nicht verfügbar; keine Änderung.', 'warning',requestId);
       return;
@@ -1616,10 +1644,13 @@ body.read-only .editor-only{display:none!important}
     try{
       let result;
       let remoteSources=[];
-      if(dialogueAIReady&&$('#dialogueAI').checked&&PLAN_ID){
-        // Authenticated server independently reloads the plan and validates the JWT + RLS.
+      if(dialogueAIReady&&PLAN_ID){
+        // Uploaded bytes are sent only with this authenticated request, never persisted to the dialogue.
+        const attachments=await Promise.all(files.map(async file=>({
+          name:file.name,mime:file.type,size:file.size,data:await readPlanFile(file)
+        })));
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
-          body:{action:'discuss',plan_id:PLAN_ID,message,
+          body:{action:'discuss',plan_id:PLAN_ID,message,attachments,
             selected_task_id:selectedId,expected_revision:serverRevision}
         });
         if(error||!remote||remote.error){
@@ -1632,14 +1663,19 @@ body.read-only .editor-only{display:none!important}
           serverResponse:remote,state:clone(data),engine:auditEngine,
           revision:serverRevision,requestId
         });
+        dialogueAttachments=[];$('#dialogueFileInput').value='';renderPlanFilePreview();
         remoteSources=Array.isArray(remote.sources)?remote.sources:[];
       }else{
+        if(files.length){
+          addDialogue('assistant','Für PDF- und Bildanalysen muss die Office-KI verfügbar sein. Bitte später erneut versuchen. Keine Änderung vorgenommen.','warning',requestId);
+          return;
+        }
         result=dialogueEngine.answer({
           message,state:clone(data),engine:auditEngine,selectedTaskId:selectedId,
           revision:serverRevision,requestId
         });
         if(result.kind==='answer'&&result.text.startsWith('Diese Anfrage kann ich noch nicht'))
-          result.text='Du bist derzeit im Regelmodus. Für eine gemeinsame Besprechung von Aufgaben, Fachplanern und Abhängigkeiten aktiviere bitte KI-Modus oberhalb des Gesprächs. Im Regelmodus sind nur einzelne vordefinierte Aktionen verfügbar.';
+          result.text='Die Office-KI ist derzeit nicht verfügbar. Bis dahin sind nur vordefinierte Regelprüfungen möglich.';
       }
       if(result.kind==='proposal')dialogueProposal=result.proposal;
       addDialogue('assistant',result.text,result.kind==='proposal'?'proposal':'answer',requestId,remoteSources);
@@ -2419,12 +2455,17 @@ body.read-only .editor-only{display:none!important}
     }
   });
   $('#dialogueForm').onsubmit=sendDialogue;
-  $('#dialogueAI').onchange=()=>{
-    dialogueProposal=null;
-    localStorage.setItem('tba_office_ai_optin_'+dialogueUserId,$('#dialogueAI').checked?'yes':'no');
-    const mode=$('#dialogueAI').checked?'Expertenmodus aktiv · Online-Recherche bei Bedarf.':'Regelmodus aktiv · keine externen KI-Anfragen.';
-    $('#dialogueAIStatus').textContent=mode;
-    renderDialogue();
+  $('#dialogueAttach').onclick=()=>$('#dialogueFileInput').click();
+  $('#dialogueFileInput').onchange=event=>{
+    const selected=[...(event.target.files||[])];
+    const allowed=['application/pdf','image/jpeg','image/png','image/webp'];
+    const combined=[...dialogueAttachments,...selected];
+    if(combined.length>3||selected.some(f=>!allowed.includes(f.type)||!f.size||f.size>8*1024*1024)||
+       combined.reduce((sum,f)=>sum+f.size,0)>12*1024*1024){
+      toast('Maximal 3 PDF-/Bilddateien: je 8 MiB und zusammen 12 MiB. Unterstützt: PDF, JPG, PNG und WebP.');
+      event.target.value='';return;
+    }
+    dialogueAttachments=combined;event.target.value='';renderPlanFilePreview();
   };
   $('#dialogueApprove').onclick=()=>{void approveDialogue()};
   $('#dialogueReject').onclick=rejectDialogue;
