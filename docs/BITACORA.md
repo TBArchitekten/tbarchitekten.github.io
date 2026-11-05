@@ -17,6 +17,14 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-05 · Integración de memoria semántica y misión persistente · ChatGPT
+- Migración TBA Office: pgvector y RPC invoker `office_romy_semantic_recall` aplicadas tras corregir sintaxis de delimitador SQL y GRANT a `extensions.vector`. Verificación live: vector habilitado, RLS habilitada, SELECT autenticado sí, INSERT autenticado no, RPC permitida a empleado autenticado.
+- Misiones: migración `office_romy_persistent_work_v1` aplicada; tabla de compromisos privados y eventos RLS, aprobación de propuesta por empleado, lease token y función atomic `office_romy_finish_mission`. Reintentos limitados; el worker no tiene acceso a herramientas de escritura de Office. Migración y cron de `office_romy_mission_schedule_v1` aplicadas con secreto aleatorio de 256 bits en schema privado. Migraciones de índices FK y timeout 110 s aplicadas.
+- Versiones activas Supabase: `office-assistant` v10 JWT, `office-terminplan-ai` v5 JWT, `office-romy-mission-runner` v1 con autenticación privada independiente. El frontend continúa en el PR #35 hasta merge.
+- Pruebas: GitHub Actions en verde antes de cierre de PR; SQL live confirma RLS, privilegios y cron registrado. Security Advisors sin hallazgos.
+- Límites verificados: ninguna misión real creada aún, ningún embedding de empleado creado, sin aceptación end-to-end de PDF/fotos, XLSX/PPTX ni dos cuentas. No afirmar paridad total de Mission Workspace/Expectation de Isabella ni E2E real.
+- Riesgo vigilado: despliegue frontend requiere merge, lectura real de archivos necesita aceptación de empleado. La primera misión de prueba debe utilizar solo datos de ensayo consentidos y verificar entrega de mensaje, cancelación y reanudación.
+
 ### 2026-11-05 · Revisión del PR #35: cerrar enlaces a la raíz
 - La tarjeta Terminplan y Terminplan-Muster del menú pasan a la misma sección interna de Projekte, desde donde se selecciona el Muster y se crea el plan sin montar el gestor raíz. El editor vuelve directamente a Projekte.
 - Se preserva la redirección de enlaces antiguos #plans y #tools a /app; #project con tab=planner conserva Work. La raíz sigue sirviendo a contraseña y administración.
