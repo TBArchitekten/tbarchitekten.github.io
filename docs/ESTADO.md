@@ -32,7 +32,7 @@ Esta integración está preparada en una rama y no está publicada ni aceptada E
 | App de la oficina (copia de Window) | `app/` y `shared/` | Heute (`ahora.js`), Kalender (`app.js`), Work con Panorama y Planner (`work.js`, `work-team.js`), ficha de tarea (`task-detail.js`, `task-team.js`), planificar tiempo (`time-plan.js`), marco y menú (`shell.js`), sincronización (`sync.js`). |
 | Ajustes de oficina en la copia | `app/office-fristen.js`, `app/office.css`; `const OFFICE=true` en `app.js` y `work.js` | Fristen = hitos de los Terminpläne. Oculta lo que la oficina todavía no tiene. |
 | Editor de Terminplan | `terminplan.html`, `terminplan-engine.js`, `terminplan-dialogue.js`, `window-editor.css` | Gantt por proyecto y fase (LPH), a partir de los Muster. Historia en `docs/TERMINPLAN-ASSISTENT-v0.1…v0.6.md`. |
-| Funciones de Supabase | `supabase/functions/office-terminplan-ai` | Asistente IA del Terminplan. Modelo `gpt-6.1-terra`; el secreto `TBA_OFFICE_OPENAI_MODEL` lo cambia sin deploy. La clave está en el secreto `TBA_OFFICE_OPENAI_API_KEY`, con cuota por persona. |
+| Funciones de Supabase | `supabase/functions/office-terminplan-ai` | Asistente IA del Terminplan. Modelo `gpt-6.1-terra` fijado en la rama #35; la versión de producción anterior todavía admite el override `TBA_OFFICE_OPENAI_MODEL` hasta desplegar la nueva Edge Function. La clave está en el secreto `TBA_OFFICE_OPENAI_API_KEY`, con cuota por persona. |
 | | `supabase/functions/office-admin` | Alta de miembros y contraseña de inicio (solo admin). |
 | | `supabase/functions/office-assistant` | Servicio personal Romy; ACTIVE v5 con JWT; historial privado por miembro, sin límite diario numérico impuesto; registro de solicitudes por empleado. |
 | Base de datos | `supabase/migrations/` | Ver §4. |
@@ -43,7 +43,7 @@ Esta integración está preparada en una rama y no está publicada ni aceptada E
 ## 3. Cómo funciona la app (`./app/`)
 - **Local primero:** cada persona tiene su estado en `localStorage` (`tba-office-window-v1`) y `sync.js` lo sincroniza con Supabase. Si en el mismo navegador inicia sesión otra persona, el estado local se vacía.
 - **Sesión compartida:** la página de inicio y la app usan la misma clave de sesión (`tba-office-auth-v2`). Sin sesión, la app manda a `../`. También manda ahí a quien no es miembro activo o tiene que cambiar su contraseña de inicio.
-- **Proyectos:** se leen de `isabella_projects`, una *vista* sobre `office_projects`. Se crean y editan solo en la página de inicio (Projekte).
+- **Proyectos:** se leen de `isabella_projects`, una *vista* sobre `office_projects`. En la producción actual se administran desde la página raíz; la rama #35 traslada creación y acceso a la sección Projekte de `/app/`, dejando la raíz para compatibilidad y administración.
 - **Kalender de cada persona:** sus tareas propias, las que tiene asignadas (`assignee_person_id` o lista de equipo) y sus propios Termine.
 - **Categorías:** `arbeit` y `personal` por persona. Una tarea de proyecto sin categoría propia se muestra como Arbeit.
 - **Equipo de proyecto:** se elige entre los miembros de la oficina (`isabella_people` = vista de `office_members`). Solo la dirección del proyecto y los admins lo cambian.
