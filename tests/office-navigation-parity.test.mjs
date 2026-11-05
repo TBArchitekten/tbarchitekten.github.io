@@ -29,7 +29,7 @@ test('Tools opens inside the Window shell, while Terminplan remains available',(
   const shell=read('app/shell.js'),app=read('app/app.js');
   assert.ok(shell.includes('id="toolsScreen"'));
   assert.ok(shell.includes('data-nav="tools"'));
-  assert.ok(app.includes("'calendar','tools','projects','readings'"));
+  assert.ok(app.includes("'calendar','tools','projects','plans','readings'"));
   assert.ok(shell.includes('id="officeToolsPlans"'));
   assert.ok(!shell.includes('href="../#plans"'));
 });
