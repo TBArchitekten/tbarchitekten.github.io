@@ -5,7 +5,7 @@ const root=document.getElementById('projectsScreen');
 if(!root)return;
 const qs=s=>root.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sb=()=>window.MINDS_SUPABASE;
-let busy=false,projects=[],plans=[],members=[],userId=null,role='member';
+let busy=false,projects=[],plans=[],templates=[],members=[],userId=null,role='member';
 const selectedProject=()=>new URLSearchParams(String(location.hash||'').replace(/^#/,'')).get('project');
 const status=text=>{qs('#officeProjectsStatus').textContent=text||''};
 function openProjects(){
@@ -15,6 +15,7 @@ function openProjects(){
 }
 function openWork(id){
   window.ISABELLA_APP?.show?.('work');
+  history.replaceState(null,'','#section=work&project='+encodeURIComponent(id));
   setTimeout(()=>window.MINDS_WORK?.open?.(id,'overview'),0);
 }
 function showProjects(){
@@ -46,7 +47,10 @@ function showProjects(){
       all.onclick=()=>{history.replaceState(null,'','#section=projects');showProjects()};
       actions.append(all);
     }
-    const template=document.createElement('a');template.href='../#plans';template.textContent='Terminplan anlegen';actions.append(template);
+    if(project.status==='aktiv'){
+      const template=document.createElement('button');template.type='button';template.textContent='+ Terminplan';
+      template.onclick=()=>newPlan(project);actions.append(template);
+    }
     card.append(actions);
     if(target){
       const box=document.createElement('div');box.className='office-project-plans';
@@ -73,17 +77,58 @@ async function refresh(){
       .select('role,is_active,must_change_password').eq('user_id',userId).maybeSingle();
     if(memberError||!current?.is_active||current.must_change_password)throw Error('Office-Berechtigung prüfen.');
     role=current.role;
-    const [pr,pl,me]=await Promise.all([
+    const [pr,pl,me,tp]=await Promise.all([
       sb().from('office_projects').select('id,number,name,status,projektleiter_id').order('number').limit(250),
       sb().from('office_terminplan_instances').select('id,project_id,phase,updated_at').eq('is_archived',false).limit(500),
-      sb().from('office_members').select('user_id,display_name,role,is_active').eq('is_active',true).limit(250)
+      sb().from('office_members').select('user_id,display_name,role,is_active').eq('is_active',true).limit(250),
+      sb().from('office_terminplan_templates').select('id,phase,version,state,title').eq('is_active',true).limit(50)
     ]);
-    if(pr.error||pl.error||me.error)throw Error('Projekte konnten nicht geladen werden.');
-    projects=pr.data||[];plans=pl.data||[];members=me.data||[];
+    if(pr.error||pl.error||me.error||tp.error)throw Error('Projekte konnten nicht geladen werden.');
+    projects=pr.data||[];plans=pl.data||[];members=me.data||[];templates=tp.data||[];
     qs('#officeProjectsNew').hidden=!['admin','projektleiter'].includes(role);
     status('');showProjects();
   }catch(error){status(error?.message||'Projekte nicht erreichbar.')}
   finally{busy=false}
+}
+function newPlan(project){
+  const core=window.TBA_OFFICE_CORE;
+  if(!core||!userId||project.status!=='aktiv'){status('Terminplan-Muster nicht verfügbar.');return}
+  const available=templates.filter(x=>x.phase&&x.state);
+  if(!available.length){status('Kein aktives Terminplan-Muster vorhanden.');return}
+  const options=available.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.phase+' · '+(x.title||x.version))+'</option>').join('');
+  window.ISABELLA_APP?.openModal?.('Neuer Terminplan',
+    '<form id="officeCreatePlanForm" class="form">'+
+    '<p class="small">Projekt: '+esc(project.number)+' · '+esc(project.name)+'</p>'+
+    '<label>Muster<select name="template" required>'+options+'</select></label>'+
+    '<label>Projektstart<input type="date" name="start" required value="'+core.todayKey()+'"></label>'+
+    '<p class="small">Das Muster bleibt unverändert. Erst nach Ihrer Bestätigung wird ein Projektterminplan angelegt.</p>'+
+    '<p id="officeCreatePlanError" class="small" role="alert"></p>'+
+    '<button type="submit" class="primary">Terminplan anlegen</button></form>');
+  const form=document.getElementById('officeCreatePlanForm');
+  if(!form)return;
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const template=available.find(x=>x.id===form.elements.template.value);
+    const start=form.elements.start.value;
+    const error=document.getElementById('officeCreatePlanError');
+    if(!template||!start||core.isWeekend(core.parseDate(start))){
+      error.textContent='Bitte einen gültigen Werktag und ein Muster wählen.';return;
+    }
+    const submit=form.querySelector('[type="submit"]');submit.disabled=true;
+    try{
+      const state=core.cloneStateForProject(template.state,{
+        start,number:project.number,name:project.name,phase:template.phase,
+        version:template.version,today:core.todayKey()
+      });
+      const {data, error:saveError}=await sb().from('office_terminplan_instances').insert({
+        project_id:project.id,template_id:template.id,template_version:template.version,
+        project_number:project.number,project_name:project.name,
+        phase:template.phase,owner_id:userId,state,source:'template'
+      }).select('id').single();
+      if(saveError||!data?.id)throw Error('Terminplan konnte nicht erstellt werden.');
+      window.location.assign('../terminplan.html?id='+encodeURIComponent(data.id));
+    }catch(e){error.textContent=e?.message||'Terminplan konnte nicht erstellt werden.';submit.disabled=false}
+  });
 }
 function newProject(){
   if(!['admin','projektleiter'].includes(role))return;
@@ -118,7 +163,10 @@ function newProject(){
   });
 }
 qs('#officeProjectsNew').addEventListener('click',newProject);
-qs('#officeProjectsBack').addEventListener('click',()=>window.ISABELLA_APP?.show?.('tools'));
+qs('#officeProjectsBack').addEventListener('click',()=>{
+  window.ISABELLA_APP?.show?.('tools');
+  history.replaceState(null,'','#section=tools');
+});
 document.getElementById('officeToolsManage')?.addEventListener('click',openProjects);
 document.getElementById('officeProjectsDrawer')?.addEventListener('click',event=>{
   event.preventDefault();
