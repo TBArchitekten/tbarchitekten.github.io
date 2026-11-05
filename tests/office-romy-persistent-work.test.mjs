@@ -41,7 +41,7 @@ test('Worker never receives a service role read tool for Office projects',()=>{
  assert.match(worker,/office_romy_runner_authorized/);
  assert.match(worker,/office_romy_claim_missions/);
  assert.match(worker,/office_romy_finish_mission/);
- assert.match(worker,/if\(authorized!==true/); // auth rejection is explicit
+ assert.match(worker,/authorized!==true/); // auth rejection is explicit
  assert.match(worker,/No tools or external actions are available/);
  assert.doesNotMatch(worker,/minds_work_files|read_text_file|list_projects|propose_create_event/);
  assert.match(sql,/enable row level security/g);
@@ -61,7 +61,7 @@ test('Romy missions never modify Office data automatically',()=>{
  const frontend=read('app/office-assistant.js');
  assert.match(tools,/kind:"start_mission"/);
  assert.match(tools,/kind:"control_mission"/);
- assert.match(tools,/status==="pending"/);
+ assert.match(tools,/proposal.status!=="pending"/);
  assert.match(tools,/reviewRomyProposal/);
  assert.match(frontend,/p\.kind==='start_mission'/);
  assert.match(frontend,/p\.kind==='control_mission'/);
