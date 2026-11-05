@@ -32,7 +32,7 @@ create policy office_romy_embeddings_owner_select
 -- the employee JWT and verifying provenance, can write derived embeddings.
 
 create function public.office_romy_semantic_recall(
-  p_embedding text,p_limit integer default 10
+  p_embedding extensions.vector(1536),p_limit integer default 10
 ) returns table(
   source_type text,source_id uuid,conversation_id uuid,
   content text,occurred_at timestamptz,score real,provenance text
@@ -42,7 +42,7 @@ language sql stable security invoker set search_path='' as $$
     select 'conversation'::text as source_type,m.id as source_id,
       m.conversation_id,
       left(m.content,2200)::text as content,m.created_at as occurred_at,
-      (1-(e.embedding <=> p_embedding::extensions.vector))::real as score,
+      (1-(e.embedding <=> p_embedding))::real as score,
       'historic_conversation_not_accepted_memory'::text as provenance
     from public.office_romy_embeddings e
     join public.office_assistant_messages m on m.id=e.message_id
@@ -52,7 +52,7 @@ language sql stable security invoker set search_path='' as $$
     select 'accepted_memory'::text as source_type, r.id as source_id,
       r.source_conversation_id as conversation_id,
       left(r.content,2200)::text as content,r.created_at as occurred_at,
-      (1-(e.embedding <=> p_embedding::extensions.vector))::real as score,
+      (1-(e.embedding <=> p_embedding))::real as score,
       'owner_confirmed_private_memory'::text as provenance
     from public.office_romy_embeddings e
     join public.office_romy_memories r on r.id=e.memory_id
@@ -67,7 +67,7 @@ language sql stable security invoker set search_path='' as $$
   order by score desc, occurred_at desc
   limit least(greatest(coalesce(p_limit,10),1),20);
 $$;
-revoke all on function public.office_romy_semantic_recall(text,integer) from public,anon;
+revoke all on function public.office_romy_semantic_recall(extensions.vector,integer) from public,anon;
 grant execute on function public.office_romy_semantic_recall(text,integer) to authenticated;
 
 create function public.office_romy_discard_retracted_vector()
