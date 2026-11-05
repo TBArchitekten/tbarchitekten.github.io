@@ -68,7 +68,7 @@ language sql stable security invoker set search_path=pg_catalog,extensions as $$
   limit least(greatest(coalesce(p_limit,10),1),20);
 $$;
 revoke all on function public.office_romy_semantic_recall(extensions.vector,integer) from public,anon;
-grant execute on function public.office_romy_semantic_recall(text,integer) to authenticated;
+grant execute on function public.office_romy_semantic_recall(extensions.vector,integer) to authenticated;
 
 create function public.office_romy_discard_retracted_vector()
 returns trigger language plpgsql security definer set search_path='' as $$
