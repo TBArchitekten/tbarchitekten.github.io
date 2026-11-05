@@ -4694,7 +4694,7 @@ window.ISABELLA_APP={
       id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
       text:String(m.content||m.text||''),
       at:String(m.created_at||m.at||new Date().toISOString()),
-      metadata:m.metadata&&typeof m.metadata==='object'?m.metadata:{},sources:[],attachments:Array.isArray(m.attachments)?m.attachments:[],artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[],quickReplies:[]
+      metadata:m.metadata&&typeof m.metadata==='object'?m.metadata:{},sources:Array.isArray(m.metadata?.sources)?m.metadata.sources:[],attachments:Array.isArray(m.attachments)?m.attachments:[],artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[],quickReplies:[]
     }));
     renderMessages(true);
   },

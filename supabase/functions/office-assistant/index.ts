@@ -28,6 +28,8 @@ const instruction=[
  "Gespräche und persönliche Kalender sind kontogebunden. Du liest ausschließlich Daten, die der JWT-gebundene Office-Zugriff freigibt.",
  "Projektdokumente und Projektaufgaben sind im Büro unter aktiven Mitgliedern geteilt; private Unterhaltungen, Kalender und persönliche Aufgaben nicht.",
  "Du kannst die angebotenen Office-Tools benutzen, um Projekte, Aufgaben, Kalender und vorhandene Textdateien zu prüfen. Nutze Quellen, statt Angaben zu erfinden.",
+ "Nutze web_search wie Window für aktuelle, externe, öffentliche Informationen. Keine vertraulichen Projektdaten oder Mitarbeiterinformationen als öffentliche Web-Suchanfrage verwenden.",
+ "Frühere private Gespräche über search_conversation_history finden; Gesprächserinnerung ist noch keine angenommene persönliche Erinnerung. Eigene Artefakte über search_generated_artifacts wiederfinden, damit Dateibelege als Originaldateien an execute_artifact_task gehen.",
  "Für einfache DOCX/PDF/TXT aus bereits vollständig formuliertem Text verwende create_document. Für XLSX/PPTX, strukturierte Tabellen oder vorhandene Quelldateien verwende execute_artifact_task: den echten Window Capability Runtime, nicht einen Textvorschlag.",
  "Eine gestartete asynchrone Ausführung ist noch KEINE fertige Datei. Benenne den Status und die Lauf-ID; sage erst nach status completed mit gespeicherten Artefakten, dass das Ergebnis vorliegt.",
  "Artefakte können aus Office Desktop oder eigenen generierten Dateien als konkret referenzierte Inputdateien verarbeitet werden. Teile keine nicht freigegebenen privaten Daten.",
@@ -69,6 +71,22 @@ function parseProviderStream(buffer,handler){
  }
  return rest;
 }
+// Reused Window isabella-chat citation extraction, bounded to HTTP(S) URLs.
+function extractWebSources(payload){
+ const seen=new Set(),out=[];
+ for(const item of payload?.output||[]){
+  if(item?.type!=="message")continue;
+  for(const part of item?.content||[]){
+   for(const ann of part?.annotations||[]){
+    const url=String(ann?.url||ann?.url_citation?.url||"").trim();
+    if(!(url.startsWith("https://")||url.startsWith("http://"))||seen.has(url))continue;
+    seen.add(url);
+    out.push({title:String(ann?.title||ann?.url_citation?.title||"Quelle").trim(),url});
+   }
+  }
+ }
+ return out.slice(0,8);
+}
 async function requestModel({apiKey,model,input,allowTools=true,onDelta=()=>{}}){
  const abort=new AbortController();
  const timeout=setTimeout(()=>abort.abort(),70000);
@@ -80,7 +98,7 @@ async function requestModel({apiKey,model,input,allowTools=true,onDelta=()=>{}})
      instructions:instruction+"\nAktuelles Datum und Ortszeit (Europe/Berlin): "+officeLocalNow()+
        "\nTermine benötigen nachgewiesene Uhrzeiten und explizite Zeitzonen-Offsets (+01:00/+02:00 oder Z)."+
        "\nKlare Rückfrage statt geschätzter Kalenderzeiten.",
-     ...(allowTools?{tools:ROMY_TOOLS,tool_choice:"auto"}:{}),
+     ...(allowTools?{tools:[{type:"web_search",search_context_size:"low"},...ROMY_TOOLS],tool_choice:"auto"}:{}),
    })
   });
   if(!response.ok||!response.body){
@@ -110,7 +128,7 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
  const complexity=await routeRomyTurn({message,history,apiKey,
    model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||env.OPENAI_MODEL||"gpt-5.6-luna"});
  let route=chatTurnModel({complexity:complexity.complexity,depth:"normal",background:false,env});
- let prompt=apiInput(history,message,attachmentInputs),text="",proposals=[],artifacts=[],skillTrace=[],
+ let prompt=apiInput(history,message,attachmentInputs),text="",proposals=[],artifacts=[],skillTrace=[],sources=[],
    inTokens=complexity.input_tokens,outTokens=complexity.output_tokens;
  for(let round=0;round<5;round++){
   const payload=await requestModel({apiKey,model:route.model,input:prompt,onDelta,
@@ -119,8 +137,10 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
   outTokens+=Number(payload.usage?.output_tokens||0);
   const portion=textOf(payload);
   if(portion)text+=(text?"\n":"")+portion;
+  sources=[...sources,...extractWebSources(payload)]
+    .filter((x,i,a)=>a.findIndex(y=>y.url===x.url)===i).slice(0,8);
   const calls=functionCalls(payload);
-  if(!calls.length)return {reply:text.trim(),proposals,artifacts,skill_trace:skillTrace,model:route.model,input_tokens:inTokens,output_tokens:outTokens};
+  if(!calls.length)return {reply:text.trim(),proposals,artifacts,sources,skill_trace:skillTrace,model:route.model,input_tokens:inTokens,output_tokens:outTokens};
   prompt.push(...(payload.output||[]));
   for(const call of calls){
    let args={};
@@ -133,7 +153,7 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
        const raw=findRomySystemSkill(args.slug);
        if(!raw)result={error:"skill_not_found"};
        else{
-         const allowed=new Set(ROMY_TOOLS.map(t=>t.name));
+         const allowed=new Set(["web_search",...ROMY_TOOLS.map(t=>t.name)]);
          const manifest=normalizeSkillRecord(raw,"system",id=>
            !allowed.has(id)?"deny":id.startsWith("propose_")?"confirm":"allow");
          skillTrace=composeSkillTrace(skillTrace,manifest);
@@ -168,16 +188,16 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
    if(call.name==="read_text_file")route={model:documentModel(env),tier:"deep",reason:"source_read"};
   }
  }
- return {reply:text.trim(),proposals,artifacts,skill_trace:skillTrace,model:route.model,input_tokens:inTokens,output_tokens:outTokens};
+ return {reply:text.trim(),proposals,artifacts,sources,skill_trace:skillTrace,model:route.model,input_tokens:inTokens,output_tokens:outTokens};
 }
 async function completeRequest(admin,uid,requestId,values){
  const {error}=await admin.from("office_assistant_requests").update(values).eq("id",requestId).eq("user_id",uid);
  if(error)console.error("romy_request_ledger_failed");
 }
-async function persistReply(admin,uid,conversationId,requestId,reply,artifacts=[],skillTrace=[]){
+async function persistReply(admin,uid,conversationId,requestId,reply,artifacts=[],skillTrace=[],sources=[]){
  const {error}=await admin.from("office_assistant_messages").insert({
   conversation_id:conversationId,user_id:uid,request_id:requestId,role:"assistant",content:reply,
-  metadata:{artifacts,skill_trace:skillTrace},
+  metadata:{artifacts,skill_trace:skillTrace,sources},
  });
  if(error)throw new Error("assistant_message_save_failed");
  await admin.from("office_assistant_conversations")
@@ -276,14 +296,14 @@ Deno.serve(async req=>{
   const result=await runRomy({db,admin,uid,conversationId:conversation.id,
     requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta});
   if(!result.reply)throw new Error("ai_empty_response");
-  await persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts,result.skill_trace);
+  await persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts,result.skill_trace,result.sources);
   await completeRequest(admin,uid,requestId,{
    status:"completed",model:result.model,
    input_tokens:result.input_tokens,output_tokens:result.output_tokens,
    skill_trace:result.skill_trace,
   });
   return {conversation_id:conversation.id,request_id:requestId,
-    reply:result.reply,proposals:result.proposals,artifacts:result.artifacts};
+    reply:result.reply,proposals:result.proposals,artifacts:result.artifacts,sources:result.sources};
  };
  if(input.stream===true){
   const enc=new TextEncoder();
