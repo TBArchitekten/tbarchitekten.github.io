@@ -27,7 +27,7 @@ test('Project manager is in Window shell; Terminplan is always Terra when availa
  assert.match(shell,/id="officeToolsManage"/);
  assert.doesNotMatch(shell,/href="\.\.\/#work"/);
  assert.match(app,/name==='projects'/);
- assert.match(root,/section=projects/);
+ assert.match(root,/const section=r\.view==='tools'\?'tools':'projects'/);
  assert.match(projects,/from\('office_projects'\)/);
  assert.match(projects,/\.insert\(\{number,name,projektleiter_id:lead\}\)/);
  assert.match(edge,/normalizePlanAttachments\(input\.attachments\)/);
