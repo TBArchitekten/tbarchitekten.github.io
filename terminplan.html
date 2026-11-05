@@ -2603,7 +2603,7 @@ body.read-only .editor-only{display:none!important}
     assistantWindowState={x,y,width,height};
     localStorage.setItem('office-plan-assistant-window-v1',JSON.stringify(assistantWindowState));
   }
-  const assistantDragHead=$('#assistantPanel .assistant-head');
+  const assistantDragHead=document.querySelector('#assistantPanel .assistant-head');
   let assistantPointer=null;
   assistantDragHead.addEventListener('pointerdown',event=>{
     if(!assistantExpanded||assistantIsPopout||matchMedia('(max-width:600px)').matches||
