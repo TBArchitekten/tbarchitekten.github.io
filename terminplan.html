@@ -588,6 +588,7 @@ body.read-only .editor-only{display:none!important}
           <input id="dialogueFileInput" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.png,.jpg,.jpeg,.webp" multiple hidden>
           <button id="dialogueAttach" type="button" class="dialogue-attach" title="Datei hinzufügen" aria-label="Datei hinzufügen"><span aria-hidden="true">＋</span></button>
           <textarea id="dialogueInput" maxlength="1500" rows="2" placeholder="Was möchtest du am Terminplan verändern? Wir können es zuerst gemeinsam besprechen …" aria-label="Nachricht an Terminplan Assistent"></textarea>
+          <button id="dialogueTransform" type="button" class="dialogue-rebuild" title="Sämtliche Strukturen anhand deiner Anweisung bearbeiten">Plan ändern</button>
           <button id="dialogueRebuild" type="button" class="dialogue-rebuild" title="Den gesamten Plan aus PDF übernehmen">PDF → Plan</button>
           <button type="submit" id="dialogueSend">Senden</button>
         </form>
@@ -1526,7 +1527,7 @@ body.read-only .editor-only{display:none!important}
     $('#dialogueProposalText').textContent=!dialogueProposal?'':!valid?
       'Vorschlag ist nicht mehr aktuell. Bitte erneut anfragen.':
       dialogueProposal.kind==='replace_plan'
-        ? 'PDF-Rekonstruktion: '+dialogueProposal.counts.groups+' Gruppen, '+
+        ? 'Vollständige Planbearbeitung: '+dialogueProposal.counts.groups+' Gruppen, '+
            (dialogueProposal.counts.tasks-dialogueProposal.counts.milestones)+' Vorgänge, '+
            dialogueProposal.counts.milestones+' Meilensteine. Vor Freigabe wird die alte Version gesichert.'
       :dialogueProposal.kind==='add_tasks'
@@ -1544,6 +1545,7 @@ body.read-only .editor-only{display:none!important}
     $('#dialogueSend').disabled=dialogueWriting;
     $('#dialogueAttach').disabled=dialogueWriting||!PLAN_ID;
     $('#dialogueRebuild').disabled=dialogueWriting||!PLAN_ID||!dialogueAIReady;
+    $('#dialogueTransform').disabled=dialogueWriting||!PLAN_ID||!dialogueAIReady;
   }
   async function storeDialogue(entry){
     if(!PLAN_ID||!dialogueUserId)return;
@@ -1720,8 +1722,9 @@ body.read-only .editor-only{display:none!important}
     const requestRebuild=forcedMode==='rebuild'||
       (/(idéntic|identic|identisch|igual al pdf|gleich.*pdf|vollständig.*pdf|komplett.*pdf|reemplaz.*pdf|replace.*pdf)/i.test(message)&&
        (files.length||dialogueSavedSources.length));
-    if(!message&&!requestRebuild)return;
-    if(requestRebuild&&(!dialogueAIReady||!rebuildEngine)){
+    const requestTransform=!requestRebuild&&(forcedMode==='transform'||/(crear grupos|crea un grupo|neue gruppe|gruppen erstellen|grupo renombr|gruppe umbenenn|borrar grupos|gruppen löschen|elimina (?:las|los) (?:tareas|actividades)|aktivitäten löschen|alle vorgänge ändern|modifica todo el plan)/i.test(message));
+    if(!message&&!requestRebuild&&!requestTransform)return;
+    if((requestRebuild||requestTransform)&&(!dialogueAIReady||!rebuildEngine)){
       addDialogue('assistant','Eine vollständige PDF-Rekonstruktion benötigt die Office-KI.','warning');return;
     }
     if(requestRebuild&&!files.length&&!dialogueSavedSources.length){
@@ -1731,6 +1734,7 @@ body.read-only .editor-only{display:none!important}
     input.value='';dialogueProposal=null;dialogueWriting=true;
     const requestId=crypto.randomUUID();
     const prompt=message||'Rekonstruiere den vollständigen Terminplan aus dem gespeicherten PDF.';
+    const planAction=requestRebuild?'rebuild':requestTransform?'transform':'discuss';
     addDialogue('user',prompt+(files.length?'\nAnhänge: '+files.map(f=>f.name).join(' · '):''),'question',requestId);
     renderDialogue();
     try{
@@ -1745,7 +1749,7 @@ body.read-only .editor-only{display:none!important}
         }
         const activeIds=[...dialogueSelectedSourceIds];
         const {data:remote,error}=await sb.functions.invoke('office-terminplan-ai',{
-          body:{action:requestRebuild?'rebuild':'discuss',plan_id:PLAN_ID,
+          body:{action:planAction,plan_id:PLAN_ID,
             message:prompt,source_ids:activeIds,
             selected_task_id:selectedId,expected_revision:serverRevision}
         });
@@ -1754,7 +1758,7 @@ body.read-only .editor-only{display:none!important}
             '). Keine Änderung. Gespeicherte Dokumente bleiben erhalten.','warning',requestId);
           return;
         }
-        if(requestRebuild){
+        if(requestRebuild||requestTransform){
           if(remote.version!=='office-ai-v0.6'||remote.source!=='office_ai_complete_plan_proposal'||
              remote.base_revision!==serverRevision||!remote.result){
             addDialogue('assistant','PDF-Entwurf ist nicht prüfbar. Keine Änderung.','warning',requestId);return;
@@ -2645,6 +2649,7 @@ body.read-only .editor-only{display:none!important}
   });
   $('#dialogueForm').onsubmit=sendDialogue;
   $('#dialogueRebuild').onclick=()=>{void sendDialogue(null,'rebuild')};
+  $('#dialogueTransform').onclick=()=>{void sendDialogue(null,'transform')};
   $('#dialogueAttach').onclick=()=>$('#dialogueFileInput').click();
   $('#dialogueFileInput').onchange=event=>{
     const selected=[...(event.target.files||[])];
