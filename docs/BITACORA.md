@@ -21,11 +21,11 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Qué cambió y por qué: después de general_execution PR #33, Romy necesita recuperar los IDs de sus propios archivos producidos para editarlos y consultar conversaciones privadas anteriores. Se adapta el search_memory/source boundary de Window: lectura lexical owner-only, sin convertir inferencias o chats en recuerdos. Se añade web_search nativo con citas y la Skill original investigar.
 - Archivos: supabase/functions/office-assistant/index.ts, romy-tools.mjs, romy-skills.mjs, app/app.js, app/index.html, tests y docs.
 - Base de datos: sin migración; respeta RLS existente para office_assistant_messages, office_romy_artifacts y minds_work_files.
-- Deploy de funciones: pendiente; sin modelos, cuotas ni permisos nuevos.
-- Cómo se probó: tests de privacidad/provenance y UI añadidos; CI pendiente.
-- Quedó pendiente: deploy, CI, aceptación de búsquedas web y recuperación autenticadas; memoria semántica no implementada y misiones de días no portadas.
+- Deploy de funciones: `office-assistant` ACTIVE v9 con JWT, 13 fuentes; sin modelos, cuotas ni permisos nuevos.
+- Cómo se probó: 130/130 CI PASS, Edge v9 ACTIVE verificada, Security Advisors sin advertencias. E2E real pendiente.
+- Quedó pendiente: merge y aceptación de búsquedas web y recuperación autenticadas; memoria semántica no implementada y misiones de días no portadas.
 - Riesgos: no enviar datos privados de empleados ni documentos confidenciales como consultas web; los resultados web son fuentes externas, no memoria aceptada.
-- PR: #34 en preparación.
+- PR: #34.
 
 
 ### 2026-11-05 · General execution Window → Romy · ChatGPT
