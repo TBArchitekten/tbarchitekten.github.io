@@ -22,7 +22,11 @@ function chooseTarget(folders,root,excludedId=null){
   }
   return choices[n]?.id||null;
 }
-async function enhance({sb,folders,files,refresh,projectName}){
+async function enhance({sb,folders,files,refresh,projectName,office=false,projectId=null}){
+  const folderTable=office?'office_project_folders':'minds_work_folders';
+  const fileTable=office?'office_project_files':'minds_work_files';
+  const fileNameField=office?'file_name':'name';
+  const label=item=>item?.[fileNameField]||item?.name||'Datei';
   if(!sb)return;
   const {data:sessionData}=await sb.auth.getSession();
   const userId=sessionData?.session?.user?.id;
@@ -32,18 +36,21 @@ async function enhance({sb,folders,files,refresh,projectName}){
   const canManage=()=>true;
   async function update(table,item,patch,errorMessage,successMessage){
     if(!item)return;
-    const {data,error}=await sb.from(table).update(patch).eq('id',item.id).select('id');
+    let query=sb.from(table).update(patch).eq('id',item.id);
+    if(office&&projectId)query=query.eq('project_id',projectId);
+    const {data,error}=await query.select('id');
     if(error||!data?.length){setStatus(errorMessage);return}
     await refresh();setStatus(successMessage);
   }
   async function rename(table,item){
-    const name=window.prompt('Neuer Name:',item.name);
-    if(name===null||name.trim()===item.name)return;
+    const original=table===fileTable?label(item):item.name;
+    const name=window.prompt('Neuer Name:',original);
+    if(name===null||name.trim()===original)return;
     if(!name.trim()){setStatus('Bitte einen Namen eingeben.');return}
-    await update(table,item,{name:name.trim()},'Umbenennen fehlgeschlagen.','Umbenannt.');
+    await update(table,item,{[table===fileTable?fileNameField:'name']:name.trim()},'Umbenennen fehlgeschlagen.','Umbenannt.');
   }
   async function move(table,item){
-    const folderMove=table==='minds_work_folders';
+    const folderMove=table===folderTable;
     const target=chooseTarget(folders,projectName,folderMove?item.id:null);
     if(target===undefined)return;
     if(folderMove){
@@ -64,15 +71,19 @@ async function enhance({sb,folders,files,refresh,projectName}){
   }
   async function removeFolder(item){
     if(!window.confirm('Leeren Ordner „'+item.name+'“ endgültig löschen?'))return;
-    const {data,error}=await sb.from('minds_work_folders').delete().eq('id',item.id).select('id');
+    let request=sb.from(folderTable).delete().eq('id',item.id);
+    if(office&&projectId)request=request.eq('project_id',projectId);
+    const {data,error}=await request.select('id');
     if(error||!data?.length){setStatus('Ordner konnte nicht gelöscht werden. Er muss leer sein.');return}
     await refresh();setStatus('Ordner gelöscht.');
   }
   async function removeFile(item){
-    if(!window.confirm('Datei „'+item.name+'“ endgültig löschen?'))return;
+    if(!window.confirm('Datei „'+label(item)+'“ endgültig löschen?'))return;
     const removed=await sb.storage.from('minds-work').remove([item.storage_path]);
     if(removed.error){setStatus('Datei konnte nicht gelöscht werden.');return}
-    const {data,error}=await sb.from('minds_work_files').delete().eq('id',item.id).select('id');
+    let request=sb.from(fileTable).delete().eq('id',item.id);
+    if(office&&projectId)request=request.eq('project_id',projectId);
+    const {data,error}=await request.select('id');
     if(error||!data?.length){
       setStatus('Datei entfernt; das Register konnte nicht aktualisiert werden. Bitte erneut versuchen.');return;
     }
@@ -89,22 +100,24 @@ async function enhance({sb,folders,files,refresh,projectName}){
     const create=(name,callback)=>{
       const button=document.createElement('button');
       button.type='button';button.textContent=name;
-      button.setAttribute('aria-label',name+' · '+item.name);
+      button.setAttribute('aria-label',name+' · '+(isFolder?item.name:label(item)));
       button.addEventListener('click',()=>void callback());
       actions.appendChild(button);
     };
-    const table=isFolder?'minds_work_folders':'minds_work_files';
+    const table=isFolder?folderTable:fileTable;
     create('Umbenennen',()=>rename(table,item));
     create('Verschieben',()=>move(table,item));
     create('Löschen',()=>isFolder?removeFolder(item):removeFile(item));
     wrapper.appendChild(actions);
   }
-  for(const tile of document.querySelectorAll('#workBody [data-work-folder]')){
-    const item=folders.find(f=>f.id===tile.dataset.workFolder);
+  for(const tile of document.querySelectorAll(office?'#workBody [data-office-work^="folder:"]':'#workBody [data-work-folder]')){
+    const id=office?tile.dataset.officeWork.slice('folder:'.length):tile.dataset.workFolder;
+    const item=folders.find(f=>f.id===id);
     if(item)addActions(tile,item,true);
   }
-  for(const tile of document.querySelectorAll('#workBody [data-work-file]')){
-    const item=files.find(f=>f.id===tile.dataset.workFile);
+  for(const tile of document.querySelectorAll(office?'#workBody [data-office-work^="download:"]':'#workBody [data-work-file]')){
+    const id=office?tile.dataset.officeWork.slice('download:'.length):tile.dataset.workFile;
+    const item=files.find(f=>f.id===id);
     if(item)addActions(tile,item,false);
   }
 }
