@@ -34,6 +34,10 @@
     const r=C.viewFromHash(location.hash);
     // Old addresses of the first Kalender and Planner lead to the same screens in the app.
     if(r.view==='kalender'){location.replace('./app/#section=calendar');return}
+    if(r.view==='work'||r.view==='project'){
+      const project=r.view==='project'&&r.id?'&project='+encodeURIComponent(r.id):'';
+      location.replace('./app/#section=projects'+project);return;
+    }
     if(r.view==='project'&&r.tab==='planner'){location.replace('./app/#section=work&project='+encodeURIComponent(r.id));return}
     switchView(r.view,{id:r.id,push:false});
   }

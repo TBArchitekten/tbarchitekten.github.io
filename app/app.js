@@ -314,7 +314,12 @@ function init(){
     setInterval(()=>{if(!document.hidden)void syncDurableChatJobs()},7000);
   }
   const reviewId=OFFICE?null:reviewRequestIdFromUrl();
-  show(reviewId?'assistant':state.screen);
+  const officeHash=OFFICE?new URLSearchParams(String(location.hash||'').replace(/^#/,'')).get('section'):null;
+  show(reviewId?'assistant':(OFFICE&&WINDOW_SECTIONS.includes(officeHash)?officeHash:state.screen));
+  if(OFFICE)window.addEventListener('hashchange',()=>{
+    const section=new URLSearchParams(String(location.hash||'').replace(/^#/,'')).get('section');
+    if(WINDOW_SECTIONS.includes(section))show(section);
+  });
   if(reviewId)setTimeout(()=>void handleReviewDeepLink(),0);
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='visible'){
@@ -466,7 +471,7 @@ function placeGlobalMenu(name){
 // and one shared page. The app chooses the section through the URL fragment
 // (#section=…); a section that belongs to another tab is opened by the app.
 const WINDOW_TAB_FOR={assistant:'chat',feed:'ahora',calendar:'tiempo',work:'work',bandeja:'bandeja',ideas:'bandeja'};
-const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','tools','readings','thoughts'];
+const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','tools','projects','readings','thoughts'];
 let windowShell=false,windowShellTab='chat',windowShellCaps=[];
 function show(name,options={}){
   if(windowShell){
@@ -522,7 +527,7 @@ function showSection(name,options={}){
   state.screen=name;
   $$('.screen').forEach(x=>x.classList.toggle('active',x.dataset.screen===name));
   document.querySelectorAll('.main-nav-item, .lens-nav-item').forEach(x=>{
-    const active=x.dataset.nav===name;
+    const active=x.dataset.nav===name||(name==='projects'&&x.dataset.nav==='tools');
     x.classList.toggle('active',active);
     if(active)x.setAttribute('aria-current','page');
     else x.removeAttribute('aria-current');
@@ -542,6 +547,7 @@ function showSection(name,options={}){
   if(name==='feed')whenLoaded(()=>{if(state.screen!=='feed')return;window.MINDS_AHORA?.render?.();renderFeed()});
   if(name==='bandeja')whenLoaded(()=>{if(state.screen==='bandeja')window.MINDS_BANDEJA?.show?.(options.view)});
   if(name==='work')setTimeout(()=>window.MINDS_WORK?.render?.(),0);
+  if(name==='projects')whenLoaded(()=>{if(state.screen==='projects')window.TBA_OFFICE_PROJECTS?.render?.()});
   if(name==='readings')ensureReadings();
   if(name==='thoughts')mountThoughts();
 }
@@ -4656,7 +4662,8 @@ function feedPreferencesPanel(){
 function categoriesPanel(){
   const rows=state.categories.map(x=>`<div class="settings-row color-row"><input type="color" data-cat-color="${x.id}" value="${esc(x.color||fallbackColor(x.id))}" aria-label="Farbe"><input data-cat-name="${x.id}" value="${esc(x.name)}"><button data-cat-delete="${x.id}" aria-label="Löschen">×</button></div>`).join('');
   const prows=state.projects.map(x=>`<div class="settings-row project-color-row"><input type="color" data-project-color="${x.id}" value="${esc(x.color||fallbackColor(x.id))}" aria-label="Farbe"><input data-project-name="${x.id}" value="${esc(x.name)}"><select data-project-cat="${x.id}">${state.categories.map(cat=>`<option value="${cat.id}" ${cat.id===x.categoryId?'selected':''}>${esc(cat.name)}</option>`).join('')}</select><button data-project-delete="${x.id}" aria-label="Löschen">×</button></div>`).join('');
-  modal(OFFICE?'Kategorien':'Categorías y proyectos',`<div class="small section-label">Kategorien</div><div id="categoryRows">${rows}</div><button id="addCategory" class="secondary settings-add">+ Kategorie</button><div class="small section-label settings-projects-title">Projekte</div>${OFFICE?'<p class="small">Die Projekte kommen aus dem Office: <a href="../#work">Projekte verwalten</a>.</p>':`<div id="projectRows">${prows}</div><button id="addProject" class="secondary settings-add">+ Projekt</button>`}<button id="saveTaxonomy" class="primary settings-save">Änderungen speichern</button>`);
+  modal(OFFICE?'Kategorien':'Categorías y proyectos',`<div class="small section-label">Kategorien</div><div id="categoryRows">${rows}</div><button id="addCategory" class="secondary settings-add">+ Kategorie</button><div class="small section-label settings-projects-title">Projekte</div>${OFFICE?'<p class="small">Die Projekte kommen aus dem Office: <a href="#section=projects" id="officeCategoryProjectsLink">Projekte verwalten</a>.</p>':`<div id="projectRows">${prows}</div><button id="addProject" class="secondary settings-add">+ Projekt</button>`}<button id="saveTaxonomy" class="primary settings-save">Änderungen speichern</button>`);
+  $('#officeCategoryProjectsLink')?.addEventListener('click',event=>{event.preventDefault();closeModal();show('projects');history.replaceState(null,'','#section=projects')});
   $('#addCategory').onclick=()=>{const id=uid();state.categories.push({id,name:'Neue Kategorie',color:fallbackColor(id)});save();categoriesPanel()};
   if($('#addProject'))$('#addProject').onclick=()=>{const id=uid();state.projects.push({id,categoryId:state.categories[0]?.id||'personal',name:'Neues Projekt',color:fallbackColor(id)});save();categoriesPanel()};
   $$('[data-cat-delete]').forEach(b=>b.onclick=()=>{const id=b.dataset.catDelete;if(state.categories.length<=1)return;state.categories=state.categories.filter(x=>x.id!==id);state.projects.forEach(p=>{if(p.categoryId===id)p.categoryId=state.categories[0]?.id||'personal'});state.tasks.forEach(t=>{if(t.categoryId===id)t.categoryId='personal'});state.events.forEach(e=>{if(e.categoryId===id)e.categoryId='personal'});save();categoriesPanel()});

@@ -43,3 +43,26 @@
 @media(max-width:899px){
  .office-app #mainNav{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
+
+/* Projects are a subview of the same authenticated Window shell, not a second application. */
+.office-app .office-tools-manage{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
+.office-app .office-projects-screen{background:#fafafa;min-height:0}
+.office-app .office-projects-scroll{height:100%;overflow:auto;padding:30px clamp(20px,5vw,70px) 90px}
+.office-app .office-projects-back{background:transparent;border:0;color:#657080;font:inherit;cursor:pointer;padding:0;margin-bottom:26px}
+.office-app .office-projects-head{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:26px}
+.office-app .office-projects-head p:first-child{font-size:12px;letter-spacing:.14em;color:#90939b;font-weight:700;margin:0 0 10px}
+.office-app .office-projects-head h1{font-size:34px;letter-spacing:-.035em;margin:0 0 10px}
+.office-app .office-projects-head p:last-child{font-size:15px;color:#686e77;margin:0}
+.office-app .office-projects-new{border:0;border-radius:12px;padding:13px 18px;background:#191919;color:white;font:inherit;cursor:pointer;white-space:nowrap}
+.office-app .office-projects-status{font-size:14px;color:#57606a;margin:10px 0 20px}
+.office-app .office-projects-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:16px;max-width:1120px}
+.office-app .office-project-card{background:white;border:1px solid #e4e6e9;border-radius:17px;padding:22px;min-width:0}
+.office-app .office-project-card h2{font-size:21px;letter-spacing:-.02em;margin:4px 0 12px}
+.office-app .office-project-card .office-project-number{color:#6e7480;font-size:12px;font-weight:650;letter-spacing:.1em}
+.office-app .office-project-card .office-project-meta{font-size:13px;color:#626c78;line-height:1.6}
+.office-app .office-project-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.office-app .office-project-actions button,.office-app .office-project-actions a{border:1px solid #d9dfe5;border-radius:9px;padding:9px 12px;background:#fff;color:#242424;font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
+.office-app .office-project-plans{margin:14px 0 0;border-top:1px solid #e9ecef;padding-top:12px}
+.office-app .office-project-plans a{display:block;margin:8px 0;color:#355d99;font-size:14px}
+.office-app .office-project-empty{color:#7c838a;padding:22px;background:white;border:1px solid #e4e6e9;border-radius:14px}
+@media(max-width:680px){.office-app .office-projects-head{align-items:flex-start;flex-direction:column}.office-app .office-projects-new{width:100%}}
