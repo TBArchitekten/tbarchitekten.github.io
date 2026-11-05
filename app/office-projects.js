@@ -13,6 +13,11 @@ function openProjects(){
   history.replaceState(null,'','#section=projects');
   void refresh();
 }
+function openPlans(){
+  window.ISABELLA_APP?.show?.('plans');
+  history.replaceState(null,'','#section=plans');
+  void refresh();
+}
 function openWork(id){
   window.ISABELLA_APP?.show?.('work');
   history.replaceState(null,'','#section=work&project='+encodeURIComponent(id));
@@ -68,6 +73,57 @@ function showProjects(){
     host.append(card);
   }
 }
+function showPlans(){
+  const templateHost=document.getElementById('officePlansTemplates');
+  const instanceHost=document.getElementById('officePlansInstances');
+  if(!templateHost||!instanceHost)return;
+  templateHost.replaceChildren();instanceHost.replaceChildren();
+  const available=templates.filter(t=>t.is_active!==false).sort((a,b)=>a.phase.localeCompare(b.phase));
+  for(const template of available){
+    const card=document.createElement('article');card.className='office-project-card office-plan-library-card';
+    const number=document.createElement('span');number.className='office-project-number';number.textContent=template.phase+' · MUSTER';
+    const title=document.createElement('h2');title.textContent=template.title;
+    const metadata=document.createElement('p');metadata.className='office-project-meta';
+    metadata.textContent='Version '+template.version+' · Originalvorlage · schreibgeschützt';
+    const actions=document.createElement('div');actions.className='office-project-actions';
+    const open=document.createElement('a');open.href='../terminplan.html?template='+encodeURIComponent(template.id);
+    open.textContent='Muster ansehen';open.className='office-plan-library-link';
+    actions.append(open);card.append(number,title,metadata,actions);templateHost.append(card);
+  }
+  if(!available.length){const empty=document.createElement('p');empty.textContent='Keine aktiven LPH-Muster verfügbar.';templateHost.append(empty)}
+  for(const plan of plans){
+    const project=projects.find(p=>p.id===plan.project_id);
+    const card=document.createElement('article');card.className='office-project-card office-plan-library-card';
+    const number=document.createElement('span');number.className='office-project-number';
+    number.textContent=project?project.number+' · '+plan.phase:plan.phase;
+    const title=document.createElement('h2');title.textContent=project?.name||'Projektterminplan';
+    const meta=document.createElement('p');meta.className='office-project-meta';
+    meta.textContent='Projektterminplan · Zuletzt geändert: '+String(plan.updated_at||'').slice(0,10);
+    const actions=document.createElement('div');actions.className='office-project-actions';
+    const open=document.createElement('a');open.href='../terminplan.html?id='+encodeURIComponent(plan.id);
+    open.textContent='Terminplan öffnen';open.className='office-plan-library-link';
+    actions.append(open);card.append(number,title,meta,actions);instanceHost.append(card);
+  }
+  if(!plans.length){
+    const empty=document.createElement('p');empty.textContent='Noch kein Projektterminplan angelegt.';instanceHost.append(empty);
+  }
+  const create=document.createElement('button');create.type='button';create.textContent='+ Projektterminplan erstellen';
+  create.className='office-projects-new office-plan-create';
+  create.onclick=()=>{
+    const active=projects.filter(p=>p.status==='aktiv');
+    if(!active.length){openProjects();return}
+    if(active.length===1){newPlan(active[0]);return}
+    const choices=active.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.number+' · '+p.name)+'</option>').join('');
+    window.ISABELLA_APP?.openModal?.('Projekt wählen',
+      '<form id="officeSelectPlanProject" class="form"><label>Projekt<select name="project">'+choices+
+      '</select></label><button type="submit" class="primary">Weiter</button></form>');
+    const form=document.getElementById('officeSelectPlanProject');
+    if(form)form.onsubmit=e=>{e.preventDefault();const project=active.find(p=>p.id===form.elements.project.value);
+      window.ISABELLA_APP?.closeModal?.();if(project)newPlan(project)};
+  };
+  instanceHost.append(create);
+}
+
 async function refresh(){
   if(busy)return;
   if(!sb()){status('Office-Verbindung nicht verfügbar.');return}
@@ -90,8 +146,10 @@ async function refresh(){
     if(pr.error||pl.error||me.error||tp.error||pm.error)throw (pr.error||pl.error||me.error||tp.error||pm.error);
     projects=pr.data||[];plans=pl.data||[];members=me.data||[];templates=tp.data||[];team=pm.data||[];
     qs('#officeProjectsNew').hidden=false;
-    status('');showProjects();
-  }catch(error){status(error?.message||'Projekte nicht erreichbar.')}
+    status('');showProjects();showPlans();
+    const plansStatus=document.getElementById('officePlansStatus');if(plansStatus)plansStatus.textContent='';
+  }catch(error){status(error?.message||'Projekte nicht erreichbar.');
+    const plansStatus=document.getElementById('officePlansStatus');if(plansStatus)plansStatus.textContent=error?.message||'Terminpläne nicht erreichbar.'}
   finally{busy=false}
 }
 function newPlan(project){
@@ -216,14 +274,15 @@ qs('#officeProjectsBack').addEventListener('click',()=>{
   history.replaceState(null,'','#section=tools');
 });
 document.getElementById('officeToolsManage')?.addEventListener('click',openProjects);
-document.getElementById('officeToolsPlans')?.addEventListener('click',openProjects);
+document.getElementById('officeToolsPlans')?.addEventListener('click',openPlans);
+document.getElementById('officePlansBack')?.addEventListener('click',()=>{window.ISABELLA_APP?.show?.('tools');history.replaceState(null,'','#section=tools')});
 document.getElementById('officePlansDrawer')?.addEventListener('click',()=>{
-  document.getElementById('closeDrawer')?.click();openProjects();
+  document.getElementById('closeDrawer')?.click();openPlans();
 });
 document.getElementById('officeProjectsDrawer')?.addEventListener('click',event=>{
   event.preventDefault();
   document.getElementById('closeDrawer')?.click();
   openProjects();
 });
-window.TBA_OFFICE_PROJECTS={render:refresh,open:openProjects};
+window.TBA_OFFICE_PROJECTS={render:refresh,open:openProjects,openPlans};
 })();
