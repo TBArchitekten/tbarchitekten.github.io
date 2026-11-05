@@ -1,3 +1,17 @@
+-- Office Work parity with Window's real task model: no shadow tasks, no Window database.
+alter table public.office_tasks add column work_status text not null default 'not_started'
+ check (work_status in ('not_started','in_progress','waiting','completed'));
+alter table public.office_tasks add column labels text[] not null default '{}'
+ check (cardinality(labels)<=30);
+alter table public.office_tasks add column estimated_minutes integer
+ check (estimated_minutes between 0 and 100000);
+update public.office_tasks set work_status='completed' where completed_at is not null;
+create policy office_tasks_team_delete on public.office_tasks for delete to authenticated
+ using ((select private.office_is_member()) and exists(
+  select 1 from public.office_project_members p
+  where p.project_id=office_tasks.project_id and p.user_id=(select auth.uid())
+ ));
+
 -- TBA Office: normalized multi-assignee team assignments for Work, matching Window's visual task model.
 -- The original assignee_id remains a backwards-compatible primary assignment.
 create table public.office_task_assignees(
