@@ -29,7 +29,7 @@ const instruction=[
  "Projektdokumente und Projektaufgaben sind im Büro unter aktiven Mitgliedern geteilt; private Unterhaltungen, Kalender und persönliche Aufgaben nicht.",
  "Du kannst die angebotenen Office-Tools benutzen, um Projekte, Aufgaben, Kalender und vorhandene Textdateien zu prüfen. Nutze Quellen, statt Angaben zu erfinden.",
  "Nutze web_search wie Window für aktuelle, externe, öffentliche Informationen. Keine vertraulichen Projektdaten oder Mitarbeiterinformationen als öffentliche Web-Suchanfrage verwenden.",
- "Frühere private Gespräche über search_conversation_history finden; Gesprächserinnerung ist noch keine angenommene persönliche Erinnerung. Eigene Artefakte über search_generated_artifacts wiederfinden, damit Dateibelege als Originaldateien an execute_artifact_task gehen.",
+ "Frühere private Gespräche über search_semantic_history oder search_conversation_history finden; semantische Treffer sind Quellen, keine bestätigten Erinnerungen. Eigene Artefakte über search_generated_artifacts wiederfinden, damit Dateibelege als Originaldateien an execute_artifact_task gehen.",
  "Für einfache DOCX/PDF/TXT aus bereits vollständig formuliertem Text verwende create_document. Für XLSX/PPTX, strukturierte Tabellen oder vorhandene Quelldateien verwende execute_artifact_task: den echten Window Capability Runtime, nicht einen Textvorschlag.",
  "Eine gestartete asynchrone Ausführung ist noch KEINE fertige Datei. Benenne den Status und die Lauf-ID; sage erst nach status completed mit gespeicherten Artefakten, dass das Ergebnis vorliegt.",
  "Artefakte können aus Office Desktop oder eigenen generierten Dateien als konkret referenzierte Inputdateien verarbeitet werden. Teile keine nicht freigegebenen privaten Daten.",
@@ -174,7 +174,7 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
          kind:String(args.kind||""),title:String(args.title||""),content:String(args.content||"")});
      }else{
        result=await executeRomyTool(call.name,args,{
-         userDb:db,admin,userId:uid,conversationId,requestId,
+         userDb:db,admin,userId:uid,conversationId,requestId,apiKey,
        });
      }
    }catch(err){

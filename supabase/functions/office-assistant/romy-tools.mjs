@@ -1,4 +1,5 @@
 import { validOfficeDate, berlinDateRangeUtc, parseExplicitZonedInstant } from "./romy-time.mjs";
+import { searchRomySemanticMemory } from "./romy-semantic-memory.mjs";
 // Adapted tool boundary for Romy using Window's explicit tool/approval discipline.
 // Queries execute with the employee's JWT and the Office RLS policies,
 // never with a shared service-role reader.
@@ -6,6 +7,9 @@ export const ROMY_TOOLS=[
  {type:"function",name:"list_skills",description:"List versioned procedures ported from Window; Skills teach workflows but never grant permissions.",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
  {type:"function",name:"load_skill",description:"Load a trusted full Window Skill by exact slug. Maximum four complementary Skills per turn; it cannot authorize actions.",strict:false,parameters:{type:"object",properties:{slug:{type:"string"}},required:["slug"],additionalProperties:false}},
  {type:"function",name:"search_personal_memory",description:"Search this employee's confirmed private memories only; not arbitrary past chat claims or model inferences.",strict:false,parameters:{type:"object",properties:{query:{type:"string"},kind:{type:"string",enum:["fact","preference"]}},additionalProperties:false}},
+ {type:"function",name:"search_semantic_history",
+ description:"Find conceptually relevant passages in this employee's own past conversations and confirmed memories, even when vocabulary differs. Results have original source IDs and provenance. A past message is NOT an accepted fact. Indexing is bounded and may not cover very old conversations.",
+ strict:false,parameters:{type:"object",properties:{query:{type:"string"}},required:["query"],additionalProperties:false}},
  {type:"function",name:"search_conversation_history",
  description:"Search the current employee's prior private conversations, with message provenance and dates. Results are historical conversation, not accepted autobiographical memory. Never use other employees' conversations.",
  strict:false,parameters:{type:"object",properties:{query:{type:"string"}},required:["query"],additionalProperties:false}},
@@ -63,8 +67,11 @@ async function registerProposal({admin,requestId,userId,conversationId,kind,payl
  return {proposal_id:data.id,kind,requires_explicit_confirmation:true,payload,
    status:"pending",message:"The employee must inspect and approve this proposal before it changes office data."};
 }
-export async function executeRomyTool(name,args,{userDb,admin,userId,conversationId,requestId}){
+export async function executeRomyTool(name,args,{userDb,admin,userId,conversationId,requestId,apiKey}){
  const a=args&&typeof args==="object"&&!Array.isArray(args)?args:{};
+ if(name==="search_semantic_history"){
+  return await searchRomySemanticMemory({userDb,admin,userId,query:a.query,apiKey});
+ }
  if(name==="search_personal_memory"){
   let q=userDb.from("office_romy_memories")
     .select("id,kind,content,created_at,source_conversation_id,source_request_id")
