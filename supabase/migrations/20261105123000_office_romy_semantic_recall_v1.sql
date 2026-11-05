@@ -37,7 +37,7 @@ create function public.office_romy_semantic_recall(
   source_type text,source_id uuid,conversation_id uuid,
   content text,occurred_at timestamptz,score real,provenance text
 )
-language sql stable security invoker set search_path='' as $$
+language sql stable security invoker set search_path=pg_catalog,extensions as $
   with own_messages as (
     select 'conversation'::text as source_type,m.id as source_id,
       m.conversation_id,
