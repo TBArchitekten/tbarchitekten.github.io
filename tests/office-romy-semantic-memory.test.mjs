@@ -72,7 +72,7 @@ test('Semantic tool uses employee RLS for sources and recall, server for embeddi
  }finally{globalThis.fetch=previous}
 });
 test('Schema prevents cross-employee writes, removes retracted sources and preserves RLS',()=>{
- const sql=read('supabase/migrations/20261105123000_office_romy_semantic_recall_v1.sql');
+ const sql=read('supabase/migrations/20261105121124_office_romy_semantic_recall_v1.sql');
  const tool=read('supabase/functions/office-assistant/romy-tools.mjs');
  const edge=read('supabase/functions/office-assistant/index.ts');
  assert.match(sql,/embedding extensions\.vector\(1536\)/);

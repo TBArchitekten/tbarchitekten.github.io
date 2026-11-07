@@ -832,7 +832,7 @@ function renderIdeaWorkspace(){
   const artifact=$('#ideaWorkspaceArtifact'),content=String(w.artifact_content||'').trim(),files=Array.isArray(w.artifacts)?w.artifacts:[];
   if(content||files.length){
     artifact.classList.remove('hidden');
-    const textActions=content?`<button id="copyIdeaArtifact">Copiar</button><button id="downloadIdeaArtifact">Descargar .md</button>`:'';
+    const textActions=content?`<button id="copyIdeaArtifact">Kopieren</button><button id="downloadIdeaArtifact">.md herunterladen</button>`:'';
     const textArtifact=content?`<div class="idea-markdown-artifact"><div class="idea-artifact-label">BORRADOR DE TRABAJO</div><div class="idea-markdown-render">${formatMessageText(content)}</div></div>`:'';
     artifact.innerHTML=`<div class="idea-artifact-head"><div><span>PRODUCTO</span><strong>${esc(w.artifact_title||files.at(-1)?.title||'Artefacto')}</strong></div><div>${textActions}<button id="toggleIdeaWorkspaceDone">${w.status==='done'?'Reabrir':'Marcar producido'}</button></div></div>${files.length?`<div class="idea-file-artifacts">${files.map(x=>artifactMarkup(x)).join('')}</div>`:''}${textArtifact}`;
     if(content){$('#copyIdeaArtifact').onclick=()=>navigator.clipboard?.writeText(content);$('#downloadIdeaArtifact').onclick=()=>downloadIdeaArtifact(w)}
@@ -1302,8 +1302,8 @@ function renderMessages(forceBottom=false){
     const displayText=resolvedReviewText(m)??cleanGeneratedDeliverableText(m.text,m.artifacts);
     const previews=artifactSurface.previews.length?`<div class="message-artifact-previews">${artifactSurface.previews.slice(0,2).map(a=>artifactPreviewMarkup(a,true)).join('')}</div>`:'';
     const deliverables=artifactSurface.deliverables.length?`<div class="message-artifacts">${artifactSurface.deliverables.slice(0,8).map(a=>artifactMarkup(a,true)).join('')}</div>`:'';
-    return `<div class="message ${m.role}" data-message-id="${esc(m.id||'')}">${reply}${Array.isArray(m.attachments)&&m.attachments.length?`<div class="message-attachments">${m.attachments.map(a=>{const path=String(a.path||''),mime=String(a.mime||''),name=String(a.name||'Archivo');if(mime.startsWith('image/'))return `<img loading="lazy" data-chat-image-path="${esc(path)}" alt="${esc(name)}">`;const ext=(name.split('.').pop()||'FILE').toUpperCase();return `<a class="message-file" data-chat-file-path="${esc(path)}" data-chat-file-name="${esc(name)}" target="_blank" rel="noopener"><span>${esc(ext)}</span><strong>${esc(name)}</strong></a>`}).join('')}</div>`:''}${displayText?`<span class="message-text">${formatMessageText(displayText)}</span>`:''}${m.role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete" role="status">Respuesta interrumpida. El texto recibido es parcial.<button type="button" data-continue-incomplete="${esc(m.id||'')}">Continuar respuesta</button></div>`:''}${previews}${deliverables}${m.role==='assistant'&&Array.isArray(m.metadata?.review_proposals)&&m.metadata.review_proposals.length&&
-      !m.metadata?.review_state?`<div class="message-review-action"><button type="button" class="secondary" data-review-message="${esc(m.id||'')}">Revisar propuesta pendiente</button></div>`:''}${m.role==='assistant'&&m.reaction?`<button type="button" class="message-reaction-badge" data-message-react="${esc(m.id||'')}" aria-label="Cambiar reacción">${typographicReaction(m.reaction,true)}</button>`:''}${m.role==='assistant'?`<div class="message-actions"><button class="message-react" data-message-react="${esc(m.id||'')}" aria-label="Reaccionar">＋</button><button class="message-reply" data-message-reply="${esc(m.id||'')}" aria-label="Responder a este mensaje">↩︎</button></div>`:''}${Array.isArray(m.sources)&&m.sources.length?`<div class="message-sources">${m.sources.map(s=>`<a href="${/^https?:\/\//i.test(String(s.url||''))?esc(s.url):'#'}" target="_blank" rel="noopener">${esc(s.title||'Fuente')}</a>`).join('')}</div>`:''}${m.role==='assistant'&&Array.isArray(m.quickReplies)&&m.quickReplies.length?`<div class="message-quick-replies">${m.quickReplies.map((q,i)=>`<button data-quick-message="${esc(m.id||'')}" data-quick-index="${i}">${esc(q.label)}</button>`).join('')}</div>`:''}</div>`;
+    return `<div class="message ${m.role}" data-message-id="${esc(m.id||'')}">${reply}${Array.isArray(m.attachments)&&m.attachments.length?`<div class="message-attachments">${m.attachments.map(a=>{const path=String(a.path||''),mime=String(a.mime||''),name=String(a.name||'Archivo');if(mime.startsWith('image/'))return `<img loading="lazy" data-chat-image-path="${esc(path)}" alt="${esc(name)}">`;const ext=(name.split('.').pop()||'FILE').toUpperCase();return `<a class="message-file" data-chat-file-path="${esc(path)}" data-chat-file-name="${esc(name)}" target="_blank" rel="noopener"><span>${esc(ext)}</span><strong>${esc(name)}</strong></a>`}).join('')}</div>`:''}${displayText?`<span class="message-text">${formatMessageText(displayText)}</span>`:''}${m.role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete" role="status">Antwort unterbrochen. Der empfangene Text ist unvollständig.<button type="button" data-continue-incomplete="${esc(m.id||'')}">Antwort fortsetzen</button></div>`:''}${previews}${deliverables}${m.role==='assistant'&&Array.isArray(m.metadata?.review_proposals)&&m.metadata.review_proposals.length&&
+      !m.metadata?.review_state?`<div class="message-review-action"><button type="button" class="secondary" data-review-message="${esc(m.id||'')}">Offenen Vorschlag prüfen</button></div>`:''}${m.role==='assistant'&&m.reaction?`<button type="button" class="message-reaction-badge" data-message-react="${esc(m.id||'')}" aria-label="Reaktion ändern">${typographicReaction(m.reaction,true)}</button>`:''}${m.role==='assistant'?`<div class="message-actions"><button class="message-react" data-message-react="${esc(m.id||'')}" aria-label="Reagieren">＋</button><button class="message-reply" data-message-reply="${esc(m.id||'')}" aria-label="Auf diese Nachricht antworten">↩︎</button></div>`:''}${Array.isArray(m.sources)&&m.sources.length?`<div class="message-sources">${m.sources.map(s=>`<a href="${/^https?:\/\//i.test(String(s.url||''))?esc(s.url):'#'}" target="_blank" rel="noopener">${esc(s.title||'Fuente')}</a>`).join('')}</div>`:''}${m.role==='assistant'&&Array.isArray(m.quickReplies)&&m.quickReplies.length?`<div class="message-quick-replies">${m.quickReplies.map((q,i)=>`<button data-quick-message="${esc(m.id||'')}" data-quick-index="${i}">${esc(q.label)}</button>`).join('')}</div>`:''}</div>`;
   }).join('');
   lastMessagesRenderKey=nextRenderKey;
   void hydrateChatImages();void hydrateArtifactFiles();
@@ -1454,7 +1454,7 @@ function openReactionPicker(id){
   closeReactionPicker();closeEmojiReactionSheet();try{navigator.vibrate?.(8)}catch{}el.classList.add('reaction-target');
   const backdrop=document.createElement('div');backdrop.className='reaction-backdrop';
   const pop=document.createElement('div');pop.className='reaction-popover imessage-reactions';
-  pop.innerHTML=`<div class="reaction-row reaction-quick-row">${REACTION_QUICK.map(x=>`<button type="button" data-inline-reaction="${x.value}" class="minds-reaction-choice ${m.reaction===x.value?'selected':''}" aria-label="${esc(x.aria)}">${typographicReaction(x.value,false)}</button>`).join('')}<button type="button" class="reaction-more" aria-label="Más emojis">＋</button></div>`;
+  pop.innerHTML=`<div class="reaction-row reaction-quick-row">${REACTION_QUICK.map(x=>`<button type="button" data-inline-reaction="${x.value}" class="minds-reaction-choice ${m.reaction===x.value?'selected':''}" aria-label="${esc(x.aria)}">${typographicReaction(x.value,false)}</button>`).join('')}<button type="button" class="reaction-more" aria-label="Weitere Emojis">＋</button></div>`;
   document.body.append(backdrop,pop);requestAnimationFrame(()=>positionReactionPopover(pop,null,el));
   backdrop.onclick=closeReactionPicker;
   pop.querySelectorAll('[data-inline-reaction]').forEach(b=>b.onclick=e=>{e.stopPropagation();applyReaction(id,b.dataset.inlineReaction||null)});
@@ -2386,11 +2386,11 @@ async function handle(text,attachments=[],replyTo=null){
     ?{source_turn_id:pending.source_turn_id,receipt_id:pending.receipt_id}:null;
   const userTurn=say('user',text||'Te envío esta imagen.',{id:durableRequestId||undefined,attachments:copy,replyTo,
     metadata:durableRequestId?{durable_request_id:durableRequestId}:{} });
-  clearReplyTarget();setChatActivity('Enviando a Isabella…');orb('thinking','Pensando…');setWorking($('#sendButton'),true);
+  clearReplyTarget();setChatActivity('Sende an Romy …');orb('thinking','Denke nach …');setWorking($('#sendButton'),true);
   try{
     if(window.ISABELLA_AI?.ask){
-      setChatActivity('Isabella está preparando la respuesta…');
-      const result=await window.ISABELLA_AI.ask(text||'Te envío esta imagen.',state,{attachments:copy,replyTo,durableRequestId,continuation:candidate,onProgress:event=>{if(event?.label){orb('thinking',event.label);setChatActivity(event.label)}},onTextDelta:(delta,full)=>{setChatActivity('Isabella está respondiendo…');streamAssistantDelta(delta,full)},onTextReset:()=>clearAssistantStream()});
+      setChatActivity('Romy bereitet die Antwort vor …');
+      const result=await window.ISABELLA_AI.ask(text||'Ich sende dir dieses Bild.',state,{attachments:copy,replyTo,durableRequestId,continuation:candidate,onProgress:event=>{if(event?.label){orb('thinking',event.label);setChatActivity(event.label)}},onTextDelta:(delta,full)=>{setChatActivity('Isabella está respondiendo…');streamAssistantDelta(delta,full)},onTextReset:()=>clearAssistantStream()});
       state.pendingIntent=null;
       clearAssistantStream();
       if(result?.durable){
@@ -2412,7 +2412,7 @@ async function handle(text,attachments=[],replyTo=null){
       userTurn.metadata={...(userTurn.metadata||{}),exposure_scope:exposure};
       const integrity=window.MINDS_TURN_INTEGRITY?.validate(result);
       if(!integrity?.ok){
-        say('assistant','No pude verificar el resultado de esta operación. No he confirmado ningún cambio.',{metadata:{exposure_scope:exposure,turn_receipt_error:integrity?.reason||'validator_unavailable'}});
+        say('assistant','Ich konnte das Ergebnis dieses Vorgangs nicht prüfen. Keine Änderung ist bestätigt.',{metadata:{exposure_scope:exposure,turn_receipt_error:integrity?.reason||'validator_unavailable'}});
         return;
       }
       const directBatch=directCreationBatch(result,integrity);
@@ -2425,7 +2425,7 @@ async function handle(text,attachments=[],replyTo=null){
         const text=committed.length?confirmationText(committed):'';
         const missing=failed.map(x=>'«'+String(x.proposal?.title||'sin título')+'»');
         const report=failed.length
-          ?(text?text+' ':'')+'No pude guardar '+naturalList(missing)+', así que '+(failed.length===1?'no lo doy por hecho':'no los doy por hechos')+'. Puedes revisarlo abajo.'
+          ?(text?text+' ':'')+'Nicht gespeichert: '+naturalList(missing)+'. '+(failed.length===1?'Es gilt nicht als erledigt':'Sie gelten nicht als erledigt')+'. Unten kannst du es prüfen.'
           :text;
         say('assistant',report,{metadata:{exposure_scope:exposure,
           turn_outcome:failed.length?'partial_or_unverified':'action_applied',
@@ -2522,10 +2522,10 @@ async function normalizeUploadImage(file){
         const max=2200,scale=Math.min(1,max/Math.max(img.naturalWidth||1,img.naturalHeight||1));
         const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
         const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
-        canvas.toBlob(blob=>{URL.revokeObjectURL(url);blob?resolve({blob,mime:'image/jpeg',ext:'jpg'}):reject(new Error('No pude preparar la imagen.'))},'image/jpeg',.88);
+        canvas.toBlob(blob=>{URL.revokeObjectURL(url);blob?resolve({blob,mime:'image/jpeg',ext:'jpg'}):reject(new Error('Das Bild konnte nicht vorbereitet werden.'))},'image/jpeg',.88);
       }catch(e){URL.revokeObjectURL(url);reject(e)}
     };
-    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('No pude leer esta imagen.'))};
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Dieses Bild konnte nicht gelesen werden.'))};
     img.src=url;
   });
 }
@@ -2548,7 +2548,7 @@ async function uploadChatFiles(files){
     const safeExt=String(prepared.ext||'bin').replace(/[^a-z0-9]/gi,'').toLowerCase()||'bin';
     const path=session.user.id+'/chat/'+today()+'/'+id+'.'+safeExt;
     const {error}=await sb.storage.from(OFFICE?'office-romy-uploads':'isabella-uploads').upload(path,prepared.blob,{contentType:prepared.mime,upsert:false});
-    if(error)throw new Error('No pude subir '+String(file.name||'el archivo')+': '+error.message);
+    if(error)throw new Error('Hochladen fehlgeschlagen: '+String(file.name||'Datei')+': '+error.message);
     out.push({path,mime:prepared.mime,name:file.name||('Archivo.'+safeExt),size:Number(file.size||0)});
   }
   return out;
@@ -2668,33 +2668,33 @@ function initVoice(){
   const cancel=()=>{discard=true;try{fallbackRec?.stop()}catch{};try{if(recorder&&recorder.state!=='inactive')recorder.stop()}catch{}stopTracks();phase='idle';closeFocus()};
   const review=text=>{
     phase='review';setText(text);transcript.readOnly=false;
-    $('#focusStatus').textContent='Revisa la transcripción';
-    primary.textContent='Enviar';secondary.textContent='Repetir';
+    $('#focusStatus').textContent='Transkription prüfen';
+    primary.textContent='Senden';secondary.textContent='Wiederholen';
     setTimeout(()=>{try{transcript.focus();transcript.setSelectionRange(transcript.value.length,transcript.value.length)}catch{}},80);
   };
   const transcribe=async(blob)=>{
-    phase='transcribing';transcript.readOnly=true;$('#focusStatus').textContent='Transcribiendo…';setText('');primary.textContent='…';secondary.textContent='Cancelar';orb('thinking','Transcribiendo…');
+    phase='transcribing';transcript.readOnly=true;$('#focusStatus').textContent='Transkribiere …';setText('');primary.textContent='…';secondary.textContent='Abbrechen';orb('thinking','Transkribiere …');
     try{
       const text=await window.ISABELLA_AI.transcribe(blob);
-      if(!text){$('#focusStatus').textContent='No entendí el audio';secondary.textContent='Repetir';primary.textContent='Cerrar';phase='empty';return}
+      if(!text){$('#focusStatus').textContent='Audio nicht verstanden';secondary.textContent='Wiederholen';primary.textContent='Schließen';phase='empty';return}
       review(text);orb();
     }catch(err){
-      $('#focusStatus').textContent='No pude transcribir';setText(err?.message||'Inténtalo de nuevo.');transcript.readOnly=true;secondary.textContent='Repetir';primary.textContent='Cerrar';phase='error';orb();
+      $('#focusStatus').textContent='Transkription fehlgeschlagen';setText(err?.message||'Bitte erneut versuchen.');transcript.readOnly=true;secondary.textContent='Wiederholen';primary.textContent='Schließen';phase='error';orb();
     }
   };
   const browserFallback=()=>{
-    if(!R){phase='error';$('#focusStatus').textContent='Voz no disponible';setText('Puedes seguir escribiendo.');primary.textContent='Cerrar';secondary.textContent='Escribir';return}
+    if(!R){phase='error';$('#focusStatus').textContent='Sprache nicht verfügbar';setText('Du kannst weitertippen.');primary.textContent='Schließen';secondary.textContent='Tippen';return}
     try{
       phase='recording';fallbackRec=new R();fallbackRec.lang='de-DE';fallbackRec.interimResults=true;let finalText='';
       fallbackRec.onresult=e=>{let interim='';for(let k=e.resultIndex;k<e.results.length;k++){const x=e.results[k][0].transcript;if(e.results[k].isFinal)finalText+=x;else interim+=x}setText((finalText+' '+interim).trim())};
       fallbackRec.onend=()=>{if(!discard&&phase==='recording')review(finalText||getText())};
-      fallbackRec.onerror=()=>{phase='error';$('#focusStatus').textContent='No pude escuchar';setText('Revisa el permiso del micrófono o escribe el mensaje.');primary.textContent='Cerrar';secondary.textContent='Escribir'};
+      fallbackRec.onerror=()=>{phase='error';$('#focusStatus').textContent='Konnte nicht zuhören';setText('Bitte die Mikrofonfreigabe prüfen oder die Nachricht tippen.');primary.textContent='Schließen';secondary.textContent='Tippen'};
       fallbackRec.start();
-    }catch{phase='error';$('#focusStatus').textContent='No pude iniciar el micrófono'}
+    }catch{phase='error';$('#focusStatus').textContent='Mikrofon konnte nicht gestartet werden'}
   };
   const start=async()=>{
-    discard=false;openFocus();orb('listening','Escuchando…');phase='recording';
-    transcript.readOnly=true;setText('');$('#focusStatus').textContent='Escuchando…';primary.textContent='Detener';secondary.textContent='Cancelar';
+    discard=false;openFocus();orb('listening','Höre zu …');phase='recording';
+    transcript.readOnly=true;setText('');$('#focusStatus').textContent='Höre zu …';primary.textContent='Stopp';secondary.textContent='Abbrechen';
     if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder||!window.ISABELLA_AI?.transcribe){browserFallback();return}
     try{
       stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
@@ -2705,7 +2705,7 @@ function initVoice(){
       recorder.onstop=()=>{
         stopTracks();if(discard){chunks=[];return}
         const blob=new Blob(chunks,{type:recorder?.mimeType||mime||'audio/webm'});chunks=[];
-        if(!blob.size){phase='empty';$('#focusStatus').textContent='No escuché audio';primary.textContent='Cerrar';secondary.textContent='Repetir';return}
+        if(!blob.size){phase='empty';$('#focusStatus').textContent='Kein Audio gehört';primary.textContent='Schließen';secondary.textContent='Wiederholen';return}
         transcribe(blob);
       };
       recorder.start(250);
@@ -2731,7 +2731,7 @@ function initVoice(){
   $('#micButton').onclick=start;
   $('#focusClose').onclick=cancel;primary.onclick=stop;secondary.onclick=secondaryAction;
 }
-function openFocus(){$('#focusMode').classList.remove('hidden');$('#focusStatus').textContent='Escuchando…';const t=$('#focusTranscript');if(t){t.value='';t.textContent='';t.readOnly=true}}function closeFocus(){$('#focusMode').classList.add('hidden');orb()}
+function openFocus(){$('#focusMode').classList.remove('hidden');$('#focusStatus').textContent='Höre zu …';const t=$('#focusTranscript');if(t){t.value='';t.textContent='';t.readOnly=true}}function closeFocus(){$('#focusMode').classList.add('hidden');orb()}
 function startWeek(d){const x=new Date(d);const day=(x.getDay()+6)%7;return addDays(x,-day)} function weekNo(d){const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=x.getUTCDay()||7;x.setUTCDate(x.getUTCDate()+4-n);const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}
 function move(dir){let d=fromIso(state.date);if(state.view==='day')d=addDays(d,dir);else if(state.view==='week')d=addDays(d,dir*7);else d=new Date(d.getFullYear(),d.getMonth()+dir,1);state.date=iso(d);save();renderCalendar()}
 /* Native continuous planning shows the *same* canonical tasks on Week/Month.
@@ -3236,7 +3236,7 @@ async function openCanonicalTaskById(rowId){
 }
 function itemActions(kind,id){
   const item=itemBy(kind,id);if(!item)return;
-  const archive=kind==='task'?'<button id="quickArchive" class="sheet-action">Archivar</button>':'';
+  const archive=kind==='task'?'<button id="quickArchive" class="sheet-action">Archivieren</button>':'';
   const complete=kind==='task'?'<button id="quickComplete" class="sheet-action">'+(item.done?'Als offen markieren':'Als erledigt markieren')+'</button>':'';
   modal(item.title,`<div class="sheet-actions">${complete}<button id="quickEdit" class="sheet-action">Bearbeiten / verschieben</button><button id="quickDuplicate" class="sheet-action">Duplizieren</button>${archive}<button id="quickDelete" class="sheet-action danger">Löschen</button></div>`);
   $('#quickEdit').onclick=()=>editItem(kind,id);

@@ -4,40 +4,25 @@ import {readFileSync} from 'node:fs';
 import {ROMY_TOOLS,executeRomyTool} from '../supabase/functions/office-assistant/romy-tools.mjs';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const mission='99999999-9999-4999-8999-999999999999';
-test('Persistent work requires a distinct explicit proposal; read-only access is private',async()=>{
+test('Missions are hidden until they can read real Office data (Gari, 07.11.2026)',async()=>{
  const names=ROMY_TOOLS.map(x=>x.name);
  for(const tool of ['propose_start_mission','propose_control_mission','list_missions'])
-  assert.ok(names.includes(tool));
- const calls=[];
- const rows=[
-  {id:mission,status:'waiting_for_user',objective:'Read-only planning',
-   completion_criterion:'Review',iteration:1,max_iterations:5}
- ];
- const userDb={from(table){assert.equal(table,'office_romy_missions');
-   return {
-     select(){return this},
-     order(){return this},
-     eq(){return this},
-     limit(){return Promise.resolve({data:rows,error:null})},
-     maybeSingle(){return Promise.resolve({data:rows[0],error:null})}
-   };
- }};
- const admin={from(table){assert.equal(table,'office_romy_proposals');return {
-   insert(row){calls.push(row);return {select(){return {single:async()=>({data:{id:mission},error:null})}}}}
- }}};
- const v=await executeRomyTool('propose_start_mission',{objective:'Review project dependencies carefully',completion_criterion:'Produce a draft for approval'},
-  {userDb,admin,userId:mission,conversationId:mission,requestId:mission,apiKey:null});
- assert.equal(v.kind,'start_mission');
- assert.equal(v.requires_explicit_confirmation,true);
- assert.equal(calls[0].kind,'start_mission');
- const list=await executeRomyTool('list_missions',{},{
-   userDb,admin,userId:mission,conversationId:mission,requestId:mission});
- assert.equal(list.missions.length,1);assert.equal(list.writes_authorized,false);
+  assert.ok(!names.includes(tool),tool+' is not offered to the model');
+ const code=read('supabase/functions/office-assistant/romy-tools.mjs');
+ assert.match(code,/export const ROMY_MISSIONS_ENABLED=false;/);
+ for(const tool of ['propose_start_mission','propose_control_mission','list_missions']){
+  const v=await executeRomyTool(tool,{objective:'x',completion_criterion:'y'},
+   {userDb:null,admin:null,userId:mission,conversationId:mission,requestId:mission,apiKey:null});
+  assert.equal(v.error,'missions_disabled');
+ }
+ assert.doesNotMatch(read('supabase/functions/office-assistant/index.ts'),/propose_start_mission/);
+ const paused=read('supabase/migrations/20261107062251_office_romy_missions_paused.sql');
+ assert.match(paused,/cron\.alter_job\(job_id := \(select jobid from cron\.job where jobname='office-romy-mission-runner'\), active := false\)/);
 });
 test('Worker never receives a service role read tool for Office projects',()=>{
  const worker=read('supabase/functions/office-romy-mission-runner/index.ts');
- const sql=read('supabase/migrations/20261105143000_office_romy_persistent_work_v1.sql');
- const cron=read('supabase/migrations/20261105144000_office_romy_mission_schedule_v1.sql');
+ const sql=read('supabase/migrations/20261105121203_office_romy_persistent_work_v1.sql');
+ const cron=read('supabase/migrations/20261105121223_office_romy_mission_schedule_v1.sql');
  assert.match(worker,/office_romy_runner_authorized/);
  assert.match(worker,/office_romy_claim_missions/);
  assert.match(worker,/office_romy_finish_mission/);

@@ -1,0 +1,19 @@
+project_id = "ynzsbemisjvfgbqcqliq"
+
+# verify_jwt per function; the deploy workflow reads it from here.
+[functions.office-admin]
+verify_jwt = true
+entrypoint = "./functions/office-admin/index.ts"
+
+[functions.office-assistant]
+verify_jwt = true
+entrypoint = "./functions/office-assistant/index.ts"
+
+[functions.office-terminplan-ai]
+verify_jwt = true
+entrypoint = "./functions/office-terminplan-ai/index.ts"
+
+# Called by the database cron with its own secret header, not by browsers.
+[functions.office-romy-mission-runner]
+verify_jwt = false
+entrypoint = "./functions/office-romy-mission-runner/index.ts"

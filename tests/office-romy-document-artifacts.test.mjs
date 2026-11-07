@@ -20,7 +20,7 @@ test('Romy ports the actual Word/PDF document builders from Window, not a second
 });
 
 test('Office artifacts are private in both PostgreSQL and Storage',()=>{
- const sql=read('supabase/migrations/20261105011000_office_romy_document_artifacts_v1.sql');
+ const sql=read('supabase/migrations/20261104235735_office_romy_document_artifacts_v1.sql');
  for(const needle of [
    'alter table public.office_romy_artifacts enable row level security',
    'revoke all on public.office_romy_artifacts from public,anon,authenticated',
@@ -65,7 +65,7 @@ test('Generated files reuse existing Window artifact cards and survive chat relo
  assert.ok(ui.includes(".select('id,role,content,attachments,metadata,created_at')"));
  assert.ok(app.includes('data-artifact-file'));
  assert.ok(app.includes('hydrateArtifactFiles('));
- assert.ok(html.includes('app.js?v=office38'));
+ assert.ok(html.includes('app.js?v=office40'));
  assert.ok(html.includes('office-assistant.js?v=office35'));
  new Function(app);new Function(ui);
 });

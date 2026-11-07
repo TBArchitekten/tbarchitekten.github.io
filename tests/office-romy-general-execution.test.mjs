@@ -26,7 +26,7 @@ test('Romy ports Window general_execution rather than inventing XLSX/PPTX makers
 });
 
 test('Office runtime isolates sources, metadata and generated files by employee',()=>{
- const sql=read('supabase/migrations/20261105023000_office_romy_capability_runtime_v1.sql');
+ const sql=read('supabase/migrations/20261105054909_office_romy_capability_runtime_v1.sql');
  for(const needle of [
   'office_romy_capability_runs_owner_select',
   "revoke all on public.office_romy_capability_runs from public,anon,authenticated",

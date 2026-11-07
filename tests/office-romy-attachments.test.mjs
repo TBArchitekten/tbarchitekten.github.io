@@ -24,14 +24,14 @@ test('Romy uses the existing Window attachment UI, not a new picker',()=>{
   assert.ok(edge.includes('loadRomyAttachments(db,uid,attachments)'));
   assert.ok(edge.includes('attachments:attached.metadata'));
   assert.ok(edge.includes('attachmentInputs:attached.inputs'));
-  assert.ok(html.includes('app.js?v=office38'));
+  assert.ok(html.includes('app.js?v=office40'));
   assert.ok(html.includes('office-assistant.js?v=office35'));
   assert.ok(html.includes('romy-transport.js?v=office27'));
   new Function(assistant);new Function(transport);new Function(app);
 });
 
 test('Per-member Romy uploads have a private bucket with no anon policies',()=>{
-  const sql=read('supabase/migrations/20261104235500_office_romy_uploads_v1.sql');
+  const sql=read('supabase/migrations/20261104230525_office_romy_uploads_v1.sql');
   assert.ok(sql.includes("values ('office-romy-uploads','office-romy-uploads',false,12582912)"));
   for(const policy of ['office_romy_uploads_read','office_romy_uploads_insert','office_romy_uploads_delete'])
     assert.ok(sql.includes('create policy '+policy));

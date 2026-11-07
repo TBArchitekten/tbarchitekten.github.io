@@ -121,7 +121,7 @@ test('Office Work connects to Office schema only and can create real buckets and
 });
 test('Private uploaded files can be reused in subsequent Terminplan requests',()=>{
  const edge=read('supabase/functions/office-terminplan-ai/index.ts'),html=read('terminplan.html');
- const migration=read('supabase/migrations/20261105142000_office_terminplan_sources_v1.sql');
+ const migration=read('supabase/migrations/20261105134324_office_terminplan_sources_v1.sql');
  assert.match(edge,/office_terminplan_sources/);
  assert.match(edge,/office-plan-sources/);
  assert.match(edge,/REBUILD_SCHEMA/);

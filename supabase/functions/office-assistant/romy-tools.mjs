@@ -3,7 +3,7 @@ import { searchRomySemanticMemory } from "./romy-semantic-memory.mjs";
 // Adapted tool boundary for Romy using Window's explicit tool/approval discipline.
 // Queries execute with the employee's JWT and the Office RLS policies,
 // never with a shared service-role reader.
-export const ROMY_TOOLS=[
+const ALL_ROMY_TOOLS=[
  {type:"function",name:"list_skills",description:"List versioned procedures ported from Window; Skills teach workflows but never grant permissions.",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
  {type:"function",name:"load_skill",description:"Load a trusted full Window Skill by exact slug. Maximum four complementary Skills per turn; it cannot authorize actions.",strict:false,parameters:{type:"object",properties:{slug:{type:"string"}},required:["slug"],additionalProperties:false}},
  {type:"function",name:"search_personal_memory",description:"Search this employee's confirmed private memories only; not arbitrary past chat claims or model inferences.",strict:false,parameters:{type:"object",properties:{query:{type:"string"},kind:{type:"string",enum:["fact","preference"]}},additionalProperties:false}},
@@ -55,6 +55,12 @@ export const ROMY_TOOLS=[
  {type:"function",name:"propose_create_task",description:"Register a proposal to CREATE a task, not an actual change. It will be applied only after the employee explicitly approves it.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},due_date:{type:"string"},project_id:{type:"string"},notes:{type:"string"}},required:["title"],additionalProperties:false}},
  {type:"function",name:"propose_create_event",description:"Register a proposal to CREATE an appointment in the user's personal calendar. It is NOT written until the employee explicitly confirms.",strict:false,parameters:{type:"object",properties:{title:{type:"string"},starts_at:{type:"string",description:"ISO-8601 with explicit UTC Z or timezone offset for Europe/Berlin (e.g. +01:00/+02:00); never infer an ungrounded clock time."},ends_at:{type:"string",description:"ISO-8601 with explicit UTC Z or timezone offset for Europe/Berlin."},project_id:{type:"string"},notes:{type:"string"}},required:["title","starts_at","ends_at"],additionalProperties:false}},
 ];
+// Missions stay in the code but are hidden from Romy until they can work with real Office data
+// (decision of Gari, 07.11.2026). Turning them on again is this flag plus the cron job.
+export const ROMY_MISSIONS_ENABLED=false;
+const MISSION_TOOLS=new Set(["list_missions","propose_start_mission","propose_control_mission"]);
+export const ROMY_TOOLS=ALL_ROMY_TOOLS.filter(t=>ROMY_MISSIONS_ENABLED||!MISSION_TOOLS.has(t.name));
+
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const validId=s=>typeof s==="string"&&UUID.test(s);
 const validDate=validOfficeDate;
@@ -76,6 +82,7 @@ async function registerProposal({admin,requestId,userId,conversationId,kind,payl
 }
 export async function executeRomyTool(name,args,{userDb,admin,userId,conversationId,requestId,apiKey}){
  const a=args&&typeof args==="object"&&!Array.isArray(args)?args:{};
+ if(!ROMY_MISSIONS_ENABLED&&MISSION_TOOLS.has(name))return err("missions_disabled");
  if(name==="search_semantic_history"){
   return await searchRomySemanticMemory({userDb,admin,userId,query:a.query,apiKey});
  }

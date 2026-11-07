@@ -4,7 +4,7 @@ const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const path=require("node:path");
 const editor=fs.readFileSync(path.join(__dirname,"../terminplan.html"),"utf8");
-const sql=fs.readFileSync(path.join(__dirname,"../supabase/migrations/20261028_office_terminplan_server_revision.sql"),"utf8");
+const sql=fs.readFileSync(path.join(__dirname,"../supabase/legacy-migrations/20261028_office_terminplan_server_revision.sql"),"utf8");
 test("browser scripts parse and have no unmatched id selectors",()=>{
   for(const m of editor.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g))new Function(m[1]);
   const ids=new Set([...editor.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));

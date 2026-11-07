@@ -19,7 +19,7 @@ test('Office and Window Tools use the same five-icon navigation rather than swit
   assert.ok(shell.includes('aria-label="Romy"'));
 });
 test('All active office members may rename and remove shared files without ownership restriction',()=>{
-  const sql=file('supabase/migrations/20261104232000_office_shared_desktop_edit_for_all.sql');
+  const sql=file('supabase/migrations/20261104221830_office_shared_desktop_edit_for_all.sql');
   const ops=file('app/office-desktop-ops.js');
   const work=file('app/work.js');
   for(const policy of ['office_folders_update','office_folders_delete','office_files_update','office_files_delete','office_work_storage_delete'])
@@ -37,7 +37,7 @@ test('All active office members may rename and remove shared files without owner
 });
 
 test('Storage policy scopes project files using outer objects.name, never project.name',()=>{
-  const sql=file('supabase/migrations/20261104232500_office_storage_scope_qualified_name.sql');
+  const sql=file('supabase/migrations/20261104222033_office_storage_scope_qualified_name.sql');
   for(const policy of ['office_work_storage_read','office_work_storage_insert','office_work_storage_delete'])assert.ok(sql.includes('create policy '+policy));
   assert.ok(sql.includes('storage.foldername(objects.name)'));
   assert.ok(!sql.includes('storage.foldername(p.name)'));

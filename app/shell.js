@@ -45,11 +45,11 @@ document.body.innerHTML = `
         <div id="chatReplyPreview" class="chat-reply-preview hidden"></div>
         <div id="chatAttachmentPreview" class="chat-attachment-preview hidden"></div>
         <div class="composer">
-          <button id="attachButton" class="attach" aria-label="Adjuntar archivo" title="Adjuntar archivo"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button id="attachButton" class="attach" aria-label="Datei anhängen" title="Datei anhängen"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
           <input id="chatImageInput" class="hidden" type="file" accept="image/*,.pdf,.txt,.md,.csv,.json,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.eml" multiple>
-          <button id="micButton" class="mic" aria-label="Hablar" title="Hablar"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg></button>
+          <button id="micButton" class="mic" aria-label="Sprechen" title="Sprechen"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg></button>
           <textarea id="chatInput" rows="1" placeholder="Nachricht an Romy …"></textarea>
-          <button id="sendButton" class="send" aria-label="Enviar" title="Enviar mensaje"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+          <button id="sendButton" class="send" aria-label="Senden" title="Nachricht senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
         </div>
       </div>
     </section>
@@ -187,7 +187,7 @@ document.body.innerHTML = `
     </div>
     <form id="feedThreadForm" class="feed-thread-form">
       <textarea id="feedThreadInput" rows="1" placeholder="Preguntar sobre esto..."></textarea>
-      <button class="send" aria-label="Enviar"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+      <button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
     </form>
   </section>
 
@@ -204,7 +204,7 @@ document.body.innerHTML = `
     </div>
     <form id="ideaWorkspaceForm" class="idea-workspace-form">
       <textarea id="ideaWorkspaceInput" rows="1" placeholder="Seguir trabajando en esta idea..."></textarea>
-      <button class="send" aria-label="Enviar"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+      <button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
     </form>
   </section>
 

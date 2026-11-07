@@ -61,7 +61,7 @@ test('The page mirrors the database rules for tasks and buckets',()=>{
 });
 
 test('Schema: buckets and tasks behind RLS, one rule set for read, write and delete',()=>{
-  const sql=read('supabase/migrations/20261104000300_office_planner_v1.sql');
+  const sql=read('supabase/migrations/20261104110123_office_planner_v1.sql');
   for(const table of ['office_task_buckets','office_tasks'])assert.match(sql,new RegExp(`alter table public\\.${table} enable row level security;`));
   assert.match(sql,/revoke all on public\.office_task_buckets, public\.office_tasks from public, anon, authenticated;/);
   assert.match(sql,/project_id is not null or created_by = \(select auth\.uid\(\)\) or assignee_id = \(select auth\.uid\(\)\)/,'personal tasks only for their author');
