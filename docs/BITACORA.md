@@ -17,6 +17,13 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Kalender: eventos de día completo de Persönlich como pastillas · Claude
+- **Qué cambió y por qué:** en la vista Tag, los eventos de día completo del otro calendario salían como texto suelto; ahora son pastillas rayadas, como el resto. Si solo hay eventos del otro calendario, ya no aparece "Keine Aufgaben".
+- **Archivos:** `app/{app.js,minds-calendar-shell.css,index.html}` y versiones en los tests.
+- **Base de datos / funciones:** ninguna.
+- **Cómo se probó:** 167/167 pruebas y captura en Chromium con puente simulado.
+- **PR:** #48
+
 ### 2026-11-07 · Kalender con los dos calendarios (paso 3) · Claude
 - **Qué cambió y por qué:** decisión de Gari: dos calendarios, Persönlich y Office, y los dos se ven en cualquiera de las cuentas.
   - Dentro de la app de Window, el Kalender de Office muestra los eventos de Persönlich rayados en gris y solo para leer, en las vistas Monat, Woche y Tag.
