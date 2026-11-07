@@ -468,6 +468,8 @@ body.read-only .editor-only{display:none!important}
 <link rel="stylesheet" href="./window-editor.css?v=1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>
+<!-- In the Window app (account Office) this client borrows the app's session; in the browser it is the usual office client. -->
+<script src="./shared/supabase-client.js?v=office3"></script>
 </head>
 <body>
 <header class="office-plan-head">
@@ -723,7 +725,13 @@ body.read-only .editor-only{display:none!important}
   const params=new URLSearchParams(location.search);
   const PLAN_ID=params.get('id');
   const TEMPLATE_ID=params.get('template');
-  const sb=supabase.createClient(OFFICE.url,OFFICE.key,{auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  const sb=window.MINDS_SUPABASE||supabase.createClient(OFFICE.url,OFFICE.key,{auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  // Inside the Window app the app signs in (its own screen); the browser goes to the office start page.
+  const inApp=!!window.WINDOW_NATIVE?.available;
+  function needSignIn(){
+    if(inApp){void window.WINDOW_NATIVE.call('session.signIn');return}
+    location.href='./';
+  }
   const initialData={project:{name:'Terminplan',start:'2027-01-04',end:'2027-05-28',standDate:'2027-01-04',standLabel:'Muster'},groups:[],tasks:[]};
   let data = initialData;
   let zoom = 'week';
@@ -931,7 +939,7 @@ body.read-only .editor-only{display:none!important}
   async function loadRemoteData(){
     const {data:sessionData,error:sessionError}=await sb.auth.getSession();
     if(sessionError||!sessionData.session){
-      location.href='./';
+      needSignIn();
       return;
     }
     const userId=sessionData.session.user.id;
@@ -946,7 +954,9 @@ body.read-only .editor-only{display:none!important}
       return;
     }
     // The start password is replaced on the Office page before any tool opens.
-    if(member.must_change_password){location.href='./';return}
+    if(member.must_change_password){
+      if(inApp){document.body.innerHTML='<div class="empty">Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.</div>';return}
+      location.href='./';return}
 
     if(TEMPLATE_ID){
       const {data:row,error}=await sb.from('office_terminplan_templates')
@@ -978,7 +988,7 @@ body.read-only .editor-only{display:none!important}
       canEdit=member.role==='admin'||row.owner_id===userId||leadsProject;
       setPlanChrome(row);
     }else{
-      location.href='./';
+      location.href=inApp?'./app/#section=plans':'./';
       return;
     }
 

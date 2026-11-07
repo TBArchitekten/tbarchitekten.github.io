@@ -51,7 +51,8 @@ test('sign-in is per person with the office e-mail; no shared start password or 
   assert.match(app,/signInWithPassword\(\{email:\$\('#email'\)\.value\.trim\(\)\.toLowerCase\(\)/);
   // A start password must be replaced before anything else opens, here and in the editor.
   assert.match(app,/if\(member\.must_change_password\)\{openPassword\(false\);return\}/);
-  assert.match(read('terminplan.html'),/if\(member\.must_change_password\)\{location\.href='\.\/';return\}/);
+  // In the browser the plan sends a start password to the start page; in the Window app it says so (no second sign-in there).
+  assert.match(read('terminplan.html'),/if\(member\.must_change_password\)\{\n\s*if\(inApp\)\{document\.body\.innerHTML='<div class="empty">Bitte zuerst im Browser auf tbarchitekten\.github\.io das Startpasswort ändern\.<\/div>';return\}\n\s*location\.href='\.\/';return\}/);
   assert.match(app,/sb\.auth\.updateUser\(\{password:pw\}\)/);
   assert.match(app,/sb\.rpc\('office_password_changed'\)/);
 });

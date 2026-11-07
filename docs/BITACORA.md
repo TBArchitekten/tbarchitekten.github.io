@@ -17,6 +17,29 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Terminpläne dentro de la app sin segundo login · Claude
+- **Qué cambió y por qué:** Gari: en la app de Window, al abrir un Terminplan pedía login otra vez, volvía a la lista y al tocar el plan otra vez pedía login.
+  - **Causa:** `terminplan.html` creaba su propio cliente con la sesión guardada en el navegador. Dentro de la app esa sesión no existe (la app la presta por el puente y `./app/` borra la guardada), así que el plan mandaba a la página raíz y su login.
+  - **Arreglo:** `terminplan.html` carga `shared/supabase-client.js` y usa `window.MINDS_SUPABASE`: dentro de la app, la sesión de la app; en el navegador, la de siempre.
+    - Sin sesión en la app: login nativo (`session.signIn`). En el navegador: la página raíz, como antes.
+    - Startpasswort pendiente en la app: aviso de cambiarlo en el navegador. Sin `id`: vuelve a `./app/#section=plans`.
+  - **Mismo fallo en «Mitglieder» y «Passwort ändern»** (menú «Mehr», van a la página raíz): la página raíz también usa el cliente compartido.
+    - Sin sesión en la app: vuelve a `./app/` y pide el login de la app.
+    - «Abmelden» ahí cierra la sesión de la app.
+  - El cliente del puente gana `auth.updateUser` (solo contraseña, `PUT /auth/v1/user` con el token prestado).
+- **Archivos:** `terminplan.html`, `index.html`, `app.js` (v6), `shared/supabase-client.js` (v=office3 en `app/index.html`, `terminplan.html`, `index.html`), `tests/office-terminplan-in-app.test.mjs` (nuevo), pins en `tests/office-app`, `office-core`, `office-navigation-parity`, `office-window-app`.
+- **Base de datos:** ninguna.
+- **Deploy de funciones:** ninguno.
+- **Cómo se probó:** 183 tests en verde.
+  - En Chromium con el puente simulado:
+    - plan abierto con la sesión de la app, sin navegar fuera y sin errores;
+    - sin sesión en la app → login nativo y se queda en el plan;
+    - en el navegador sin sesión → página raíz;
+    - `#password` en la app → `PUT /auth/v1/user` con el token prestado y vuelta a `./app/`;
+    - `#members` en la app → `office-admin` con el token prestado.
+- **Quedó pendiente o sin probar:** probarlo en el iPhone real (no hace falta un build nuevo: la app ya confía en todo el sitio de Office).
+- **PR:** #52
+
 ### 2026-11-07 · El Kalender es el calendario de tus proyectos · Claude
 - **Qué cambió y por qué:** decisión de Gari: el calendario es el de los proyectos, no el de la persona.
   - **Kalender:** de cada proyecto en cuyo equipo estás, todas las tareas con fecha (las haya creado quien sea), todas las Fristen de sus Terminpläne y los Termine con proyecto. Además, tus tareas personales y tus Termine.
