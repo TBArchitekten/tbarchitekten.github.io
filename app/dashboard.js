@@ -229,7 +229,7 @@
       '<div class="desk-task-list" data-desk-task-list>' +
       (rows || '<p class="desk-empty">Keine Aufgaben an diesem Tag.</p>') + '</div>' +
       '<div class="desk-panel-footer">' +
-      '<span>' + items.filter(x=>!x.done).length + ' offen · ' + meetings.length + ' eventos</span>' +
+      '<span>' + items.filter(x=>!x.done).length + ' offen · ' + meetings.length + (meetings.length===1?' Termin':' Termine') + '</span>' +
       '<button type="button" data-desk-open-time>Im Kalender ansehen '+deskIcon('arrow')+'</button></div>';
   };
   // One read-only weekly view inside the existing Plan, never another calendar.

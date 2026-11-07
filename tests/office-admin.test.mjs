@@ -54,7 +54,7 @@ test('the admin function checks the caller before any change and never stores th
 });
 
 test('the base schema keeps every Office table behind membership and roles',()=>{
-  const sql=read('supabase/migrations/20261104000000_office_base_v1.sql');
+  const sql=read('supabase/migrations/20261103222203_office_base_v1.sql');
   for(const t of ['office_members','office_projects','office_terminplan_templates','office_terminplan_instances','office_terminplan_versions','office_terminplan_dialogue_messages','office_terminplan_ai_requests'])
     assert.match(sql,new RegExp('alter table public\\.'+t+' enable row level security'),t+' has RLS');
   assert.match(sql,/revoke all on public\.office_members from public, anon, authenticated/);

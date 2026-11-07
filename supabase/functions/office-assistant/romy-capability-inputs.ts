@@ -9,6 +9,9 @@ const INPUT_MIME_BY_EXT:Record<string,string>={
   csv:"text/csv",zip:"application/zip",html:"text/html",htm:"text/html",txt:"text/plain",json:"application/json",md:"text/markdown",
   png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp"
 };
+const ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// inputRefs used uuid() without defining it, so any referenced input file failed with a ReferenceError.
+function uuid(v:any){const s=String(v||"").trim();return ID.test(s)?s:""}
 const MAX_INPUT_FILE_BYTES=12*1024*1024;
 const MAX_INPUT_TOTAL_BYTES=24*1024*1024;
 function safeFilename(v:any){

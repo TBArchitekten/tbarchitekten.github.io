@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const sql=read('supabase/migrations/20261104220000_office_assistant_personal_v1.sql');
+const sql=read('supabase/migrations/20261104205847_office_assistant_personal_v1.sql');
 const edge=read('supabase/functions/office-assistant/index.ts');
 
 test('Assistant reuses Window chat rather than building another UI',()=>{
@@ -13,7 +13,7 @@ test('Assistant reuses Window chat rather than building another UI',()=>{
     assert.ok(shell.includes(needle),'Window shell missing '+needle);
   }
   assert.ok(!shell.includes('data-nav="assistant" aria-label="Assistent" hidden'));
-  for(const needle of ['office-assistant.js?v=office35','office-assistant.css?v=office8','app.js?v=office38']){
+  for(const needle of ['office-assistant.js?v=office35','office-assistant.css?v=office8','app.js?v=office40']){
     assert.ok(html.includes(needle),'asset cache not bumped '+needle);
   }
   for(const needle of ['office_assistant_conversations','office_assistant_messages','app()?.setOfficeMessages','window.TBA_OFFICE_ASSISTANT']){
@@ -45,7 +45,7 @@ test('Every conversation, message and request belongs to exactly one authenticat
 });
 
 test('Personal assistant requests are authenticated and deduplicated without an unapproved quota',()=>{
-  const migration=read('supabase/migrations/20261104223000_office_assistant_remove_unapproved_daily_cap.sql');
+  const migration=read('supabase/migrations/20261104213325_office_assistant_remove_unapproved_daily_cap.sql');
   const frontend=read('app/office-assistant.js');
   for(const expected of [
     'create or replace function public.office_assistant_reserve',

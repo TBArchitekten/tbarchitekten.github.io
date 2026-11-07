@@ -14,6 +14,22 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 - **Office recibe Threads y el conector de Claude**, como Window.
 - **Akten:** se resuelve después. Antes hay que aclarar con la dirección el tema de datos de clientes.
 - **Bernried y Schwarz se quedan en Window como están.** Mudarlos se ve en un paso posterior.
+- **Desktop de Büro:** se queda como está, solo con los Desktops de proyecto.
+- **Fuentes del Terminplan privadas:** es intencional. Como en un chat, los PDF que sube una persona no los ven otras.
+- **Misiones de Romy:** ocultas hasta que puedan leer datos reales.
+
+### Resuelto el 07.11 (PR #41)
+- **Costo de Romy:**
+  - el modelo ve los **últimos 24 mensajes**, como Isabella en Window; lo anterior lo busca con `search_semantic_history` y `search_conversation_history`;
+  - la hora va en el turno y no en las instrucciones, así el proveedor puede reutilizar (cachear) la parte fija del prompt.
+- **Misiones:** las herramientas no se ofrecen a Romy (`ROMY_MISSIONS_ENABLED=false`) y el cron está pausado (migración `20261107062251`). Las tablas y el runner siguen ahí.
+- **RLS de `office_task_assignees`:** la asignación tiene que ser del mismo proyecto que la tarea (migración `20261107062242`, probada en una transacción revertida antes y después).
+- **Romy y archivos de entrada:** `inputRefs` usaba `uuid()` sin definirla, así que cualquier archivo referenciado fallaba. Corregido (lo encontró el comprobador de tipos).
+- **Migraciones:**
+  - los archivos llevan ahora la versión registrada en Supabase, sin duplicados;
+  - las tres `20261028_*` del proyecto antiguo están en `supabase/legacy-migrations/`.
+- **Textos:** el chat y la voz de Romy pasaron a alemán (antes decían "Enviando a Isabella…", "Escuchando…", etc.), igual que "eventos" en el panel Heute.
+- **Deploy manual desde el repo:** `.github/workflows/deploy-functions.yml` y `supabase/config.toml`, igual que en Window. **Falta que Gari añada el secreto** `SUPABASE_ACCESS_TOKEN` en el entorno `supabase` del repo (Settings → Environments). Hasta entonces, **los cambios de `office-assistant` de este PR no están desplegados.**
 
 ### Estado real tras PR #37–#39 (no estaba en la bitácora)
 - **Work ya no usa el `work.js` de Window.** Usa `app/office-work.js` y `app/office-window-work-surface.js` sobre `office_tasks`, `office_task_buckets`, `office_task_assignees`, `office_project_folders`, `office_project_files` y `office_project_members`.
@@ -124,7 +140,7 @@ PR #35 fusionado a `main` en el commit `369dab63038cb49fabd7523ddc295472492e15e3
 - **Oculto a propósito:** Eingang (Bandeja), Lecturas y Thoughts; el Assistent y Desktop están integrados, aunque siguen pendientes de aceptación con usuarios.
 
 ## 4. Base de datos y permisos
-**Migraciones**, todas aplicadas a Supabase al 04.11.2026:
+**Migraciones.** Desde el 07.11, cada archivo de `supabase/migrations/` lleva la versión que registró Supabase; esa carpeta es la lista completa y vigente. La lista de abajo es histórica: los nombres de archivo cambiaron y las tres `20261028_*` están ahora en `supabase/legacy-migrations/`. Lista histórica:
 - `20261028_office_ai_quota_v1`
 - `20261028_office_terminplan_dialogue_v1`
 - `20261028_office_terminplan_server_revision`

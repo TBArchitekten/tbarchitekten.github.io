@@ -56,7 +56,7 @@ test('Office reads only Office tables but reuses Window visual view files',()=>{
  for(const table of ['office_projects','office_tasks','office_task_buckets','office_project_folders','office_project_files','office_task_assignees'])
   assert.match(app,new RegExp(table));
  assert.doesNotMatch(app,/from\('isabella_projects'\)/);
- const sql=read('supabase/migrations/20261105152000_office_work_multi_assignees_v1.sql');
+ const sql=read('supabase/migrations/20261105155214_office_work_multi_assignees_v1.sql');
  assert.match(sql,/enable row level security/);
  assert.match(sql,/office_task_assignees_insert/);
  assert.match(sql,/office_tasks_team_delete/);
@@ -124,7 +124,7 @@ test('Window unbucketed Planner column is always available and accepts dropped t
  assert.match(adapter,/moveTask\(dragged,target\.dataset\.dropBucket\|\|null\)/);
 });
 test('Office file actions are authorized for project teammates, with immutable storage identity',()=>{
- const sql=read('supabase/migrations/20261105152000_office_work_multi_assignees_v1.sql');
+ const sql=read('supabase/migrations/20261105155214_office_work_multi_assignees_v1.sql');
  assert.match(sql,/office_project_files_team_update/);
  assert.match(sql,/office_project_files_team_delete/);
  assert.match(sql,/office_file_identity_guard/);

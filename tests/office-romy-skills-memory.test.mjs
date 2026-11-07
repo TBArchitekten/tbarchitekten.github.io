@@ -38,7 +38,7 @@ test('Romy imports the exact Window registry: Skills teach, tools govern',()=>{
 });
 
 test('Memory can only become accepted after its owner reviews a proposal',()=>{
- const sql=read('supabase/migrations/20261105013000_office_romy_skills_memory_v1.sql');
+ const sql=read('supabase/migrations/20261105001450_office_romy_skills_memory_v1.sql');
  const tool=read('supabase/functions/office-assistant/romy-tools.mjs');
  for(const s of [
    'alter table public.office_romy_memories enable row level security',
@@ -71,7 +71,7 @@ test('Romy uses the existing Window modal for review, trace and owner retraction
    "window.confirm(p.kind==='remember'"
  ])assert.ok(ui.includes(needle),'Memory UI missing '+needle);
  assert.ok(html.includes('office-assistant.js?v=office35'));
- assert.ok(html.includes('app.js?v=office38'));
+ assert.ok(html.includes('app.js?v=office40'));
  assert.ok(!ui.includes('office-chat-layout'));
  new Function(ui);
 });

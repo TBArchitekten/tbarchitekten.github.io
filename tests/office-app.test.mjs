@@ -88,7 +88,7 @@ test('Project team: collaborative Office membership without mandatory lead',()=>
 });
 
 test('Schema fix: categories are unique per person',()=>{
-  const sql=read('supabase/migrations/20261104000500_office_window_fixes.sql');
+  const sql=read('supabase/migrations/20261104121353_office_window_fixes.sql');
   assert.match(sql,/drop constraint isabella_categories_client_key_key;/);
   assert.match(sql,/add constraint isabella_categories_user_client_key unique \(user_id, client_key\);/);
   assert.match(sql,/create index isabella_tasks_project_assignee_idx/);

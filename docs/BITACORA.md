@@ -17,6 +17,28 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Correcciones de la revisión · Claude
+- **Qué cambió y por qué:** correcciones acordadas con Gari tras la revisión:
+  - el historial de Romy se acota a 24 mensajes como en Window, y el prompt queda listo para la caché (la hora va en el turno);
+  - misiones ocultas (flag y cron pausado);
+  - RLS de `office_task_assignees` corregida;
+  - `uuid()` que faltaba en las entradas de archivos de Romy;
+  - migraciones renombradas a las versiones de Supabase y las de 20261028 movidas a `legacy-migrations`;
+  - textos del chat y la voz de Romy en alemán;
+  - workflow de deploy manual y `supabase/config.toml`.
+- **Archivos:**
+  - `supabase/functions/office-assistant/{index.ts,romy-tools.mjs,romy-capability-inputs.ts}`;
+  - `supabase/migrations/*` (renombradas y 2 nuevas), `supabase/legacy-migrations/`, `supabase/config.toml`;
+  - `.github/workflows/deploy-functions.yml`;
+  - `app/{app.js,shell.js,dashboard.js,index.html}`;
+  - `tests/*` (referencias y tests nuevos en `office-review-1107.test.mjs`);
+  - docs.
+- **Base de datos:** `20261107062242_office_task_assignees_project_check` y `20261107062251_office_romy_missions_paused`, ambas **aplicadas** con el MCP de Supabase. El arreglo de RLS se probó antes y después en una transacción revertida: antes se aceptaba una asignación de otro proyecto; después se rechaza.
+- **Deploy de funciones:** **pendiente.** `office-assistant` debe desplegarse con el nuevo workflow cuando Gari añada `SUPABASE_ACCESS_TOKEN` al entorno `supabase` del repo. Mientras tanto sigue en producción la v12 (sin el límite de 24 mensajes y con las herramientas de misión visibles; el cron ya está pausado).
+- **Cómo se probó:** 165/165 pruebas; comprobador de tipos de TypeScript sin nombres indefinidos.
+- **Quedó pendiente:** la unificación del modelo de datos (Gari decide tras conocer qué pasa con Tools); la regla de permisos de archivos de proyecto (todos o el equipo); el presupuesto de Romy.
+- **PR:** #41
+
 ### 2026-11-07 · Revisión de PR #16–#39 y decisiones de Gari · Claude
 - **Qué cambió y por qué:** Gari pidió revisar a fondo lo hecho con ChatGPT del 04 al 05.11. Se revisaron:
   - el código y las migraciones;

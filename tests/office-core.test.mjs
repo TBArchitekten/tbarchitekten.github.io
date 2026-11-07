@@ -68,7 +68,7 @@ test('the editor and the AI function share the edit rule: owner, admin or Projek
   const editor=read('terminplan.html'),fn=read('supabase/functions/office-terminplan-ai/index.ts');
   assert.match(editor,/canEdit=member\.role==='admin'\|\|row\.owner_id===userId\|\|leadsProject/);
   assert.match(fn,/const canEdit=plan\.owner_id===auth\.user\.id\|\|member\.role==="admin"\|\|leadsProject/);
-  const sql=read('supabase/migrations/20261104000000_office_base_v1.sql');
+  const sql=read('supabase/migrations/20261103222203_office_base_v1.sql');
   assert.match(sql,/p_owner = \(select auth\.uid\(\)\) or \(select private\.office_leads_project\(p_project\)\)/);
 });
 
