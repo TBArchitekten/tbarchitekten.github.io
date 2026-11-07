@@ -17,6 +17,30 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Office lista para la app de Window (paso 1) · Claude
+- **Qué cambió y por qué:** Gari quiere entrar a Office desde la app del iPhone de Window, cambiando de cuenta como en GitHub (Persönlich / Office). Este paso prepara la web de Office; el cambio de cuenta en la app va en el repo de Window.
+  - `shared/supabase-client.js`: si la página corre dentro de la app (`window.webkit.messageHandlers.windowNative`), usa el mismo contrato v1 que Window.
+    - Pide el access token a la app y no guarda sesión propia (borra `tba-office-auth-v2`).
+    - El inicio y el cierre de sesión los hace la app.
+    - En el navegador no cambia nada.
+  - `app/sync.js` y `app/shell.js`: dentro de la app, sin sesión, se pide a la app que muestre su inicio de sesión, en lugar de ir a la página raíz; "Abmelden" cierra la sesión de la app.
+  - Pestañas de Office en la app: Romy · Heute · Kalender · Work · Tools. Projekte y Terminplan-Muster se abren en Tools.
+  - En el menú "•••" aparece "Zu Persönlich wechseln" si la app anuncia `account.switch`.
+  - Tools tiene ahora su propio "•••", porque en la app no hay barra lateral.
+- **Archivos:** `shared/supabase-client.js`, `app/{sync.js,shell.js,app.js,office.css,index.html}`, `tests/office-window-app.test.mjs` (nuevo) y referencias de versión en otros tests.
+- **Base de datos / funciones:** ninguna.
+- **Cómo se probó:**
+  - 166/166 pruebas.
+  - Recorrido en Chromium con un puente simulado y Supabase respondido localmente, en tres casos:
+    - con sesión: modo app activo, sin barra propia, nada guardado en localStorage, las peticiones llevan el token de la app, sin errores de página;
+    - sin sesión: pide `session.signIn` y no sale de la página;
+    - navegador sin puente: va a la página raíz como antes.
+- **Quedó pendiente:**
+  - Los enlaces "Mitglieder" y "Passwort ändern" llevan a la página raíz, que dentro de la app pide su propio inicio de sesión: es una sesión aparte y funciona, pero no es la de la app.
+  - Si una cuenta todavía tiene el Startpasswort, en la app se muestra un aviso para cambiarlo primero en el navegador.
+- **Riesgos o decisiones que necesitan a Gari:** ninguno.
+- **PR:** #46
+
 ### 2026-11-07 · Romy: "heute" incluye lo vencido · Claude
 - **Qué cambió y por qué:** Gari preguntó a Romy "¿Tengo algo pendiente para hoy?" y le respondió que nada, aunque tenía abierta una tarea vencida el 04.11. `list_tasks` solo filtraba por fecha exacta.
   - Ahora acepta `range:"today"` y `range:"week"`, con la misma lógica que `listTasks` de Window: tareas abiertas que vencen ese día o antes, más las de varios días ya empezadas.

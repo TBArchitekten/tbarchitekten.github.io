@@ -29,10 +29,14 @@ async function init(){
   if(error){setStatus('Anmeldung konnte nicht gelesen werden');return}
   user=data.session?.user||null;
   // Office sign-in happens on the start page; only active members with their own password get in.
-  if(!user){location.replace('../');return}
+  // In the Window app the app signs in (account "Office"): ask it instead of leaving the page.
+  if(!user){openLogin();return}
   const {data:member,error:memberError}=await sb.from('office_members')
     .select('user_id,email,display_name,role,is_active,must_change_password').eq('user_id',user.id).eq('is_active',true).maybeSingle();
-  if(memberError||!member||member.must_change_password){location.replace('../');return}
+  if(memberError||!member||member.must_change_password){
+    if(window.WINDOW_NATIVE?.available&&member?.must_change_password){setStatus('Bitte zuerst im Browser das Startpasswort ändern.');return}
+    if(window.WINDOW_NATIVE?.available&&!memberError){setStatus('Kein aktiver Office-Zugang.');return}
+    openLogin();return}
   window.TBA_OFFICE_MEMBER=Object.freeze({...member});
   // The local copy belongs to one person: a different sign-in on this browser starts from empty.
   if(app.getState().officeOwner!==user.id){
@@ -43,7 +47,7 @@ async function init(){
   try{window.dispatchEvent(new CustomEvent('office:member',{detail:{...member}}))}catch{}
   paintAuth();
   await syncNow({initial:true});
-  sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||!session)location.replace('../')});
+  sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||!session)openLogin()});
   window.addEventListener('isabella:state',()=>{if(hydrating||!user)return;clearTimeout(timer);timer=setTimeout(()=>syncNow({pushOnly:true}),900)});
   window.addEventListener('isabella:mutation',e=>{if(!user||!e.detail)return;recordActivity(e.detail)});
   window.addEventListener('isabella:proposal-feedback',e=>{if(!user||!e.detail)return;recordProposalFeedback(e.detail)});
@@ -55,7 +59,11 @@ function paintAuth(){
   setStatus('Office verbunden · automatische Synchronisierung');
 }
 // The office signs in on its start page (email and password); there is no sign-in inside the app.
-function openLogin(){location.replace('../')}
+// In the Window iPhone app the native screen signs in (bridge session.signIn).
+function openLogin(){
+  if(window.WINDOW_NATIVE?.available){void window.WINDOW_NATIVE.call('session.signIn');return}
+  location.replace('../');
+}
 async function ensureTaxonomy(state){
   const categories=(state.categories||[]).map((c,i)=>({user_id:user.id,client_key:c.id,name:c.name,color:c.color||null,sort_order:i}));
   if(categories.length){

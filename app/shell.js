@@ -95,7 +95,7 @@ document.body.innerHTML = `
 
     <section id="toolsScreen" class="screen office-tools-screen" data-screen="tools" aria-label="Werkzeuge">
       <div class="office-tools-scroll">
-        <div class="office-tools-head"><p>TOOLS</p><h1>Werkzeuge</h1>
+        <div class="office-tools-head"><span class="minds-menu-slot" data-menu-slot="tools"></span><p>TOOLS</p><h1>Werkzeuge</h1>
         <p>Wiederverwendbare Werkzeuge und Office-Muster für die Projektarbeit.</p></div>
         <button type="button" class="office-tools-card" id="officeToolsPlans" aria-label="Terminplan öffnen">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.tools}</span>
@@ -218,7 +218,7 @@ document.body.innerHTML = `
   </nav>
 
   <div id="drawerBackdrop" class="backdrop hidden"></div>
-  <aside id="drawer" class="drawer hidden"><div class="drawer-head"><div><div class="eyebrow">TBA OFFICE</div><div class="drawer-title">Mehr</div></div><button id="closeDrawer" class="round">×</button></div><a class="drawer-link" id="officeProjectsDrawer" href="#section=projects">Projekte verwalten</a><button class="drawer-link" type="button" id="officePlansDrawer">Terminplan-Muster</button><a class="drawer-link" href="../#members" data-office-admin hidden>Mitglieder</a><button data-action="new">Neu anlegen</button><button data-action="tasks">Aufgaben</button><button data-action="categories">Kategorien</button><a class="drawer-link" href="../#password">Passwort ändern</a><button id="officeSignOut">Abmelden</button><button id="authButton" hidden>Synchronisieren</button><button id="refreshViewAction" data-action="refreshview" class="hidden">Ansicht aktualisieren</button><div class="office-hidden-actions" hidden><button data-shell-nav="readings">Lecturas</button><button data-shell-nav="thoughts">Thoughts</button><button data-action="memory"></button><button data-action="assistantprefs"></button><button data-action="push"></button><button data-action="permissions"></button><button data-action="reviews"></button><button data-action="routines"></button><button data-action="intents"></button><button data-action="continuity"></button><button data-action="skills"></button><button data-action="doctor"></button><button data-action="feedprefs"></button><button data-action="artifacts"></button><button data-action="aiusage"></button></div><div id="syncStatus" class="drawer-note">Verbinde mit dem Office …</div><div id="currentBuildInfo" class="drawer-note">TBA Office · auf Basis von Window</div></aside>
+  <aside id="drawer" class="drawer hidden"><div class="drawer-head"><div><div class="eyebrow">TBA OFFICE</div><div class="drawer-title">Mehr</div></div><button id="closeDrawer" class="round">×</button></div><a class="drawer-link" id="officeProjectsDrawer" href="#section=projects">Projekte verwalten</a><button class="drawer-link" type="button" id="officePlansDrawer">Terminplan-Muster</button><a class="drawer-link" href="../#members" data-office-admin hidden>Mitglieder</a><button data-action="new">Neu anlegen</button><button data-action="tasks">Aufgaben</button><button data-action="categories">Kategorien</button><a class="drawer-link" href="../#password">Passwort ändern</a><button id="officeSwitchAccount" type="button" hidden>Zu Persönlich wechseln</button><button id="officeSignOut">Abmelden</button><button id="authButton" hidden>Synchronisieren</button><button id="refreshViewAction" data-action="refreshview" class="hidden">Ansicht aktualisieren</button><div class="office-hidden-actions" hidden><button data-shell-nav="readings">Lecturas</button><button data-shell-nav="thoughts">Thoughts</button><button data-action="memory"></button><button data-action="assistantprefs"></button><button data-action="push"></button><button data-action="permissions"></button><button data-action="reviews"></button><button data-action="routines"></button><button data-action="intents"></button><button data-action="continuity"></button><button data-action="skills"></button><button data-action="doctor"></button><button data-action="feedprefs"></button><button data-action="artifacts"></button><button data-action="aiusage"></button></div><div id="syncStatus" class="drawer-note">Verbinde mit dem Office …</div><div id="currentBuildInfo" class="drawer-note">TBA Office · auf Basis von Window</div></aside>
   <div id="focusMode" class="focus hidden" role="dialog" aria-modal="true"><div class="focus-head"><div class="focus-name">Romy</div><button id="focusClose" class="round">×</button></div><div class="focus-center"><div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="focusStatus" class="focus-status">Hört zu …</div><textarea id="focusTranscript" class="focus-transcript" rows="5" readonly placeholder="Tu transcripción aparecerá aquí."></textarea></div><div class="focus-actions"><button id="focusKeyboard">Abbrechen</button><button id="focusStop" class="dark">Stopp</button></div></div>
   <div id="modalBackdrop" class="backdrop hidden"></div><div id="modal" class="modal hidden"><div class="modal-head"><div id="modalTitle" class="modal-title"></div><button id="closeModal" class="round">×</button></div><div id="modalBody"></div></div>
 </div>`;
@@ -230,5 +230,16 @@ window.addEventListener('office:member',e=>{
 document.getElementById('officeSignOut')?.addEventListener('click',async()=>{
   try{localStorage.removeItem('tba-office-window-v1')}catch{}
   try{await window.MINDS_SUPABASE?.auth.signOut()}catch{}
+  // In the Window app, signing out ends the app's office session and the app shows its sign-in.
+  if(window.WINDOW_NATIVE?.available)return;
   location.replace('../');
 });
+// Window iPhone app: switch to the personal account, like changing users on GitHub.
+(async()=>{
+  const native=window.WINDOW_NATIVE;if(!native?.available)return;
+  const info=await native.call('app.info');
+  if(!(info?.app?.capabilities||[]).includes('account.switch'))return;
+  const button=document.getElementById('officeSwitchAccount');if(!button)return;
+  button.hidden=false;
+  button.onclick=()=>void native.call('account.switch',{to:'personal'});
+})();
