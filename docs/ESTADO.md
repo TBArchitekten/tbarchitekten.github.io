@@ -20,6 +20,13 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 - **Un solo modelo de datos, el de Window** ("Sí, has la unificación con el modelo de Window").
 - **Archivos compartidos:** todos los miembros activos pueden renombrar, mover y borrar archivos y carpetas de los Desktops de proyecto.
 
+### Office dentro de la app de Window (desde el 07.11, PR #46 + Window)
+- La app del iPhone de Window tiene dos cuentas: **Persönlich** (Window) y **Office** (este proyecto), con sesiones y datos separados.
+- En la cuenta Office, la app carga `https://tbarchitekten.github.io/app/` y le presta la sesión de Office por el puente (`windowNative`, contrato v1 de Window).
+  - La página no guarda sesión propia.
+  - En el navegador todo sigue igual: se entra por la página raíz.
+- Pestañas en la app: Romy · Heute · Kalender · Work · Tools. "Zu Persönlich wechseln" está en el menú "•••".
+
 ### Resuelto el 07.11 (PR #42): un solo modelo de datos
 - **Work vuelve a ser el `work.js` de Window** (Panorama, Desktop, Planner), sobre las tablas de Window:
   - tareas en `isabella_tasks`;

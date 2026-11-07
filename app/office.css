@@ -21,8 +21,10 @@
 /* Tools lives in Window's single shell; no navigation jump to another menu. */
 .office-app .office-tools-screen{background:#fafafa;min-height:0}
 .office-app .office-tools-scroll{height:100%;overflow:auto;padding:40px clamp(20px,5vw,70px)}
-.office-app .office-tools-head{margin:0 0 28px}
-.office-app .office-tools-head>p:first-child{font-size:12px;letter-spacing:.14em;color:#90939b;font-weight:700;margin:0 0 12px}
+.office-app .office-tools-head{margin:0 0 28px;position:relative}
+/* The "•••" menu in Tools too (the Window app hides the side navigation). */
+.office-app .office-tools-head .minds-menu-slot{position:absolute;right:0;top:-10px}
+.office-app .office-tools-head>p:first-of-type{font-size:12px;letter-spacing:.14em;color:#90939b;font-weight:700;margin:0 0 12px}
 .office-app .office-tools-head h1{font-size:34px;letter-spacing:-.035em;margin:0 0 14px}
 .office-app .office-tools-head>p:last-child{font-size:16px;color:#686e77;line-height:1.55;max-width:600px;margin:0}
 .office-app .office-tools-card{

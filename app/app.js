@@ -470,7 +470,9 @@ function placeGlobalMenu(name){
 // Window iPhone app: the app shows its own tab bar (Chat · Ahora · Tiempo · Work · Bandeja)
 // and one shared page. The app chooses the section through the URL fragment
 // (#section=…); a section that belongs to another tab is opened by the app.
-const WINDOW_TAB_FOR={assistant:'chat',feed:'ahora',calendar:'tiempo',work:'work',bandeja:'bandeja',ideas:'bandeja'};
+// In the office account the fifth tab is Tools (Projekte and Terminplan-Muster open there too).
+const WINDOW_TAB_FOR=OFFICE?{assistant:'chat',feed:'ahora',calendar:'tiempo',work:'work',tools:'tools',projects:'tools',plans:'tools'}
+  :{assistant:'chat',feed:'ahora',calendar:'tiempo',work:'work',bandeja:'bandeja',ideas:'bandeja'};
 const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','tools','projects','plans','readings','thoughts'];
 let windowShell=false,windowShellTab='chat',windowShellCaps=[];
 function show(name,options={}){

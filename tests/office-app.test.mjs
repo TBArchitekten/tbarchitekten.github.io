@@ -8,11 +8,14 @@ const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z-]+\.js)\?v=[^"]+"><\/
 const src=f=>read('app/'+f);
 
 test('The app connects only to TBA Office, with the office sign-in',()=>{
-  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office1"><\/script>/);
+  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office2"><\/script>/);
   const client=read('shared/supabase-client.js');
   assert.match(client,/const office = window\.TBA_OFFICE_CONFIG;/);
   assert.match(client,/storageKey: office\.storageKey,/,'one session with the start page');
-  assert.doesNotMatch(client,/WINDOW_NATIVE|supabase\.co/);
+  // No project address of Window (or any other) in the client: only the office config.
+  assert.doesNotMatch(client,/supabase\.co|lodexwyyynlarkqgkyhy/);
+  // Since 07.11.2026 the Window iPhone app can open the office (account "Office"): it lends the session.
+  assert.match(client,/const bridge = window\.webkit\?\.messageHandlers\?\.windowNative;/);
   for(const f of [...readdirSync(new URL('../app/',import.meta.url)).filter(f=>f.endsWith('.js')),'../shared/supabase-client.js']){
     const s=src(f);
     assert.doesNotMatch(s,/[a-z]{20}\.supabase\.co|sb_publishable_|service_role|sb_secret_/,f+' carries no project address or key');
@@ -39,14 +42,15 @@ test('Office loads only its own assistant, not personal Window AI modules',()=>{
 
 test('Sync: members only, everyone sees the projects, own calendar, no realtime',()=>{
   const sync=src('sync.js');
-  assert.match(sync,/if\(!user\)\{location\.replace\('\.\.\/'\);return\}/);
+  assert.match(sync,/if\(!user\)\{openLogin\(\);return\}/);
   assert.match(sync,/from\('office_members'\)[\s\S]{0,140}\.eq\('is_active',true\)/);
-  assert.match(sync,/if\(memberError\|\|!member\|\|member\.must_change_password\)\{location\.replace\('\.\.\/'\);return\}/);
+  assert.match(sync,/if\(memberError\|\|!member\|\|member\.must_change_password\)\{/);
+  assert.match(sync,/openLogin\(\);return\}/);
   assert.match(sync,/app\.getState\(\)\.officeOwner!==user\.id/,'another person on this browser starts empty');
   assert.match(sync,/upsert\(categories,\{onConflict:'user_id,client_key'\}\)/);
   assert.match(sync,/from\('isabella_projects'\)\.select\([^)]*\)\.eq\('archived',false\)/);
   assert.doesNotMatch(sync,/\.channel\(|signInWithOtp/);
-  assert.match(sync,/function openLogin\(\)\{location\.replace\('\.\.\/'\)\}/);
+  assert.match(sync,/function openLogin\(\)\{\n  if\(window\.WINDOW_NATIVE\?\.available\)\{void window\.WINDOW_NATIVE\.call\('session\.signIn'\);return\}\n  location\.replace\('\.\.\/'\);\n\}/);
   const work=src('work.js');
   assert.match(work,/from\('isabella_projects'\)\.select\('id,client_key,name,number'\)\.eq\('archived',false\)/);
   assert.doesNotMatch(work.match(/async function loadProject[\s\S]*?\n/)?.[0]||'',/user_id/,'projects are shared');

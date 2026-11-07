@@ -13,7 +13,7 @@ test('Assistant reuses Window chat rather than building another UI',()=>{
     assert.ok(shell.includes(needle),'Window shell missing '+needle);
   }
   assert.ok(!shell.includes('data-nav="assistant" aria-label="Assistent" hidden'));
-  for(const needle of ['office-assistant.js?v=office35','office-assistant.css?v=office8','app.js?v=office40']){
+  for(const needle of ['office-assistant.js?v=office35','office-assistant.css?v=office8','app.js?v=office41']){
     assert.ok(html.includes(needle),'asset cache not bumped '+needle);
   }
   for(const needle of ['office_assistant_conversations','office_assistant_messages','app()?.setOfficeMessages','window.TBA_OFFICE_ASSISTANT']){
