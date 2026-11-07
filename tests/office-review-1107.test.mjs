@@ -77,7 +77,7 @@ test('Romy chat in German: no Isabella or Spanish in the send and voice flow',()
 test('Romy: "today" includes overdue and multi-day tasks, like Window', async()=>{
   const src=read('supabase/functions/office-assistant/romy-tools.mjs');
   assert.match(src,/range:\{type:"string",enum:\["today","week"\]\}/);
-  assert.match(src,/if\(a\.range\)q=q\.is\("completed_at",null\)\.or\("due_date\.lte\."\+until\+",start_date\.lte\."\+until\);/);
+  assert.match(src,/if\(range\)q=q\.is\("completed_at",null\)\.or\("due_date\.lte\."\+until\+",start_date\.lte\."\+until\);/);
   assert.match(read('supabase/functions/office-assistant/index.ts'),/list_tasks mit range \\"today\\"/);
   // The logic, run on sample rows (the case of 07.11.2026: an open task due 04.11 was missed).
   const {shapeTaskRows}=await import('../supabase/functions/office-assistant/romy-tools.mjs');

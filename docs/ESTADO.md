@@ -34,6 +34,11 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
   - La app los lee con su sesión de Window y solo pasa título y horas.
   - No entran en el estado: no se guardan, no se sincronizan y Romy no los ve.
 
+### Formularios y Romy (desde el 07.11, PR #53)
+- **Sin Kategorie en Office:** todo es «Arbeit». Las listas de Aufgaben van por proyecto.
+- **«Neu anlegen»:** abre el editor completo de tareas con el día ya puesto, con un cambio «Aufgabe | Termin». El Termin tiene todos sus campos.
+- **Romy y el conector:** para «mañana» u otro día usan `list_tasks` con `day`, que incluye lo vencido que sigue abierto.
+
 ### Kalender = calendario de tus proyectos (desde el 07.11, PR #51)
 - **Qué muestra el Kalender:** de los proyectos en cuyo equipo estás, todas las tareas con fecha, las Fristen y los Termine con proyecto. Además, tus tareas personales y tus Termine.
   - Lo de colegas lleva sus iniciales. El filtro «Nur meine» deja solo lo tuyo.

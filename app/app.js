@@ -3342,7 +3342,7 @@ function editItem(kind,id){
     <label>${kind==='task'?'Datum (optional)':'Datum'}<input id="editDate" type="date" value="${esc(item.date||'')}"></label>
     ${specific}
     ${sessionDetails}
-    <label>Kategorie<select id="editCategory">${cats}</select></label>
+    ${OFFICE?'':`<label>Kategorie<select id="editCategory">${cats}</select></label>`}
     <label>Projekt<select id="editProject">${projects}</select></label>
     <label>Notizen<textarea id="editNotes" rows="3">${esc(item.notes||'')}</textarea></label>
     <button id="editSave" class="primary">Änderungen speichern</button>
@@ -3352,7 +3352,7 @@ function editItem(kind,id){
     const before=clone(item);
     item.title=$('#editTitle').value.trim()||item.title;
     item.date=kind==='task'?($('#editDate').value||null):($('#editDate').value||item.date);
-    item.categoryId=$('#editCategory').value||'personal';
+    item.categoryId=$('#editCategory')?.value||item.categoryId||(OFFICE?'arbeit':'personal');
     item.projectId=$('#editProject').value||null;
     item.notes=$('#editNotes').value||'';
     if(kind==='event'){item.start=$('#editTime').value||item.start;item.duration=Math.max(5,Number($('#editDuration').value||item.duration||60))}
@@ -3808,7 +3808,10 @@ async function aiUsagePanel(){
 function tasksPanel(){
   const pending=state.tasks.filter(t=>!t.archivedAt&&!t.done);
   const undated=pending.filter(t=>!t.date).length;
-  const groups=state.categories.map(c=>({id:'category:'+c.id,name:c.name,color:c.color||fallbackColor(c.id),count:pending.filter(t=>t.categoryId===c.id).length}));
+  const groups=OFFICE
+    ?[...state.projects.map(p=>({id:'project:'+p.id,name:p.name,color:p.color||fallbackColor(p.id),count:pending.filter(t=>t.projectId===p.id).length})).filter(g=>g.count),
+      {id:'project:',name:'Ohne Projekt',color:'#6D7278',count:pending.filter(t=>!t.projectId).length}]
+    :state.categories.map(c=>({id:'category:'+c.id,name:c.name,color:c.color||fallbackColor(c.id),count:pending.filter(t=>t.categoryId===c.id).length}));
   let body='<div class="task-groups">';
   body+=`<button class="task-group-card smart" data-task-group="undated"><span><strong>Ohne Datum</strong><small>Noch nicht eingeplant</small></span><b>${undated}</b></button>`;
   body+=groups.map(g=>`<button class="task-group-card" data-task-group="${esc(g.id)}" style="--group-color:${esc(g.color)}"><span><strong>${esc(g.name)}</strong><small>Liste</small></span><b>${g.count}</b></button>`).join('');
@@ -3819,8 +3822,9 @@ function tasksPanel(){
 function taskGroupPanel(group){
   const all=state.tasks.filter(t=>!t.archivedAt);
   const isUndated=group==='undated',categoryId=group.startsWith('category:')?group.slice(9):null;
-  const title=isUndated?'Ohne Datum':(state.categories.find(c=>c.id===categoryId)?.name||'Aufgaben');
-  const filtered=all.filter(t=>isUndated?!t.date:t.categoryId===categoryId);
+  const byProject=group.startsWith('project:'),projectId=byProject?group.slice(8)||null:null;
+  const title=isUndated?'Ohne Datum':byProject?(projectId?project(projectId):'Ohne Projekt'):(state.categories.find(c=>c.id===categoryId)?.name||'Aufgaben');
+  const filtered=all.filter(t=>isUndated?!t.date:byProject?(t.projectId||null)===projectId:t.categoryId===categoryId);
   const pending=filtered.filter(t=>!t.done).sort((a,b)=>(a.date?0:1)-(b.date?0:1)||String(a.date||'').localeCompare(String(b.date||''))||taskOrder(a,b));
   const done=filtered.filter(t=>t.done).sort((a,b)=>String(b.completedAt||'').localeCompare(String(a.completedAt||'')));
   const row=t=>`<div class="task-list-row ${t.done?'done':''}"><button class="task-list-check ${t.done?'checked':''}" data-list-task-toggle="${t.id}" aria-label="${t.done?'Als offen markieren':'Als erledigt markieren'}">${t.done?'✓':''}</button><button class="task-list-main" data-edit-task="${t.id}"><span>${esc(t.title)}</span><small>${t.date?esc(t.date):'Ohne Datum'}${t.projectId?' · '+esc(project(t.projectId)):''}</small></button></div>`;
@@ -3833,50 +3837,39 @@ function taskGroupPanel(group){
   document.querySelectorAll('[data-edit-task]').forEach(x=>x.onclick=()=>editItem('task',x.dataset.editTask));
   document.querySelectorAll('[data-list-task-toggle]').forEach(x=>x.onclick=e=>{e.stopPropagation();const id=x.dataset.listTaskToggle;const t=state.tasks.find(y=>y.id===id);if(!t)return;const before=clone(t);t.done=!t.done;t.completedAt=t.done?new Date().toISOString():null;mutation('task',t.done?'complete':'reopen',before,t,'manual');save();taskGroupPanel(group)});
 }
-function newPanel(presetDate=null){
-  modal('Neu anlegen',`<div class="form">
-    <select id="newType"><option value="task">Aufgabe</option><option value="event">Termin</option></select>
-    <input id="newTitle" placeholder="Titel">
-    <label>Datum <span class="small">(bei Aufgaben optional)</span><input id="newDate" type="date" value="${esc(presetDate||'')}"></label>
-    <label>Kategorie<select id="newCat">${state.categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
-    <label>Projekt<select id="newProject"><option value="">Ohne Projekt</option>${state.projects.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
-    <input id="newTime" type="time" value="09:00">
+// "Neu anlegen" (calendar +, menu): the complete form at once, not a short one to fill in later
+// (Gari, 07.11.2026). A task opens the full task editor; one tap switches to a Termin and back.
+function newPanel(presetDate=null,kind='task',draft={}){
+  const date=draft.date||presetDate||null;
+  if(kind==='task'){
+    if(!window.MINDS_TASK_DETAIL?.open){modal('Neu anlegen','<p class="small">Anlegen ist gerade nicht möglich. Bitte die Seite neu laden.</p>');return}
+    void window.MINDS_TASK_DETAIL.open({date,projectKey:draft.projectKey||null,
+      categoryKey:OFFICE?'arbeit':(draft.categoryKey||state.categories[0]?.id||null),
+      draft:(draft.title||draft.notes)?{title:draft.title||'',notes:draft.notes||''}:null,
+      onSwitchKind:d=>newPanel(presetDate,'event',d)});
+    return;
+  }
+  const catKey=draft.categoryKey||state.categories[0]?.id;
+  const cats=state.categories.map(c=>`<option value="${c.id}" ${c.id===catKey?'selected':''}>${esc(c.name)}</option>`).join('');
+  const projects='<option value="">Ohne Projekt</option>'+state.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===draft.projectKey?'selected':''}>${esc(p.name)}</option>`).join('');
+  modal('Neuer Termin',`<div class="form item-editor">
+    <div class="minds-new-kind" role="group" aria-label="Art"><button type="button" id="newToTask" aria-pressed="false">Aufgabe</button><button type="button" class="is-active" aria-pressed="true">Termin</button></div>
+    <label>Titel<input id="newTitle" placeholder="Titel" value="${esc(draft.title||'')}"></label>
+    <label>Datum<input id="newDate" type="date" value="${esc(date||today())}"></label>
+    <label>Uhrzeit<input id="newTime" type="time" value="09:00"></label>
+    <label>Dauer (min)<input id="newDuration" type="number" min="5" step="5" value="60"></label>
+    ${OFFICE?'':`<label>Kategorie<select id="newCat">${cats}</select></label>`}
+    <label>Projekt<select id="newProject">${projects}</select></label>
+    <label>Notizen<textarea id="newNotes" rows="3">${esc(draft.notes||'')}</textarea></label>
     <button id="newSave" type="button" class="primary">Speichern</button><div id="quickTaskStatus" class="small" role="status" aria-live="polite"></div>
   </div>`);
-  const type=$('#newType'),dateInput=$('#newDate'),timeInput=$('#newTime');
-  const syncType=()=>{const event=type.value==='event';if(event&&!dateInput.value)dateInput.value=today();timeInput.classList.toggle('hidden',!event)};
-  type.onchange=syncType;syncType();
-  let saving=false,attempt=null;
-  $('#newSave').onclick=async()=>{
-    if(saving)return;
+  $('#newToTask').onclick=()=>newPanel(presetDate,'task',{title:$('#newTitle').value,date:$('#newDate').value||null,
+    projectKey:$('#newProject').value||null,notes:$('#newNotes').value,categoryKey:$('#newCat')?.value||null});
+  $('#newSave').onclick=()=>{
     const title=$('#newTitle').value.trim();if(!title){$('#quickTaskStatus').textContent='Bitte einen Titel eingeben.';return}
-    const kind=type.value,date=dateInput.value||null,categoryId=$('#newCat').value,projectId=$('#newProject').value||null;
-    if(kind==='task'){
-      const button=$('#newSave'),status=$('#quickTaskStatus');
-      if(!window.MINDS_TASK_DETAIL?.createQuick){status.textContent='Anlegen ist gerade nicht möglich. Bitte die Seite neu laden.';return}
-      const values={title,date,categoryKey:categoryId,projectKey:projectId};
-      if(attempt){
-        if(!Object.entries(values).every(([k,v])=>attempt[k]===v)){
-          status.textContent='Das letzte Speichern ist noch nicht bestätigt. Bitte mit denselben Angaben erneut versuchen oder ein neues Formular öffnen.';
-          return;
-        }
-      }else attempt={...values,clientKey:crypto.randomUUID()};
-      saving=true;button.disabled=true;button.textContent='Speichere …';
-      status.textContent='Speichere …';
-      try{
-        const task=await window.MINDS_TASK_DETAIL.createQuick(attempt);
-        if(!task?.id||task.title!==attempt.title)throw new Error('Die Aufgabe konnte nicht bestätigt werden.');
-        status.textContent='Aufgabe angelegt.';
-        void Promise.resolve(window.ISABELLA_SYNC_PULL_NOW?.()).then(()=>renderCalendar()).catch(()=>{});
-        setTimeout(()=>{if($('#newSave')===button)closeModal()},650);
-      }catch(error){
-        status.textContent='Speichern konnte nicht bestätigt werden: '+String(error?.message||error);
-        button.disabled=false;button.textContent='Speichern';
-      }finally{saving=false}
-      return;
-    }
-    if(!date){$('#quickTaskStatus').textContent='Ein Termin braucht ein Datum.';return}
-    const item={id:uid(),title,date,categoryId,projectId,start:timeInput.value||'09:00',duration:60};
+    const day=$('#newDate').value;if(!day){$('#quickTaskStatus').textContent='Ein Termin braucht ein Datum.';return}
+    const item={id:uid(),title,date:day,categoryId:OFFICE?'arbeit':($('#newCat')?.value||'personal'),projectId:$('#newProject').value||null,
+      start:$('#newTime').value||'09:00',duration:Math.max(5,Number($('#newDuration').value)||60),notes:$('#newNotes').value||''};
     state.events.push(item);mutation('event','create',null,item,'manual');
     save();closeModal();renderCalendar();
   };

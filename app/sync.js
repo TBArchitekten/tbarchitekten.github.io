@@ -177,7 +177,7 @@ function projectTaskRow(t,catKey,projKey){
     done:!!t.completed_at,completedAt:t.completed_at||null,
     archivedAt:t.archived_at||null,sortOrder:Number(t.sort_order||0),
     reminderTime:t.due_date&&t.reminder_time?String(t.reminder_time).slice(0,5):null,
-    categoryId:catKey.get(t.category_id)||(t.project_id?'arbeit':'personal'),
+    categoryId:catKey.get(t.category_id)||'arbeit',
     projectId:projKey.get(t.project_id)||null,priority:t.priority||'normal',
     recurrence:t.recurrence||{},notes:t.notes||'',metadata:t.metadata||{},
     startDate:t.start_date||null,assignee:t.assignee||null,
@@ -260,7 +260,7 @@ async function pullState(local,maps){
   const teamAllocations=(allocations||[]).map(a=>({
     taskId:taskKeys.get(a.task_id),personId:a.person_id,date:a.work_date,plannedMinutes:a.planned_minutes
   })).filter(a=>a.taskId);
-  const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||(e.project_id?'arbeit':'personal'),projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null,ownerId:e.user_id||null,mine:e.user_id===user.id}});
+  const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||'arbeit',projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null,ownerId:e.user_id||null,mine:e.user_id===user.id}});
   const remoteMemory=(mem||[]).map(m=>({id:m.client_key||m.id,kind:m.kind,subject:m.subject,content:m.content,status:m.status,confidence:Number(m.confidence),source:m.source,exposure_scope_key:m.exposure_scope_key||'global',provenance_class:m.provenance_class||'owner',metadata:m.metadata||{}}));
   const freshest=mergePulledEntityState(remoteTasks,remoteEvents,app.getState(),local);
   const remoteFeed=(pref?.status!=='rejected'&&pref?.value&&typeof pref.value==='object')?canonicalFeedPreferences(pref.value):canonicalFeedPreferences(freshest.feedPreferences);
