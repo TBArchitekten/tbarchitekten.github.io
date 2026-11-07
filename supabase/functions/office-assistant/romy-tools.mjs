@@ -1,4 +1,4 @@
-import { validOfficeDate, berlinDateRangeUtc, parseExplicitZonedInstant } from "./romy-time.mjs";
+import { validOfficeDate, berlinDateRangeUtc, parseExplicitZonedInstant, officeLocalNow } from "./romy-time.mjs";
 import { searchRomySemanticMemory } from "./romy-semantic-memory.mjs";
 // Adapted tool boundary for Romy using Window's explicit tool/approval discipline.
 // Queries execute with the employee's JWT and the Office RLS policies,
@@ -26,7 +26,7 @@ const ALL_ROMY_TOOLS=[
  },required:["objective","completion_criterion"],additionalProperties:false}},
  {type:"function",name:"propose_control_mission",description:"Request employee approval to resume or cancel their own mission. It must be reviewed; no silent control.",strict:false,parameters:{type:"object",properties:{mission_id:{type:"string"},action:{type:"string",enum:["resume","cancel"]}},required:["mission_id","action"],additionalProperties:false}},
  {type:"function",name:"list_projects",description:"Read the office project catalog (shared with active office members).",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
- {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. Filter optionally by due date or project UUID.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
+ {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. For 'what is pending today' use range:'today': open tasks due today or earlier (overdue ones carry overdue:true) plus multi-day tasks already started (in_progress:true). range:'week' does the same for the next 7 days. Never say nothing is pending without checking overdue tasks. due_from/due_to filter by exact due dates; project_id by project UUID. mine:true marks tasks this employee created or is assigned to.",strict:false,parameters:{type:"object",properties:{range:{type:"string",enum:["today","week"]},project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments overlapping an inclusive date range in Europe/Berlin. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_files",description:"List filenames and metadata in the shared Office or project Desktop. project_id can be omitted for the shared Büro root.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},search:{type:"string"},scope:{type:"string",enum:["office","project","all"]}},additionalProperties:false}},
  {type:"function",name:"read_text_file",description:"Read text/markdown/CSV/JSON source material from a shared Desktop file by exact file UUID. Other formats may require an attachment; do not pretend to read them.",strict:false,parameters:{type:"object",properties:{file_id:{type:"string"}},required:["file_id"],additionalProperties:false}},
@@ -71,6 +71,22 @@ async function checkedQuery(promise){
  const {data,error}=await promise;
  if(error)throw new Error("office_read_failed");
  return data||[];
+}
+const berlinToday=()=>officeLocalNow().slice(0,10);
+const addDays=(day,n)=>new Date(Date.parse(day+"T00:00:00Z")+n*864e5).toISOString().slice(0,10);
+async function assignedTaskIds(userDb,userId,ids){
+ if(!ids.length)return new Set();
+ const {data,error}=await userDb.from("minds_work_task_assignees").select("task_id").eq("person_id",userId).in("task_id",ids);
+ return new Set(error?[]:(data||[]).map(r=>r.task_id));
+}
+// Like Window's listTasks: a multi-day task belongs to every day from its start until its due date.
+export function shapeTaskRows(rows,{day,range,userId,assigned=new Set()}){
+ const until=range==="week"?addDays(day,7):day;
+ const inRange=t=>(t.due_date&&t.due_date<=until)||(t.start_date&&t.start_date<=until&&(!t.due_date||t.due_date>=day));
+ return (range?rows.filter(t=>!t.completed_at&&inRange(t)):rows).map(({user_id,assignee_person_id,...t})=>({...t,
+  overdue:!t.completed_at&&!!t.due_date&&t.due_date<day||undefined,
+  in_progress:!t.completed_at&&!!t.start_date&&t.start_date<=day&&(!t.due_date||t.due_date>day)||undefined,
+  mine:user_id===userId||assignee_person_id===userId||assigned.has(t.id)||undefined}));
 }
 async function registerProposal({admin,requestId,userId,conversationId,kind,payload}){
  const {data,error}=await admin.from("office_romy_proposals").insert({
@@ -157,14 +173,19 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
  if(name==="list_tasks"){
   if(a.project_id&&!validId(a.project_id))return err("invalid_project_id");
   if(a.due_from&&!validDate(a.due_from)||a.due_to&&!validDate(a.due_to))return err("invalid_date");
+  if(a.range&&a.range!=="today"&&a.range!=="week")return err("invalid_range");
+  const day=berlinToday(),until=a.range==="week"?addDays(day,7):day;
   let q=userDb.from("isabella_tasks")
-    .select("id,title,due_date,start_date,completed_at,project_id,work_status,priority,notes")
+    .select("id,title,due_date,start_date,completed_at,project_id,work_status,priority,notes,user_id,assignee_person_id")
     .is("archived_at",null);
   if(a.project_id)q=q.eq("project_id",a.project_id);
+  if(a.range)q=q.is("completed_at",null).or("due_date.lte."+until+",start_date.lte."+until);
   if(a.due_from)q=q.gte("due_date",a.due_from);
   if(a.due_to)q=q.lte("due_date",a.due_to);
-  const rows=await checkedQuery(q.order("due_date",{ascending:true,nullsFirst:false}).limit(250));
-  return {tasks:safeArray(rows,250),scope:"RLS-visible office project tasks plus this employee's personal tasks"};
+  const rows=safeArray(await checkedQuery(q.order("due_date",{ascending:true,nullsFirst:false}).limit(250)),250);
+  const assigned=await assignedTaskIds(userDb,userId,rows.map(t=>t.id));
+  return {today:day,range:a.range||null,tasks:shapeTaskRows(rows,{day,range:a.range,userId,assigned}),
+    scope:"RLS-visible office project tasks plus this employee's personal tasks"};
  }
  if(name==="list_calendar"){
   if(!validDate(a.from)||!validDate(a.to)||a.to<a.from)return err("invalid_date_range");

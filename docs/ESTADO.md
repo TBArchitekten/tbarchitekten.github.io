@@ -63,6 +63,7 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
   - Lo creó Gari desde su cuenta de Supabase (gari), pero es un token **de proyecto**: solo llega a TBA Office y solo con permiso de escritura en Edge Functions. Todo lo demás está en None, así que **no puede tocar Window** ni la base de datos.
   - Si algún día hace falta otro permiso, se edita el token en Supabase, no se crea uno más amplio.
   - Pendiente opcional: la cuenta TBArchitekten (martinez@bernhardarchitekten.com) está invitada como Developer a la organización y falta aceptar la invitación por correo. Sirve como segundo acceso de la oficina.
+- **Romy y "heute" (PR #45):** `list_tasks` con `range:"today"`/`"week"` incluye lo vencido y las tareas de varios días en curso, como Window.
 - **`office-assistant` v14** (07.11), publicada con el workflow desde `main`, con los archivos normales del repo. Lleva el límite de 24 mensajes, las misiones ocultas y el arreglo de `uuid()`.
   - La v13 de la mañana era la misma función, cargada con un envoltorio desde GitHub mientras no había token. La v14 la reemplazó.
   - **Cómo se comprobó:** la función arranca y responde `invalid_session` sin usuario, y 401 sin sesión.
