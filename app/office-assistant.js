@@ -38,8 +38,9 @@ function display(content=rows){
 }
 async function refreshThreads(){
   if(!ownerId)return false;
+  // Project Threads (Work) are Romy conversations too, but they live in Work, not in this list.
   const {data,error}=await sb.from('office_assistant_conversations')
-    .select('id,title,updated_at').eq('user_id',ownerId)
+    .select('id,title,updated_at').eq('user_id',ownerId).eq('work_thread',false)
     .order('updated_at',{ascending:false}).limit(100);
   if(error){status('Die Gesprächsliste konnte nicht geladen werden.');return false}
   threads=data||[];

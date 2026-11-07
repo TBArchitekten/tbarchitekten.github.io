@@ -117,7 +117,7 @@ test('Romy keeps the original Window chat and offers resumable private jobs',()=
  assert.ok(ui.includes('window.confirm('));
  assert.ok(ui.includes('app()?.openModal?.('));
  assert.ok(ui.includes("clearTimeout(capabilityTimer)"));
- assert.ok(html.includes('office-assistant.js?v=office35'));
+ assert.ok(html.includes('office-assistant.js?v=office36'));
  assert.ok(app.includes('generated-artifact generated-file'));
  assert.ok(app.includes("OFFICE?'office-romy-artifacts':'minds-artifacts'"));
  assert.ok(!ui.includes('office-chat-layout'));

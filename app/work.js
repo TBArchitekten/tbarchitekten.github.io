@@ -10,7 +10,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sb=window.MINDS_SUPABASE;
 const DEFAULT_BUCKETS=['Projektorganisation','Entwurf','Genehmigung','Ausführungsplanung','Ausschreibung/Vergabe','Baustelle','Dokumentation'];
-let projectKey=localStorage.getItem('minds-work-project')||OFFICE_ROOT,view=(()=>{const v=localStorage.getItem('minds-work-view')||'overview';return OFFICE&&['knowledge','threads'].includes(v)?'overview':v})(),folderId=null,project=null,folders=[],files=[],buckets=[],tasks=[],threads=[],activeThreadId=null,bound=false,pendingTaskFiles=[],editingAttachments=[],draggedWorkTaskId=null,draggedWorkBucketId=null;
+let projectKey=localStorage.getItem('minds-work-project')||OFFICE_ROOT,view=(()=>{const v=localStorage.getItem('minds-work-view')||'overview';return OFFICE&&v==='knowledge'?'overview':v})(),folderId=null,project=null,folders=[],files=[],buckets=[],tasks=[],threads=[],activeThreadId=null,bound=false,pendingTaskFiles=[],editingAttachments=[],draggedWorkTaskId=null,draggedWorkBucketId=null;
 const workSignedCache=new Map();
 let team=[],reviewSettings=null,reviewReportLimit=20,workRenderVersion=0;
 /* Purely visual preferences and labels; no task statuses are rewritten. */
@@ -1162,7 +1162,7 @@ async function loadThreads(){
   if(error)throw error;threads=data||[];
   const ids=threads.map(x=>x.conversation_id).filter(Boolean);
   if(ids.length){
-    const {data:msgs}=await sb.from('conversation_messages')
+    const {data:msgs}=await sb.from(OFFICE?'office_assistant_messages':'conversation_messages')
       .select('conversation_id,role,content,created_at')
       .in('conversation_id',ids).in('role',['user','assistant'])
       .order('created_at',{ascending:false}).limit(240);
@@ -1186,18 +1186,18 @@ async function renderThreads(){
   activeThreadId=null;
   const body=$('#workBody');
   body.innerHTML=`<div class="work-threads">
-    <div class="work-desktop-toolbar"><div><strong>Threads</strong><p class="small">Conversaciones de trabajo por tema. Comparten Desktop, Conocimiento y Planner de ${esc(project.name)} sin mezclar sus historiales.</p></div><div class="work-thread-toolbar-actions">${archived.length?`<button data-work-archived>Archivados · ${archived.length}</button>`:''}<button data-work-new-thread>＋ Thread</button></div></div>
+    <div class="work-desktop-toolbar"><div><strong>Threads</strong><p class="small">Private Gespräche mit Romy zu einem Thema. Nur du siehst sie; Romy kennt dabei das Projekt ${esc(project.name)}.</p></div><div class="work-thread-toolbar-actions">${archived.length?`<button data-work-archived>Archiviert · ${archived.length}</button>`:''}<button data-work-new-thread>＋ Thread</button></div></div>
     <div class="work-thread-list">${active.map(t=>{
       const preview=String(t.preview?.content||t.summary||'').trim();
       const at=t.last_activity_at||t.preview?.created_at||t.updated_at;
       return `<div class="work-thread-row">
         <button class="work-thread-card" data-work-thread="${t.id}">
-          <span class="work-thread-card-main"><strong>${esc(t.title)}</strong><span>${esc(preview?workPlainPreview(preview).slice(0,150):'Todavía sin conversación')}</span></span>
+          <span class="work-thread-card-main"><strong>${esc(t.title)}</strong><span>${esc(preview?workPlainPreview(preview).slice(0,150):'Noch kein Gespräch')}</span></span>
           <span class="work-thread-card-meta">${esc(threadDate(at))}<b>›</b></span>
         </button>
-        <button class="work-thread-more" data-work-thread-actions="${t.id}" aria-label="Opciones de ${esc(t.title)}">•••</button>
+        <button class="work-thread-more" data-work-thread-actions="${t.id}" aria-label="Optionen für ${esc(t.title)}">•••</button>
       </div>`;
-    }).join('')||'<div class="work-empty work-empty-wide">Todavía no hay Threads activos en este proyecto.</div>'}</div>
+    }).join('')||'<div class="work-empty work-empty-wide">Noch keine Threads in diesem Projekt.</div>'}</div>
   </div>`;
   $('[data-work-new-thread]')?.addEventListener('click',createThread);
   $('[data-work-archived]')?.addEventListener('click',openArchivedThreads);
@@ -1206,10 +1206,10 @@ async function renderThreads(){
 }
 function openThreadEditor(thread=null){
   const isRename=!!thread;
-  window.ISABELLA_APP?.openModal?.(isRename?'Renombrar Thread':'Nuevo Thread',`<div class="form work-thread-editor">
-    <label>Nombre<input id="workThreadName" maxlength="160" value="${esc(thread?.title||'')}" placeholder="Nombre del Thread"></label>
+  window.ISABELLA_APP?.openModal?.(isRename?'Thread umbenennen':'Neuer Thread',`<div class="form work-thread-editor">
+    <label>Name<input id="workThreadName" maxlength="160" value="${esc(thread?.title||'')}" placeholder="z. B. Lichtplanung"></label>
     <div id="workThreadEditorError" class="human-inline-error"></div>
-    <button id="workThreadSave" class="primary">${isRename?'Guardar nombre':'Crear Thread'}</button>
+    <button id="workThreadSave" class="primary">${isRename?'Namen speichern':'Thread anlegen'}</button>
   </div>`);
   const input=$('#workThreadName');input?.focus();input?.select();
   $('#workThreadSave').onclick=()=>void saveThreadName(thread);
@@ -1217,15 +1217,15 @@ function openThreadEditor(thread=null){
 }
 async function saveThreadName(thread){
   const title=String($('#workThreadName')?.value||'').trim();
-  if(!title){threadError('Escribe un nombre para el Thread.');return}
+  if(!title){threadError('Gib dem Thread einen Namen.');return}
   threadError('');
   if(thread){
     const {error}=await sb.rpc('minds_rename_work_thread',{p_thread_id:thread.id,p_title:title});
-    if(error){threadError(error.code==='23505'?'Ya existe un Thread activo con ese nombre.':'No pude cambiar el nombre del Thread.');return}
+    if(error){threadError(error.code==='23505'?'Es gibt schon einen Thread mit diesem Namen.':'Der Name konnte nicht geändert werden.');return}
   }else{
     const order=(threads.reduce((m,x)=>Math.max(m,Number(x.sort_order||0)),0)||0)+10;
     const {data,error}=await sb.from('minds_work_threads').insert({project_id:project.id,title,sort_order:order,metadata:{source:'work_ui'}}).select('id').single();
-    if(error){threadError(error.code==='23505'?'Ya existe un Thread activo con ese nombre.':'No pude crear el Thread.');return}
+    if(error){threadError(error.code==='23505'?'Es gibt schon einen Thread mit diesem Namen.':'Der Thread konnte nicht angelegt werden.');return}
     activeThreadId=data.id;
   }
   window.ISABELLA_APP?.closeModal?.();setStatus('');await renderThreads();
@@ -1234,22 +1234,22 @@ function createThread(){openThreadEditor(null)}
 function openThreadActions(thread){
   if(!thread)return;
   window.ISABELLA_APP?.openModal?.(thread.title,`<div class="work-thread-action-sheet">
-    <button id="workThreadRename" class="secondary">Renombrar</button>
-    <button id="workThreadArchive" class="secondary danger-text">Quitar de la lista (archivar)</button>
-    <p class="small">Archivar lo quita de la lista activa, pero conserva toda la conversación para poder recuperarla después.</p>
+    <button id="workThreadRename" class="secondary">Umbenennen</button>
+    <button id="workThreadArchive" class="secondary danger-text">Archivieren</button>
+    <p class="small">Archivieren nimmt ihn aus der Liste; das Gespräch bleibt erhalten und lässt sich wiederherstellen.</p>
   </div>`);
   $('#workThreadRename').onclick=()=>openThreadEditor(thread);
   $('#workThreadArchive').onclick=()=>confirmArchiveThread(thread);
 }
 function confirmArchiveThread(thread){
-  window.ISABELLA_APP?.openModal?.('Archivar Thread',`<div class="confirm-copy">¿Archivar “${esc(thread.title)}”? La conversación se conserva y Isabella podrá recuperarla como contexto histórico.</div><div class="confirm-actions"><button id="workThreadArchiveCancel" class="secondary">Cancelar</button><button id="workThreadArchiveConfirm" class="primary">Archivar</button></div>`);
+  window.ISABELLA_APP?.openModal?.('Thread archivieren',`<div class="confirm-copy">„${esc(thread.title)}“ archivieren? Das Gespräch bleibt erhalten.</div><div class="confirm-actions"><button id="workThreadArchiveCancel" class="secondary">Abbrechen</button><button id="workThreadArchiveConfirm" class="primary">Archivieren</button></div>`);
   $('#workThreadArchiveCancel').onclick=()=>window.ISABELLA_APP?.closeModal?.();
   $('#workThreadArchiveConfirm').onclick=()=>void setThreadStatus(thread,'archived');
 }
 async function setThreadStatus(thread,status){
   const {error}=await sb.rpc('minds_set_work_thread_status',{p_thread_id:thread.id,p_status:status});
   if(error){
-    setStatus(error.code==='23505'?'No puedo restaurarlo porque ya existe un Thread activo con ese nombre.':'No pude actualizar el Thread.');
+    setStatus(error.code==='23505'?'Wiederherstellen geht nicht: Es gibt schon einen Thread mit diesem Namen.':'Der Thread konnte nicht aktualisiert werden.');
     return;
   }
   if(status==='archived'&&activeThreadId===thread.id)activeThreadId=null;
@@ -1257,20 +1257,20 @@ async function setThreadStatus(thread,status){
 }
 function openArchivedThreads(){
   const archived=threads.filter(x=>x.status==='archived');
-  window.ISABELLA_APP?.openModal?.('Threads archivados',`<div class="work-thread-archive-list">${archived.map(t=>`<div class="work-thread-archive-row"><div><strong>${esc(t.title)}</strong><span>${esc(threadDate(t.last_activity_at||t.updated_at))}</span></div><div><button class="secondary" data-thread-archive-rename="${t.id}">Renombrar</button><button class="secondary" data-thread-restore="${t.id}">Restaurar</button></div></div>`).join('')||'<div class="small">No hay Threads archivados.</div>'}</div>`);
+  window.ISABELLA_APP?.openModal?.('Archivierte Threads',`<div class="work-thread-archive-list">${archived.map(t=>`<div class="work-thread-archive-row"><div><strong>${esc(t.title)}</strong><span>${esc(threadDate(t.last_activity_at||t.updated_at))}</span></div><div><button class="secondary" data-thread-archive-rename="${t.id}">Umbenennen</button><button class="secondary" data-thread-restore="${t.id}">Wiederherstellen</button></div></div>`).join('')||'<div class="small">Keine archivierten Threads.</div>'}</div>`);
   $$('[data-thread-archive-rename]').forEach(b=>b.onclick=()=>openThreadEditor(threads.find(x=>x.id===b.dataset.threadArchiveRename)));
   $$('[data-thread-restore]').forEach(b=>b.onclick=()=>void setThreadStatus(threads.find(x=>x.id===b.dataset.threadRestore),'active'));
 }
 async function ensureThreadConversation(thread){
   if(thread.conversation_id)return thread.conversation_id;
   const {data,error}=await sb.rpc('minds_ensure_work_thread_conversation',{p_thread_id:thread.id});
-  if(error||!data)throw error||new Error('No pude abrir la conversación.');
+  if(error||!data)throw error||new Error('Das Gespräch konnte nicht geöffnet werden.');
   thread.conversation_id=String(data);return thread.conversation_id;
 }
 async function loadThreadMessages(thread){
   const cid=await ensureThreadConversation(thread);
-  const {data,error}=await sb.from('conversation_messages')
-    .select('client_key,role,content,created_at,metadata')
+  const {data,error}=await sb.from(OFFICE?'office_assistant_messages':'conversation_messages')
+    .select(OFFICE?'id,role,content,created_at,metadata':'client_key,role,content,created_at,metadata')
     .eq('conversation_id',cid).in('role',['user','assistant'])
     .order('created_at',{ascending:true}).limit(400);
   if(error)throw error;return data||[];
@@ -1295,18 +1295,18 @@ function threadMessageMarkup(m){
   const sources=Array.isArray(m.metadata?.sources)?m.metadata.sources:[];
   const artifacts=Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[];
   const groups=threadArtifactGroups(artifacts),copy=cleanThreadDeliverableText(m.content,artifacts);
-  const previews=groups.previews.length?`<div class="work-thread-previews">${groups.previews.slice(0,2).map(a=>`<button type="button" data-thread-artifact-preview="${esc(a.storage_path)}" aria-label="Abrir vista previa"><img data-thread-artifact-image="${esc(a.storage_path)}" alt="Vista previa del documento"></button>`).join('')}</div>`:'';
+  const previews=groups.previews.length?`<div class="work-thread-previews">${groups.previews.slice(0,2).map(a=>`<button type="button" data-thread-artifact-preview="${esc(a.storage_path)}" aria-label="Vorschau öffnen"><img data-thread-artifact-image="${esc(a.storage_path)}" alt="Vorschau des Dokuments"></button>`).join('')}</div>`:'';
   const deliverables=groups.deliverables.length?`<div class="work-thread-artifacts">${groups.deliverables.slice(0,8).map(a=>a?.storage_path?`<a href="#" data-thread-artifact="${esc(a.storage_path)}"><span>${esc(threadArtifactLabel(a.kind))}</span>${esc(a.title||'Archivo')}</a>`:'').join('')}</div>`:'';
   // Messages Claude saved through the Window connector carry their author.
   const author=m.metadata?.source==='claude_connector'&&role==='assistant'?'<div class="work-thread-author">Claude</div>':'';
-  return `<article class="work-thread-message ${role}${author?' from-claude':''}">${author}${copy?`<div class="work-thread-message-copy">${window.ISABELLA_APP?.formatMessageText?.(copy)||esc(copy).replace(/\n/g,'<br>')}</div>`:''}${previews}${deliverables}${sources.length?`<details><summary>Fuentes</summary>${sources.slice(0,6).map(s=>`<div class="small">${esc(s.title||s.url||'Fuente')}</div>`).join('')}</details>`:''}${role==='assistant'&&!sources.length&&!author?'<div class="work-thread-source-boundary">Esta respuesta no incluye fuentes citadas verificables.</div>':''}${role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete">Respuesta interrumpida. El texto recibido es parcial.<button type="button" data-thread-continue="${esc(m.client_key||m.id||'')}">Continuar respuesta</button></div>`:''}</article>`;
+  return `<article class="work-thread-message ${role}${author?' from-claude':''}">${author}${copy?`<div class="work-thread-message-copy">${window.ISABELLA_APP?.formatMessageText?.(copy)||esc(copy).replace(/\n/g,'<br>')}</div>`:''}${previews}${deliverables}${sources.length?`<details><summary>Quellen</summary>${sources.slice(0,6).map(s=>`<div class="small">${esc(s.title||s.url||'Fuente')}</div>`).join('')}</details>`:''}${!OFFICE&&role==='assistant'&&!sources.length&&!author?'<div class="work-thread-source-boundary">Esta respuesta no incluye fuentes citadas verificables.</div>':''}${role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete">Antwort unterbrochen. Der Text ist unvollständig.<button type="button" data-thread-continue="${esc(m.client_key||m.id||'')}">Continuar respuesta</button></div>`:''}</article>`;
 }
 async function hydrateThreadArtifacts(root=document){
   const files=[...root.querySelectorAll?.('[data-thread-artifact]')||[]],images=[...root.querySelectorAll?.('[data-thread-artifact-image]')||[]];
   await Promise.all([...files,...images].map(async node=>{
     try{
       const path=String(node.dataset.threadArtifact||node.dataset.threadArtifactImage||'');if(!path)return;
-      const {data}=await sb.storage.from('minds-artifacts').createSignedUrl(path,3600);if(!data?.signedUrl)return;
+      const {data}=await sb.storage.from(OFFICE?'office-romy-artifacts':'minds-artifacts').createSignedUrl(path,3600);if(!data?.signedUrl)return;
       if(node.matches('img')){
         node.src=data.signedUrl;
         const button=node.closest('[data-thread-artifact-preview]');
@@ -1350,13 +1350,13 @@ function claudeContinueUrl(thread){
 }
 async function renderThreadConversation(id){
   const thread=threads.find(x=>x.id===id);if(!thread){activeThreadId=null;await renderThreads();return}
-  const body=$('#workBody');body.innerHTML='<div class="surface-loading">Abriendo Thread…</div>';
+  const body=$('#workBody');body.innerHTML='<div class="surface-loading">Thread wird geöffnet …</div>';
   try{
     const messages=await loadThreadMessages(thread);
     body.innerHTML=`<section class="work-thread-conversation">
-      <header class="work-thread-head"><button data-thread-back class="text-btn">‹ Threads</button><div><strong>${esc(thread.title)}</strong><span>${esc(project.name)}</span></div><a class="work-thread-claude" href="${esc(claudeContinueUrl(thread))}" target="_blank" rel="noopener" title="Abrir este tema en Claude con el conector Window">Continuar en Claude</a><button data-thread-actions class="work-thread-head-more" aria-label="Opciones del Thread">•••</button></header>
-      ${themenblattMarkup(thread)}<div class="work-thread-log" id="workThreadLog">${messages.map(threadMessageMarkup).join('')||'<div class="work-thread-empty">Este Thread está vacío. Empieza con la primera pregunta o tarea.</div>'}</div>
-      <div class="work-thread-compose-region"><div id="workThreadProgress" class="chat-activity work-thread-progress" role="status" aria-live="polite" data-phase="${esc(threadProgress.phase)}" ${threadProgress.id===thread.id&&threadProgress.label?'':'hidden'}>${threadProgress.id===thread.id?esc(threadProgress.label):''}</div><form class="work-thread-composer ${threadInFlight.has(thread.id)?'is-busy':''}" id="workThreadForm"><textarea id="workThreadInput" rows="1" placeholder="Preguntar en ${esc(thread.title)}…"></textarea><button class="send" aria-label="Enviar"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form></div>
+      <header class="work-thread-head"><button data-thread-back class="text-btn">‹ Threads</button><div><strong>${esc(thread.title)}</strong><span>${esc(project.name)}</span></div>${OFFICE?'':`<a class="work-thread-claude" href="${esc(claudeContinueUrl(thread))}" target="_blank" rel="noopener" title="Abrir este tema en Claude con el conector Window">Continuar en Claude</a>`}<button data-thread-actions class="work-thread-head-more" aria-label="Thread-Optionen">•••</button></header>
+      ${themenblattMarkup(thread)}<div class="work-thread-log" id="workThreadLog">${messages.map(threadMessageMarkup).join('')||'<div class="work-thread-empty">Dieser Thread ist noch leer. Fang mit der ersten Frage an.</div>'}</div>
+      <div class="work-thread-compose-region"><div id="workThreadProgress" class="chat-activity work-thread-progress" role="status" aria-live="polite" data-phase="${esc(threadProgress.phase)}" ${threadProgress.id===thread.id&&threadProgress.label?'':'hidden'}>${threadProgress.id===thread.id?esc(threadProgress.label):''}</div><form class="work-thread-composer ${threadInFlight.has(thread.id)?'is-busy':''}" id="workThreadForm"><textarea id="workThreadInput" rows="1" placeholder="Romy fragen: ${esc(thread.title)} …"></textarea><button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form></div>
     </section>`;
     $('[data-thread-back]').onclick=()=>{activeThreadId=null;void renderThreads()};
     $('[data-thread-actions]').onclick=()=>openThreadActions(thread);
@@ -1366,14 +1366,15 @@ async function renderThreadConversation(id){
       if(i<0)return;
       const preceding=messages.slice(0,i).reverse().find(m=>m.role==='user');
       const original=String(preceding?.content||'').slice(0,900);
-      void sendThreadMessage(thread,'Continúa desde el punto donde se interrumpió tu respuesta anterior, sin repetir la parte ya escrita. Pregunta original: '+original);
+      void sendThreadMessage(thread,OFFICE?'Setze deine letzte Antwort dort fort, wo sie unterbrochen wurde, ohne den schon geschriebenen Teil zu wiederholen. Ursprüngliche Frage: '+original:'Continúa desde el punto donde se interrumpió tu respuesta anterior, sin repetir la parte ya escrita. Pregunta original: '+original);
     });
     $('#workThreadInput')?.addEventListener('keydown',e=>{
       if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('#workThreadForm')?.requestSubmit()}
     });
     void hydrateThreadArtifacts(body);
+    if(OFFICE)void renderThreadProposals(thread);
     requestAnimationFrame(()=>{const log=$('#workThreadLog');if(log)log.scrollTop=log.scrollHeight});
-  }catch(e){console.error(e);body.innerHTML='<div class="work-empty">No pude abrir este Thread.</div>'}
+  }catch(e){console.error(e);body.innerHTML='<div class="work-empty">Dieser Thread konnte nicht geöffnet werden.</div>'}
 }
 async function persistThreadMessage(conversationId,role,content,metadata={}){
   const session=await getSession();if(!session)throw new Error('Sin sesión');
@@ -1386,11 +1387,63 @@ async function persistThreadMessage(conversationId,role,content,metadata={}){
   await sb.from('conversations').update({updated_at:new Date().toISOString()}).eq('id',conversationId);
   return key;
 }
+// Office: the Thread is a Romy conversation. Romy stores the question and the answer itself
+// (office-assistant), so the page only sends and shows the stream.
+async function sendOfficeThreadMessage(thread,message,input){
+  try{
+    const cid=await ensureThreadConversation(thread);
+    setThreadProgress(thread.id,'thinking','Romy denkt nach …');
+    if(activeThreadId===thread.id&&view==='threads'){
+      const log=$('#workThreadLog');
+      if(log){log.querySelector('.work-thread-empty')?.remove();log.insertAdjacentHTML('beforeend',threadMessageMarkup({role:'user',content:message})+'<article class="work-thread-message assistant" id="workThreadLive"><div class="work-thread-message-copy"></div></article>');log.scrollTop=log.scrollHeight}
+    }
+    const result=await window.TBA_ROMY_TRANSPORT.send({
+      message,conversationId:cid,requestId:crypto.randomUUID(),attachments:[],
+      onDelta:(_delta,partial)=>{
+        setThreadProgress(thread.id,'thinking','Romy schreibt …');
+        const live=$('#workThreadLive .work-thread-message-copy');
+        if(live&&activeThreadId===thread.id){live.innerHTML=window.ISABELLA_APP?.formatMessageText?.(partial)||esc(partial).replace(/\n/g,'<br>');const log=$('#workThreadLog');if(log)log.scrollTop=log.scrollHeight}
+      }
+    });
+    await sb.from('minds_work_threads').update({last_activity_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',thread.id);
+    setThreadProgress(thread.id,'received',result?.reply?'':'Romy hat keine Textantwort gegeben.');
+    setStatus('');
+  }catch(e){
+    console.error(e);
+    setThreadProgress(thread.id,'error','Die Antwort ist unbestätigt. Prüfe den Verlauf, bevor du erneut sendest.');
+  }finally{
+    threadInFlight.delete(thread.id);
+    if(input)input.disabled=false;
+    if(activeThreadId===thread.id&&view==='threads')await renderThreads();
+  }
+}
+// Romy's proposals in a Thread (task, event, memory): confirm or discard them right here.
+async function renderThreadProposals(thread){
+  if(!thread.conversation_id)return;
+  const {data,error}=await sb.from('office_romy_proposals').select('id,kind,payload,status')
+    .eq('conversation_id',thread.conversation_id).eq('status','pending').order('created_at',{ascending:true});
+  const log=$('#workThreadLog');if(error||!log||activeThreadId!==thread.id)return;
+  log.querySelectorAll('.romy-pending-review').forEach(x=>x.remove());
+  for(const p of data||[]){
+    const d=p.payload||{},title=p.kind==='remember'?'Erinnerungsvorschlag':p.kind==='create_event'?'Terminvorschlag':'Aufgabenvorschlag';
+    const what=p.kind==='remember'?String(d.content||''):String(d.title||'')+' · '+(p.kind==='create_event'?[d.starts_at,d.ends_at].filter(Boolean).join(' – '):(d.due_date||'ohne Fälligkeit'));
+    log.insertAdjacentHTML('beforeend',`<div class="romy-pending-review" data-thread-proposal="${esc(p.id)}"><strong>${esc(title)}</strong><p>${esc(what)}</p><div class="romy-review-actions"><button type="button" data-proposal-decision="apply">Bestätigen</button><button type="button" data-proposal-decision="reject">Verwerfen</button></div></div>`);
+  }
+  log.querySelectorAll('[data-thread-proposal]').forEach(card=>card.querySelectorAll('[data-proposal-decision]').forEach(button=>button.onclick=async()=>{
+    card.querySelectorAll('button').forEach(b=>b.disabled=true);
+    const {data:result,error:actionError}=await sb.functions.invoke('office-assistant',{body:{action:'review_proposal',proposal_id:card.dataset.threadProposal,decision:button.dataset.proposalDecision}});
+    if(actionError||result?.error){setStatus('Der Vorschlag konnte nicht angewendet werden.');card.querySelectorAll('button').forEach(b=>b.disabled=false);return}
+    setStatus(button.dataset.proposalDecision==='apply'?'Vorschlag übernommen.':'Vorschlag verworfen.');
+    await window.ISABELLA_SYNC_PULL_NOW?.();
+    void renderThreadProposals(thread);
+  }));
+}
 async function sendThreadMessage(thread,overrideMessage=null){
   if(threadInFlight.has(thread.id))return;
   const input=$('#workThreadInput'),message=String(overrideMessage??input?.value??'').trim();if(!message)return;
   threadInFlight.add(thread.id);
   if(input){input.disabled=true;if(overrideMessage===null)input.value=''}
+  if(OFFICE){await sendOfficeThreadMessage(thread,message,input);return}
   setThreadProgress(thread.id,'sending','Enviando mensaje a MINDS…');
   try{
     const cid=await ensureThreadConversation(thread);

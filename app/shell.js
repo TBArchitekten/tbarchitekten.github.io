@@ -145,7 +145,7 @@ document.body.innerHTML = `
           <button data-work-view="desktop">Desktop</button>
           <button data-work-view="planner">Planner</button>
           <button data-work-view="knowledge" hidden>Wissen</button>
-          <button data-work-view="threads" hidden>Threads</button>
+          <button data-work-view="threads">Threads</button>
         </div>
         <div id="workStatus" class="work-status" aria-live="polite"></div>
         <div id="workBody" class="work-body"><div class="surface-loading">Öffne Work …</div></div>
