@@ -3030,6 +3030,7 @@ function loadOtherCalendar(force=false){
 function otherCalendarOn(day){const f=nativePlanFilters();return f?.personKey||f?.projectId?[]:otherCalendar.rows.filter(e=>e.date===day)}
 function otherTitle(e){return OTHER_CALENDAR_LABEL+' · '+(e.allDay?'ganztägig':e.start)+' · '+e.title+' (nur lesen)'}
 function otherChip(e){return `<span class="wk-chip other-account-entry" title="${esc(otherTitle(e))}"><span class="wk-chip-label">${esc(e.title)}</span></span>`}
+function otherPill(e){return `<span class="pill other-account-entry" title="${esc(otherTitle(e))}">${esc(e.title)}</span>`}
 function otherAgendaRow(e){return `<div class="agenda-item other-account-entry" title="${esc(otherTitle(e))}"><span class="other-account-mark" aria-hidden="true"></span><div class="agenda-main"><strong>${esc(e.title)}</strong><div class="meta">${esc(OTHER_CALENDAR_LABEL)} · nur lesen</div></div><div class="agenda-tail"><div class="atime">${esc(e.allDay?'Ganztägig':e.start)}</div></div></div>`}
 function renderCalendar(){loadAkteFristen();loadOtherCalendar();$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));const d=fromIso(state.date);$('#calTitle').textContent=state.view==='month'?d.toLocaleDateString('de-DE',{month:'long'}):state.view==='week'?`KW ${weekNo(d)}`:d.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});if(state.view==='month')month();else if(state.view==='week')week();else day()}
 function taskSpansDay(task,key){return !!window.MINDS_DESK_MODEL?.spansDay?.(task,key)}
@@ -3146,14 +3147,14 @@ function day(){
   const spans=state.tasks.filter(x=>taskSpansDay(x,state.date)).sort(taskOrder);
   const lanes=window.MINDS_DAY_LAYOUT?.layout(ev)||new Map();
   const dayFristen=akteFristenOn(state.date);
-  let h='<div class="day-all"><b>Ganztägig</b><div>'+dayFristen.map(fristChip).join('')+other.filter(e=>e.allDay).map(otherChip).join('')+
+  let h='<div class="day-all"><b>Ganztägig</b><div>'+dayFristen.map(fristChip).join('')+other.filter(e=>e.allDay).map(otherPill).join('')+
     (ta.length||spans.length?ta.map(t=>'<button class="pill calendar-entry task-item '+(t.done?'task-done':'')+
       '" data-kind="task" data-id="'+esc(t.id)+'" data-date="'+esc(t.date)+
       '" style="--item-color:'+itemColor(t)+'"><span class="wk-check" aria-hidden="true"></span>'+esc(t.title)+'</button>').join('')+
       spans.map(t=>'<button class="pill calendar-entry is-span" data-kind="task" data-id="'+esc(t.id)+
       '" style="--item-color:'+itemColor(t)+'" title="Aufgabe läuft '+esc(spanUntilLabel(t))+'"><span class="wk-check" aria-hidden="true"></span>'+esc(t.title)+
       '<span class="pill-span">'+esc(spanUntilLabel(t))+'</span></button>').join(''):
-      (dayFristen.length?'':'<span class="meta">Keine Aufgaben</span>'))+'</div></div><div class="hours">';
+      (dayFristen.length||other.some(e=>e.allDay)?'':'<span class="meta">Keine Aufgaben</span>'))+'</div></div><div class="hours">';
   for(let hr=7;hr<=22;hr++)h+='<div class="hrow"><div class="hlabel">'+pad(hr)+':00</div><div></div></div>';
   for(const e of ev){
     const slot=lanes.get(e.id);
