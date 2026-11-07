@@ -17,3 +17,9 @@ entrypoint = "./functions/office-terminplan-ai/index.ts"
 [functions.office-romy-mission-runner]
 verify_jwt = false
 entrypoint = "./functions/office-romy-mission-runner/index.ts"
+
+# Claude connector (remote MCP). It answers the unauthenticated 401 itself (OAuth discovery)
+# and checks the Supabase JWT and the office membership on every request.
+[functions.office-mcp]
+verify_jwt = false
+entrypoint = "./functions/office-mcp/index.ts"

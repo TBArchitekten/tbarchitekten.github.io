@@ -17,6 +17,25 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Conector de Claude para Office (paso 4, parte 1) · Claude
+- **Qué cambió y por qué:** decisiones de Gari del 07.11: Office recibe el conector de Claude como Window, y puede leer todo, documentos incluidos; los Threads serán privados, como en Window (llegan en la parte 2).
+  - Nueva función `office-mcp`: servidor MCP remoto con OAuth 2.1 de Supabase.
+    - Herramientas: overview, proyectos, contexto de proyecto, Fristen, búsqueda de documentos, lectura de PDF/Word/Excel/texto, tareas (leer, crear, cambiar) y calendario propio.
+    - Corre con el JWT de la persona y bajo la RLS de la oficina; solo entran miembros activos.
+  - Nueva página `oauth-consent.html`, en alemán, con correo y contraseña de la oficina.
+  - Guía: `docs/OFFICE-CONNECTOR.md`.
+- **Archivos:** `supabase/functions/office-mcp/{index.ts,office-tools.mjs}`, `supabase/config.toml`, `oauth-consent.{html,js}`, `tests/office-mcp.test.mjs`, docs.
+- **Base de datos:** ninguna.
+- **Deploy de funciones:** `office-mcp` con el workflow después del merge.
+- **Cómo se probó:**
+  - 173/173 pruebas, con pruebas de comportamiento de las herramientas contra un cliente simulado;
+  - `deno check` del servidor sin errores;
+  - extracción de PDF, Word y Excel probada en Deno con archivos generados;
+  - página de consentimiento en Chromium sin errores.
+- **Quedó pendiente:** Gari tiene que activar el OAuth Server en el panel de Supabase (Authentication → OAuth Server, ruta `/oauth-consent.html`) y añadir el conector en Claude. Después: Threads privados en Work (parte 2).
+- **Riesgos o decisiones que necesitan a Gari:** el conector entrega a Claude (Anthropic) el contenido de los documentos que se lean. Gari lo decidió así; conviene contárselo a Titus junto con el tema de datos de clientes.
+- **PR:** #49
+
 ### 2026-11-07 · Kalender: eventos de día completo de Persönlich como pastillas · Claude
 - **Qué cambió y por qué:** en la vista Tag, los eventos de día completo del otro calendario salían como texto suelto; ahora son pastillas rayadas, como el resto. Si solo hay eventos del otro calendario, ya no aparece "Keine Aufgaben".
 - **Archivos:** `app/{app.js,minds-calendar-shell.css,index.html}` y versiones en los tests.
