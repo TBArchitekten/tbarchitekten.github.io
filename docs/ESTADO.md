@@ -1,9 +1,83 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 05.11.2026, por ChatGPT (PR #35 fusionado y publicado, SHA `369dab63038cb49fabd7523ddc295472492e15e3`; backend assistant v12, Terminplan AI v5 y mission runner v2).
+**Actualizado:** 07.11.2026, por Claude: revisión de PR #16–#39 y decisiones de Gari, en la sección siguiente. La versión anterior era del 05.11.2026, de ChatGPT, tras el PR #35.
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
+
+## Revisión de Claude · 07.11.2026 (leer primero)
+Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, funciones, pruebas). Esta sección **corrige** datos de más abajo que quedaron viejos.
+
+### Decisiones de Gari (07.11)
+- **Window tendrá dos cuentas**, como cambiar de usuario en GitHub: **Persönlich** (Window) y **Office** (TBA Office). Cada cuenta tiene adentro lo suyo, y lo que se escribe va a la cuenta activa.
+- **Kalender:** solo dos calendarios, Persönlich y Office. Se ven los dos en cualquiera de las cuentas.
+- **Office recibe Threads y el conector de Claude**, como Window.
+- **Akten:** se resuelve después. Antes hay que aclarar con la dirección el tema de datos de clientes.
+- **Bernried y Schwarz se quedan en Window como están.** Mudarlos se ve en un paso posterior.
+
+### Estado real tras PR #37–#39 (no estaba en la bitácora)
+- **Work ya no usa el `work.js` de Window.** Usa `app/office-work.js` y `app/office-window-work-surface.js` sobre `office_tasks`, `office_task_buckets`, `office_task_assignees`, `office_project_folders`, `office_project_files` y `office_project_members`.
+- **`office_tasks` y `office_task_buckets` están en uso.** La §4 decía "sin uso": eso ya no vale, y **no se deben borrar**.
+- **Desktop de Büro:** la vista Büro solo lista los proyectos y ya no permite guardar archivos de Büro. `minds_work_folders` y `minds_work_files` (de PR #16) están vacías y la interfaz no las usa.
+- **Projekte:**
+  - cualquier miembro activo crea proyectos, sin Projektleiter;
+  - el equipo es `office_project_members`, colaborativo: lo cambian el creador, un admin o cualquier miembro del equipo;
+  - los miembros del equipo pueden editar Terminpläne, tareas y buckets del proyecto.
+- **Terminplan:**
+  - las fuentes PDF e imágenes se guardan en el bucket privado `office-plan-sources`, y **solo las puede leer quien las subió**;
+  - "PDF → Plan" reconstruye con propuesta y confirmación;
+  - el plan de Bernried se reparó (revisión 7, con snapshot previo).
+- **Funciones en vivo (07.11):**
+  - `office-admin` v2;
+  - `office-terminplan-ai` v8 (Terra, 25 consultas al día por persona);
+  - `office-assistant` v12 (Romy, sin límite diario);
+  - `office-romy-mission-runner` v2, con cron cada 5 minutos.
+- **Migraciones:**
+  - las 27 del repo desde `20261104000000` están aplicadas en Supabase;
+  - las tres `20261028_*` **no existen en este proyecto** (vienen del proyecto antiguo y su contenido quedó dentro de `office_base_v1`), así que la lista de §4 que las daba por aplicadas era un error mío del 04.11;
+  - en el repo hay **timestamps duplicados** (`20261105144000` ×2 y `20261105152000` ×2): la CLI de Supabase fallaría con ellos.
+- **Datos en vivo:** 1 miembro (Gari), 1 proyecto, 1 Terminplan, 1 tarea del Planner, 1 tarea del Kalender, 1 carpeta y 0 archivos de Desktop. Solo lo ha probado Gari.
+- **Lo que está bien:**
+  - JWT y comprobación de miembro activo en todas las funciones;
+  - RLS en todas las tablas;
+  - Security Advisor sin hallazgos;
+  - claves solo en el servidor;
+  - el secreto del cron es ilegible para los clientes;
+  - CORS limitado a la página;
+  - `store:false` en el chat;
+  - 159 pruebas pasan y la CI está verde.
+
+### Hallazgos (por prioridad)
+1. **Dos sistemas de tareas.**
+   - El Planner usa `office_tasks`; Heute, Kalender, la ficha de tarea y Romy usan `isabella_tasks`.
+   - Por eso las tareas del Planner **no aparecen** en Heute ni en el Kalender, y Romy no las ve.
+   - Al revés, las tareas que crea Romy no aparecen en el Planner.
+2. **Dos Desktops.** Work guarda en `office_project_files`, pero `list_files`, `read_text_file` y los archivos de entrada de Romy leen `minds_work_files`, que está vacía. **Romy no ve los documentos del Desktop.**
+3. **Dos equipos.** Work, Projekte y el Terminplan usan `office_project_members`; la ficha de tarea (desde Heute) usa `minds_work_project_people`. En la ficha, la lista de responsables de un proyecto sale vacía.
+4. **RLS de `office_task_assignees`:** la política compara `t.project_id = t.project_id` (sombra de nombre), así que no comprueba que el proyecto de la asignación sea el de la tarea. El riesgo es bajo: se corrige calificando `office_task_assignees.project_id`.
+5. **Permisos de archivos de proyecto inconsistentes:**
+   - en Storage cualquier miembro puede borrar el archivo;
+   - en la tabla solo el autor o el equipo;
+   - las carpetas las puede cambiar o borrar cualquier miembro.
+6. **Fuentes del Terminplan:** solo las lee quien las subió, así que un colega del equipo no puede reconstruir el plan con esas fuentes.
+7. **Costo de Romy:**
+   - no tiene límite (decisión de Gari);
+   - en cada turno manda **todo** el historial de la conversación, y hasta 5 rondas por turno;
+   - `web_search` está siempre disponible;
+   - el Code Interpreter usa `gpt-6-astra`.
+
+   El presupuesto mensual no está acordado y la cuenta de OpenAI sigue siendo la personal de Gari.
+8. **Misiones:** el runner no tiene datos ni herramientas; solo razona sobre el objetivo y el resumen anterior. Hoy aporta poco y cada checkpoint cuesta. Sugerencia: ocultarlas hasta que puedan leer datos reales.
+9. **Documentación:** los PR #37–#39 no tienen entrada en la bitácora, y partes de este archivo describen un estado viejo (por ejemplo, la §2 y la §4).
+10. Quedan restos en español, como "eventos" en el panel Heute de la pantalla de Romy.
+
+### Decisión pendiente de Gari: un solo modelo de datos
+Antes de probar con colegas hay que unificar las tareas, el Desktop y el equipo en un solo modelo. Casi no hay datos, así que ahora cuesta poco.
+- **Opción A (recomendada):** usar el modelo de Window (`isabella_tasks`, `minds_work_*`) para todo, con `office_project_members` como único equipo (adaptando la RLS).
+  - Heute, Kalender, la ficha y Romy ya lo usan.
+  - Los Threads y el conector de Claude que vienen de Window se apoyan en el mismo esquema.
+  - Work se apunta de nuevo a esas tablas, conservando lo que pidió Gari: equipo colaborativo, proyectos creados desde la app y acciones de Desktop.
+- **Opción B:** dejar las tareas de proyecto en `office_tasks` y adaptar Heute, Kalender, la ficha y Romy para leerlas y crearlas ahí; las tareas personales seguirían en `isabella_tasks`. Es posible, pero se aleja del código de Window y obliga a mantener adaptadores para Threads y el conector.
 
 ## Integración Office #35 · frontend y backend publicados (05.11.2026)
 PR #35 fusionado a `main` en el commit `369dab63038cb49fabd7523ddc295472492e15e3`. **La suite automatizada de `main` y el workflow de despliegue GitHub Pages finalizaron correctamente.** Sigue pendiente la aceptación funcional de empleados. En Supabase TBA Office sí se han desplegado office-assistant v12 y office-terminplan-ai v5 (JWT obligatorio), office-romy-mission-runner v2 (sin JWT en el gateway pero protegido por un secreto privado validado mediante RPC de servicio), el índice pgvector y las migraciones de misiones y su cron cada cinco minutos. No se declara paridad total con Window ni aceptación E2E.
@@ -57,7 +131,7 @@ PR #35 fusionado a `main` en el commit `369dab63038cb49fabd7523ddc295472492e15e3
 - `20261104000000_office_base_v1`
 - `20261104000100_office_password_flag_invoker`
 - `20261104000200_office_seed_terminplan_templates`
-- `20261104000300_office_planner_v1` (tablas `office_tasks` y `office_task_buckets`, **sin uso**, ver §6)
+- `20261104000300_office_planner_v1` (tablas `office_tasks` y `office_task_buckets`: **en uso por Work desde PR #37, no borrar**; ver la revisión del 07.11 arriba)
 - `20261104000400_office_window_tables_v1`
 - `20261104000500_office_window_fixes`
 - `20261104210000_office_desktop_v1` (aplicada con Supabase MCP como versión `20261104203250`; incluye bucket privado `minds-work`)
