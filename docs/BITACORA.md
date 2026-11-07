@@ -17,6 +17,33 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Romy v13 publicada y permisos del equipo probados · Claude
+- **Qué cambió y por qué:**
+  - Se publicó `office-assistant` v13 con los cambios del PR #41: historial de 24 mensajes, hora fuera del prompt fijo, misiones ocultas y arreglo de `uuid()`.
+  - Gari no pudo entrar a la cuenta de Supabase de la oficina para crear el token: falló el inicio de sesión con GitHub (TBArchitekten) y con el correo.
+  - Un token de su cuenta personal también daría acceso a Window, así que no se usó.
+- **Cómo se publicó:**
+  - Con el conector de Supabase, que tiene acceso a la cuenta de la oficina.
+  - El `index.ts` publicado es un envoltorio de una línea. Importa `supabase/functions/office-assistant/index.ts` desde raw.githubusercontent.com en el commit fijo `dfddc193c18b44e098dc5183c82a5acda3f53416`.
+  - El paquete se arma al publicar; en ejecución no depende de GitHub.
+  - El próximo deploy con el workflow lo reemplaza por los archivos normales.
+- **Archivos:** solo docs (`docs/ESTADO.md` y `docs/BITACORA.md`).
+- **Base de datos:** ninguna migración. Prueba de RLS con dos miembros simulados en una transacción revertida (`raise exception` al final):
+  - el miembro del equipo cambia la tarea (1), se asigna (1), los buckets (2) y las carpetas (1);
+  - el miembro activo fuera del equipo no cambia la tarea (0) ni los buckets (0), pero sí las carpetas (1), según la regla de Gari;
+  - asignar a alguien de fuera del equipo lo rechaza la clave foránea.
+- **Deploy de funciones:** `office-assistant` v13, con el conector de Supabase (Gari dio el OK).
+- **Cómo se probó:**
+  - los 14 archivos que sirve GitHub en ese commit son idénticos byte a byte a los del repo (`cmp`);
+  - sin sesión, la pasarela responde 401;
+  - con la clave anónima, la función arranca y responde `{"error":"invalid_session"}` con CORS de la página, lo que confirma que cargó todos los módulos.
+- **Quedó pendiente:**
+  - el token de la cuenta de la oficina, que necesita recuperar el acceso a esa cuenta;
+  - probar Romy con una conversación real (Gari);
+  - el presupuesto de Romy.
+- **Riesgos o decisiones que necesitan a Gari:** ninguno nuevo.
+- **PR:** #43
+
 ### 2026-11-07 · Un solo modelo de datos (el de Window) · Claude
 - **Qué cambió y por qué:** Gari decidió unificar Office con el modelo de Window. Antes había dos sistemas de tareas, dos Desktops y dos equipos.
   - Work vuelve a ser el `work.js` de Window, sobre `isabella_tasks`, `minds_work_buckets`, `minds_work_task_assignees`, `minds_work_folders` y `minds_work_files`.
@@ -41,7 +68,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
   - recorrido simulado Romy → Work → Planner → Desktop → Romy → Work → Tools: una sola navegación, sin errores de página, y Panorama, Planner y Desktop se ven bien;
   - después de aplicar, se comprobaron las copias, las claves nuevas y que el cron de misiones sigue pausado.
 - **Quedó pendiente o sin probar:**
-  - la prueba de RLS con un segundo miembro simulado (equipo frente a no equipo) no se pudo correr porque el MCP pidió confirmación y nadie respondió; se repite cuando Gari esté;
+  - la prueba de RLS con un segundo miembro simulado se corrió después (ver la entrada de arriba, PR #43);
   - la prueba real con un colega;
   - borrar las tablas obsoletas (necesita OK de Gari);
   - el presupuesto de Romy.

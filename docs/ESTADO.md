@@ -33,6 +33,10 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
   - los responsables solo pueden ser del equipo, porque las claves foráneas apuntan a `office_project_members`;
   - si alguien sale del equipo, deja de ser responsable;
   - el equipo puede cambiar y borrar las tareas y los buckets de su proyecto (`private.office_in_project_team`).
+- **Permisos probados** el 07.11 con dos miembros simulados, en una transacción revertida:
+  - quien está en el equipo puede cambiar tareas y buckets del proyecto y asignarse;
+  - quien no está en el equipo no puede cambiar tareas ni buckets, pero sí renombrar carpetas (archivos compartidos para todos);
+  - asignar a alguien de fuera del equipo lo rechaza la clave foránea.
 - **Archivos:** las políticas de `minds_work_folders`, `minds_work_files` y del Storage ya dejaban a todo miembro activo renombrar, mover y borrar. Era justo la regla que pidió Gari, así que no hizo falta cambiarlas.
 - **Datos:** lo que había en las tablas solo de Office se copió con los mismos ids: 2 buckets, 1 tarea y 1 carpeta (migración `20261107064831_office_unify_window_model_v1`). Las tablas `office_tasks`, `office_task_buckets`, `office_task_assignees`, `office_project_folders` y `office_project_files` **siguen ahí, marcadas como obsoletas**, y `minds_work_project_people` queda sin uso. **Borrarlas necesita el OK explícito de Gari.**
 - **Por qué ChatGPT había cambiado Work (PR #37):** desde el PR #16, la línea 93 de `work.js` llamaba `$('[data-work-view]').forEach(...)`; `$` devuelve un solo elemento, así que Work fallaba siempre con "Work konnte gerade nicht geöffnet werden". Ahora usa `$$`.
@@ -54,7 +58,12 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
   - los archivos llevan ahora la versión registrada en Supabase, sin duplicados;
   - las tres `20261028_*` del proyecto antiguo están en `supabase/legacy-migrations/`.
 - **Textos:** el chat y la voz de Romy pasaron a alemán (antes decían "Enviando a Isabella…", "Escuchando…", etc.), igual que "eventos" en el panel Heute.
-- **Deploy manual desde el repo:** `.github/workflows/deploy-functions.yml` y `supabase/config.toml`, igual que en Window. **Falta que Gari añada el secreto** `SUPABASE_ACCESS_TOKEN` en el entorno `supabase` del repo (Settings → Environments). Hasta entonces, **los cambios de `office-assistant` de este PR no están desplegados.**
+- **Deploy manual desde el repo:** `.github/workflows/deploy-functions.yml` y `supabase/config.toml`, igual que en Window. **Falta el secreto** `SUPABASE_ACCESS_TOKEN` en el entorno `supabase` del repo (Settings → Environments). Tiene que salir de la cuenta de Supabase de la oficina, la que tiene la organización "Titus Bernhard Architekten". **No uses un token de la cuenta personal de Gari:** esa cuenta también puede manejar Window. El 07.11 Gari no pudo entrar a la cuenta de la oficina (falló el inicio con GitHub y con el correo), así que el token sigue pendiente.
+- **`office-assistant` v13 publicada el 07.11 con el conector de Supabase.** Lleva el límite de 24 mensajes, las misiones ocultas y el arreglo de `uuid()`.
+  - **Por qué hay un envoltorio:** copiar a mano unos 130 KB de código era arriesgado. Por eso el `index.ts` publicado es un envoltorio de una línea que importa la función del repo en el commit fijo `dfddc19` (fusión del PR #42) desde raw.githubusercontent.com.
+  - **Qué significa:** el paquete se arma al publicar y en ejecución no se descarga nada de GitHub. En el panel de Supabase solo se ve el envoltorio.
+  - **Cómo se comprobó:** los 14 archivos que sirve GitHub en ese commit son idénticos byte a byte a los del repo. La función arranca y responde `invalid_session` sin usuario.
+  - **Siguiente paso:** el próximo deploy con el workflow lo sustituye por los archivos normales.
 
 ### Estado real tras PR #37–#39 (no estaba en la bitácora)
 > Los tres primeros puntos quedaron superados por el PR #42 (un solo modelo de datos, arriba). Se dejan como historia.
@@ -72,7 +81,7 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 - **Funciones en vivo (07.11):**
   - `office-admin` v2;
   - `office-terminplan-ai` v8 (Terra, 25 consultas al día por persona);
-  - `office-assistant` v12 (Romy, sin límite diario);
+  - `office-assistant` v12 (Romy, sin límite diario); **v13 desde el 07.11**, ver arriba;
   - `office-romy-mission-runner` v2, con cron cada 5 minutos.
 - **Migraciones:**
   - las 27 del repo desde `20261104000000` están aplicadas en Supabase;
