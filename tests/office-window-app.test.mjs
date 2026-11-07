@@ -30,6 +30,23 @@ test('Office tabs in the app: Romy, Heute, Kalender, Work, Tools; switch to Pers
   assert.match(shell,/includes\('account\.switch'\)/);
   assert.match(shell,/native\.call\('account\.switch',\{to:'personal'\}\)/);
   const index=read('app/index.html');
-  for(const s of ['../shared/supabase-client.js?v=office2','./shell.js?v=office41','./app.js?v=office41','./sync.js?v=office3'])
+  for(const s of ['../shared/supabase-client.js?v=office2','./shell.js?v=office41','./app.js?v=office42','./sync.js?v=office3'])
     assert.ok(index.includes(s),s);
+});
+
+test('Kalender shows the other account (Persönlich) read-only, only in the app, never saved or synced', ()=>{
+  const app=read('app/app.js');
+  assert.match(app,/const OTHER_CALENDAR_LABEL=OFFICE\?'Persönlich':'Office';/);
+  // Only when the app offers it, through the bridge; the app reads with its own session.
+  assert.match(app,/if\(!windowShell\|\|!windowShellCaps\.includes\('calendar\.other'\)\|\|otherCalendar\.loading\)return;/);
+  assert.match(app,/native\.call\('calendar\.other',\{from,to\}\)/);
+  // Kept apart from state: rendered only, ids marked, no data-kind (so no editor, no drag).
+  assert.doesNotMatch(app,/state\.events\.push\([^)]*other|otherCalendar\.rows[^;]*save\(\)/);
+  for(const tpl of ['function otherChip','function otherAgendaRow'])assert.ok(app.includes(tpl),tpl);
+  const helpers=app.slice(app.indexOf('function otherChip'),app.indexOf('function renderCalendar'));
+  assert.doesNotMatch(helpers,/data-kind|calendar-entry/);
+  assert.match(app,/if\(e\.otherAccount\)\{\n        h\+=`<div class="wk-event other-account-entry/);
+  assert.match(app,/if\(e\.otherAccount\)\{\n      h\+='<div class="event other-account-entry"/);
+  assert.match(app,/function renderCalendar\(\)\{loadAkteFristen\(\);loadOtherCalendar\(\);/);
+  assert.match(read('app/minds-calendar-shell.css'),/\.other-account-entry/);
 });

@@ -17,6 +17,26 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Kalender con los dos calendarios (paso 3) · Claude
+- **Qué cambió y por qué:** decisión de Gari: dos calendarios, Persönlich y Office, y los dos se ven en cualquiera de las cuentas.
+  - Dentro de la app de Window, el Kalender de Office muestra los eventos de Persönlich rayados en gris y solo para leer, en las vistas Monat, Woche y Tag.
+  - La app los lee con su propia sesión de Window (mensaje `calendar.other`) y solo entrega título y horas.
+  - Nunca entran en el estado de la página: no se guardan, no se sincronizan con la base de la oficina y Romy no los ve.
+  - En el navegador no aparece nada de Persönlich.
+  - Window hace lo mismo al revés: Tiempo muestra Office.
+- **Archivos:** `app/{app.js,minds-calendar-shell.css,index.html}`, `tests/office-window-app.test.mjs` y versiones en tests.
+- **Base de datos / funciones:** ninguna.
+- **Cómo se probó:**
+  - 167/167 pruebas.
+  - En Chromium con un puente simulado, que devolvió tres eventos personales de prueba:
+    - salen en Monat (puntos grises y agenda), Woche y Tag;
+    - al tocarlos no se abre el editor;
+    - no están en el estado ni en localStorage;
+    - no hubo escrituras de eventos.
+- **Quedó pendiente:** que Gari lo vea en el iPhone cuando salga la build de TestFlight con el paso 3.
+- **Riesgos o decisiones que necesitan a Gari:** ninguno.
+- **PR:** #47
+
 ### 2026-11-07 · Office lista para la app de Window (paso 1) · Claude
 - **Qué cambió y por qué:** Gari quiere entrar a Office desde la app del iPhone de Window, cambiando de cuenta como en GitHub (Persönlich / Office). Este paso prepara la web de Office; el cambio de cuenta en la app va en el repo de Window.
   - `shared/supabase-client.js`: si la página corre dentro de la app (`window.webkit.messageHandlers.windowNative`), usa el mismo contrato v1 que Window.
