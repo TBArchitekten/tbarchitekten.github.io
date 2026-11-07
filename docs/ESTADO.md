@@ -26,6 +26,9 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
   - La página no guarda sesión propia.
   - En el navegador todo sigue igual: se entra por la página raíz.
 - Pestañas en la app: Romy · Heute · Kalender · Work · Tools. "Zu Persönlich wechseln" está en el menú "•••".
+- **Kalender con los dos calendarios (PR #47):** dentro de la app, el Kalender de Office muestra también los eventos de Persönlich, rayados en gris y solo para leer.
+  - La app los lee con su sesión de Window y solo pasa título y horas.
+  - No entran en el estado: no se guardan, no se sincronizan y Romy no los ve.
 
 ### Resuelto el 07.11 (PR #42): un solo modelo de datos
 - **Work vuelve a ser el `work.js` de Window** (Panorama, Desktop, Planner), sobre las tablas de Window:
