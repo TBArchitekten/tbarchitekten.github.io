@@ -25,6 +25,10 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 - En la cuenta Office, la app carga `https://tbarchitekten.github.io/app/` y le presta la sesión de Office por el puente (`windowNative`, contrato v1 de Window).
   - La página no guarda sesión propia.
   - En el navegador todo sigue igual: se entra por la página raíz.
+  - **Terminpläne, Mitglieder y «Passwort ändern» (PR #52)** también usan la sesión de la app (`shared/supabase-client.js`): no piden un segundo login.
+    - Sin sesión, piden el login de la app.
+    - El Terminplan sin `id` vuelve a `./app/#section=plans`.
+    - «Passwort ändern» cambia la contraseña con el token prestado (`PUT /auth/v1/user`). La sesión de la app sigue; las otras sesiones de esa persona se cierran.
 - Pestañas en la app: Romy · Heute · Kalender · Work · Tools. "Zu Persönlich wechseln" está en el menú "•••".
 - **Kalender con los dos calendarios (PR #47):** dentro de la app, el Kalender de Office muestra también los eventos de Persönlich, rayados en gris y solo para leer.
   - La app los lee con su sesión de Window y solo pasa título y horas.

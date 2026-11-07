@@ -76,6 +76,24 @@
       return { data: { subscription: { unsubscribe: () => listeners.delete(callback) } } };
     },
     signOut: async () => { cached = null; await call('session.signOut'); return { error: null }; },
+    // Passwort ändern (start page): Supabase Auth changes it with the current access token and
+    // keeps this session (the app's); other sessions of the person are signed out.
+    updateUser: async (attributes) => {
+      const token = (await current())?.access_token;
+      if (!token) return { data: { user: null }, error: { message: 'Nicht angemeldet.' } };
+      try {
+        const response = await fetch(config.url + '/auth/v1/user', {
+          method: 'PUT',
+          headers: { apikey: config.publishableKey, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: attributes?.password })
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) return { data: { user: null }, error: { message: body.msg || body.error_description || body.message || 'HTTP ' + response.status, code: body.error_code, status: response.status } };
+        return { data: { user: body }, error: null };
+      } catch (error) {
+        return { data: { user: null }, error: { message: String(error?.message || error) } };
+      }
+    },
     signInWithPassword: signInInApp,
     signInWithOtp: signInInApp,
     verifyOtp: signInInApp

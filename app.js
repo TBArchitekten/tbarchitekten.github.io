@@ -13,7 +13,10 @@
       return;
     }
   }
-  const sb=supabase.createClient(CFG.url,CFG.key,{auth:{storageKey:CFG.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  // In the Window app the app holds the Office session and lends it through the bridge
+  // (shared/supabase-client.js); this page never asks for a second sign-in there.
+  const sb=window.MINDS_SUPABASE||supabase.createClient(CFG.url,CFG.key,{auth:{storageKey:CFG.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  const inApp=!!window.WINDOW_NATIVE?.available;
   // Sessions of the previous Office backend (Bernried Project Hub) are no longer valid here.
   try{localStorage.removeItem('tba-office-auth-v1')}catch{}
 
@@ -65,6 +68,7 @@
   }
 
   async function boot(session){
+    if(!session&&inApp){void window.WINDOW_NATIVE.call('session.signIn');location.replace('./app/');return}
     if(!session){showOnly('auth');return}
     user=session.user;
     member=await ownMembership(user.id);
@@ -360,7 +364,7 @@
     }finally{submit.disabled=false}
   });
 
-  $('#logoutBtn').onclick=async()=>{await sb.auth.signOut();location.hash='';location.reload()};
+  $('#logoutBtn').onclick=async()=>{await sb.auth.signOut();if(inApp)return;location.hash='';location.reload()};
   $('#openTerminplanTool').onclick=()=>switchView('plans');
   $('#newPlanBtn').onclick=()=>openCreate('LPH3');
   $('#projectNewPlanBtn').onclick=()=>openCreate('LPH3',currentProjectId);
