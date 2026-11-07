@@ -17,6 +17,29 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Revisión de PR #16–#39 y decisiones de Gari · Claude
+- **Qué cambió y por qué:** Gari pidió revisar a fondo lo hecho con ChatGPT del 04 al 05.11. Se revisaron:
+  - el código y las migraciones;
+  - las políticas RLS y de Storage en vivo;
+  - las funciones Edge, el cron y los advisors;
+  - las pruebas y la CI;
+  - un recorrido simulado de la app.
+
+  Además se anotaron las decisiones de Gari del 07.11: Window con dos cuentas (Persönlich/Office), Kalender con dos calendarios, Threads y conector de Claude para Office, Akten más adelante, y Bernried y Schwarz se quedan en Window.
+- **Archivos:** `docs/ESTADO.md` (sección "Revisión de Claude · 07.11.2026" y corrección de la §4) y `docs/BITACORA.md`.
+- **Base de datos / deploy:** ninguno. Solo consultas de lectura.
+- **Cómo se probó:** 159/159 pruebas, CI de `main` en verde, Security Advisor sin hallazgos, recorrido simulado sin errores de página.
+- **Hallazgos principales:**
+  - dos sistemas de tareas (Planner `office_tasks` frente a Heute, Kalender y Romy en `isabella_tasks`);
+  - dos Desktops (Romy lee `minds_work_files`, que está vacía);
+  - dos tablas de equipo;
+  - una sombra de nombre en la RLS de `office_task_assignees`;
+  - el costo de Romy (historial completo en cada turno, sin presupuesto);
+  - misiones sin datos;
+  - los PR #37–#39 sin documentar;
+  - timestamps de migración duplicados.
+- **Riesgos o decisiones que necesitan a Gari:** elegir un solo modelo de datos (opción A recomendada, ver ESTADO); presupuesto mensual de Romy; qué hacer con las misiones.
+- **PR:** #40
 
 ### 2026-11-05 · Publicación de PR #35 y verificación de Pages · ChatGPT
 - Cambio: PR #35 «Office: Projekte unificados, Terminplan Terra/PDF y Romy con memoria + misiones» fusionado por squash merge en `main`, SHA `369dab63038cb49fabd7523ddc295472492e15e3`.
