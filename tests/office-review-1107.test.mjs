@@ -39,6 +39,19 @@ test('Migration files carry the versions recorded in Supabase, without duplicate
   assert.ok(!files.some(f=>f.startsWith('20261028_')),'old-project migrations live in supabase/legacy-migrations');
 });
 
+test('One data model: Window tables, team from office_project_members, old Office tables only copied',()=>{
+  const sql=read('supabase/migrations/20261107064831_office_unify_window_model_v1.sql');
+  assert.match(sql,/add constraint isabella_tasks_project_assignee_team_fkey\s+foreign key \(project_id, assignee_person_id\) references public\.office_project_members\(project_id, user_id\)\s+on delete set null \(assignee_person_id\)/);
+  assert.match(sql,/add constraint minds_work_task_assignees_team_fkey[\s\S]{0,160}references public\.office_project_members\(project_id, user_id\)\s+on delete cascade/);
+  assert.match(sql,/create function private\.office_in_project_team\(p_project uuid\)/);
+  assert.match(sql,/revoke all on function private\.office_in_project_team\(uuid\) from public, anon;/);
+  for(const p of ['isabella_tasks_delete','minds_work_buckets_update','minds_work_buckets_delete'])
+    assert.match(sql,new RegExp(`alter policy ${p} `));
+  for(const t of ['office_tasks','office_task_buckets','office_task_assignees','office_project_folders','office_project_files'])
+    assert.match(sql,new RegExp(`from public\\.${t} `),t+' is copied');
+  assert.doesNotMatch(sql,/drop table|truncate|delete from/i,'nothing is deleted without Gari');
+});
+
 test('Functions deploy manually from the repo, like Window',()=>{
   const wf=read('.github/workflows/deploy-functions.yml');
   assert.match(wf,/workflow_dispatch:/);

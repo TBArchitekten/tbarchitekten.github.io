@@ -212,7 +212,7 @@ async function saveTeam(projectId,oldIds,newIds){
   }
   if(errors.length)throw Error('Mitglieder nicht vollständig gespeichert: '+errors.join('; '));
 }
-function manageMembers(project){
+function manageMembers(project,onSaved=null){
   const existing=team.filter(x=>x.project_id===project.id).map(x=>x.user_id);
   window.ISABELLA_APP?.openModal?.('Mitglieder · '+project.name,
     '<form id="officeProjectMembersForm" class="form">'+
@@ -229,6 +229,7 @@ function manageMembers(project){
       await saveTeam(project.id,existing,chosen);
       window.ISABELLA_APP?.closeModal?.();
       await refresh();
+      onSaved?.();
     }catch(error){document.getElementById('officeProjectMembersError').textContent=error.message;b.disabled=false}
   };
 }
@@ -284,5 +285,16 @@ document.getElementById('officeProjectsDrawer')?.addEventListener('click',event=
   document.getElementById('closeDrawer')?.click();
   openProjects();
 });
-window.TBA_OFFICE_PROJECTS={render:refresh,open:openProjects,openPlans};
+// Work (Window's work.js) opens the same team editor and Terminplan creation, without leaving the app.
+async function projectById(id){await refresh();return projects.find(x=>x.id===id)||null}
+async function openTeam(id,onSaved=null){
+  const project=await projectById(id);
+  if(!project){status('Projekt nicht gefunden.');return}
+  manageMembers(project,onSaved);
+}
+async function openNewPlan(id){
+  const project=await projectById(id);
+  if(project)newPlan(project);
+}
+window.TBA_OFFICE_PROJECTS={render:refresh,open:openProjects,openPlans,openTeam,openNewPlan};
 })();

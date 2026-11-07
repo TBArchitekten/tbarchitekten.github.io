@@ -106,19 +106,6 @@ test('Structural edits preserve old task identity, progress, protected dates and
  assert.throws(()=>builder.convert(before,misleading,'Instruction','2026-11-05','transform'),/unrecognized_new_task_row/);
 });
 
-test('Office Work connects to Office schema only and can create real buckets and folders',()=>{
- const index=read('app/index.html'),work=read('app/office-work.js'),projects=read('app/office-projects.js');
- assert.match(index,/office-work\.js\?v=office38/);
- assert.doesNotMatch(index,/src="\.\/work\.js/);
- for(const name of ['office_projects','office_tasks','office_task_buckets','office_project_files','office_project_folders'])
-  assert.match(work,new RegExp(name));
- assert.doesNotMatch(work,/from\('isabella_projects'\)/);
- assert.match(work,/MINDS_WORK=/);
- assert.match(projects,/Mitglieder/);
- assert.match(projects,/office_project_members/);
- assert.doesNotMatch(projects,/name="lead"/);
- new Function(work);new Function(projects);
-});
 test('Private uploaded files can be reused in subsequent Terminplan requests',()=>{
  const edge=read('supabase/functions/office-terminplan-ai/index.ts'),html=read('terminplan.html');
  const migration=read('supabase/migrations/20261105134324_office_terminplan_sources_v1.sql');
@@ -148,3 +135,16 @@ test('Assistant floats, resizes and can open its own window',()=>{
  assert.match(css,/assistant-popout/);
  assert.match(css,/dialogue-saved-sources/);
 });
+
+test('Work uses Window tables; the team is office_project_members, edited in Projekte',()=>{
+ const index=read('app/index.html'),team=read('app/work-team.js'),projects=read('app/office-projects.js');
+ assert.match(index,/src="\.\/work\.js\?v=office40"/);
+ assert.match(team,/from\('office_project_members'\)\s*\.select\('user_id'\)\.eq\('project_id',projectId\)/);
+ assert.doesNotMatch(team,/minds_work_project_people/);
+ assert.match(team,/projects\.openTeam\(project\.id/);
+ assert.match(projects,/window\.TBA_OFFICE_PROJECTS=\{render:refresh,open:openProjects,openPlans,openTeam,openNewPlan\}/);
+ assert.match(projects,/office_project_members/);
+ assert.doesNotMatch(projects,/name="lead"/);
+ new Function(team);new Function(projects);
+});
+
