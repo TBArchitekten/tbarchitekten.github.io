@@ -58,12 +58,14 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
   - los archivos llevan ahora la versión registrada en Supabase, sin duplicados;
   - las tres `20261028_*` del proyecto antiguo están en `supabase/legacy-migrations/`.
 - **Textos:** el chat y la voz de Romy pasaron a alemán (antes decían "Enviando a Isabella…", "Escuchando…", etc.), igual que "eventos" en el panel Heute.
-- **Deploy manual desde el repo:** `.github/workflows/deploy-functions.yml` y `supabase/config.toml`, igual que en Window. **Falta el secreto** `SUPABASE_ACCESS_TOKEN` en el entorno `supabase` del repo (Settings → Environments). Tiene que salir de la cuenta de Supabase de la oficina, la que tiene la organización "Titus Bernhard Architekten". **No uses un token de la cuenta personal de Gari:** esa cuenta también puede manejar Window. El 07.11 Gari no pudo entrar a la cuenta de la oficina (falló el inicio con GitHub y con el correo), así que el token sigue pendiente.
-- **`office-assistant` v13 publicada el 07.11 con el conector de Supabase.** Lleva el límite de 24 mensajes, las misiones ocultas y el arreglo de `uuid()`.
-  - **Por qué hay un envoltorio:** copiar a mano unos 130 KB de código era arriesgado. Por eso el `index.ts` publicado es un envoltorio de una línea que importa la función del repo en el commit fijo `dfddc19` (fusión del PR #42) desde raw.githubusercontent.com.
-  - **Qué significa:** el paquete se arma al publicar y en ejecución no se descarga nada de GitHub. En el panel de Supabase solo se ve el envoltorio.
-  - **Cómo se comprobó:** los 14 archivos que sirve GitHub en ese commit son idénticos byte a byte a los del repo. La función arranca y responde `invalid_session` sin usuario.
-  - **Siguiente paso:** el próximo deploy con el workflow lo sustituye por los archivos normales.
+- **Deploy manual desde el repo (funciona desde el 07.11):** `.github/workflows/deploy-functions.yml` y `supabase/config.toml`, igual que en Window. GitHub → Actions → "Deploy Supabase Edge Functions" → Run workflow, con los nombres de las funciones.
+  - **El token** `SUPABASE_ACCESS_TOKEN` está en el entorno `supabase` del repo.
+  - Lo creó Gari desde su cuenta de Supabase (gari), pero es un token **de proyecto**: solo llega a TBA Office y solo con permiso de escritura en Edge Functions. Todo lo demás está en None, así que **no puede tocar Window** ni la base de datos.
+  - Si algún día hace falta otro permiso, se edita el token en Supabase, no se crea uno más amplio.
+  - Pendiente opcional: la cuenta TBArchitekten (martinez@bernhardarchitekten.com) está invitada como Developer a la organización y falta aceptar la invitación por correo. Sirve como segundo acceso de la oficina.
+- **`office-assistant` v14** (07.11), publicada con el workflow desde `main`, con los archivos normales del repo. Lleva el límite de 24 mensajes, las misiones ocultas y el arreglo de `uuid()`.
+  - La v13 de la mañana era la misma función, cargada con un envoltorio desde GitHub mientras no había token. La v14 la reemplazó.
+  - **Cómo se comprobó:** la función arranca y responde `invalid_session` sin usuario, y 401 sin sesión.
 
 ### Estado real tras PR #37–#39 (no estaba en la bitácora)
 > Los tres primeros puntos quedaron superados por el PR #42 (un solo modelo de datos, arriba). Se dejan como historia.
@@ -81,7 +83,7 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 - **Funciones en vivo (07.11):**
   - `office-admin` v2;
   - `office-terminplan-ai` v8 (Terra, 25 consultas al día por persona);
-  - `office-assistant` v12 (Romy, sin límite diario); **v13 desde el 07.11**, ver arriba;
+  - `office-assistant` v12 (Romy, sin límite diario); **v14 desde el 07.11**, ver arriba;
   - `office-romy-mission-runner` v2, con cron cada 5 minutos.
 - **Migraciones:**
   - las 27 del repo desde `20261104000000` están aplicadas en Supabase;
