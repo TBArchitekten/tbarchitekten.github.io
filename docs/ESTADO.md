@@ -33,7 +33,10 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 ### Conector de Claude para Office (desde el 07.11, PR #49)
 - `office-mcp`: Claude trabaja en Office con el login de cada persona, bajo la RLS de la oficina. Puede leer todo, documentos incluidos (decisión de Gari), y crear y cambiar tareas.
 - Configuración y herramientas: `docs/OFFICE-CONNECTOR.md`. **Falta que Gari active el OAuth Server** en el panel de Supabase.
-- Threads en Office: privados como en Window (decisión de Gari), pendientes (paso 4, parte 2).
+- **Threads en Office (PR #50):** pestaña Threads en Work, privada como en Window.
+  - Cada Thread es una conversación con Romy ligada al proyecto, guardada en `minds_work_threads`, y solo la ve su dueño.
+  - Romy sabe de qué proyecto se trata.
+  - No salen en la lista de chats de Romy.
 
 ### Resuelto el 07.11 (PR #42): un solo modelo de datos
 - **Work vuelve a ser el `work.js` de Window** (Panorama, Desktop, Planner), sobre las tablas de Window:

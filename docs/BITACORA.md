@@ -17,6 +17,31 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Threads privados en Work (paso 4, parte 2) · Claude
+- **Qué cambió y por qué:** decisión de Gari: en Office, los Threads son privados, como en Window.
+  - Un Thread es una conversación con Romy ligada a un proyecto, y solo la ve quien la abre.
+  - Romy recibe en cada turno de qué proyecto y Thread se trata (nota de desarrollador desde el servidor) y puede usar las tareas, los archivos y los Terminpläne de ese proyecto.
+  - Los Threads no aparecen en la lista de chats de Romy.
+  - Los vorschläge de Romy (tarea, Termin, recuerdo) se confirman o descartan dentro del Thread.
+- **Archivos:**
+  - `supabase/migrations/20261107130516_office_work_threads_v1.sql`;
+  - `supabase/functions/office-assistant/index.ts` (`threadNote`);
+  - `app/{work.js,shell.js,office-assistant.js,index.html}`;
+  - `tests/office-threads.test.mjs` y versiones en tests.
+- **Base de datos:** migración `20261107130516_office_work_threads_v1`, **aplicada** con el MCP de Supabase.
+  - Crea la tabla `minds_work_threads`, con RLS solo para su dueño; ningún admin la lee.
+  - Añade la columna `office_assistant_conversations.work_thread`.
+  - Crea tres RPC como invocador (crear la conversación, renombrar, archivar).
+  - Antes se ensayó en una transacción revertida: misma conversación al repetir, nombre duplicado rechazado, se renombra también la conversación, y se puede reusar el nombre después de archivar.
+- **Deploy de funciones:** `office-assistant`, con el workflow después del merge.
+- **Cómo se probó:**
+  - 176/176 pruebas.
+  - Recorrido en Chromium con Supabase y Romy simulados: crear el Thread, abrirlo, preguntar, ver la respuesta en streaming y el vorschlag con Bestätigen/Verwerfen.
+  - Romy recibió el `conversation_id` del Thread y no hubo errores de página.
+- **Quedó pendiente:** que Gari lo pruebe de verdad. Las Akten (Themenblatt) siguen para después.
+- **Riesgos o decisiones que necesitan a Gari:** ninguno.
+- **PR:** #50
+
 ### 2026-11-07 · Conector de Claude para Office (paso 4, parte 1) · Claude
 - **Qué cambió y por qué:** decisiones de Gari del 07.11: Office recibe el conector de Claude como Window, y puede leer todo, documentos incluidos; los Threads serán privados, como en Window (llegan en la parte 2).
   - Nueva función `office-mcp`: servidor MCP remoto con OAuth 2.1 de Supabase.

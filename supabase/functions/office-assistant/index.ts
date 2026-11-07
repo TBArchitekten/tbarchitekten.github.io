@@ -50,7 +50,16 @@ const functionCalls=payload=>(payload?.output||[]).filter(x=>x?.type==="function
 // The changing clock goes into the turn input, not into the instructions, so the provider can cache
 // the stable prefix (instructions and tools) across turns and tool rounds.
 const clockNote=()=>({role:"developer",content:"Aktuelles Datum und Ortszeit (Europe/Berlin): "+officeLocalNow()});
-const apiInput=(history,message,attachmentInputs=[])=>[...history.map(m=>({role:m.role,content:m.content})),clockNote(),{role:"user",content:attachmentInputs.length?[...(message?[{type:"input_text",text:message}]:[]),...attachmentInputs]:message}];
+const apiInput=(history,message,attachmentInputs=[],notes=[])=>[...history.map(m=>({role:m.role,content:m.content})),clockNote(),...notes.map(content=>({role:"developer",content})),{role:"user",content:attachmentInputs.length?[...(message?[{type:"input_text",text:message}]:[]),...attachmentInputs]:message}];
+// A private project Thread in Work (decision of Gari, 07.11.2026): Romy works in that project's context.
+async function threadNote(db,uid,conversationId){
+ const {data}=await db.from("minds_work_threads").select("title,project_id,office_projects(name,number)")
+   .eq("conversation_id",conversationId).eq("user_id",uid).maybeSingle();
+ if(!data)return [];
+ const p=data.office_projects||{};
+ return ["Dieses Gespräch ist der private Thread «"+String(data.title||"").slice(0,160)+"» im Projekt «"+String(p.name||"")+"»"+
+   (p.number?" (Nr. "+p.number+")":"")+", project_id "+data.project_id+". Beziehe dich auf dieses Projekt und nutze seine Aufgaben, Dateien und Terminpläne, wenn es hilft."];
+}
 // Same bound as Window's isabella-chat: the provider sees the last 24 messages of the conversation.
 // Older context is found with the search tools; replaying every turn made long chats expensive.
 const HISTORY_LIMIT=24;
@@ -121,7 +130,7 @@ async function requestModel({apiKey,model,input,allowTools=true,onDelta=()=>{}})
   return completed;
  }finally{clearTimeout(timeout);}
 }
-async function runRomy({db,admin,uid,conversationId,requestId,history,message,attachmentInputs=[],apiKey,onDelta}){
+async function runRomy({db,admin,uid,conversationId,requestId,history,message,attachmentInputs=[],apiKey,onDelta,notes=[]}){
  // Use Window's server-authoritative capability contract on every browser turn.
  const contract=interactiveTurnContract({surface:"chat_browser",background:false,attachments:attachmentInputs.length});
  if(contract.tools!=="governed")throw new Error("capability_contract_failed");
@@ -130,7 +139,7 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
  const complexity=await routeRomyTurn({message,history,apiKey,
    model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||env.OPENAI_MODEL||"gpt-5.6-luna"});
  let route=chatTurnModel({complexity:complexity.complexity,depth:"normal",background:false,env});
- let prompt=apiInput(history,message,attachmentInputs),text="",proposals=[],artifacts=[],skillTrace=[],sources=[],
+ let prompt=apiInput(history,message,attachmentInputs,notes),text="",proposals=[],artifacts=[],skillTrace=[],sources=[],
    inTokens=complexity.input_tokens,outTokens=complexity.output_tokens;
  for(let round=0;round<5;round++){
   const payload=await requestModel({apiKey,model:route.model,input:prompt,onDelta,
@@ -295,8 +304,9 @@ Deno.serve(async req=>{
   return json(503,{error:"message_save_failed"});
  }
  const process=async onDelta=>{
+  const notes=await threadNote(db,uid,conversation.id).catch(()=>[]);
   const result=await runRomy({db,admin,uid,conversationId:conversation.id,
-    requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta});
+    requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta,notes});
   if(!result.reply)throw new Error("ai_empty_response");
   await persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts,result.skill_trace,result.sources);
   await completeRequest(admin,uid,requestId,{
