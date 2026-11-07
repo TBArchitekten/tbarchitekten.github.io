@@ -85,7 +85,9 @@ function localProjects(maps){
 function taskRow(t,maps){
   if(t.done&&!t.completedAt)t.completedAt=new Date().toISOString();
   if(!t.done)t.completedAt=null;
-  return {user_id:user.id,client_key:t.id,title:t.title,due_date:t.date||null,completed_at:t.completedAt||null,archived_at:t.archivedAt||null,sort_order:Number(t.sortOrder||0),reminder_time:t.date?(t.reminderTime||null):null,category_id:maps.catByKey.get(t.categoryId)?.id||null,project_id:maps.projByKey.get(t.projectId)?.id||null,priority:t.priority||'normal',recurrence:t.recurrence||{},notes:t.notes||'',metadata:t.metadata||{},updated_at:t.updatedAt||new Date().toISOString()};
+  // A colleague's project task keeps its author (a trigger enforces it) and its own category.
+  const foreign=!!t.ownerId&&t.ownerId!==user.id;
+  return {user_id:user.id,client_key:t.id,title:t.title,due_date:t.date||null,completed_at:t.completedAt||null,archived_at:t.archivedAt||null,sort_order:Number(t.sortOrder||0),reminder_time:t.date?(t.reminderTime||null):null,category_id:foreign?(t.categoryRowId||null):maps.catByKey.get(t.categoryId)?.id||null,project_id:maps.projByKey.get(t.projectId)?.id||null,priority:t.priority||'normal',recurrence:t.recurrence||{},notes:t.notes||'',metadata:t.metadata||{},updated_at:t.updatedAt||new Date().toISOString()};
 }
 function eventRow(e,maps){
   const start=localDateTime(e.date,e.start),end=new Date(start.getTime()+((e.duration||60)*60000));
@@ -124,6 +126,8 @@ function mergePulledEntityState(remoteTasks,remoteEvents,current,syncSnapshot){
 async function persistEntityMutation(detail){
   const kind=String(detail?.entityType||'');
   if(!['task','event'].includes(kind)||!detail?.entityKey)return;
+  // Colleagues' project Termine are read-only here (RLS allows only their author to change them).
+  if(kind==='event'&&detail.after?.ownerId&&detail.after.ownerId!==user.id)return;
   const table=kind==='task'?'isabella_tasks':'isabella_events';
   if(detail.action==='delete'){
     const {error}=await sb.from(table).delete().eq('user_id',user.id).eq('client_key',detail.entityKey);
@@ -145,7 +149,9 @@ async function pushState(state,maps){
     const {error}=await sb.from('isabella_deleted_items').upsert(tombstones,{onConflict:'user_id,entity_type,client_key'});
     if(error)throw error;
   }
-  const tasks=(state.tasks||[]).map(t=>taskRow(t,maps));
+  // Only own rows are pushed in bulk; colleagues' project tasks and Termine already live on the server.
+  const own=x=>!x.ownerId||x.ownerId===user.id;
+  const tasks=(state.tasks||[]).filter(own).map(t=>taskRow(t,maps));
   if(tasks.length){
     const {error}=await sb.from('isabella_tasks').upsert(tasks,{onConflict:'client_key',ignoreDuplicates:true});
     if(error)throw error;
@@ -154,7 +160,7 @@ async function pushState(state,maps){
     const {error}=await sb.from('isabella_tasks').delete().eq('user_id',user.id).in('client_key',state.deletedTaskIds);
     if(error)throw error;
   }
-  const events=(state.events||[]).map(e=>eventRow(e,maps));
+  const events=(state.events||[]).filter(own).map(e=>eventRow(e,maps));
   if(events.length){
     const {error}=await sb.from('isabella_events').upsert(events,{onConflict:'client_key',ignoreDuplicates:true});
     if(error)throw error;
@@ -178,6 +184,7 @@ function projectTaskRow(t,catKey,projKey){
     assigneePersonId:t.assignee_person_id||null,
     workStatus:t.work_status||'not_started',
     workBucketId:t.work_bucket_id||null,workSortOrder:Number(t.work_sort_order||0),
+    ownerId:t.user_id||null,categoryRowId:t.category_id||null,
     labels:Array.isArray(t.labels)?t.labels:[],
     checklist:Array.isArray(t.checklist)?t.checklist:[],
     attachments:Array.isArray(t.attachments)?t.attachments:[],
@@ -185,21 +192,37 @@ function projectTaskRow(t,catKey,projKey){
     updatedAt:t.updated_at||null
   };
 }
-// The Kalender of one person: their own tasks (personal or in a project) and every task assigned to them,
-// directly or through the task's team list. Colleagues' other project tasks stay in each project's Planner.
+// The Kalender is the calendar of your projects (decision of Gari, 07.11.2026): own tasks (personal or in
+// a project), tasks assigned to you, and every dated task of the projects whose team you are in.
+// Heute stays yours: it filters on `mine`.
+let teamProjectIds=[];
+async function loadTeamProjects(){
+  const {data,error}=await sb.from('office_project_members').select('project_id').eq('user_id',user.id);
+  if(error)return {error};
+  teamProjectIds=[...new Set((data||[]).map(x=>x.project_id))];
+  return {error:null};
+}
+let linkedTaskIds=new Set();
 async function officeCalendarTasks(){
   const {data:links,error:le}=await sb.from('minds_work_task_assignees').select('task_id').eq('person_id',user.id);
   if(le)return {data:null,error:le};
-  const linked=[...new Set((links||[]).map(x=>x.task_id))];
-  const filter='user_id.eq.'+user.id+',assignee_person_id.eq.'+user.id+(linked.length?',id.in.('+linked.join(',')+')':'');
+  const linked=[...new Set((links||[]).map(x=>x.task_id))];linkedTaskIds=new Set(linked);
+  const team=teamProjectIds.length?',and(project_id.in.('+teamProjectIds.join(',')+'),or(due_date.not.is.null,start_date.not.is.null))':'';
+  const filter='user_id.eq.'+user.id+',assignee_person_id.eq.'+user.id+(linked.length?',id.in.('+linked.join(',')+')':'')+team;
   return await sb.from('isabella_tasks').select('*').or(filter).order('due_date',{ascending:true});
 }
+// Own Termine and the Termine of your projects (the team sees them; only the author changes them).
+async function officeCalendarEvents(){
+  const filter='user_id.eq.'+user.id+(teamProjectIds.length?',project_id.in.('+teamProjectIds.join(',')+')':'');
+  return await sb.from('isabella_events').select('*').or(filter).order('starts_at',{ascending:true});
+}
 async function pullState(local,maps){
+  const team=await loadTeamProjects();if(team.error)throw team.error;
   const [{data:tasks,error:te},{data:events,error:ee},{data:mem,error:me},{data:pref,error:pre},{data:assistantPref,error:ape},
     {data:assignees,error:asError},{data:allocations,error:alError},
     {data:teamPeople,error:peopleError}] = await Promise.all([
     officeCalendarTasks(),
-    sb.from('isabella_events').select('*').eq('user_id',user.id).order('starts_at',{ascending:true}),
+    officeCalendarEvents(),
     Promise.resolve({data:[],error:null}),
     Promise.resolve({data:null,error:null}),
     Promise.resolve({data:null,error:null}),
@@ -229,14 +252,15 @@ async function pullState(local,maps){
   }
   const remoteTasks=(tasks||[]).filter(t=>!deletedTaskIds.has(t.client_key||t.id)).map(t=>{
     const ids=teamIdsFor(assignedByTask.get(t.id)||[],t.assignee_person_id);
-    return {...projectTaskRow(t,catKey,projKey),
-      assigneePersonIds:ids.length?ids:(t.assignee_person_id?[t.assignee_person_id]:[])};
+    const assigned=ids.length?ids:(t.assignee_person_id?[t.assignee_person_id]:[]);
+    return {...projectTaskRow(t,catKey,projKey),assigneePersonIds:assigned,
+      mine:t.user_id===user.id||assigned.includes(user.id)||linkedTaskIds.has(t.id)};
   });
   const taskKeys=new Map((tasks||[]).map(t=>[t.id,t.client_key||t.id]));
   const teamAllocations=(allocations||[]).map(a=>({
     taskId:taskKeys.get(a.task_id),personId:a.person_id,date:a.work_date,plannedMinutes:a.planned_minutes
   })).filter(a=>a.taskId);
-  const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||(e.project_id?'arbeit':'personal'),projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null}});
+  const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||(e.project_id?'arbeit':'personal'),projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null,ownerId:e.user_id||null,mine:e.user_id===user.id}});
   const remoteMemory=(mem||[]).map(m=>({id:m.client_key||m.id,kind:m.kind,subject:m.subject,content:m.content,status:m.status,confidence:Number(m.confidence),source:m.source,exposure_scope_key:m.exposure_scope_key||'global',provenance_class:m.provenance_class||'owner',metadata:m.metadata||{}}));
   const freshest=mergePulledEntityState(remoteTasks,remoteEvents,app.getState(),local);
   const remoteFeed=(pref?.status!=='rejected'&&pref?.value&&typeof pref.value==='object')?canonicalFeedPreferences(pref.value):canonicalFeedPreferences(freshest.feedPreferences);

@@ -111,7 +111,10 @@ function bandejaLine(){
 
 function paint(){
   const day=$('#ahoraDay'),next=$('#ahoraNext');if(!day||!next||!M()||!APP())return;
-  const state=APP().getState(),today=todayKey(),key=M().addDays(today,offset);
+  // Heute is yours (Gari, 07.11.2026): own and assigned tasks, own Termine. The Kalender shows the
+  // whole project; colleagues' tasks and Termine carry mine:false and stay out of here.
+  const full=APP().getState(),today=todayKey(),key=M().addDays(today,offset);
+  const state={...full,tasks:(full.tasks||[]).filter(t=>t.mine!==false),events:(full.events||[]).filter(e=>e.mine!==false)};
   const dateEl=$('#ahoraDate');if(dateEl)dateEl.textContent=cap(new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'}));
   bandejaLine();
 

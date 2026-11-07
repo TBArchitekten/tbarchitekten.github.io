@@ -17,6 +17,35 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · El Kalender es el calendario de tus proyectos · Claude
+- **Qué cambió y por qué:** decisión de Gari: el calendario es el de los proyectos, no el de la persona.
+  - **Kalender:** de cada proyecto en cuyo equipo estás, todas las tareas con fecha (las haya creado quien sea), todas las Fristen de sus Terminpläne y los Termine con proyecto. Además, tus tareas personales y tus Termine.
+  - **Iniciales visibles** (fondo oscuro, no tenue) en las tareas y Termine de colegas: las de la persona responsable o, si no hay, las de quien lo creó.
+  - **Filtro «Nur meine»** en la barra del calendario.
+  - Los Termine de colegas se pueden ver, pero no cambiar: al tocarlos se abre un aviso de solo lectura y no se pueden arrastrar.
+  - **Heute sigue siendo tuyo:** solo lo que creaste o tienes asignado, y tus Termine.
+  - **Fristen** en Heute y Kalender: solo las de tus proyectos (antes salían las de todos).
+  - Proyectos en los que no estás: nada en tu calendario; en Work se siguen pudiendo abrir.
+- **Corrección de paso:** al sincronizar, solo se suben en bloque las filas propias. Al editar una tarea de un colega, se conserva su categoría (antes se le ponía la tuya); el autor ya lo protegía un trigger.
+- **Archivos:**
+  - `app/{app.js,sync.js,ahora.js,office-fristen.js,calendar-plan.js,minds-calendar-shell.css,index.html}`;
+  - `supabase/migrations/20261107163056_office_project_calendar_v1.sql`;
+  - `tests/office-project-calendar.test.mjs` y versiones en tests.
+- **Base de datos:** migración `20261107163056_office_project_calendar_v1`, **aplicada**. Es una política nueva de lectura en `isabella_events` para el equipo de los Termine con proyecto; no se quitó ninguna.
+  - Probada antes en una transacción revertida: el equipo ve el Termin del proyecto (1), no ve el privado (0), no puede editarlo (0), y alguien de fuera del equipo no lo ve (0).
+- **Cómo se probó:**
+  - 180/180 pruebas.
+  - Recorrido en Chromium con dos colegas simulados (Yvonne y Antonia):
+    - en Woche y Tag se ven sus tareas y su Jour fixe con iniciales YB y AK;
+    - salen las Fristen de Bernried y no las de Schwarz;
+    - «Nur meine» deja solo lo propio;
+    - Heute no incluye lo de los colegas;
+    - el Termin de Yvonne abre el aviso de solo lectura;
+    - solo se suben filas propias.
+- **Quedó pendiente:** nada.
+- **Riesgos o decisiones que necesitan a Gari:** ninguno.
+- **PR:** #51
+
 ### 2026-11-07 · Threads privados en Work (paso 4, parte 2) · Claude
 - **Qué cambió y por qué:** decisión de Gari: en Office, los Threads son privados, como en Window.
   - Un Thread es una conversación con Romy ligada a un proyecto, y solo la ve quien la abre.
