@@ -799,3 +799,8 @@ body .app .agenda-item.other-account-entry{cursor:default}
 .app .day-all .pill.other-account-entry{border:1px dashed rgba(138,143,152,.6);background:#f6f7f8;color:#4b4f56;cursor:default}
 body .app .agenda-item.other-account-entry .meta{color:#8a8f98}
 .app .other-account-mark{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px dashed #8a8f98;justify-self:center;margin-top:6px;flex:none}
+/* Project calendar: whose task or Termin it is (initials), clearly visible, and the "Nur meine" switch. */
+.app .who-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:16px;padding:0 4px;margin-right:5px;
+  border-radius:8px;background:#1f2328;color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.03em;line-height:1;vertical-align:1px;flex:none}
+.app .minds-plan-mine{border:1px solid rgba(0,0,0,.14);background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
+.app .minds-plan-mine.is-on{background:#0062cc;border-color:#0062cc;color:#fff}

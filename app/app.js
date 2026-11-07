@@ -211,7 +211,7 @@ function itemColor(item){
 }
 function dayColors(date,filters=null){
   const P=window.MINDS_CALENDAR_PLAN;
-  const events=state.events.filter(e=>e.date===date&&(!filters?.projectId||e.projectId===filters.projectId)&&!filters?.personKey);
+  const events=state.events.filter(e=>e.date===date&&(!filters?.projectId||e.projectId===filters.projectId)&&!filters?.personKey&&mineOrAll(e,filters));
   const tasks=state.tasks.filter(t=>t.date===date&&!t.archivedAt&&(!filters||!P||P.qualifies(t,filters)));
   return window.MINDS_CALENDAR_COLORS.colorsForItems(state,[...events,...tasks]);
 }
@@ -2741,8 +2741,20 @@ function move(dir){let d=fromIso(state.date);if(state.view==='day')d=addDays(d,d
 let nativePlanRoster={projectId:'',people:[]},nativePlanFetching='';
 const nativePlanFilters=()=>({
   projectId:typeof state.nativePlanFilters?.projectId==='string'?state.nativePlanFilters.projectId:'',
-  personKey:typeof state.nativePlanFilters?.personKey==='string'?state.nativePlanFilters.personKey:''
+  personKey:typeof state.nativePlanFilters?.personKey==='string'?state.nativePlanFilters.personKey:'',
+  // Project calendar (Gari, 07.11.2026): everything of your projects; "Nur meine" keeps only your own.
+  onlyMine:!!state.calendarOnlyMine
 });
+const mineOrAll=(item,filters)=>!filters?.onlyMine||item.mine!==false;
+// Whose task or Termin it is, at a glance: initials of the person responsible (else the author).
+function whoBadge(item){
+  if(!item||item.mine!==false)return '';
+  const id=item.assigneePersonIds?.[0]||item.assigneePersonId||item.ownerId;
+  const name=String(state.teamPeople?.find(p=>p.id===id)?.name||'').trim();
+  if(!name)return '';
+  const initials=name.split(/\s+/).filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  return `<span class="who-badge" title="${esc(name)}">${esc(initials)}</span>`;
+}
 function nativePlanSelectedPeople(projectId){
   const people=new Map();
   if(nativePlanRoster.projectId===projectId){
@@ -2800,7 +2812,8 @@ function nativePlanToolbar(){
       '<option value="'+esc(key)+'" '+(filters.personKey===key?'selected':'')+'>'+esc(name)+'</option>').join('');
   return '<div class="minds-plan-controls"><div class="minds-plan-filter-row">'+
     '<select aria-label="Projekt filtern" data-native-filter="project">'+projects+'</select>'+
-    '<select aria-label="Verantwortliche filtern" data-native-filter="person">'+people+'</select></div>'+
+    '<select aria-label="Verantwortliche filtern" data-native-filter="person">'+people+'</select>'+
+    '<button type="button" class="minds-plan-mine'+(filters.onlyMine?' is-on':'')+'" data-native-only-mine aria-pressed="'+(filters.onlyMine?'true':'false')+'">Nur meine</button></div>'+
     '<span>Balken: Aufgabenzeiträume, keine Arbeitsstunden</span>'+
     (state.nativePlanShowAll?'<button type="button" data-native-show-all>Weniger anzeigen</button>':'')+'</div>';
 }
@@ -2844,6 +2857,9 @@ function bindNativePlanControls(){
     state.nativePlanFilters=node.dataset.nativeFilter==='project'
       ?{projectId:node.value,personKey:''}:{projectId:prev.projectId,personKey:node.value};
     save();renderCalendar();
+  });
+  $$('[data-native-only-mine]').forEach(button=>button.onclick=()=>{
+    state.calendarOnlyMine=!state.calendarOnlyMine;save();renderCalendar();
   });
   $$('[data-native-show-all]').forEach(button=>button.onclick=()=>{
     state.nativePlanShowAll=!state.nativePlanShowAll;save();renderCalendar();
@@ -3049,7 +3065,7 @@ function agendaRow(kind,item){
   const color=itemColor(item),done=kind==='task'&&!!item.done,span=kind==='task'&&item.date!==state.date&&taskSpansDay(item,state.date);
   return `<div class="agenda-item ${kind}-item ${kind==='task'&&!span?'task-item':''} ${span?'is-span':''} ${done?'task-done':''} ${presentation?.isSession?'is-work-session':''}" data-kind="${kind}" data-id="${item.id}" ${span?'':`data-date="${item.date}"`} tabindex="0" style="--item-color:${color}">
     ${kind==='task'?`<button class="task-check ${done?'checked':''}" data-task-toggle="${item.id}" aria-label="${done?'Als offen markieren':'Als erledigt markieren'}">${done?'✓':''}</button>`:'<span class="adot"></span>'}
-    <div class="agenda-main"><strong>${esc(presentation?.title||item.title)}</strong><div class="meta">${presentation?.isSession?'Reservierte Zeit · ':''}${esc(category)}${esc(proj)}${span?' · läuft '+esc(spanUntilLabel(item)):''}</div></div>
+    <div class="agenda-main"><strong>${whoBadge(item)}${esc(presentation?.title||item.title)}</strong><div class="meta">${presentation?.isSession?'Reservierte Zeit · ':''}${esc(category)}${esc(proj)}${span?' · läuft '+esc(spanUntilLabel(item)):''}</div></div>
     <div class="agenda-tail"><div class="atime">${esc(span?'In Bearbeitung':time)}</div>${kind==='task'&&!span?'<button class="drag-handle" aria-label="Halten und ziehen zum Sortieren">⠿</button>':''}</div>
   </div>`;
 }
@@ -3074,7 +3090,7 @@ function month(){
   // the booking falls on a different day than the task's due date.
   const filters=nativePlanFilters(),model=window.MINDS_CALENDAR_PLAN;
   const visibleState={...state,tasks:state.tasks.filter(t=>model.qualifies(t,filters)),
-    events:filters.personKey?[]:state.events.filter(e=>!filters.projectId||e.projectId===filters.projectId)};
+    events:filters.personKey?[]:state.events.filter(e=>(!filters.projectId||e.projectId===filters.projectId)&&mineOrAll(e,filters))};
   const {tasks:ta,events:ev}=window.MINDS_DESK_MODEL.monthAgendaGroups(visibleState,state.date);
   h+=`<div class="agenda"><div class="agenda-head">${esc(pretty(state.date))}${state.date===today()?' · Heute':''}</div>`;
   const fristen=akteFristenOn(state.date),other=otherCalendarOn(state.date);
@@ -3098,7 +3114,7 @@ function week(){
   const days=[];
   for(let i=0;i<7;i++){
     const d=addDays(s,i),di=iso(d),
-      evAll=filters.personKey?[]:[...state.events.filter(x=>x.date===di&&(!filters.projectId||x.projectId===filters.projectId)),...otherCalendarOn(di)].sort((a,b)=>String(a.start||'').localeCompare(String(b.start||''))),
+      evAll=filters.personKey?[]:[...state.events.filter(x=>x.date===di&&(!filters.projectId||x.projectId===filters.projectId)&&mineOrAll(x,filters)),...otherCalendarOn(di)].sort((a,b)=>String(a.start||'').localeCompare(String(b.start||''))),
       timed=evAll.filter(e=>!e.allDay&&clock(e.start)!==null&&Number(e.duration)>0),
       untimed=evAll.filter(e=>!timed.includes(e)),
       teamPlan=nativePlanTeamAllocations(di,filters),
@@ -3117,8 +3133,8 @@ function week(){
   let h=nativePlanToolbar()+nativePlanBand(projection.weeks[0])+`<div class="week week-timegrid" style="--wk-hour:${HOUR}px;--wk-hours:${hours}">`;
   h+='<div class="wk-head"><div class="wk-gutter"></div>'+days.map(x=>`<div class="wk-dayhead ${x.di===today()?'is-today':''}"><span>${esc(x.d.toLocaleDateString('de-DE',{weekday:'short'}).replace('.',''))}</span><strong>${x.d.getDate()}</strong></div>`).join('')+'</div>';
   h+='<div class="wk-allday"><div class="wk-gutter wk-allday-label">Ganztägig</div>'+days.map(x=>`<div class="wday" data-week-date="${x.di}">${akteFristenOn(x.di).map(fristChip).join('')}${
-    x.untimed.map(e=>{if(e.otherAccount)return otherChip(e);const p=workSessionPresentation(e);return `<button class="calendar-entry event-item wk-chip wk-chip-event ${p.isSession?'is-work-session':''}" data-kind="event" data-id="${e.id}" data-date="${e.date}" style="--item-color:${itemColor(e)}">${esc(p.title)}</button>`}).join('')}${
-    x.ta.map(t=>`<button class="calendar-entry task-item wk-chip ${t.done?'task-done':''}" draggable="true" data-kind="task" data-id="${t.id}" data-date="${t.date}" style="--item-color:${itemColor(t)}">${check(t)}<span class="wk-chip-label">${esc(t.title)}</span></button>`).join('')}${
+    x.untimed.map(e=>{if(e.otherAccount)return otherChip(e);const p=workSessionPresentation(e);return `<button class="calendar-entry event-item wk-chip wk-chip-event ${p.isSession?'is-work-session':''}" data-kind="event" data-id="${e.id}" data-date="${e.date}" ${e.mine===false?'data-readonly="1"':''} style="--item-color:${itemColor(e)}">${whoBadge(e)}${esc(p.title)}</button>`}).join('')}${
+    x.ta.map(t=>`<button class="calendar-entry task-item wk-chip ${t.done?'task-done':''}" draggable="true" data-kind="task" data-id="${t.id}" data-date="${t.date}" style="--item-color:${itemColor(t)}">${check(t)}<span class="wk-chip-label">${whoBadge(t)}${esc(t.title)}</span></button>`).join('')}${
     x.teamPlan.map(a=>`<button type="button" class="wk-chip minds-team-day-entry" data-team-task="${esc(a.task.id)}" title="Geplante Stunden, kein bestätigter Termin">${esc(a.person)} · ${esc(a.task.title)} · ${Number(a.minutes)} min geplant</button>`).join('')}</div>`).join('')+'</div>';
   h+='<div class="wk-body"><div class="wk-gutter wk-hours">'+Array.from({length:hours},(_,i)=>`<span style="top:${i*HOUR}px">${pad(fromH+i)}:00</span>`).join('')+'</div>';
   for(const x of days){
@@ -3132,8 +3148,8 @@ function week(){
         continue;
       }
       const p=workSessionPresentation(e),compact=height<38;
-      h+=`<button type="button" class="calendar-entry event-item wk-event ${p.isSession?'is-work-session':''} ${compact?'is-compact':''}" data-kind="event" data-id="${esc(e.id)}" data-date="${esc(e.date)}" title="${esc(range(e)+' · '+p.title)}" style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;--wk-left:${slot.lane/slot.columns};--wk-width:${1/slot.columns};--item-color:${itemColor(e)}">${
-        compact?`<b>${esc(e.start)} ${esc(p.title)}</b>`:`<b>${esc(p.title)}</b><span class="wk-time">${esc(range(e))}</span>`}</button>`;
+      h+=`<button type="button" class="calendar-entry event-item wk-event ${p.isSession?'is-work-session':''} ${compact?'is-compact':''}" data-kind="event" data-id="${esc(e.id)}" data-date="${esc(e.date)}" ${e.mine===false?'data-readonly="1"':''} title="${esc(range(e)+' · '+p.title)}" style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;--wk-left:${slot.lane/slot.columns};--wk-width:${1/slot.columns};--item-color:${itemColor(e)}">${
+        compact?`<b>${whoBadge(e)}${esc(e.start)} ${esc(p.title)}</b>`:`<b>${whoBadge(e)}${esc(p.title)}</b><span class="wk-time">${esc(range(e))}</span>`}</button>`;
     }
     if(x.di===today()&&nowMin>=fromH*60&&nowMin<=toH*60)h+=`<div class="wk-now" style="top:${((nowMin-fromH*60)*PX).toFixed(1)}px" aria-hidden="true"></div>`;
     h+='</div>';
@@ -3142,17 +3158,18 @@ function week(){
 }
 function day(){
   const other=otherCalendarOn(state.date);
-  const ev=[...state.events.filter(x=>x.date===state.date),...other.filter(e=>!e.allDay)],ta=state.tasks.filter(x=>x.date===state.date&&!x.archivedAt)
+  const dayFilters=nativePlanFilters();
+  const ev=[...state.events.filter(x=>x.date===state.date&&mineOrAll(x,dayFilters)),...other.filter(e=>!e.allDay)],ta=state.tasks.filter(x=>x.date===state.date&&!x.archivedAt&&mineOrAll(x,dayFilters))
     .sort((a,b)=>Number(a.done)-Number(b.done)||taskOrder(a,b));
-  const spans=state.tasks.filter(x=>taskSpansDay(x,state.date)).sort(taskOrder);
+  const spans=state.tasks.filter(x=>taskSpansDay(x,state.date)&&mineOrAll(x,dayFilters)).sort(taskOrder);
   const lanes=window.MINDS_DAY_LAYOUT?.layout(ev)||new Map();
   const dayFristen=akteFristenOn(state.date);
   let h='<div class="day-all"><b>Ganztägig</b><div>'+dayFristen.map(fristChip).join('')+other.filter(e=>e.allDay).map(otherPill).join('')+
     (ta.length||spans.length?ta.map(t=>'<button class="pill calendar-entry task-item '+(t.done?'task-done':'')+
       '" data-kind="task" data-id="'+esc(t.id)+'" data-date="'+esc(t.date)+
-      '" style="--item-color:'+itemColor(t)+'"><span class="wk-check" aria-hidden="true"></span>'+esc(t.title)+'</button>').join('')+
+      '" style="--item-color:'+itemColor(t)+'"><span class="wk-check" aria-hidden="true"></span>'+whoBadge(t)+esc(t.title)+'</button>').join('')+
       spans.map(t=>'<button class="pill calendar-entry is-span" data-kind="task" data-id="'+esc(t.id)+
-      '" style="--item-color:'+itemColor(t)+'" title="Aufgabe läuft '+esc(spanUntilLabel(t))+'"><span class="wk-check" aria-hidden="true"></span>'+esc(t.title)+
+      '" style="--item-color:'+itemColor(t)+'" title="Aufgabe läuft '+esc(spanUntilLabel(t))+'"><span class="wk-check" aria-hidden="true"></span>'+whoBadge(t)+esc(t.title)+
       '<span class="pill-span">'+esc(spanUntilLabel(t))+'</span></button>').join(''):
       (dayFristen.length||other.some(e=>e.allDay)?'':'<span class="meta">Keine Aufgaben</span>'))+'</div></div><div class="hours">';
   for(let hr=7;hr<=22;hr++)h+='<div class="hrow"><div class="hlabel">'+pad(hr)+':00</div><div></div></div>';
@@ -3169,9 +3186,9 @@ function day(){
     const width=1/slot.columns,left=slot.lane/slot.columns;
     h+='<button type="button" class="event calendar-entry event-item '+
       (presentation.isSession?'is-work-session':'')+'" data-kind="event" data-id="'+esc(e.id)+
-      '" data-date="'+esc(e.date)+'" style="top:'+slot.top+'px;height:'+Math.max(12,slot.height)+
+      '" data-date="'+esc(e.date)+'"'+(e.mine===false?' data-readonly="1"':'')+' style="top:'+slot.top+'px;height:'+Math.max(12,slot.height)+
       'px;--day-left:'+left+';--day-width:'+width+';--item-color:'+itemColor(e)+'">'+
-      '<b>'+esc(e.start)+' '+esc(presentation.title)+'</b>'+
+      '<b>'+whoBadge(e)+esc(e.start)+' '+esc(presentation.title)+'</b>'+
       (slot.height>=40?'<div class="meta">'+esc(cat(e.categoryId))+
         (e.projectId?' · '+esc(project(e.projectId)):'')+'</div>':'')+
       '<span class="day-resize-handle" data-day-resize="'+esc(e.id)+
@@ -3303,6 +3320,13 @@ function itemActions(kind,id){
 function editItem(kind,id){
   if(kind==='task'&&typeof window!=='undefined'&&window.MINDS_TASK_DETAIL?.open){void window.MINDS_TASK_DETAIL.open({clientKey:id});return;}
   const item=itemBy(kind,id);if(!item)return;
+  // A colleague's project Termin: the team sees it; only its author changes it.
+  if(kind==='event'&&item.mine===false){
+    const who=state.teamPeople?.find(p=>p.id===item.ownerId)?.name||'jemand aus dem Team';
+    modal(item.title,`<div class="confirm-copy"><p>${esc(item.allDay?'Ganztägig':item.start+' · '+item.duration+' min')} · ${esc(fromIso(item.date).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'}))}</p><p>${esc(project(item.projectId))}</p>${item.notes?`<p>${esc(item.notes)}</p>`:''}<p class="meta">Termin von ${esc(who)}. Nur ${esc(who)} kann ihn ändern.</p></div><div class="confirm-actions"><button id="readonlyEventOk" class="primary">OK</button></div>`);
+    $('#readonlyEventOk').onclick=closeModal;
+    return;
+  }
   const cats=state.categories.map(x=>`<option value="${x.id}" ${x.id===item.categoryId?'selected':''}>${esc(x.name)}</option>`).join('');
   const projects='<option value="">Ohne Projekt</option>'+state.projects.map(x=>`<option value="${x.id}" ${x.id===item.projectId?'selected':''}>${esc(x.name)}</option>`).join('');
   const session=kind==='event'?workSessionPresentation(item):null;
@@ -3498,7 +3522,7 @@ async function resizeDayEvent(clientKey,duration){
   }catch(error){renderCalendar();nativePlanToast('Arbeitszeit konnte nicht angepasst werden: '+(error?.message||error))}
 }
 function initEventDrag(){
-  $$('.hours .event-item[data-kind="event"]').forEach(row=>{
+  $$('.hours .event-item[data-kind="event"]:not([data-readonly])').forEach(row=>{
     if(row.dataset.eventDragBound)return;
     row.dataset.eventDragBound='1';
     let timer=null,active=false,startY=0,startTop=0,before=null;

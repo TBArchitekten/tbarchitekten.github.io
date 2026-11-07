@@ -1,7 +1,8 @@
 /* TBA Office · Fristen are the milestones of the office's Terminpläne.
    Window reads confirmed deadlines from each project's Akte; the office keeps its dates in the
-   Terminpläne, so Heute and the Kalender show the milestones of every Terminplan that is not
-   archived (read only; they are changed in the Terminplan itself). */
+   Terminpläne, so Heute and the Kalender show the milestones of the Terminpläne that are not
+   archived, of the projects whose team you are in (Gari, 07.11.2026: the calendar of your projects).
+   Read only; they are changed in the Terminplan itself. */
 (()=>{
 'use strict';
 const cache={at:0,rows:[],ok:false,loading:null};
@@ -24,8 +25,15 @@ function load(force=false){
   if(!sb)return Promise.resolve(cache);
   if(cache.loading)return cache.loading;
   if(!force&&cache.at&&Date.now()-cache.at<5*60000)return Promise.resolve(cache);
-  cache.loading=Promise.resolve(sb.from('office_terminplan_instances')
-      .select('id,project_id,project_name,state,office_projects(name,status)').eq('is_archived',false).limit(200))
+  cache.loading=sb.auth.getUser().then(async({data:{user}})=>{
+      if(!user)return {data:[],error:null};
+      const team=await sb.from('office_project_members').select('project_id').eq('user_id',user.id);
+      if(team.error)return {data:null,error:team.error};
+      const ids=[...new Set((team.data||[]).map(x=>x.project_id))];
+      if(!ids.length)return {data:[],error:null};
+      return await sb.from('office_terminplan_instances')
+        .select('id,project_id,project_name,state,office_projects(name,status)').eq('is_archived',false).in('project_id',ids).limit(200);
+    })
     .then(({data,error})=>{cache.at=Date.now();cache.ok=!error;if(!error)cache.rows=rowsFrom(data)},
       ()=>{cache.at=Date.now();cache.ok=false})
     .then(()=>{cache.loading=null;return cache});

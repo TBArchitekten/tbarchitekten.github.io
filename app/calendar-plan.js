@@ -27,6 +27,7 @@ const interval=task=>{
 };
 const qualifies=(task,filters={})=>{
   if(task.archivedAt)return false;
+  if(filters.onlyMine&&task.mine===false)return false;
   if(filters.projectId&&task.projectId!==filters.projectId)return false;
   if(filters.personKey){
     const ids=personIds(task);
