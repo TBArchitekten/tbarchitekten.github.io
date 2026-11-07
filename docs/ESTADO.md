@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 07.11.2026, por Claude: revisión de PR #16–#39 y decisiones de Gari, en la sección siguiente. La versión anterior era del 05.11.2026, de ChatGPT, tras el PR #35.
+**Actualizado:** 07.11.2026, por Claude: revisión de PR #16–#39, decisiones de Gari, correcciones (PR #41) y **un solo modelo de datos** (PR #42), en la sección siguiente. La versión anterior era del 05.11.2026, de ChatGPT, tras el PR #35.
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
@@ -17,6 +17,31 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 - **Desktop de Büro:** se queda como está, solo con los Desktops de proyecto.
 - **Fuentes del Terminplan privadas:** es intencional. Como en un chat, los PDF que sube una persona no los ven otras.
 - **Misiones de Romy:** ocultas hasta que puedan leer datos reales.
+- **Un solo modelo de datos, el de Window** ("Sí, has la unificación con el modelo de Window").
+- **Archivos compartidos:** todos los miembros activos pueden renombrar, mover y borrar archivos y carpetas de los Desktops de proyecto.
+
+### Resuelto el 07.11 (PR #42): un solo modelo de datos
+- **Work vuelve a ser el `work.js` de Window** (Panorama, Desktop, Planner), sobre las tablas de Window:
+  - tareas en `isabella_tasks`;
+  - buckets en `minds_work_buckets`;
+  - varios responsables en `minds_work_task_assignees`;
+  - Desktop en `minds_work_folders` y `minds_work_files`.
+
+  Heute, Kalender, la ficha de tarea, Work y Romy leen y escriben lo mismo, así que una tarea del Planner aparece en Heute y en el Kalender, y Romy ve los documentos del Desktop.
+- **El equipo del proyecto es solo `office_project_members`**, el colaborativo que se elige en Projekte:
+  - el botón "Team" del Planner abre el mismo diálogo de Projekte;
+  - los responsables solo pueden ser del equipo, porque las claves foráneas apuntan a `office_project_members`;
+  - si alguien sale del equipo, deja de ser responsable;
+  - el equipo puede cambiar y borrar las tareas y los buckets de su proyecto (`private.office_in_project_team`).
+- **Archivos:** las políticas de `minds_work_folders`, `minds_work_files` y del Storage ya dejaban a todo miembro activo renombrar, mover y borrar. Era justo la regla que pidió Gari, así que no hizo falta cambiarlas.
+- **Datos:** lo que había en las tablas solo de Office se copió con los mismos ids: 2 buckets, 1 tarea y 1 carpeta (migración `20261107064831_office_unify_window_model_v1`). Las tablas `office_tasks`, `office_task_buckets`, `office_task_assignees`, `office_project_folders` y `office_project_files` **siguen ahí, marcadas como obsoletas**, y `minds_work_project_people` queda sin uso. **Borrarlas necesita el OK explícito de Gari.**
+- **Por qué ChatGPT había cambiado Work (PR #37):** desde el PR #16, la línea 93 de `work.js` llamaba `$('[data-work-view]').forEach(...)`; `$` devuelve un solo elemento, así que Work fallaba siempre con "Work konnte gerade nicht geöffnet werden". Ahora usa `$$`.
+- **El "salto" que vio Gari** venía del PR #13 (de Claude): Tools y "Projekte verwalten" enlazaban a la página raíz, que tiene su propio menú. Desde los PR #24 y #35 todo está dentro de `/app`. Un recorrido simulado Romy → Work → Planner → Desktop → Romy → Work → Tools hace una sola navegación y no da errores.
+- **Otros cambios:**
+  - "+ Terminplan" en Panorama abre el diálogo de Projekte sin salir de Work;
+  - si no hay proyectos, Work muestra "Noch keine Projekte" con un enlace a Projekte;
+  - el selector Büro está oculto (`SHOW_BURO=false`), según la decisión de Gari;
+  - `app/office-work.js` y `app/office-window-work-surface.js` se borraron.
 
 ### Resuelto el 07.11 (PR #41)
 - **Costo de Romy:**
@@ -32,9 +57,10 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 - **Deploy manual desde el repo:** `.github/workflows/deploy-functions.yml` y `supabase/config.toml`, igual que en Window. **Falta que Gari añada el secreto** `SUPABASE_ACCESS_TOKEN` en el entorno `supabase` del repo (Settings → Environments). Hasta entonces, **los cambios de `office-assistant` de este PR no están desplegados.**
 
 ### Estado real tras PR #37–#39 (no estaba en la bitácora)
-- **Work ya no usa el `work.js` de Window.** Usa `app/office-work.js` y `app/office-window-work-surface.js` sobre `office_tasks`, `office_task_buckets`, `office_task_assignees`, `office_project_folders`, `office_project_files` y `office_project_members`.
-- **`office_tasks` y `office_task_buckets` están en uso.** La §4 decía "sin uso": eso ya no vale, y **no se deben borrar**.
-- **Desktop de Büro:** la vista Büro solo lista los proyectos y ya no permite guardar archivos de Büro. `minds_work_folders` y `minds_work_files` (de PR #16) están vacías y la interfaz no las usa.
+> Los tres primeros puntos quedaron superados por el PR #42 (un solo modelo de datos, arriba). Se dejan como historia.
+- ~~**Work ya no usa el `work.js` de Window.** Usa `app/office-work.js` y `app/office-window-work-surface.js` sobre `office_tasks`, `office_task_buckets`, `office_task_assignees`, `office_project_folders`, `office_project_files` y `office_project_members`.~~
+- ~~**`office_tasks` y `office_task_buckets` están en uso.**~~ Desde el PR #42 están copiadas y obsoletas; aun así **no se borran sin el OK de Gari**.
+- **Desktop de Büro:** la vista Büro está oculta; solo hay Desktops de proyecto, en `minds_work_folders` y `minds_work_files`.
 - **Projekte:**
   - cualquier miembro activo crea proyectos, sin Projektleiter;
   - el equipo es `office_project_members`, colaborativo: lo cambian el creador, un admin o cualquier miembro del equipo;
@@ -64,6 +90,8 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
   - 159 pruebas pasan y la CI está verde.
 
 ### Hallazgos (por prioridad)
+> Estado: 1, 2, 3 y 5 resueltos en el PR #42; 4, 7 (historial), 8, 9 y 10 en el PR #41. 6 es intencional (decisión de Gari). Queda abierto el presupuesto de Romy (7).
+
 1. **Dos sistemas de tareas.**
    - El Planner usa `office_tasks`; Heute, Kalender, la ficha de tarea y Romy usan `isabella_tasks`.
    - Por eso las tareas del Planner **no aparecen** en Heute ni en el Kalender, y Romy no las ve.
@@ -87,8 +115,8 @@ Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, func
 9. **Documentación:** los PR #37–#39 no tienen entrada en la bitácora, y partes de este archivo describen un estado viejo (por ejemplo, la §2 y la §4).
 10. Quedan restos en español, como "eventos" en el panel Heute de la pantalla de Romy.
 
-### Decisión pendiente de Gari: un solo modelo de datos
-Antes de probar con colegas hay que unificar las tareas, el Desktop y el equipo en un solo modelo. Casi no hay datos, así que ahora cuesta poco.
+### Un solo modelo de datos (decidido: opción A, hecho en el PR #42)
+Antes de probar con colegas había que unificar las tareas, el Desktop y el equipo en un solo modelo. Casi no había datos, así que costaba poco.
 - **Opción A (recomendada):** usar el modelo de Window (`isabella_tasks`, `minds_work_*`) para todo, con `office_project_members` como único equipo (adaptando la RLS).
   - Heute, Kalender, la ficha y Romy ya lo usan.
   - Los Threads y el conector de Claude que vienen de Window se apoyan en el mismo esquema.
@@ -147,7 +175,7 @@ PR #35 fusionado a `main` en el commit `369dab63038cb49fabd7523ddc295472492e15e3
 - `20261104000000_office_base_v1`
 - `20261104000100_office_password_flag_invoker`
 - `20261104000200_office_seed_terminplan_templates`
-- `20261104000300_office_planner_v1` (tablas `office_tasks` y `office_task_buckets`: **en uso por Work desde PR #37, no borrar**; ver la revisión del 07.11 arriba)
+- `20261104000300_office_planner_v1` (tablas `office_tasks` y `office_task_buckets`: usadas por Work del PR #37 al #41; desde el PR #42 copiadas a las tablas de Window y obsoletas. No borrar sin OK de Gari)
 - `20261104000400_office_window_tables_v1`
 - `20261104000500_office_window_fixes`
 - `20261104210000_office_desktop_v1` (aplicada con Supabase MCP como versión `20261104203250`; incluye bucket privado `minds-work`)
@@ -250,7 +278,7 @@ La copia de Window se dividió en las partes A (tablas), B (marco, Kalender, Heu
 ## 8. Preguntas abiertas y decisiones
 1. **Desktop (decidido 04.11):** carpeta común Büro + carpetas por proyecto; lectura para todos los miembros activos, sin limitarla al equipo. Todo tipo de documento técnicamente permitido. Pendiente decidir con dirección qué se sube realmente, y validar el límite de tamaño práctico en pruebas.
 2. **Assistent en la oficina:** ¿para quién (todos o algunos), presupuesto mensual y qué puede leer (tareas, Terminpläne, archivos)?
-3. ¿Borrar las tablas antiguas vacías `office_tasks` y `office_task_buckets`? Requiere aprobación explícita.
+3. ¿Borrar las tablas obsoletas `office_tasks`, `office_task_buckets`, `office_task_assignees`, `office_project_folders`, `office_project_files` y `minds_work_project_people` (copiadas o sin uso desde el PR #42)? Requiere aprobación explícita.
 4. ¿Clima en Heute?
 
 ## 9. Cómo probar

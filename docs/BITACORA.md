@@ -17,6 +17,37 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Un solo modelo de datos (el de Window) · Claude
+- **Qué cambió y por qué:** Gari decidió unificar Office con el modelo de Window. Antes había dos sistemas de tareas, dos Desktops y dos equipos.
+  - Work vuelve a ser el `work.js` de Window, sobre `isabella_tasks`, `minds_work_buckets`, `minds_work_task_assignees`, `minds_work_folders` y `minds_work_files`.
+  - El único equipo es `office_project_members`, y el botón "Team" del Planner abre el diálogo de Projekte.
+  - Se encontró y corrigió el fallo que rompía Work desde el PR #16: `$` en lugar de `$$` en la línea 93 de `work.js`. Muy probablemente por eso se cambió Work en el PR #37.
+  - "+ Terminplan" abre el diálogo de Projekte sin salir de Work.
+  - Estado vacío con enlace a Projekte.
+  - Selector Büro oculto.
+- **Archivos:**
+  - `app/work.js`, `app/work-team.js`, `app/office-projects.js`, `app/index.html`;
+  - borrados `app/office-work.js` y `app/office-window-work-surface.js`;
+  - `supabase/migrations/20261107064831_office_unify_window_model_v1.sql`;
+  - `tests/office-{app,desktop,37-acceptance,38-window-parity,review-1107}.test.mjs`;
+  - docs.
+- **Base de datos:** migración `20261107064831_office_unify_window_model_v1`, **aplicada** con el MCP de Supabase tras un ensayo en una transacción revertida. Hace tres cosas:
+  1. Las claves foráneas de responsables apuntan a `office_project_members`: al salir del equipo, se borra el responsable.
+  2. Crea `private.office_in_project_team` y la añade a la edición de tareas y buckets.
+  3. Copia con los mismos ids los datos de las tablas solo de Office (2 buckets, 1 tarea, 1 carpeta) y marca esas tablas como obsoletas. **No se borró nada.**
+- **Deploy de funciones:** ninguno nuevo. `office-assistant` sigue esperando el secreto del entorno `supabase`, como en el PR #41.
+- **Cómo se probó:**
+  - 162/162 pruebas;
+  - recorrido simulado Romy → Work → Planner → Desktop → Romy → Work → Tools: una sola navegación, sin errores de página, y Panorama, Planner y Desktop se ven bien;
+  - después de aplicar, se comprobaron las copias, las claves nuevas y que el cron de misiones sigue pausado.
+- **Quedó pendiente o sin probar:**
+  - la prueba de RLS con un segundo miembro simulado (equipo frente a no equipo) no se pudo correr porque el MCP pidió confirmación y nadie respondió; se repite cuando Gari esté;
+  - la prueba real con un colega;
+  - borrar las tablas obsoletas (necesita OK de Gari);
+  - el presupuesto de Romy.
+- **Riesgos o decisiones que necesitan a Gari:** ninguno nuevo. Hoy solo Gari es miembro activo, así que los permisos de equipo todavía no afectan a nadie más.
+- **PR:** #42
+
 ### 2026-11-07 · Correcciones de la revisión · Claude
 - **Qué cambió y por qué:** correcciones acordadas con Gari tras la revisión:
   - el historial de Romy se acota a 24 mensajes como en Window, y el prompt queda listo para la caché (la hora va en el turno);

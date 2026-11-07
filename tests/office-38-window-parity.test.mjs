@@ -4,64 +4,9 @@ import fs from 'node:fs';
 import {createRequire} from 'node:module';
 import {validateRebuild} from '../supabase/functions/office-terminplan-ai/rebuild-core.mjs';
 const require=createRequire(import.meta.url);
-const surface=require('../app/office-window-work-surface.js');
 const rebuild=require('../terminplan-rebuild.js');
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('Office Desktop uses Window file tile contract including icon and drop hint',()=>{
- const html=surface.desktop({
-  project:{name:'Bernried'},folderId:null,
-  folders:[{id:'f1',name:'Dokumente',parent_id:null}],
-  files:[{id:'a',file_name:'Plan.pdf',folder_id:null,bytes:2000,media_type:'application/pdf'}],
-  plans:[{id:'p1',phase:'LPH3'}]
- });
- for(const klass of ['work-desktop-toolbar','work-breadcrumb','work-file','work-folder','work-file-icon','work-files','work-drop-hint'])
-  assert.match(html,new RegExp(klass));
- assert.match(html,/Dokumente/);
- assert.match(html,/Plan\.pdf/);
- assert.match(html,/work-tile-svg/);
- assert.match(html,/terminplan\.html\?id=p1/);
- assert.doesNotMatch(html,/office-work-wrap/);
-});
-test('Office Planner uses Window Board/card/checklist/actions with meaningful task metadata',()=>{
- const board=surface.planner({
-  project:{name:'Bernried'},buckets:[{id:'bucket-1',name:'Grundrisse',position:0}],
-  members:[{user_id:'m1',display_name:'Edgar Martínez'},{user_id:'m2',display_name:'Yvonne Schwarz'}],
-  tasks:[{
-   id:'task-1',title:'Lichtplanung freigeben',bucket_id:'bucket-1',
-   start_date:'2026-11-01',due_date:'2026-11-12',completed_at:null,
-   priority:'hoch',assignee_ids:['m1','m2'],
-   checklist:[{id:'c1',text:'Pläne geprüft',done:true},{id:'c2',text:'AG Freigabe',done:false}]
-  }],
-  now:'2026-11-05'
- });
- for(const klass of ['work-planner-toolbar','work-board','work-bucket','work-bucket-grab',
-  'work-task-card','work-task-title-row','work-task-toggle','work-card-checks',
-  'work-completed','work-meta-priority','work-card-assignee']){
-  if(klass==='work-completed')continue; // only rendered when completed tasks exist
-  assert.match(board,new RegExp(klass));
- }
- assert.match(board,/Edgar Martínez, Yvonne Schwarz/);
- assert.match(board,/1\/2/);
- assert.match(board,/Wichtig/);
- assert.match(board,/data-office-work="toggle-task:task-1"/);
- assert.match(board,/data-office-work="new-task:bucket-1"/);
- assert.match(board,/data-office-work="bucket-menu:bucket-1"/);
-});
-test('Office reads only Office tables but reuses Window visual view files',()=>{
- const index=read('app/index.html'),app=read('app/office-work.js');
- assert.match(index,/office-window-work-surface\.js\?v=office38/);
- assert.match(index,/office-work\.js\?v=office38/);
- assert.match(app,/TBA_WINDOW_WORK_SURFACE/);
- for(const table of ['office_projects','office_tasks','office_task_buckets','office_project_folders','office_project_files','office_task_assignees'])
-  assert.match(app,new RegExp(table));
- assert.doesNotMatch(app,/from\('isabella_projects'\)/);
- const sql=read('supabase/migrations/20261105155214_office_work_multi_assignees_v1.sql');
- assert.match(sql,/enable row level security/);
- assert.match(sql,/office_task_assignees_insert/);
- assert.match(sql,/office_tasks_team_delete/);
- new Function(app);
-});
 test('Muster library is separate from Projekte and preserves read-only template path',()=>{
  const shell=read('app/shell.js'),projects=read('app/office-projects.js'),
   app=read('app/app.js'),plan=read('terminplan.html');
@@ -115,14 +60,6 @@ test('Complete PDF rows can be proposed with unresolved arrows but never called 
  assert.throws(()=>rebuild.convert(original,source,'Instruction','2026-11-05','transform'),/source_not_completely_verified/);
 });
 
-test('Window unbucketed Planner column is always available and accepts dropped tasks',()=>{
- const board=surface.planner({project:{name:'Bernried'},buckets:[{id:'b',name:'Grundrisse',position:1}],tasks:[],members:[]});
- assert.match(board,/Ohne Bucket/);
- assert.match(board,/data-drop-bucket=""/);
- const adapter=read('app/office-work.js');
- assert.match(adapter,/const target=e\.target\.closest\('\[data-drop-bucket\]'\)/);
- assert.match(adapter,/moveTask\(dragged,target\.dataset\.dropBucket\|\|null\)/);
-});
 test('Office file actions are authorized for project teammates, with immutable storage identity',()=>{
  const sql=read('supabase/migrations/20261105155214_office_work_multi_assignees_v1.sql');
  assert.match(sql,/office_project_files_team_update/);
@@ -131,24 +68,6 @@ test('Office file actions are authorized for project teammates, with immutable s
  assert.match(sql,/new\.storage_path/);
  assert.match(sql,/office_project_members/);
 });
-test('Office Desktop exposes Window rename, move and delete on Office tables, without breaking Window',()=>{
- const html=read('app/index.html'),adapter=read('app/office-work.js'),
-  operations=read('app/office-desktop-ops.js');
- assert.match(html,/office-desktop-ops\.js\?v=office38/);
- assert.match(adapter,/TBA_OFFICE_DESKTOP\?\.enhance/);
- assert.match(adapter,/office:true,projectId:project\.id/);
- assert.match(operations,/office_project_folders/);
- assert.match(operations,/office_project_files/);
- assert.match(operations,/const folderTable=office\?/);
- assert.match(operations,/const fileNameField=office\?/);
- assert.match(operations,/data-office-work\^="folder:/);
- assert.match(operations,/data-office-work\^="download:/);
- assert.match(operations,/create\('Umbenennen'/);
- assert.match(operations,/create\('Verschieben'/);
- assert.match(operations,/create\('Löschen'/);
- new Function(operations);new Function(adapter);
-});
-
 test('Full-plan replacement cannot silently discard known links or unidentified source arrows',()=>{
  const html=read('terminplan.html'),source=read('terminplan-rebuild.js');
  assert.match(source,/ambiguousArrowEvidence/);
@@ -179,3 +98,15 @@ test('Completed reconstruction discloses previous links even if the new source h
  assert.equal(preview.proposal.graph_not_transcribed,false);
  assert.match(preview.text,/1 bereits gespeicherte Verknüpfungen/);
 });
+
+test('Since 07.11.2026 Work is Window\'s own work.js on Window\'s tables (one data model)',()=>{
+ const index=read('app/index.html'),work=read('app/work.js'),ops=read('app/office-desktop-ops.js');
+ assert.match(index,/<script src="\.\/work\.js\?v=office40"><\/script>/);
+ assert.doesNotMatch(index,/office-work\.js|office-window-work-surface\.js/);
+ assert.ok(!fs.existsSync(new URL('../app/office-work.js',import.meta.url)));
+ for(const table of ['isabella_projects','isabella_tasks','minds_work_buckets','minds_work_folders','minds_work_files'])
+  assert.match(work,new RegExp("from\\('"+table+"'\\)"));
+ assert.match(work,/TBA_OFFICE_DESKTOP\?\.enhance\(\{sb,folders,files,refresh:renderDesktop/);
+ assert.match(ops,/const folderTable=office\?'office_project_folders':'minds_work_folders'/);
+});
+

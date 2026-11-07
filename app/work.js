@@ -4,6 +4,8 @@
 // Terminpläne; the Akte parts, Wissen and Threads stay off until the office has them.
 const OFFICE=true;
 const OFFICE_ROOT='__office__';
+// Gari, 07.11.2026: the shared Büro Desktop stays hidden for now; Work shows the project Desktops.
+const SHOW_BURO=false;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sb=window.MINDS_SUPABASE;
@@ -73,15 +75,22 @@ async function render(){
     if(!latest())return;
     if(catalog.error)throw catalog.error;
     const switcher=$('.work-project-switch');
-    if(switcher)switcher.innerHTML='<button data-work-project="'+OFFICE_ROOT+'">Büro</button>'+
+    if(switcher)switcher.innerHTML=(SHOW_BURO?'<button data-work-project="'+OFFICE_ROOT+'">Büro</button>':'')+
       (catalog.data||[]).map(p=>'<button data-work-project="'+esc(p.client_key)+'" title="'+esc((p.number?p.number+' · ':'')+p.name)+'">'+esc(p.name)+'</button>').join('');
-    if(projectKey!==OFFICE_ROOT&&!(catalog.data||[]).some(p=>p.client_key===projectKey))
+    if((projectKey!==OFFICE_ROOT||!SHOW_BURO)&&!(catalog.data||[]).some(p=>p.client_key===projectKey))
       projectKey=(catalog.data||[])[0]?.client_key||OFFICE_ROOT;
+    if(projectKey===OFFICE_ROOT&&!SHOW_BURO){
+      project=null;
+      const body=$('#workBody');
+      if(body)body.innerHTML='<div class="work-empty" role="status"><p>Noch keine Projekte.</p><p class="small">Projekte legst du unter Tools → Projekte an.</p><a class="secondary" href="#section=projects">Projekte öffnen</a></div>';
+      $$('[data-work-view]').forEach(b=>{b.hidden=b.dataset.workView!=='overview'});
+      return;
+    }
     if(projectKey===OFFICE_ROOT)view='desktop';
     const loadedProject=projectKey===OFFICE_ROOT?null:await waitForWork(loadProject(session),'project');
     if(!latest())return;
     project=loadedProject;
-    $('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
+    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
     paintChrome();
     const settings=project&&!OFFICE?await waitForWork(
       sb.from('minds_self_review_settings').select('enabled,timezone,local_hour,code_preparation_enabled')
@@ -335,7 +344,7 @@ function officeTerminplaene(m){
     const sub=[String(p.phase||'').replace('LPH','LPH '),p.state?.project?.standDate?'Stand '+cockpitShort(p.state.project.standDate):'',next?'Nächster Meilenstein '+cockpitShort(next.start):''].filter(Boolean).join(' · ');
     return '<a class="cockpit-file" href="../terminplan.html?id='+encodeURIComponent(p.id)+'"><span>'+esc(next?next.name:(p.state?.project?.name||'Terminplan'))+'</span><small>'+esc(sub)+'</small></a>';
   }).join('');
-  return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitPlans"><div class="cockpit-head"><h2 id="cockpitPlans">Terminpläne</h2><a class="cockpit-link" href="../#project='+encodeURIComponent(project.id)+'">+ Terminplan</a></div>'+
+  return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitPlans"><div class="cockpit-head"><h2 id="cockpitPlans">Terminpläne</h2><button type="button" class="cockpit-link" data-office-new-plan="'+esc(project.id)+'">+ Terminplan</button></div>'+
     (rows||'<p class="cockpit-empty">Noch kein Terminplan für dieses Projekt.</p>')+'</section></div>';
 }
 function officeNextMilestone(state,today){
@@ -384,6 +393,7 @@ async function renderOverview(){
     pflege:pflegeQ?.data?.[0]?.value||null,plans:planQ?.data||[],partial:(OFFICE?[taskQ,eventQ,planQ]:[taskQ,claimQ,fileQ,memQ,threadQ]).some(x=>!x)};
   body.innerHTML=cockpitMarkup(m);
   $$('[data-work-go]').forEach(button=>button.onclick=()=>document.querySelector('[data-work-view="'+button.dataset.workGo+'"]')?.click());
+  $$('[data-office-new-plan]').forEach(button=>button.onclick=()=>void window.TBA_OFFICE_PROJECTS?.openNewPlan?.(button.dataset.officeNewPlan));
   $$('[data-work-edit-task]').forEach(button=>button.onclick=()=>void window.ISABELLA_APP?.openCanonicalTaskById?.(button.dataset.workEditTask));
   $$('[data-akte-decide]').forEach(button=>button.onclick=()=>{button.disabled=true;void decideAkteEntry(button.dataset.akteId,button.dataset.akteDecide)});
   $$('[data-akte-task]').forEach(button=>button.onclick=()=>{button.disabled=true;void akteEntryToTask(button.dataset.akteTask)});

@@ -23,7 +23,7 @@ test('The app connects only to TBA Office, with the office sign-in',()=>{
 test('Office loads only its own assistant, not personal Window AI modules',()=>{
   for(const f of ['ai.js','bandeja.js','ambient.js','akte-skills.js','credit.js','situation.js','chat-stream-recovery.js'])
     assert.ok(!loaded.includes(f),f+' is not loaded');
-  for(const f of ['shell.js','app.js','office-work.js','ahora.js','sync.js','task-detail.js','office-fristen.js','office-assistant.js'])
+  for(const f of ['shell.js','app.js','work.js','ahora.js','sync.js','task-detail.js','office-fristen.js','office-assistant.js'])
     assert.ok(loaded.includes(f),f+' is loaded');
   assert.ok(loaded.indexOf('office-fristen.js')<loaded.indexOf('app.js'));
   const shell=src('shell.js');
@@ -33,8 +33,8 @@ test('Office loads only its own assistant, not personal Window AI modules',()=>{
   assert.match(shell,/<button data-work-view="desktop">Desktop<\/button>/,'Desktop is now available');
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
-  assert.match(src('office-work.js'),/window\.MINDS_WORK=/);
-  assert.doesNotMatch(appIndex,/src="\.\/work\.js/);
+  assert.match(src('work.js'),/window\.MINDS_WORK=/);
+  assert.match(appIndex,/src="\.\/work\.js\?v=office40"/,'Window Work is back since 07.11.2026');
 });
 
 test('Sync: members only, everyone sees the projects, own calendar, no realtime',()=>{
@@ -47,21 +47,21 @@ test('Sync: members only, everyone sees the projects, own calendar, no realtime'
   assert.match(sync,/from\('isabella_projects'\)\.select\([^)]*\)\.eq\('archived',false\)/);
   assert.doesNotMatch(sync,/\.channel\(|signInWithOtp/);
   assert.match(sync,/function openLogin\(\)\{location\.replace\('\.\.\/'\)\}/);
-  const work=src('office-work.js');
-  assert.match(work,/from\('office_projects'\)/);
-  assert.doesNotMatch(work,/from\('isabella_projects'\)/);
+  const work=src('work.js');
+  assert.match(work,/from\('isabella_projects'\)\.select\('id,client_key,name,number'\)\.eq\('archived',false\)/);
+  assert.doesNotMatch(work.match(/async function loadProject[\s\S]*?\n/)?.[0]||'',/user_id/,'projects are shared');
 });
 
 test('German screens: date formats and the texts people see',()=>{
-  for(const f of ['app.js','office-work.js','ahora.js','task-detail.js','dashboard.js','time-plan.js','task-team.js'])
+  for(const f of ['app.js','work.js','ahora.js','task-detail.js','dashboard.js','time-plan.js','task-team.js'])
     assert.doesNotMatch(src(f),/'es-ES'/,f+' formats dates in German');
-  const app=src('app.js'),ahora=src('ahora.js'),work=src('office-work.js');
+  const app=src('app.js'),ahora=src('ahora.js'),work=src('work.js');
   assert.match(app,/wd=\['Mo','Di','Mi','Do','Fr','Sa','So'\]/);
   assert.match(app,/`KW \$\{weekNo\(d\)\}`/);
   assert.match(app,/modal\('Neu anlegen',/);
   assert.match(ahora,/>Demnächst<\/h2>/);
   assert.match(ahora,/<\/svg>Aufgabe hinzufügen<\/button>/);
-  assert.match(work,/Demnächst · 14 Tage/);
+  assert.match(work,/<h2 id="cockpitNext">Nächste 14 Tage<\/h2>/);
   assert.match(src('task-detail.js'),/>Aufgabe anlegen</);
 });
 
