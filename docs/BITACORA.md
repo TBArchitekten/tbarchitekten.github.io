@@ -17,6 +17,22 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Token de deploy y Romy v14 desde GitHub · Claude
+- **Qué cambió y por qué:** Gari creó el token para el workflow de deploy y no quiso esperar a tener acceso a la cuenta de la oficina.
+  - El token sale de su cuenta de Supabase (gari).
+  - Es **de proyecto**: solo TBA Office, solo Edge Functions en escritura y todo lo demás en None, así que no llega a Window.
+  - Está guardado como `SUPABASE_ACCESS_TOKEN` en el entorno `supabase` del repo.
+  - Con él se publicó `office-assistant` v14 desde `main`, con los archivos normales. Reemplaza la v13 con envoltorio.
+- **Archivos:** solo docs.
+- **Base de datos:** ninguna.
+- **Deploy de funciones:** `office-assistant` v14, con el workflow `Deploy Supabase Edge Functions` (run 42368817570): pruebas en verde, 14 archivos subidos y 401 sin sesión.
+- **Cómo se probó:** la versión 14 está activa, y con la clave anónima la función responde `{"error":"invalid_session"}`, lo que confirma que arrancó.
+- **Quedó pendiente:**
+  - aceptar la invitación de TBArchitekten (Developer) cuando Gari tenga su correo de la oficina; es opcional, como segundo acceso;
+  - opcional: limitar el entorno `supabase` a la rama `main` (ahora está en "No restriction"; el workflow ya solo corre desde `main`).
+- **Riesgos o decisiones que necesitan a Gari:** ninguno.
+- **PR:** #44
+
 ### 2026-11-07 · Romy v13 publicada y permisos del equipo probados · Claude
 - **Qué cambió y por qué:**
   - Se publicó `office-assistant` v13 con los cambios del PR #41: historial de 24 mensajes, hora fuera del prompt fijo, misiones ocultas y arreglo de `uuid()`.
