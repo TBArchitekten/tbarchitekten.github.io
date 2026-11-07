@@ -24,7 +24,7 @@ test('Romy uses the existing Window attachment UI, not a new picker',()=>{
   assert.ok(edge.includes('loadRomyAttachments(db,uid,attachments)'));
   assert.ok(edge.includes('attachments:attached.metadata'));
   assert.ok(edge.includes('attachmentInputs:attached.inputs'));
-  assert.ok(html.includes('app.js?v=office44'));
+  assert.ok(html.includes('app.js?v=office45'));
   assert.ok(html.includes('office-assistant.js?v=office36'));
   assert.ok(html.includes('romy-transport.js?v=office27'));
   new Function(assistant);new Function(transport);new Function(app);

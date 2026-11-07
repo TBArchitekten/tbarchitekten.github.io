@@ -78,7 +78,8 @@ function nextRow(item,state,today){
 }
 
 function taskMeta(task,state,key){
-  const bits=[nameOf(state.categories,task.categoryId),task.projectId?nameOf(state.projects,task.projectId):''];
+  // Office has no categories (everything is work): the project says where a task belongs.
+  const bits=[task.projectId?nameOf(state.projects,task.projectId):''];
   if(M().spansDay(task,key)){const d=M().dateFromKey(task.date);if(d)bits.push('läuft bis '+shortMonth(d))}
   if(task.reminderTime&&task.date===key)bits.push('Erinnerung '+task.reminderTime);
   return bits.filter(Boolean).join(' · ');
@@ -95,7 +96,7 @@ function taskRow(task,sessions,state,key,today,overdue=false){
     (label?'<span class="ahora-state">'+esc(label)+'</span>':'')+'</div>';
 }
 function eventRow(e,state){
-  const meta=[e.projectId?nameOf(state.projects,e.projectId):nameOf(state.categories,e.categoryId),e.allDay?'':minutesText(e.duration)].filter(Boolean).join(' · ');
+  const meta=[e.projectId?nameOf(state.projects,e.projectId):'',e.allDay?'':minutesText(e.duration)].filter(Boolean).join(' · ');
   return '<button type="button" class="ahora-row ahora-event" data-ahora-event="'+esc(e.id)+'">'+
     '<span class="ahora-badge is-termin"><strong>'+esc(e.allDay?'Tag':String(e.start||'·'))+'</strong></span>'+
     '<span class="ahora-row-main"><strong>'+esc(e.title||'Termin')+'</strong>'+(meta?'<small>'+esc(meta)+'</small>':'')+'</span></button>';

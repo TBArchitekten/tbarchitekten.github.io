@@ -71,9 +71,12 @@ export function createOfficeTools({sb,userId,now=()=>new Date(),uuid=()=>crypto.
     return {projects:list.map(p=>({id:p.id,number:p.number||undefined,name:p.name}))};
   }
 
-  async function listTasks({range='open',project,query,mine=false,limit=80}={}){
+  async function listTasks({range='open',day:askedDay,project,query,mine=false,limit=80}={}){
     if(!['today','week','open','done_recent'].includes(range))throw new ToolError('range: today, week, open oder done_recent.');
-    const day=today(),until=range==='week'?addDays(day,7):day,cap=Math.min(Math.max(Number(limit)||80,1),200);
+    if(askedDay!=null&&!/^\d{4}-\d{2}-\d{2}$/.test(String(askedDay)))throw new ToolError('day: YYYY-MM-DD.');
+    // A specific day (e.g. tomorrow) works like today: everything due by then and still open, plus multi-day tasks running.
+    if(askedDay)range='day';
+    const now0=today(),day=askedDay||now0,until=range==='week'?addDays(day,7):day,cap=Math.min(Math.max(Number(limit)||80,1),200);
     const [names,people]=await Promise.all([projectNames(),memberNames()]);
     const p=project?await resolveProject(project):null;
     let q=sb.from('isabella_tasks').select(TASK_COLS).is('archived_at',null);
@@ -86,16 +89,16 @@ export function createOfficeTools({sb,userId,now=()=>new Date(),uuid=()=>crypto.
       q=q.order('due_date',{ascending:true,nullsFirst:false});
     }
     let rows=must(await q.limit(Math.max(cap,120)),'tasks')||[];
-    if(range==='today'||range==='week')rows=rows.filter(t=>inRange(t,day,until));
+    if(range==='today'||range==='week'||range==='day')rows=rows.filter(t=>inRange(t,day,until));
     let assigned=new Set();
     if(rows.length){
       const a=await sb.from('minds_work_task_assignees').select('task_id').eq('person_id',userId).in('task_id',rows.map(t=>t.id));
       if(!a.error)assigned=new Set((a.data||[]).map(r=>r.task_id));
     }
     let out=rows.map(t=>({...taskOut(t,names,people),mine:t.user_id===userId||t.assignee_person_id===userId||assigned.has(t.id)||undefined,
-      overdue:!t.completed_at&&t.due_date&&t.due_date<day||undefined}));
+      overdue:!t.completed_at&&t.due_date&&t.due_date<now0||undefined}));
     if(mine)out=out.filter(t=>t.mine);
-    return {today:day,range,project:p?p.name:null,count:Math.min(out.length,cap),tasks:out.slice(0,cap)};
+    return {today:now0,day,range,project:p?p.name:null,count:Math.min(out.length,cap),tasks:out.slice(0,cap)};
   }
 
   async function listEvents({from,to}={}){

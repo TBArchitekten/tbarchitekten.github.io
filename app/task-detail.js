@@ -14,6 +14,8 @@ const fail=err=>status('Nicht gespeichert · '+(err?.message||String(err)),true)
 const selectOption=(id,name,selected)=>'<option value="'+E(id)+'" '+(String(id)===String(selected)?'selected':'')+'>'+E(name)+'</option>';
 const datesValid=(start,due)=>!start||!due||start<=due;
 const yes=(value)=>Array.isArray(value)?value:[];
+// TBA Office: everything here is work, so tasks carry the category "Arbeit" without asking (Gari, 07.11.2026).
+const HIDE_CATEGORY=!!window.TBA_OFFICE_CONFIG;
 async function readTask(opts){
   let query=sb.from('isabella_tasks').select('*');
   if(opts.taskId)query=query.eq('id',opts.taskId);
@@ -62,9 +64,13 @@ async function open(opts={}){
     let choices=await readChoices(projectId);
     if(ticket!==generation)return;
     if(!projectId&&task)projectId=task.project_id;
-    const categoryId=task?.category_id||choices.categories.find(c=>c.client_key===opts.categoryKey)?.id||null;
+    const categoryKey=opts.categoryKey||(HIDE_CATEGORY?'arbeit':null);
+    const categoryId=task?.category_id||choices.categories.find(c=>c.client_key===categoryKey)?.id||null;
     const teamData=task&&window.MINDS_TASK_TEAM?.read?await window.MINDS_TASK_TEAM.read(task.id,task.assignee_person_id):{ids:[],allocations:[]};
     const ctx={ticket,task,projectId,categoryId,choices,opts,queue:Promise.resolve(),blocked:false,
+      draft:!task&&opts.draft?{...opts.draft}:null,
+      // One key per new task: a second tap or a retry after a lost answer finds the same row instead of a copy.
+      clientKey:task?null:uid(),
       teamIds:teamData.ids.length?teamData.ids:(task?.assignee_person_id?[task.assignee_person_id]:[]),
       allocations:teamData.allocations};
     render(ctx);
@@ -72,7 +78,8 @@ async function open(opts={}){
 }
 function render(ctx){
   if(ctx.ticket!==generation)return;
-  const t=ctx.task||{},choices=ctx.choices;
+  // A new task keeps what was already typed (draft) when the form is drawn again, e.g. after choosing a project.
+  const t=ctx.task||ctx.draft||{},choices=ctx.choices;
   const person=t.assignee_person_id||'',legacy=t.assignee&&!person;
   const statusValue=t.work_status||'not_started',priority=t.priority||'normal';
   const projectOptions=selectOption('','Ohne Projekt',t.project_id||ctx.projectId)+
@@ -91,7 +98,11 @@ function render(ctx){
     (String(l.url||'').match(/^https?:\/\//i)?E(l.url):'#')+'">'+E(l.title||l.url||'Link')+'</a>'+
     '<button type="button" data-task-link-remove="'+i+'" title="Link entfernen">×</button></div>').join('');
   const estimate=Number(t.metadata?.planning?.estimated_minutes||0);
-  const body='<div class="minds-task-detail" data-task-detail>'+
+  // New from the calendar: the complete form at once, and one tap to make it a Termin instead.
+  const kindSwitch=!ctx.task&&typeof ctx.opts.onSwitchKind==='function'
+    ?'<div class="minds-new-kind" role="group" aria-label="Art"><button type="button" class="is-active" aria-pressed="true">Aufgabe</button>'+
+      '<button type="button" id="taskDetailToEvent" aria-pressed="false">Termin</button></div>':'';
+  const body='<div class="minds-task-detail" data-task-detail>'+kindSwitch+
     '<header class="minds-task-detail-top"><button type="button" class="minds-task-complete'+(t.completed_at?' is-done':'')+'" id="taskDetailComplete" aria-pressed="'+!!t.completed_at+'" aria-label="'+(t.completed_at?'Aufgabe wieder öffnen':'Als erledigt markieren')+'">'+
     (t.completed_at?'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m5 12 4 4 10-10"/></svg>':'')+'</button><input id="taskDetailTitle" aria-label="Titel" placeholder="Titel der Aufgabe" value="'+E(t.title||ctx.opts.title||'')+'">'+
     '<button class="minds-task-more" type="button" id="taskDetailMore" aria-label="Aufgabenoptionen">···</button></header>'+
@@ -110,7 +121,7 @@ function render(ctx){
     '<label>Priorität<select id="taskDetailPriority">'+
     [['low','Niedrig'],['normal','Normal'],['important','Wichtig'],['urgent','Dringend']]
       .map(([id,name])=>selectOption(id,name,priority)).join('')+'</select></label>'+
-    '<label>Kategorie<select id="taskDetailCategory">'+categoryOptions+'</select></label>'+
+    (HIDE_CATEGORY?'':'<label>Kategorie<select id="taskDetailCategory">'+categoryOptions+'</select></label>')+
     '<label>Geschätzte Zeit (min)<input id="taskDetailEstimate" type="number" min="0" max="43200" step="15" value="'+(estimate||'')+'" placeholder="Keine Schätzung"></label>'+
     '<label>Erinnerung<input id="taskDetailReminder" type="time" value="'+E(String(t.reminder_time||'').slice(0,5))+'"></label>'+
     '</div>'+
@@ -156,6 +167,11 @@ function bind(ctx){
     if(!dates()){status('Der Beginn muss vor oder am Fälligkeitstag liegen.',true);return null}
     return make(value);
   };
+  $('#taskDetailToEvent')?.addEventListener('click',()=>{
+    const d=readDraft(),project=ctx.choices.projects.find(p=>p.id===($('#taskDetailProject')?.value||''));
+    ctx.opts.onSwitchKind({title:d.title,date:d.due_date||d.start_date||ctx.opts.date||null,
+      projectKey:project?.client_key||null,notes:d.notes,categoryKey:ctx.choices.categories.find(c=>c.id===d.category_id)?.client_key||null});
+  });
   blur('#taskDetailTitle',value=>({title:value.trim()}));
   blur('#taskDetailNotes',value=>({notes:value}));
   blur('#taskDetailLabels',value=>({labels:value.split(',').map(s=>s.trim()).filter(Boolean)}));
@@ -260,6 +276,7 @@ async function changeProject(ctx,id){
     return;
   }
   if(!ctx.task){
+    ctx.draft=readDraft();if(ctx.draft.category_id!==undefined)ctx.categoryId=ctx.draft.category_id;
     ctx.projectId=id;ctx.opts.projectId=id;ctx.opts.bucketId=null;ctx.choices=await readChoices(id);
     if(ctx.ticket===generation)render(ctx);return;
   }
@@ -268,6 +285,16 @@ async function changeProject(ctx,id){
   ctx.projectId=id;ctx.opts.bucketId=null;ctx.choices=await readChoices(id);
   ctx.teamIds=[];ctx.allocations=[];
   if(ctx.ticket===generation)render(ctx);
+}
+// What is typed in a task that does not exist yet.
+function readDraft(){
+  const v=s=>$(s)?.value??'';
+  return {title:v('#taskDetailTitle'),start_date:v('#taskDetailStart')||null,due_date:v('#taskDetailDue')||null,
+    work_status:v('#taskDetailWorkStatus')||'not_started',priority:v('#taskDetailPriority')||'normal',
+    category_id:$('#taskDetailCategory')?(v('#taskDetailCategory')||null):undefined,
+    reminder_time:v('#taskDetailReminder')||null,labels:v('#taskDetailLabels').split(',').map(s=>s.trim()).filter(Boolean),
+    notes:v('#taskDetailNotes'),checklist:$('#taskDetailChecks')?collectChecks():[],
+    metadata:{planning:{estimated_minutes:Number(v('#taskDetailEstimate')||0)||0}}};
 }
 async function createTask(ctx){
   const title=$('#taskDetailTitle')?.value.trim();
@@ -281,7 +308,8 @@ async function createTask(ctx){
   const projectId=$('#taskDetailProject').value||null;
   if(member&&!projectId){status('Bitte zuerst ein Projekt wählen, dann die Verantwortlichen.',true);return}
   const statusValue=$('#taskDetailWorkStatus').value;
-  const row={title,project_id:projectId,category_id:$('#taskDetailCategory').value||null,
+  const categoryField=$('#taskDetailCategory');
+  const row={title,project_id:projectId,category_id:categoryField?(categoryField.value||null):(ctx.categoryId||null),
     work_bucket_id:$('#taskDetailBucket').value||null,work_status:statusValue,
     priority:$('#taskDetailPriority').value,start_date:$('#taskDetailStart').value||null,
     due_date:$('#taskDetailDue').value||null,assignee_person_id:null,
@@ -293,7 +321,21 @@ async function createTask(ctx){
   status('Lege an …');
   const button=$('#taskDetailCreate');button.disabled=true;
   try{
-    const {data,error}=await sb.from('isabella_tasks').insert(row).select('*').single();
+    row.client_key=ctx.clientKey||uid();ctx.clientKey=row.client_key;
+    const owner=(await sb.auth.getSession())?.data?.session?.user?.id||null;
+    const readBack=async()=>{
+      let q=sb.from('isabella_tasks').select('*').eq('client_key',row.client_key);
+      if(owner)q=q.eq('user_id',owner);
+      const {data:found,error:readError}=await q.maybeSingle();
+      if(readError)throw readError;
+      return found;
+    };
+    let data=await readBack(),error=null;
+    if(!data){
+      const inserted=await sb.from('isabella_tasks').insert(row).select('*').single();
+      data=inserted.data;error=inserted.error;
+      if(error||!data){data=await readBack();if(data)error=null}
+    }
     if(error||!data)throw error||new Error('Der Server hat die Aufgabe nicht bestätigt.');
     ctx.task=data;ctx.projectId=data.project_id;ctx.categoryId=data.category_id;
     if(ctx.teamIds?.length){

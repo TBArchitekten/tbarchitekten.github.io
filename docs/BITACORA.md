@@ -17,6 +17,41 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Romy y «mañana», sin Kategorie en Office, formulario completo al crear · Claude
+- **Qué cambió y por qué (tres peticiones de Gari):**
+  - **Romy para mañana:** a la pregunta «¿tengo algo pendiente para mañana?» contestó que nada, aunque «Test» (fällig 04.11) seguía abierta.
+    - No era por el campo «Verantwortlich»: la tarea es suya porque la creó él.
+    - La causa: para otro día que no fuera hoy, Romy buscaba solo lo que vencía exactamente ese día.
+    - Ahora `list_tasks` acepta `day:"YYYY-MM-DD"`: todo lo que vence hasta ese día y sigue abierto (lo vencido marcado contra el hoy real) y las tareas de varios días en curso. La instrucción de Romy lo pide para mañana u otro día.
+    - Lo mismo en el conector de Claude (`office-mcp`, `list_tasks` con `day`).
+  - **Sin Kategorie en Office** (todo es trabajo). Se quitó:
+    - del editor de tareas, del de Termine y de «Neu anlegen»;
+    - de las filas de Heute;
+    - del menú «Mehr» (Kategorien).
+    - Las listas de Aufgaben van ahora por proyecto. Lo nuevo se guarda como «Arbeit», y al sincronizar lo que no tiene categoría también.
+    - En Persönlich (Window) la categoría se queda: allí separa Casa, MINDS, Architectures, etc.
+  - **«Neu anlegen» con todos los campos** (Office y Persönlich):
+    - Una tarea abre directamente el editor completo con el día ya puesto.
+    - Arriba hay un cambio «Aufgabe | Termin» que conserva lo escrito.
+    - El Termin tiene ahora todos sus campos: Dauer y Notizen.
+    - Al elegir un proyecto en una tarea nueva ya no se borran el título ni las fechas escritas.
+    - Crear desde el editor completo usa una clave fija y lee de vuelta: un segundo toque o un reintento no duplica la tarea, como antes el formulario corto.
+- **Archivos:**
+  - Romy y conector: `supabase/functions/office-assistant/romy-tools.mjs`, `index.ts`, `supabase/functions/office-mcp/office-tools.mjs`, `index.ts`.
+  - App: `app/app.js` (office45), `app/task-detail.js` (office3), `app/task-detail.css` (v2), `app/ahora.js` (office4), `app/sync.js` (office5), `app/shell.js` (office43).
+  - Tests: `tests/office-day-and-forms.test.mjs` (nuevo) y pins.
+  - Window: PR aparte con el mismo formulario completo.
+- **Base de datos:** ninguna.
+- **Deploy de funciones:** `office-assistant` y `office-mcp` (workflow «Deploy Supabase functions»).
+- **Cómo se probó:** 188 tests en verde. En Chromium (Office y Window):
+  - «+» abre el editor completo con la fecha, sin Kategorie en Office;
+  - el proyecto conserva lo escrito;
+  - Aufgabe ↔ Termin conserva título, fecha, proyecto y notas;
+  - la tarea se crea con «Arbeit»;
+  - el Termin se guarda con Dauer y Notizen;
+  - las listas van por proyecto y no hay «Kategorien» en el menú.
+- **PR:** #53
+
 ### 2026-11-07 · Terminpläne dentro de la app sin segundo login · Claude
 - **Qué cambió y por qué:** Gari: en la app de Window, al abrir un Terminplan pedía login otra vez, volvía a la lista y al tocar el plan otra vez pedía login.
   - **Causa:** `terminplan.html` creaba su propio cliente con la sesión guardada en el navegador. Dentro de la app esa sesión no existe (la app la presta por el puente y `./app/` borra la guardada), así que el plan mandaba a la página raíz y su login.
