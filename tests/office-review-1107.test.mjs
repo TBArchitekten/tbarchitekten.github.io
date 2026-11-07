@@ -73,3 +73,26 @@ test('Romy chat in German: no Isabella or Spanish in the send and voice flow',()
     assert.ok(!app.includes(es),es);
   assert.doesNotMatch(read('app/dashboard.js'),/ eventos</);
 });
+
+test('Romy: "today" includes overdue and multi-day tasks, like Window', async()=>{
+  const src=read('supabase/functions/office-assistant/romy-tools.mjs');
+  assert.match(src,/range:\{type:"string",enum:\["today","week"\]\}/);
+  assert.match(src,/if\(a\.range\)q=q\.is\("completed_at",null\)\.or\("due_date\.lte\."\+until\+",start_date\.lte\."\+until\);/);
+  assert.match(read('supabase/functions/office-assistant/index.ts'),/list_tasks mit range \\"today\\"/);
+  // The logic, run on sample rows (the case of 07.11.2026: an open task due 04.11 was missed).
+  const {shapeTaskRows}=await import('../supabase/functions/office-assistant/romy-tools.mjs');
+  const me='u1',day='2026-11-07';
+  const rows=[
+    {id:'a',title:'Test',due_date:'2026-11-04',start_date:'2026-11-04',completed_at:null,user_id:me},
+    {id:'b',title:'Heute',due_date:'2026-11-07',completed_at:null,user_id:'u2',assignee_person_id:me},
+    {id:'c',title:'Mehrtägig',start_date:'2026-11-05',due_date:'2026-11-12',completed_at:null,user_id:'u2'},
+    {id:'d',title:'Später',start_date:'2026-11-10',due_date:'2026-11-12',completed_at:null,user_id:me},
+    {id:'e',title:'Erledigt',due_date:'2026-11-03',completed_at:'2026-11-03T10:00:00Z',user_id:me},
+    {id:'f',title:'Nächste Woche',due_date:'2026-11-13',completed_at:null,user_id:'u2'}];
+  const today=shapeTaskRows(rows,{day,range:'today',userId:me,assigned:new Set(['c'])});
+  assert.deepEqual(today.map(t=>[t.id,!!t.overdue,!!t.in_progress,!!t.mine]),
+    [['a',true,false,true],['b',false,false,true],['c',false,true,true]]);
+  assert.ok(today.every(t=>!('user_id' in t)&&!('assignee_person_id' in t)),'no raw ids in the model input');
+  assert.deepEqual(shapeTaskRows(rows,{day,range:'week',userId:me}).map(t=>t.id),['a','b','c','d','f']);
+  assert.equal(shapeTaskRows(rows,{day,userId:me}).length,6,'without range nothing is filtered');
+});

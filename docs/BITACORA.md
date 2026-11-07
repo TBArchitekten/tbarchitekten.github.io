@@ -17,6 +17,19 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-07 · Romy: "heute" incluye lo vencido · Claude
+- **Qué cambió y por qué:** Gari preguntó a Romy "¿Tengo algo pendiente para hoy?" y le respondió que nada, aunque tenía abierta una tarea vencida el 04.11. `list_tasks` solo filtraba por fecha exacta.
+  - Ahora acepta `range:"today"` y `range:"week"`, con la misma lógica que `listTasks` de Window: tareas abiertas que vencen ese día o antes, más las de varios días ya empezadas.
+  - Cada tarea lleva `overdue`, `in_progress` y `mine` (creada por la persona o asignada a ella).
+  - Las instrucciones de Romy piden nombrar lo vencido con su fecha.
+- **Archivos:** `supabase/functions/office-assistant/{romy-tools.mjs,index.ts}`, `tests/office-review-1107.test.mjs`, docs.
+- **Base de datos:** ninguna.
+- **Deploy de funciones:** `office-assistant`, con el workflow, después del merge.
+- **Cómo se probó:** 163/163 pruebas, incluida una de comportamiento con el caso del 07.11 (vencida, de hoy, de varios días, futura, hecha).
+- **Quedó pendiente:** que Gari lo pruebe en Romy.
+- **Riesgos o decisiones que necesitan a Gari:** ninguno.
+- **PR:** #45
+
 ### 2026-11-07 · Token de deploy y Romy v14 desde GitHub · Claude
 - **Qué cambió y por qué:** Gari creó el token para el workflow de deploy y no quiso esperar a tener acceso a la cuenta de la oficina.
   - El token sale de su cuenta de Supabase (gari).
