@@ -12,6 +12,7 @@ import mammoth from "npm:mammoth@1.12.3";
 import * as XLSX from "npm:xlsx@0.18.5";
 import {Buffer} from "node:buffer";
 import {createOfficeTools,ToolError} from "./office-tools.mjs";
+import {createOfficeAkteTools} from "./office-akte.mjs";
 
 const SUPABASE_URL=(Deno.env.get("SUPABASE_URL")||"").replace(/\/$/,"");
 // The public URL pasted into Claude; the protected-resource metadata must repeat it exactly.
@@ -67,19 +68,19 @@ async function extractText(bytes:Uint8Array,mime:string,name:string):Promise<{te
 }
 
 const INSTRUCTIONS=`TBA Office is the shared workspace of Titus Bernhard Architekten: projects with their team, Planner tasks, Terminpläne (their milestones are the Fristen), project desktops with documents, and each employee's personal tasks and calendar.
-Language: answer in the language the person writes in (Gari writes Spanish). Everything you WRITE into the Office (task titles, notes) is German.
+Language: answer in the language the person writes in (in the office, normally German). Everything written into the Office must be German.
 Visibility: project tasks, Terminpläne and project documents are shared among active members; personal tasks and the calendar are private to the signed-in person.
 How to work:
-- Start: overview (today, overdue, Fristen) or project_context for one project.
+- Start: overview (today, overdue, Fristen) or project_context for one project. For Projektakte open_project or open_topic requires explicit project-team membership.
 - Before stating anything about documents: search_files, then read_file. Cite file names. Never invent files, dates or decisions.
 - create_task / update_task change real tasks: do it when asked; otherwise propose. A task with a project is visible to the project team.
-- Keep tool calls lean: read_file is paged (next_offset).`;
+- Diagnostics are private to the signed-in account and omit message contents. Never infer colleague access from an admin role.\n- Keep tool calls lean: read_file is paged (next_offset).`;
 
 const text=(value:unknown)=>({content:[{type:"text" as const,text:typeof value==="string"?value:JSON.stringify(value)}]});
 const READ={readOnlyHint:true,destructiveHint:false,openWorldHint:false};
 const WRITE={readOnlyHint:false,destructiveHint:false,openWorldHint:false};
 
-function buildServer(tools:ReturnType<typeof createOfficeTools>){
+function buildServer(tools:ReturnType<typeof createOfficeTools>,akte:ReturnType<typeof createOfficeAkteTools>){
   const server=new McpServer({name:"TBA Office",version:"1.0.0"},{instructions:INSTRUCTIONS});
   const run=(fn:(args:any)=>Promise<unknown>)=>async(args:any)=>{
     try{return text(await fn(args||{}))}
@@ -108,6 +109,14 @@ function buildServer(tools:ReturnType<typeof createOfficeTools>){
     inputSchema:z.object({title:z.string(),project:z.string().optional(),due_date:z.string().optional(),start_date:z.string().optional(),notes:z.string().optional()}),annotations:WRITE},run(a=>tools.createTask(a)));
   server.registerTool("update_task",{title:"Aufgabe ändern",description:"Change a task's title, dates or notes, or mark it done/undone. Pass only fields to change; null clears a date. Allowed for the creator, assignees and the project team.",
     inputSchema:z.object({task_id:z.string(),title:z.string().optional(),due_date:z.string().nullable().optional(),start_date:z.string().nullable().optional(),notes:z.string().optional(),done:z.boolean().optional()}),annotations:WRITE},run(a=>tools.updateTask(a)));
+  server.registerTool("open_project",{title:"Projektakte öffnen",description:"Read the Projektakte for a project assigned to the signed-in employee. Entries keep their proposed/confirmed status, evidence and source references.",
+    inputSchema:z.object({project:z.string()}),annotations:READ},run(a=>akte.openProject(a)));
+  server.registerTool("open_topic",{title:"Themenblatt öffnen",description:"Read one topic from a project assigned to the signed-in employee; ambiguous matches return candidates rather than a guess.",
+    inputSchema:z.object({project:z.string(),topic:z.string()}),annotations:READ},run(a=>akte.openTopic(a)));
+  server.registerTool("search_akte",{title:"Projektquellen durchsuchen",description:"Read project claims and source passages with provenance and page/sheet locators; project membership mandatory.",
+    inputSchema:z.object({project:z.string(),query:z.string(),limit:z.number().int().min(1).max(25).optional()}),annotations:READ},run(a=>akte.searchAkte(a)));
+  server.registerTool("turn_diagnostics",{title:"Eigene Turn-Diagnose",description:"Read-only execution statuses and latencies for this signed-in member only. No message text or colleagues' diagnostics.",
+    inputSchema:z.object({limit:z.number().int().min(1).max(50).optional()}),annotations:READ},run(a=>akte.turnDiagnostics(a)));
   return server;
 }
 
@@ -127,7 +136,8 @@ Deno.serve(async(req:Request)=>{
   if(memberError||!member?.is_active)return json({error:"not_an_active_member",error_description:"Kein aktiver Office-Zugang."},403);
   if(member.must_change_password)return json({error:"password_change_required",error_description:"Bitte zuerst im Office das Startpasswort ändern."},403);
   const tools=createOfficeTools({sb,userId:data.user.id,extractText});
-  const handler=createMcpHandler(()=>buildServer(tools));
+  const akte=createOfficeAkteTools({sb,userId:data.user.id,base:tools});
+  const handler=createMcpHandler(()=>buildServer(tools,akte));
   const res=await handler.fetch(req);
   const headers=new Headers(res.headers);for(const [k,v] of Object.entries(CORS))headers.set(k,v);
   return new Response(res.body,{status:res.status,statusText:res.statusText,headers});
