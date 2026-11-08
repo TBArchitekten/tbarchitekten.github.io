@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy = Isabella · Phase 6 · Live und MCP · ChatGPT
+- Änderung und Zweck: Romy Live als separate deutsche WebRTC-Oberfläche, dieselben gepinnten Window-Clientmodule, individuelle Office-JWT-Prüfung; neue read-only Projektakte/Themenblatt/Quellen-/Diagnose-Werkzeuge mit OAuth und expliziter Projektmitgliedschaft. Diktiermikrofon bleibt unverändert.
+- Dateien: `app/live/*`, `app/office-live-entry.js`, `app/index.html`, gemeinsame Engine und Sync-Manifeste, `supabase/functions/office-mcp/index.ts`, `office-akte.mjs`, Tests unter `tests/browser/` und `tests/office-romy-phase6-mcp.test.mjs`, `AGENTS.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Datenbank: keine neue Phase-6-Migration — in Supabase angewendet: **nein**.
+- Deploy: keiner; später nach Review `isabella-live-session` und `office-mcp` gemäß Office-Konfiguration.
+- Prüfung: Chromium mit synthetischen WebRTC-, Audio- und OAuth-Doubles; nur Owner-Transkript wird gespeichert, Agenten-Sprachausgaben nicht, kanonische Aktionen benötigen Bestätigung; OAuth-Projektakte nur im berechtigten Team. Office Engine/Chromium/PG17 und minds-Regressionen erfolgreich am verifizierten Code-Stand; finaler PR-HEAD in CI erneut prüfen.
+- Ausstehend: reale Sprachqualität, Mikrofonberechtigungen auf iPhone/Safari, echte OAuth-Anmeldung und Provider-Integration; keine Produktions-E2E-Behauptung.
+- Risiko/Entscheidung: keine original persönliche Isabella-Stimme in Office, kein Office-Mobile-Push, keine Akten-Schreibrechte über MCP. Kein Secret-Wert im Repository.
+- PR: Phase 6 (apilado sobre Phase 5), ohne Merge, Migration oder Deploy.
+
+
 ### 2026-11-08 · Romy = Isabella · Phase 5 · Projektakte und Docling · ChatGPT
 - Was geändert wurde: eine gemeinsame Projektakte nur für Projektmitglieder; Quellenzitate und Versionen als Zulassungsbedingung, neue Inhalte ausschließlich als Vorschläge. Tägliches serverseitiges Projekt-Leasing verhindert doppelte Nachtläufe.
 - Dateien: Engine `_shared/akte-pflege.mjs`, `_shared/office-akte-access.mjs`, `isabella-work-ingest-runner`, `window-akte-pflege`, Quellcode-Manifest, SQL-Migration, SQL- und Node-Tests, `.github/workflows/romy-akte-pflege.yml`, ESTADO und BITACORA.
