@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy = Isabella · fase 3: chat común y Chromium · ChatGPT
+- Qué cambió y por qué: el chat de Office usa el cliente de Window y respuestas canónicas del motor Office, sin mezclar identidades. El chat heredado queda accesible únicamente mediante elección manual.
+- Archivos: `app/office-engine-chat.js`, `app/index.html`, `app/ai.js` y otros cinco módulos compartidos, `docs/sync-window-app-manifest.json`, `tests/office-app.test.mjs`, `tests/browser/romy-chat.chromium.mjs`, workflow de Chromium y documentación.
+- Base de datos: ninguna migración nueva en fase 3 — aplicada en Supabase: no.
+- Deploy de funciones: ninguno. El backend nuevo no está activado en producción.
+- Cómo se probó: CI de Node/Edge Deno y tests aislados de Chromium para streaming, propuestas, recibos y aislamiento entre dos cuentas ficticias. E2E con sesión real pendiente.
+- Quedó pendiente o sin probar: enlace de voz real, revisión del chat integrado en Safari, verificación de Deshacer con Office desplegado y sincronización de historial anterior (deliberadamente no automática).
+- Riesgos y preguntas: se conserva `office-assistant` como respaldo elegible, sin fallbacks silenciosos ni importación de su historial.
+- PR: apilado sobre #58, todavía sin fusionar.
+
 ### 2026-11-08 · Romy = Isabella · fase 2, motor sincronizado sin activar · ChatGPT
 - Qué cambió y por qué: se copiaron desde minds `30451152a0a5` los 95 archivos del motor habilitado, todos verificados por SHA; se añadió sincronización reproducible y workflow que solo abre PR, perfil Office del motor y adaptador team-scoped de Terminpläne.
 - Archivos: `supabase/functions/_shared`, 20 Edge Functions de `supabase/functions`, `supabase/config.toml`, `scripts/sync-window.mjs`, `.github/workflows/sync-window-engine.yml`, `verify-romy-engine.yml`, tests, y manifiesto `docs/sync-window-engine-manifest.json`.
