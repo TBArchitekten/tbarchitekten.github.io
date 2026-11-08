@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy = Isabella · Phase 4, persönliche Kontinuität · ChatGPT
+- Änderung und Begründung: nächtliches Gedächtnis und proaktive Präsenz verwenden ausschließlich den aktiven Office-Kontoinhaber, mit eigenem Tagesbudget. Neuer persönlicher Speicher-/Präsenzdialog aus der gemeinsamen Window-Quelle; keine mobile Office-Push-Benachrichtigung.
+- Dateien: `app/office-personal.js`, aktualisierte Engine-Module, `app/index.html`, Quellcode-Manifeste, SQL-Migration und isolierte Tests, sowie diese Dokumentation.
+- Datenbank: `20261108214000_office_romy_owner_forget_v1.sql` vorbereitet — in Supabase angewendet: **nein**.
+- Funktionen: keine deployed; später `isabella-heartbeat`, `isabella-dream`, `isabella-presence`, `isabella-routine-runner` nur mit geprüftem Office-Profil.
+- Tests: Testpersonen und Projektbezeichnungen sind erfunden; Node/Deno, SQL A/B in transaktionaler Einweg-Datenbank und Offline-Chromium. CI-Ergebnis ist vor dem Merge anhand des finalen HEAD zu bestätigen.
+- Noch offen: echte Anmeldesitzung und End-to-End-Überprüfung der Erinnerung, Besuch im Browser und Abnahme durch Claude.
+- Risiko / gewählte Option: Vergessen invalidiert persönliche Erinnerungen mit Provenienz statt destruktiver Löschung; ältere Chat-Historie bleibt unangetastet.
+- PR: Phase-4-Branch auf Phase 3, nicht gemergt.
+
 ### 2026-11-08 · Romy = Isabella · fase 3: chat común y Chromium · ChatGPT
 - Qué cambió y por qué: el chat de Office usa el cliente de Window y respuestas canónicas del motor Office, sin mezclar identidades. El chat heredado queda accesible únicamente mediante elección manual.
 - Archivos: `app/office-engine-chat.js`, `app/index.html`, `app/ai.js` y otros cinco módulos compartidos, `docs/sync-window-app-manifest.json`, `tests/office-app.test.mjs`, `tests/browser/romy-chat.chromium.mjs`, workflow de Chromium y documentación.
