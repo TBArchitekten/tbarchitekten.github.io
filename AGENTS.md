@@ -27,3 +27,6 @@ Si trabajas sin acceso al repositorio (un chat normal), termina dándole a Gari 
 - La interfaz de la oficina está en **alemán** y las fechas en formato `de-DE`.
 - Si cambias un JS o CSS, sube su `?v=` en el HTML que lo carga. GitHub Pages guarda en caché.
 - Cambios en `main` = publicados en ~1 minuto. Trabaja en una rama y abre un PR.
+
+## Phase 6 · Romy Live und Office-MCP (08.11.2026)
+Die echte Live-WebRTC-Sitzung verwendet ausschließlich den JWT des angemeldeten Office-Mitglieds, prüft aktive Mitgliedschaft und abgeschlossenes Startpasswort und bleibt an den serverseitigen Office-Profilvertrag gebunden. Browser-Sprachausgaben sind keine bestätigten Assistentenantworten und dürfen keine Aktionen oder Faktenbehauptungen legitimieren. Der offizielle Chat ist der einzige Weg für bestätigte Aufträge und Belege. `office-mcp` führt Projektakte-Lesezugriffe nur für explizite Projektteammitglieder aus, Diagnosen ausschließlich für den angemeldeten Besitzer. Die Originalstimme von Isabella und iPhone-Office-Push bleiben deaktiviert. Diese Regeln dürfen bei späterer Synchronisierung nicht gelockert werden.
