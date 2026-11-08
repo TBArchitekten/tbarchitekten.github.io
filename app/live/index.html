@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Romy Live · TBA Office</title>
+<link rel="stylesheet" href="./live.css?v=romy6">
+</head>
+<body>
+<main class="live-shell">
+  <header class="live-header">
+    <a href="../" aria-label="Zum Romy-Chat zurückkehren">← Romy-Chat</a>
+    <span class="live-tag">LIVE · SPRACHMODUS</span>
+  </header>
+  <section class="live-main" aria-labelledby="live-title">
+    <h1 id="live-title">Romy</h1>
+    <p class="live-subtitle">Sprachgespräch · GPT-Live</p>
+    <div class="live-wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <p id="liveStatus" class="live-status" role="status" aria-live="polite">Bereit für ein Sprachgespräch.</p>
+    <p id="livePlayback" class="live-playback" role="status" aria-live="polite">Die Lautsprecherwiedergabe startet nach dem Empfang. Falls nötig, Lautsprecher manuell aktivieren.</p>
+    <audio id="liveAudio" class="live-audio" autoplay playsinline controls aria-label="Audioausgabe von Romy"></audio>
+    <button id="liveUnlock" class="live-unlock hidden" type="button">Lautsprecher aktivieren</button>
+    <div class="live-captions" aria-label="Vorläufige Spracherkennung">
+      <div><span>Du</span><p id="liveInput">—</p>
+        <button id="liveConsult" class="live-consult hidden" type="button">Romy fragen</button>
+      </div>
+      <div><span>Romy</span><p id="liveOutput">—</p></div>
+    </div>
+    <section id="liveMindsReview" class="live-minds-review hidden" aria-label="Geprüfte Rückfrage an Romy">
+      <label for="liveMindsText">Prüfe, was Romy verstanden hat. Erst deine Freigabe sendet es an den Hauptchat.</label>
+      <textarea id="liveMindsText" rows="2" maxlength="2000" placeholder="Text prüfen oder korrigieren"></textarea>
+      <div class="live-minds-actions">
+        <button id="liveMindsSend" type="button">Romy fragen</button>
+        <button id="liveMindsDismiss" type="button">Abbrechen</button>
+      </div>
+      <p id="liveMindsStatus" role="status" aria-live="polite">Noch keine Anfrage gesendet.</p>
+      <p id="liveMindsAnswer" class="hidden" aria-live="polite"></p>
+      <a id="liveMindsChat" class="hidden" href="../">Zum Chat, um das Ergebnis zu prüfen</a>
+    </section>
+  </section>
+  <footer class="live-footer">
+    <div class="live-voice-picker">
+      <label for="liveVoice">Stimme von Romy</label>
+      <select id="liveVoice" name="voice" aria-describedby="liveVoiceHint">
+        <option value="nuri" selected>Nuri</option>
+        <option value="brise">Brise</option>
+        <option value="juni">Juni</option>
+        <option value="flitz">Flitz</option>
+        <option value="marin">Marin</option>
+        <option value="cedar">Cedar</option>
+        <option value="sage">Sage</option>
+      </select>
+      <p id="liveVoiceHint">Wähle vor Beginn eine vorhandene Stimme. Die persönliche Originalstimme von Isabella ist im Office nicht verfügbar.</p>
+      <p id="liveOriginalNote" class="hidden"></p>
+    </div>
+    <label><input type="checkbox" id="liveManualReview" checked> Transkript vor der Übergabe an den Hauptchat prüfen</label>
+    <div class="live-actions">
+      <button id="liveStart" type="button" class="primary">Gespräch starten</button>
+      <button id="liveStop" type="button" class="secondary" disabled>Beenden</button>
+    </div>
+    <p class="live-disclaimer">Romy speichert deine bestätigten Sprachtranskripte in deinem eigenen Office-Chat. Ausgaben der Sprach-KI sind kein verifiziertes Ergebnis. Aktionen und Vorschläge werden im Hauptchat geprüft. Die Audioverbindung ist auf 90 Sekunden begrenzt.</p>
+  </footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
+<script src="../../office-config.js?v=1"></script>
+<script>window.APP_PROFILE="office";</script>
+<script src="../../shared/supabase-client.js?v=office3"></script>
+<script src="../turn-integrity.js?v=romy3"></script>
+<script src="./canonical.js?v=romy6"></script>
+<script src="./transcript.js?v=romy6"></script>
+<script src="./live.js?v=romy6"></script>
+</body>
+</html>
