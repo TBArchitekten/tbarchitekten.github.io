@@ -1,0 +1,28 @@
+name: Verify Romy chat in Chromium (offline)
+on:
+  push:
+    branches: ['romy-isabella/**']
+  pull_request:
+    branches: ['romy-isabella/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned browser test runner without scripts
+        run: npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Install isolated Chromium browser
+        run: npx playwright install --with-deps chromium
+      - name: Exercise real browser transport, receipts and per-member chat using synthetic doubles
+        env:
+          CI: 'true'
+        run: node --test tests/browser/romy-chat.chromium.mjs
