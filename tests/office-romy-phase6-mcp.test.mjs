@@ -82,6 +82,7 @@ test('Phase 6: OAuth identity and mandatory active membership precede MCP tools'
     assert.ok(src.includes('server.registerTool("'+t+'"'));
   assert.ok(src.indexOf('sb.auth.getUser(token)')<src.indexOf('createOfficeAkteTools({sb,userId:data.user.id'));
   assert.ok(src.indexOf('must_change_password')<src.indexOf('createOfficeAkteTools({sb,userId:data.user.id'));
-  assert.match(src,/office_project_members/);
+  const scope=readFileSync(new URL('../supabase/functions/office-mcp/office-akte.mjs',import.meta.url),'utf8');
+  assert.match(scope,/office_project_members/);
   assert.doesNotMatch(src,/Deno\.env\.get\("SUPABASE_SERVICE_ROLE_KEY"\)/);
 });
