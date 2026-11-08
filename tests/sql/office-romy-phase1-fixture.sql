@@ -73,6 +73,21 @@ create table public.isabella_tasks(
   created_at timestamptz not null default now(),
   unique(id,user_id)
 );
+-- Existing Office personal preferences are owner-private; recall functions read them.
+create table public.isabella_preferences(
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id),
+  preference_key text not null,
+  value jsonb not null default '{}'::jsonb,
+  status text not null default 'confirmed',
+  updated_at timestamptz not null default now(),
+  unique(user_id,preference_key)
+);
+alter table public.isabella_preferences enable row level security;
+grant select on public.isabella_preferences to authenticated;
+create policy fixture_prefs_owner on public.isabella_preferences
+for select to authenticated using (user_id=(select auth.uid()));
+
 create table public.minds_work_threads(
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id),
