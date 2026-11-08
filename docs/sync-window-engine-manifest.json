@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "ff0dda6873f5dfc3f2b2e2d8278a627691a64529",
+  "source_sha": "8c2a0095c5435745b6f9b79c67891c9be2c727ad",
   "mode": "engine",
   "files": [
     {
@@ -24,8 +24,8 @@
     {
       "source": "supabase/functions/_shared/assistant-profile.mjs",
       "target": "supabase/functions/_shared/assistant-profile.mjs",
-      "sha": "38c27ae028e9b701703a39e93d3496ae424df21f",
-      "bytes": 5525
+      "sha": "da848b53f24fb7e067840c066a56ab501f60b804",
+      "bytes": 6408
     },
     {
       "source": "supabase/functions/_shared/browser-continuation.mjs",
@@ -480,8 +480,8 @@
     {
       "source": "supabase/functions/isabella-chat/index.ts",
       "target": "supabase/functions/isabella-chat/index.ts",
-      "sha": "9a9797bd9b83cb2846e7c58c35b893d72eabc420",
-      "bytes": 344541
+      "sha": "f2c801a68cd71731a54079fff45b1929615cfabc",
+      "bytes": 344751
     },
     {
       "source": "supabase/functions/isabella-delivery-runner/index.ts",
@@ -498,8 +498,8 @@
     {
       "source": "supabase/functions/isabella-heartbeat/index.ts",
       "target": "supabase/functions/isabella-heartbeat/index.ts",
-      "sha": "82d579c13d575e4c9542e2c0047c43e9381805f1",
-      "bytes": 18609
+      "sha": "e8734eb29ca97e2c13042fa27fe944c3b4a67be1",
+      "bytes": 20313
     },
     {
       "source": "supabase/functions/isabella-live-session/index.ts",
@@ -522,14 +522,14 @@
     {
       "source": "supabase/functions/isabella-presence/index.ts",
       "target": "supabase/functions/isabella-presence/index.ts",
-      "sha": "5dc41ad87f3bb659436ea6bb60acfd4949b8d1f2",
-      "bytes": 2320
+      "sha": "01bf10e2530150aeb90750e728b80558168d2a09",
+      "bytes": 2552
     },
     {
       "source": "supabase/functions/isabella-routine-runner/index.ts",
       "target": "supabase/functions/isabella-routine-runner/index.ts",
-      "sha": "a6d859cf9c5f52cdfdf8e8bab1fbc7ca8d5d3d70",
-      "bytes": 21341
+      "sha": "7efee71280dba24a82701da47511c027960e6183",
+      "bytes": 21559
     },
     {
       "source": "supabase/functions/isabella-runtime-mcp/index.ts",
