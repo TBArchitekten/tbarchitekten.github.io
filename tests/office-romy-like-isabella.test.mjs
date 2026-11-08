@@ -117,7 +117,7 @@ test('5 · The work radar: Fristen of two weeks, own Threads, own overdue tasks,
   assert.equal(await romyRadar(fakeDb({}),'u',{today:'2026-11-08'}),null,'nothing to say: no note');
   assert.equal(radarNote(null),'');
   assert.equal(await romyRadar({from(){throw new Error('down')}},'u'),null);
-  assert.match(fn,/const notes=\[\.\.\.thread,radarNote\(radar\)\]\.filter\(Boolean\);/);
+  assert.match(fn,/const notes=\[\.\.\.thread\]\.filter\(Boolean\),radarText=radarNote\(radar\);/);
   assert.match(fn,/ROMY_INITIATIVE,\n\]\.join/);
   assert.match(fn,/\.select\("role,content,created_at,metadata"\)/);
 });
@@ -127,4 +127,11 @@ test('Work Threads show the same system lines and reopen after a review',()=>{
   assert.match(work,/if\(role==='assistant'&&m\.metadata\?\.author==='system'\)return `<article class="work-thread-message assistant is-event">/);
   assert.match(work,/if\(activeThreadId===thread\.id\)await renderThreadConversation\(thread\.id\);else void renderThreadProposals\(thread\);/);
   assert.match(read('app/app.css'),/\.work-thread-message\.assistant\.is-event\{/);
+});
+
+test('A light turn carries less: the last ten messages and no radar (08.11.2026)',()=>{
+  assert.match(fn,/const LIGHT_HISTORY=10;/);
+  assert.match(fn,/const light=complexity\.complexity==="light"&&!attachmentInputs\.length;/);
+  assert.match(fn,/apiInput\(light\?history\.slice\(-LIGHT_HISTORY\):history,message,attachmentInputs,light\?notes:\[\.\.\.notes,radar\]\.filter\(Boolean\)\)/);
+  assert.match(fn,/onDelta,notes,radar:radarText\}\);/);
 });

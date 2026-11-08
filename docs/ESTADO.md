@@ -29,6 +29,7 @@ Gari decidió pasar a Romy cinco puntos de Isabella (Window). Lo demás de Isabe
   - **Responsables:** `list_tasks` lleva `responsable`, con los nombres de la persona principal y del equipo de Work.
   - **Recibo tras confirmar:** al confirmar o descartar un vorschlag, el servidor escribe en la conversación «Bestätigt: …» o «Verworfen: …». Así Romy ya no dice que algo sigue pendiente de confirmar.
 - **Sin migraciones.** Función a desplegar: `office-assistant`.
+- **Turnos ligeros (después, el mismo día):** si el clasificador marca el turno como `light` y no hay adjuntos, lleva los últimos 10 mensajes y va sin radar. Romy no precarga proyectos, así que un mensaje corto ronda los 13k tokens.
 
 ## Revisión de Claude · 07.11.2026 (leer primero)
 Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, funciones, pruebas). Esta sección **corrige** datos de más abajo que quedaron viejos.
