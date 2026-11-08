@@ -92,6 +92,11 @@ create policy fixture_prefs_owner on public.isabella_preferences
 for select to authenticated using (user_id=(select auth.uid()));
 
 -- Existing Office calendar events are owner-specific and are not migrated anew.
+alter table public.isabella_tasks enable row level security;
+grant select on public.isabella_tasks to authenticated;
+create policy fixture_tasks_select on public.isabella_tasks for select to authenticated
+using (user_id=(select auth.uid()) or project_id is not null);
+
 create table public.isabella_events(
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id),
