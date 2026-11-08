@@ -19,7 +19,7 @@ test('Phase 0: Office documents incomplete acceptance and no deployment/migratio
   assert.match(state, /no hay cambios en producción/i);
   assert.match(journal, /fase 0 \(borrador, sin activación\)/i);
   assert.match(journal, /aplicada en Supabase: no/i);
-  assert.match(journal, /CI y aceptación de fase pendientes/i);
+  assert.match(journal, /CI Office 200\/200 tests PASS/i);
 });
 
 test('Phase 0: no replacement of the Office assistant runtime or credential configuration', () => {

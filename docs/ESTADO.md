@@ -7,7 +7,9 @@ La referencia es `gari01234/minds/docs/ROMY-MOTOR-ISABELLA-ENCARGO.md`. Sustituy
 
 **Seguridad y permisos:** los cambios personales requieren RLS por propietario; la Projektakte, RLS por proyecto. Ninguna prueba usa servicios reales. D1 permitirá crear directamente lo dictado con comprobación y Deshacer, pero D2 (modificar, completar o borrar sin confirmación) sigue prohibido. Nada de este trabajo se ha fusionado, desplegado ni aplicado a Supabase.
 
-**Pendiente:** completar la fase 0 y verificar tests, CI y equivalencia byte a byte de Window antes de comenzar las migraciones de fase 1. La pregunta abierta sobre el alcance de prompts de background se resuelve provisionalmente con exclusión de Office hasta que estén aislados, probados y configurados por persona.
+**Verificación automatizada (08.11.2026):** GitHub Actions «Verify Terminplan dependency audit» en la rama de fase 0: 200 pruebas, 200 superadas, 0 fallidas; comprobación de scripts del navegador PASS. Esta verificación no es aceptación funcional del motor ni autoriza comenzar fase 1.
+
+**Pendiente:** completar la fase 0 y verificar los prompts de background, todo el chat en alemán y la equivalencia byte a byte de Window; las migraciones de fase 1 todavía no se han iniciado. La pregunta abierta sobre el alcance de prompts de background se resuelve provisionalmente con exclusión de Office hasta que estén aislados, probados y configurados por persona.
 
 ---
 

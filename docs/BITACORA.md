@@ -22,7 +22,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Archivos: AGENTS.md, docs/ESTADO.md, docs/BITACORA.md.
 - Base de datos: ninguna migración — aplicada en Supabase: no.
 - Deploy de funciones: ninguno; office-assistant sigue siendo el respaldo actual.
-- Cómo se probó: lectura de AGENTS, ESTADO y las entradas recientes de BITACORA; CI y aceptación de fase pendientes.
+- Cómo se probó: lectura de AGENTS, ESTADO y las entradas recientes de BITACORA; CI Office 200/200 tests PASS, comprobación de scripts del navegador PASS. No hay todavía aceptación funcional completa de la fase.
 - Quedó pendiente o sin probar: procesos nocturnos, localización integral del chat, prueba byte a byte de Window, CI de ambos repositorios y PRs de las fases 1–6.
 - Riesgos o decisiones que necesitan a Gari: el runtime Office no se puede activar con prompts de background aún no adaptados; opción prudente: dejar esas rutas desconectadas hasta verificar aislamiento.
 - PR: rama romy-isabella/phase-0-office-contract (borrador).
