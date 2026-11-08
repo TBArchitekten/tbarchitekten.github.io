@@ -35,12 +35,12 @@ jobs:
           const fs = require('node:fs');
           // Print only synthetically safe, redacted failure classifications; never the
           // startup response, which contains credentials for the local sandbox.
-          const lines=fs.readFileSync('/tmp/office-local-start.log','utf8').split(/\\r?\\n/);
-          for(const raw of lines.filter(x=>/\\b(ERROR|failed|not found|does not exist|syntax error|Error:)\\b/i.test(x)).slice(-12)){
-            const safe=raw.replace(/(?:https?:\\/\\/|postgres(?:ql)?:\\/\\/)\\S+/gi,'[url]')
-              .replace(/\\b(?:eyJ|sk-|sb_secret_|sb_publishable_)[A-Za-z0-9._-]+/g,'[redacted]')
+          const lines=fs.readFileSync('/tmp/office-local-start.log','utf8').split(/\r?\n/);
+          for(const raw of lines.filter(x=>/\b(ERROR|failed|not found|does not exist|syntax error|Error:)\b/i.test(x)).slice(-12)){
+            const safe=raw.replace(/(?:https?:\/\/|postgres(?:ql)?:\/\/)\S+/gi,'[url]')
+              .replace(/\b(?:eyJ|sk-|sb_secret_|sb_publishable_)[A-Za-z0-9._-]+/g,'[redacted]')
               .replace(/[A-Za-z0-9._-]{40,}/g,'[redacted]')
-              .replace(/(['"])([^'"]*)\\1/g,(whole,q,value)=>/^[a-z_][a-z0-9_]*$/i.test(value)?whole:q+'[redacted]'+q)
+              .replace(/(['"])([^'"]*)\1/g,(whole,q,value)=>/^[a-z_][a-z0-9_]*$/i.test(value)?whole:q+'[redacted]'+q)
               .slice(0,220);
             console.log('Local schema startup diagnosis: '+safe);
           }
