@@ -51,6 +51,9 @@ jobs:
               echo "::error::Unknown function: $f"; exit 1
             fi
           done
+      - name: Pin the Office assistant profile
+        # The shared engine defaults to Window; in Office it must always run as Romy (not a secret).
+        run: supabase secrets set ASSISTANT_PROFILE=office --project-ref "$PROJECT_REF"
       - name: Deploy
         run: |
           set -f
@@ -62,11 +65,15 @@ jobs:
             echo "::endgroup::"
           done
       - name: Check the deployed functions still ask for sign-in
+        # verify_jwt functions must answer 401; the runners (verify_jwt = false) check their own secret
+        # and must refuse an anonymous call with a 4xx. A 2xx or 5xx (boot error) fails the run.
         run: |
           set -f
           for f in $FUNCTIONS; do
             [ "$f" = "office-romy-mission-runner" ] && continue
             code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "https://$PROJECT_REF.supabase.co/functions/v1/$f" -H 'Content-Type: application/json' -d '{}')
             echo "$f → HTTP $code"
-            if [ "$code" != "401" ]; then echo "::error::$f answered $code without sign-in (expected 401)"; exit 1; fi
+            if awk -v f="[functions.$f]" '$0==f{s=1;next} /^\[/{s=0} s&&/^verify_jwt = false/{found=1} END{exit !found}' supabase/config.toml; then
+              case "$code" in 4??) ;; *) echo "::error::$f answered $code to an anonymous call (expected 4xx)"; exit 1;; esac
+            elif [ "$code" != "401" ]; then echo "::error::$f answered $code without sign-in (expected 401)"; exit 1; fi
           done
