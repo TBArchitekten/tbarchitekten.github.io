@@ -9,7 +9,7 @@ const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z0-9-]+\.js)\?v=[^"]+">
 const src=f=>read('app/'+f);
 
 test('The app connects only to TBA Office, with the office sign-in',()=>{
-  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME=localStorage\.getItem\("tba_office_chat_backend"\)==="window"\?"window":"legacy";<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
+  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME=localStorage\.getItem\("tba_office_chat_backend"\)==="legacy"\?"legacy":"window";<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
   const client=read('shared/supabase-client.js');
   assert.match(client,/const office = window\.TBA_OFFICE_CONFIG;/);
   assert.match(client,/storageKey: office\.storageKey,/,'one session with the start page');
@@ -47,9 +47,9 @@ test('Office runs the shared Window chat under Office profile and isolates legac
   assert.ok(loaded.indexOf('office-fristen.js')<loaded.indexOf('app.js'));
   assert.ok(loaded.indexOf('ai.js')<loaded.indexOf('app.js'),'common AI initializes before canonical app');
   assert.ok(loaded.indexOf('office-engine-chat.js')>loaded.indexOf('app.js'));
-  // Until ASSISTANT_PROFILE=office is set and the engine is deployed (09.11.2026), the proven Office
-  // runtime stays the default; the shared engine is opt-in (localStorage tba_office_chat_backend=window).
-  assert.match(src('office-assistant.js'),/if\(window\.APP_CHAT_RUNTIME!==['"]legacy['"]\)return/);
+  // Since 09.11.2026 the shared engine (ASSISTANT_PROFILE=office) is the default; the former runtime
+  // stays as an explicit fallback (localStorage tba_office_chat_backend=legacy).
+  assert.match(src('office-assistant.js'),/if\(window\.APP_CHAT_RUNTIME!==['"]legacy['"]\)return/,'old runtime only via explicit choice');
   assert.match(src('office-engine-chat.js'),/if\(window\.APP_PROFILE!==['"]office['"]\|\|window\.APP_CHAT_RUNTIME===['"]legacy['"]\)return/);
   const shell=src('shell.js');
   for(const nav of ['bandeja','readings','thoughts'])
