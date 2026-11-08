@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Validación de fase 0 · ChatGPT
+- Qué cambió y por qué: se comprobó el perfil de servidor de Office por usuario, el diccionario alemán compartido y el orden explícito de inicialización en la PWA. Una prueba de carga se corrigió para aceptar nombres de módulos con dígitos sin perder la aserción de dependencia.
+- Archivos: app/assistant-i18n.js, app/index.html, tests/office-app.test.mjs, docs/ESTADO.md y docs/BITACORA.md; la implementación del perfil reside en el PR de fase 0 de minds.
+- Base de datos: ninguna migración — aplicada en Supabase: no.
+- Deploy de funciones: ninguno; office-assistant sigue siendo el respaldo actual.
+- Cómo se probó: CI de Office y de minds correctas. En minds, 1211 tests aprobados y Deno check correcto, con `promptComponentSizes()` en fixture sintético.
+- Quedó pendiente o sin probar: compatibilidad SQL y datos multiusuario de fase 1, sincronización, runtime, PWA y aceptación operativa de Office de fases 2–6.
+- Riesgos o decisiones que necesitan a Gari: procesos proactivos de Office sin activar hasta confirmar aislamiento por miembro; sin push móvil para Office.
+- PR: #56 (Office) y #318 (minds), sin fusionar.
+
 ### 2026-11-08 · Romy = Isabella · fase 0 (borrador, sin activación) · ChatGPT
 - Qué cambió y por qué: se alinea la regla D1/D2 de AGENTS.md con el encargo del 08.11. Se documenta el estado de la preparación de perfil en el repositorio minds. La fase 0 no está aceptada ni activada.
 - Archivos: AGENTS.md, docs/ESTADO.md, docs/BITACORA.md.
