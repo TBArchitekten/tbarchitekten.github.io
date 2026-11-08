@@ -1,8 +1,8 @@
 # TBA Office · Estado actual
 
-**Stand 09.11.2026 · Claude · Romy = Isabella: cadena #56–#62 fusionada y 22 migraciones aplicadas. Falta un paso de Gari para desplegar el motor.**
+**Stand 09.11.2026 · Claude · Romy = Isabella activo: motor desplegado con `ASSISTANT_PROFILE=office` (puesto por Gari en el panel), runners programados, chat de Office en el motor nuevo. Responsables de tareas se guardan otra vez.**
 
-**Falta (Gari, un minuto):** en Supabase TBA Office → Edge Functions → Secrets, añadir `ASSISTANT_PROFILE` = `office`. El token de GitHub de Office no puede escribir secretos ni migraciones; sin ese valor el motor correría como Isabella de Window, así que `deploy-functions.yml` se niega a desplegar funciones del motor. Después: ejecutar el deploy con la casilla `profile_set_in_dashboard` y la lista de funciones de abajo. Mientras tanto, el chat de Office usa el runtime de Romy probado (`office-assistant`); el motor nuevo se prueba con `localStorage.tba_office_chat_backend = "window"` y pasa a ser el predeterminado cuando esté desplegado. Mejor aún: dar al token los permisos `secrets_write` y `database_migrations_write`.
+El runtime anterior (`office-assistant`) sigue como respaldo explícito: `localStorage.tba_office_chat_backend = "legacy"`. El token de GitHub de Office sigue sin permisos de secretos ni de migraciones: los deploys del motor se lanzan con la casilla `profile_set_in_dashboard`, y las migraciones nuevas se aplican desde la base (archivo fijado al commit y SHA-256 comprobado) hasta que el token tenga `database_migrations_write`. pg_cron no arrancó los jobs nuevos hasta un `cron.alter_job(..., active := true)`; desde las 23:42 UTC corren cada minuto y los runners responden 200.
 
 ## Romy = Isabella · revisión y publicación
 
