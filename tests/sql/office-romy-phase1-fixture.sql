@@ -30,6 +30,15 @@ create table public.office_members(
   must_change_password boolean not null default false,
   created_at timestamptz default now(), updated_at timestamptz default now()
 );
+-- Office already exposes this invoker compatibility view over member records.
+create or replace view public.isabella_people with (security_invoker=true) as
+  select m.user_id as id,m.user_id,m.display_name as name,
+    null::text as relationship,null::date as birthday,
+    jsonb_build_object('role',m.role) as metadata,
+    m.created_at,m.updated_at,m.user_id::text as client_key
+  from public.office_members m where m.is_active;
+grant select on public.isabella_people to authenticated;
+
 create or replace function private.office_is_member()
 returns boolean language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.office_members m
