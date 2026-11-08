@@ -226,12 +226,17 @@ $test$;
 -- but not A's personal conversation or any Akte of project Q.
 select set_config('request.jwt.claim.sub','55555555-5555-4555-8555-555555555555',true);
 do $team$
+declare snapshot jsonb;
 begin
   if (select count(*) from public.minds_work_claims where statement like 'Synthetic%')<>1 then
     raise exception 'project teammate must read P regardless of claim author';
   end if;
   if (select count(*) from public.minds_work_files where name like 'fixture-%')<>1 then
     raise exception 'project teammate must read P files regardless of uploader';
+  end if;
+  snapshot:=public.minds_project_model_snapshot('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid);
+  if snapshot is null or not coalesce(snapshot->'claims' @> '[{"statement":"Synthetic project claim P"}]'::jsonb,false) then
+    raise exception 'project snapshot must include fellow member claim via Office team RLS';
   end if;
   if (select count(*) from public.conversation_messages where content like 'Synthetic%')<>0 then
     raise exception 'project teammate may not read A or B personal chat';
@@ -249,6 +254,11 @@ begin
   if (select count(*) from public.minds_work_claims where statement like 'Synthetic%')<>0 then
     raise exception 'admin must not read unassigned Akte';
   end if;
+  begin
+    perform public.minds_project_model_snapshot('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid);
+    raise exception 'admin must not obtain an unassigned project snapshot';
+  exception when sqlstate 'P0002' then null;
+  end;
 end
 $test$;
 
