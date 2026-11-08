@@ -2372,7 +2372,7 @@ async function syncDurableChatJobs(){
 async function handle(text,attachments=[],replyTo=null){
   // Reuse Window's composer and message renderer. Office has its own authenticated
   // conversation service; never invoke Isabella's runtime, proposals or local fallback.
-  if(OFFICE){
+  if(OFFICE&&window.APP_CHAT_RUNTIME==='legacy'){
     clearReplyTarget();
     if(!window.TBA_OFFICE_ASSISTANT?.send)return;
     await window.TBA_OFFICE_ASSISTANT.send(text,{attachments,replyTo});
@@ -2472,7 +2472,11 @@ async function handle(text,attachments=[],replyTo=null){
     }:{}});
     void syncDurableChatJobs();
   }
-  finally{clearAssistantStream();setChatActivity('');orb();setWorking($('#sendButton'),false)}
+  finally{
+    clearAssistantStream();setChatActivity('');orb();setWorking($('#sendButton'),false);
+    if(OFFICE&&window.APP_CHAT_RUNTIME!=='legacy')
+      void window.TBA_OFFICE_ENGINE_CHAT?.reconcile?.();
+  }
 }
 let pendingChatFiles=[];
 const pendingChatUrls=new Map();
