@@ -1,5 +1,17 @@
 # TBA Office · Estado actual
 
+**Actualizado:** 08.11.2026 · ChatGPT: fase 3, chat canónico compartido preparado en rama, sin producción.
+
+## Fase 3 · Chat de Window en Office (PR apilado, no desplegado)
+
+La PWA de Office carga los seis módulos de chat compartidos desde minds con procedencia y hashes registrados en `docs/sync-window-app-manifest.json`. La pestaña Romy pasa por `isabella-chat` de **Office**, `conversations` y `conversation_messages` propias bajo RLS. `office-engine-chat.js` muestra historial privado por usuario y reconcilia la respuesta canónica. La ruta anterior `office-assistant` sigue intacta, pero solo se utiliza si se selecciona expresamente como alternativa, nunca por fallo automático.
+
+Se sincronizó un ajuste de `ai.js` en el repo fuente para que el contexto de respuestas citadas diga Romy y el primer nombre del miembro Office, conservando el texto de Window literalmente cuando `APP_PROFILE=window`. El chat conserva SSE, lectura tras cerrar, propuestas tipadas, recibos D1 con Deshacer y líneas de sistema. No se convierten mensajes de otro usuario en propios ni se atribuyen avisos de app a Romy.
+
+**Pruebas:** suites Node y Deno heredadas, comparación de hashes exactos y una suite Chromium de navegador offline con SSE fragmentado, identidad A/B, propuesta/recibo de ejecución y destino Office. Esta última prueba verifica el transporte y el adaptador de datos mediante dobles; la prueba de la interfaz completa contra Office autenticado sigue pendiente para la revisión final. Ninguna prueba contacta con Supabase ni OpenAI reales.
+
+**Sin cambios en producción:** no hay merges, migraciones aplicadas, claves configuradas ni funciones desplegadas. Las conversaciones antiguas de Office se conservan; no se migran automáticamente al esquema nuevo.
+
 **Actualizado:** 08.11.2026 · ChatGPT: fase 2 (motor copiado, sin activación) preparada en rama apilada. Ningún merge, ninguna migración aplicada, ninguna función desplegada.
 
 ## Fase 2 · Motor Window bajo perfil Office (PR en preparación)
