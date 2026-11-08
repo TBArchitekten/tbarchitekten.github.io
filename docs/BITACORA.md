@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy = Isabella · fase 1 · aceptación estructural con RPC · ChatGPT
+- Qué cambió y por qué: se completó la compatibilidad estructural del motor con 90 tablas y RPCs auditadas; se activó RLS en todas las nuevas tablas y se verificaron denegaciones de acceso entre miembros/proyectos. Se añadió el contrato de rutinas/Watch con ejecución exclusivamente de worker y sin VAPID de Office.
+- Archivos: 16 migraciones `2026110820…`–`20261108212700`, workflows `.github/workflows/verify.yml` y `verify-romy-schema.yml`, pruebas SQL sintéticas, `docs/ESTADO.md` y este registro.
+- Base de datos: nuevas migraciones no destructivas — aplicada en Supabase: **no**.
+- Deploy de funciones: ninguno.
+- Cómo se probó: PostgreSQL 17 efímero y Supabase local; verificaciones SQL de propietario, equipo, administrador no miembro, inserción falsificada y permisos de RPC; Node tests y `pg_dump --schema-only` sin contenido. CI verde en los SHA previos; el SHA final debe verificarse antes de iniciar fase 2.
+- Quedó pendiente o sin probar: acceso de una persona real, herramientas del motor desplegadas, rendimiento, uso real de la Projektakte y cualquier integración de voz.
+- Riesgos o decisiones que necesitan revisión: los dominios de Window que no existen en Office quedan excluidos; `minds_store_vapid_pair_if_absent` no se copia; futuras migraciones de producción deben revisarse en orden por Claude.
+- PR: Office #57 / minds #319, ambos apilados y sin fusionar.
+
+
 ### 2026-11-08 · Romy = Isabella · fase 1, propuesta de esquema (no aplicada) · ChatGPT
 - Qué cambió y por qué: migraciones estructurales basadas exclusivamente en metadatos del esquema de Window; owner RLS personal y lectura por `office_project_members` en Projektakte; Storage privado y cron sin valores activos.
 - Archivos: seis migraciones `20261108200000` a `20261108205000`, `tests/sql/office-romy-phase1-acceptance.sql`, `.github/workflows/verify.yml`, `docs/ESTADO.md`, `docs/BITACORA.md`.
