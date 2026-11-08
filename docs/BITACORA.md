@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy = Isabella · fase 2, motor sincronizado sin activar · ChatGPT
+- Qué cambió y por qué: se copiaron desde minds `30451152a0a5` los 95 archivos del motor habilitado, todos verificados por SHA; se añadió sincronización reproducible y workflow que solo abre PR, perfil Office del motor y adaptador team-scoped de Terminpläne.
+- Archivos: `supabase/functions/_shared`, 20 Edge Functions de `supabase/functions`, `supabase/config.toml`, `scripts/sync-window.mjs`, `.github/workflows/sync-window-engine.yml`, `verify-romy-engine.yml`, tests, y manifiesto `docs/sync-window-engine-manifest.json`.
+- Base de datos: `20261108213000_office_window_direct_create_default_v1.sql` D1, con opt-out `review` preservado — aplicada en Supabase: no.
+- Deploy de funciones: ninguno. Se conservará `office-assistant` hasta aceptación.
+- Cómo se probó: 95 hashes de blob iguales; CI Offline Node 176/176; Deno check de 20 funciones; PG17 efímero con D1 y pruebas de aislamiento de dos personas.
+- Quedó pendiente o sin probar: Origin/OAuth/credenciales de runner, integración PWA común de chat y voz, rutinas, Proyectoakte y aceptación E2E. Los endpoints sin adaptaciones no se activan.
+- Riesgos o decisiones que necesitan revisión: Office no tendrá push iPhone; D1 sí, D2 no; las modificaciones de Terminplan deben seguir propuesta + confirmación.
+- PR: rama `romy-isabella/phase-2-engine-sync` apilada en fase 1, pendiente de revisión.
+
 ### 2026-11-08 · Romy = Isabella · fase 1 · aceptación estructural con RPC · ChatGPT
 - Qué cambió y por qué: se completó la compatibilidad estructural del motor con 90 tablas y RPCs auditadas; se activó RLS en todas las nuevas tablas y se verificaron denegaciones de acceso entre miembros/proyectos. Se añadió el contrato de rutinas/Watch con ejecución exclusivamente de worker y sin VAPID de Office.
 - Archivos: 16 migraciones `2026110820…`–`20261108212700`, workflows `.github/workflows/verify.yml` y `verify-romy-schema.yml`, pruebas SQL sintéticas, `docs/ESTADO.md` y este registro.
