@@ -1,5 +1,20 @@
 # TBA Office · Estado actual
 
+**Stand 08.11.2026 · ChatGPT · Phase 5: Projektakte ausschließlich auf Branch vorbereitet; keine Live-Änderungen.**
+
+## Phase 5 · Gemeinsame Projektakte, quellengestützte Vorschläge
+
+Die bereits in Phase 1 angelegten Window-kompatiblen Tabellen für Projektsteckbrief, Themen, Entscheidungen, Claims, Modell, Dokumentsegmente und Docling werden im selben Engine-Profil verwendet. Projektakten sind ausschließlich für aktive `office_project_members` des zugehörigen Projekts lesbar, auch eine nicht zugewiesene Administratorin erhält keinen impliziten Zugriff. Persönliche Threads bleiben privat.
+
+Die Quelle `gari01234/minds` hat die projektspezifische, deutschsprachige `Akte-Pflege` ergänzt. Ein nächtlicher Office-Workflow mit GitHub-OIDC soll nach späterem Review pro aktivem Projekt nur neu indexierte Dokumente lesen. Das Ergebnis sind ausschließlich `proposed`-Einträge mit wörtlichem Quellenzitat, Dokumentversion und `requires_human_review`, keine still bestätigten Entscheidungen. Der serverseitige Autor wird als `system` kenntlich gemacht, eine technische Mitglieds-ID ist keine Aussage über menschliche Autorenschaft. Pro Projekt existiert eine tägliche Claim-/Lease-Sperre.
+
+`isabella-work-ingest-runner` prüft vor jeder Office-Docling-Verarbeitung zusätzlich aktiven Projektstatus, Besitzer und aktuelle Teammitgliedschaft. Revozierte Mitglieder können keine Projektdateien über den Worker weiter verarbeiten. Kein Zugriff auf fremde private Chats und keine automatische Freigabe von Aufgaben.
+
+**Neue, nicht angewendete Migration:** `20261108215000_office_romy_akte_maintenance_state_v1.sql`. Die Quellcode-Manifeste pinnen 96 Engine-Dateien, einschließlich des neuen Zugriffswächters. Die isolierten Tests enthalten fiktionale Projekte und prüfen RLS, den täglichen Claim, fehlende Rechte und vorgeschlagene Quellzitate; Produktions-E2E ist ausdrücklich ausstehend.
+
+**Es wurde nichts gemergt, deployed oder auf dem echten Supabase-Schema ausgeführt.** Keine Zugangsdaten oder Kundendaten wurden übernommen. Offen: eine explizite System-Autor-Spalte statt technischer Mitglieds-ID und eine spätere produktive Abnahme mit rechtmäßig freigegebenen Quellen.
+
+
 **Stand: 08.11.2026 · ChatGPT · Phase 4 auf Branch (nicht live).** Romy nutzt für persönliche Kontinuität eine eigene Speicherung pro angemeldetem Office-Mitglied; keine Produktionseingriffe.
 
 ## Phase 4 · Persönliche Erinnerung und Präsenz (unveröffentlicht)
