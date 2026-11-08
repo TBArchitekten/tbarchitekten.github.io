@@ -1,9 +1,9 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 08.11.2026, por ChatGPT: inicio documental de la fase 0 de `Romy = Isabella`. No hay cambios en producción, migraciones ni despliegues.
+**Actualizado:** 08.11.2026, por ChatGPT: fase 0 de `Romy = Isabella` validada en CI; preparación únicamente en ramas, sin cambios en producción, migraciones ni despliegues.
 
 ## Encargo vigente · Romy = Isabella (08.11.2026)
-La referencia es `gari01234/minds/docs/ROMY-MOTOR-ISABELLA-ENCARGO.md`. Sustituye para este trabajo la decisión anterior que excluía lo personal de Romy: el nuevo objetivo incluye continuidad privada por persona y Projektakte compartida por equipo. La fase 0 permanece en **borrador no aceptado**: perfil y persona se preparan en una rama de minds; aún no hay sincronización de motor ni PWA, ni suite de aceptación completa. El runtime `office-assistant` permanece como respaldo y el despliegue activo de Office no cambia.
+La referencia es `gari01234/minds/docs/ROMY-MOTOR-ISABELLA-ENCARGO.md`. Sustituye para este trabajo la decisión anterior que excluía lo personal de Romy: el nuevo objetivo incluye continuidad privada por persona y Projektakte compartida por equipo. La fase 0 ha pasado las pruebas de perfil y la CI de los dos repositorios. Preparados el perfil de servidor por usuario, los prompts de background y el diccionario de chat; el motor y la PWA aún no están sincronizados ni activados en Office. El runtime `office-assistant` permanece como respaldo y el despliegue activo de Office no cambia.
 
 **Seguridad y permisos:** los cambios personales requieren RLS por propietario; la Projektakte, RLS por proyecto. Ninguna prueba usa servicios reales. D1 permitirá crear directamente lo dictado con comprobación y Deshacer, pero D2 (modificar, completar o borrar sin confirmación) sigue prohibido. Nada de este trabajo se ha fusionado, desplegado ni aplicado a Supabase.
 
