@@ -63,4 +63,4 @@ jobs:
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
-            -c "select case when exists(select 1 from public.conversations where id='44444444-4444-4444-8444-444444444441') then 1/0 else 1 end;"
+            -c "do \$\$ begin if exists(select 1 from public.conversations where id='44444444-4444-4444-8444-444444444441') then raise exception 'synthetic fixture survived rollback'; end if; end \$\$;"
