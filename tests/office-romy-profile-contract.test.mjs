@@ -12,14 +12,14 @@ test('Phase 0: D1 is explicit direct create with server receipt and bounded Undo
   assert.match(agents, /Toda tabla nueva lleva RLS/);
 });
 
-test('Phase 0: Office documents incomplete acceptance and no deployment/migration', () => {
+test('Phase 0: Office documents verified code acceptance without deployment/migration', () => {
   const state = read('docs/ESTADO.md');
   const journal = read('docs/BITACORA.md');
-  assert.match(state, /fase 0 permanece en \*\*borrador no aceptado\*\*/i);
+  assert.match(state, /fase 0 ha pasado las pruebas de perfil y la CI de los dos repositorios/i);
   assert.match(state, /no hay cambios en producción/i);
-  assert.match(journal, /fase 0 \(borrador, sin activación\)/i);
+  assert.match(journal, /Validación de fase 0/i);
   assert.match(journal, /aplicada en Supabase: no/i);
-  assert.match(journal, /CI Office 200\/200 tests PASS/i);
+  assert.match(journal, /CI de Office y de minds correctas/i);
 });
 
 test('Phase 0: no replacement of the Office assistant runtime or credential configuration', () => {
