@@ -23,6 +23,9 @@ BEGIN
       WHERE key IN ('heartbeat_runner','chat_runner','routine_runner','mission_runner','capability_runner','work_ingest_runner')
         AND length(value)>=32)<>6
     THEN RAISE EXCEPTION 'runner secrets were not generated'; END IF;
+  IF NOT (public.minds_continuity_terms('Fassade und Bauantrag für das Projekt') @> array['bauantrag','fassade']::text[])
+     OR 'projekt' = ANY(public.minds_continuity_terms('Fassade und Bauantrag für das Projekt'))
+    THEN RAISE EXCEPTION 'continuity terms helper missing or changed'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.isabella_runtime_secrets WHERE key='heartbeat_url' AND value LIKE 'https://%/functions/v1/isabella-heartbeat')
     THEN RAISE EXCEPTION 'heartbeat url missing'; END IF;
 END $runners$;

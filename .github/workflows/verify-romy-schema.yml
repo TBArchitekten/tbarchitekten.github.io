@@ -59,7 +59,8 @@ jobs:
             supabase/migrations/20261108215000_office_romy_akte_maintenance_state_v1.sql \
             supabase/migrations/20261108220000_office_window_engine_owner_writes_v1.sql \
             supabase/migrations/20261108221000_office_romy_append_notice_v1.sql \
-            supabase/migrations/20261108222000_office_romy_runner_schedule_v1.sql
+            supabase/migrations/20261108222000_office_romy_runner_schedule_v1.sql \
+            supabase/migrations/20261109001000_office_continuity_terms_v1.sql
           do
             psql -X -v ON_ERROR_STOP=1 -f "$file"
           done
