@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy: los turnos ligeros llevan menos · Claude
+- **Qué cambió y por qué:**
+  - En Window, un «¡Gracias!» costó ~370k caracteres porque se precargó un proyecto entero. Gari: «esto no puede pasar», también en Office.
+  - Romy no precarga proyectos: sus mensajes cortos rondan los 13k tokens, sobre todo instrucciones y herramientas, que la caché reutiliza.
+  - Aun así, un turno que el clasificador marca como `light` (sin adjuntos) ahora:
+    - lleva solo los últimos 10 mensajes, en lugar de 24;
+    - va sin el ARBEITSRADAR.
+- **Archivos:** `supabase/functions/office-assistant/index.ts` (`LIGHT_HISTORY`), test en `tests/office-romy-like-isabella.test.mjs`.
+- **Base de datos:** ninguna. **Deploy:** `office-assistant`.
+- **Cómo se probó:** 197 tests en verde; `deno check` sin errores nuevos (100 heredados).
+- **PR:** (este)
+
 ### 2026-11-08 · Romy como Isabella: sin silencios, avisos del sistema, streaming robusto, historial, radar · Claude
 - **Qué cambió y por qué:**
   - Gari pidió pasar a Romy cinco puntos de Isabella (Window). Lo personal no se pasa.

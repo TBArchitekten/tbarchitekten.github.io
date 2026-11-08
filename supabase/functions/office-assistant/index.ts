@@ -134,7 +134,10 @@ async function requestModel({apiKey,model,input,allowTools=true,onDelta=()=>{}})
   return completed;
  }finally{clearTimeout(timeout);}
 }
-async function runRomy({db,admin,uid,conversationId,requestId,history,message,attachmentInputs=[],apiKey,onDelta,notes=[]}){
+// A light turn («Danke», «verschieb das auf Mittwoch») carries less (08.11.2026, Gari: a «¡Gracias!» must
+// not cost like a project review): the last LIGHT_HISTORY messages and no work radar.
+const LIGHT_HISTORY=10;
+async function runRomy({db,admin,uid,conversationId,requestId,history,message,attachmentInputs=[],apiKey,onDelta,notes=[],radar=""}){
  // Use Window's server-authoritative capability contract on every browser turn.
  const contract=interactiveTurnContract({surface:"chat_browser",background:false,attachments:attachmentInputs.length});
  if(contract.tools!=="governed")throw new Error("capability_contract_failed");
@@ -143,7 +146,8 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
  const complexity=await routeRomyTurn({message,history,apiKey,
    model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||env.OPENAI_MODEL||"gpt-5.6-luna"});
  let route=chatTurnModel({complexity:complexity.complexity,depth:"normal",background:false,env});
- let prompt=apiInput(history,message,attachmentInputs,notes),text="",proposals=[],artifacts=[],skillTrace=[],sources=[],
+ const light=complexity.complexity==="light"&&!attachmentInputs.length;
+ let prompt=apiInput(light?history.slice(-LIGHT_HISTORY):history,message,attachmentInputs,light?notes:[...notes,radar].filter(Boolean)),text="",proposals=[],artifacts=[],skillTrace=[],sources=[],
    inTokens=complexity.input_tokens,outTokens=complexity.output_tokens;
  for(let round=0;round<5;round++){
   const payload=await requestModel({apiKey,model:route.model,input:prompt,onDelta,
@@ -337,9 +341,9 @@ Deno.serve(async req=>{
  }
  const process=async onDelta=>{
   const [thread,radar]=await Promise.all([threadNote(db,uid,conversation.id).catch(()=>[]),romyRadar(db,uid)]);
-  const notes=[...thread,radarNote(radar)].filter(Boolean);
+  const notes=[...thread].filter(Boolean),radarText=radarNote(radar);
   const result=await runRomy({db,admin,uid,conversationId:conversation.id,
-    requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta,notes});
+    requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta,notes,radar:radarText});
   if(!result.reply)throw new Error("ai_empty_response");
   await persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts,result.skill_trace,result.sources);
   await completeRequest(admin,uid,requestId,{
