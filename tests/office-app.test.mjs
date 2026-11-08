@@ -8,7 +8,7 @@ const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z-]+\.js)\?v=[^"]+"><\/
 const src=f=>read('app/'+f);
 
 test('The app connects only to TBA Office, with the office sign-in',()=>{
-  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
+  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
   const client=read('shared/supabase-client.js');
   assert.match(client,/const office = window\.TBA_OFFICE_CONFIG;/);
   assert.match(client,/storageKey: office\.storageKey,/,'one session with the start page');
