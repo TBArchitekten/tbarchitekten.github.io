@@ -9,6 +9,10 @@ on:
         description: 'Functions to deploy, separated by spaces (e.g. office-assistant office-terminplan-ai)'
         required: true
         default: 'office-assistant'
+      profile_set_in_dashboard:
+        description: 'ASSISTANT_PROFILE=office is already set in Supabase → Edge Functions → Secrets (only needed while the token cannot set secrets)'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -53,7 +57,16 @@ jobs:
           done
       - name: Pin the Office assistant profile
         # The shared engine defaults to Window; in Office it must always run as Romy (not a secret).
-        run: supabase secrets set ASSISTANT_PROFILE=office --project-ref "$PROJECT_REF"
+        # An engine function never goes out unless the profile is pinned here or confirmed as set.
+        env:
+          PROFILE_CONFIRMED: ${{ inputs.profile_set_in_dashboard }}
+        run: |
+          set -f
+          if ! echo " $FUNCTIONS " | grep -Eq ' (isabella-[a-z0-9-]+|window-akte-pflege) '; then echo "no engine function in this deploy"; exit 0; fi
+          if supabase secrets set ASSISTANT_PROFILE=office --project-ref "$PROJECT_REF" >/dev/null 2>&1; then echo "profile pinned"; exit 0; fi
+          if [ "$PROFILE_CONFIRMED" = "true" ]; then echo "::notice::The token cannot set secrets; relying on ASSISTANT_PROFILE=office set in the dashboard."; exit 0; fi
+          echo "::error::Could not set ASSISTANT_PROFILE=office (the token has no secrets permission). Set it in Supabase → Edge Functions → Secrets, then run again with 'profile_set_in_dashboard' checked."
+          exit 1
       - name: Deploy
         run: |
           set -f
