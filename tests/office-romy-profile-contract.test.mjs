@@ -9,7 +9,7 @@ test('Phase 0: D1 is explicit direct create with server receipt and bounded Undo
   assert.match(agents, /D1 \(08\.11\.2026\).*creación.*directamente.*autorización.*Deshacer/);
   assert.match(agents, /D2 sigue desactivado.*mover, completar, archivar o borrar.*propuesta \+ confirmación/);
   assert.match(agents, /No escribas aquí datos de clientes/);
-  assert.match(agents, /Todo.*tabla nueva lleva RLS/);
+  assert.match(agents, /Toda tabla nueva lleva RLS/);
 });
 
 test('Phase 0: Office documents incomplete acceptance and no deployment/migration', () => {
