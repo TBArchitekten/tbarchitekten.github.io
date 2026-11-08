@@ -45,7 +45,8 @@ jobs:
             supabase/migrations/20261108203000_office_window_engine_rls_v1.sql \
             supabase/migrations/20261108204000_office_window_engine_storage_v1.sql \
             supabase/migrations/20261108205000_office_window_engine_heartbeat_template_v1.sql \
-            supabase/migrations/20261108210500_office_window_engine_views_v1.sql
+            supabase/migrations/20261108210500_office_window_engine_views_v1.sql \
+            supabase/migrations/20261108211000_office_window_engine_rpc_read_v1.sql
           do
             psql -X -v ON_ERROR_STOP=1 -f "$file"
           done
