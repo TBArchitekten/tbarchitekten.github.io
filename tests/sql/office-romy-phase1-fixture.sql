@@ -80,6 +80,9 @@ create table public.isabella_preferences(
   preference_key text not null,
   value jsonb not null default '{}'::jsonb,
   status text not null default 'confirmed',
+  confidence numeric not null default 1,
+  evidence jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique(user_id,preference_key)
 );
