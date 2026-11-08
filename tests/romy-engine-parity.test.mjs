@@ -8,11 +8,11 @@ import {officeMilestonesFromPlans} from '../supabase/functions/_shared/office-te
 
 const path=p=>new URL('../'+p,import.meta.url);
 const read=p=>readFileSync(path(p),'utf8');
-test('Pinned Window engine is byte-identical to the 95 Git blobs in its committed manifest',()=>{
+test('Pinned Window engine is byte-identical to the 98 Git blobs in its committed manifest',()=>{
   const manifest=JSON.parse(read('docs/sync-window-engine-manifest.json'));
   assert.equal(manifest.source_repository,'gari01234/minds');
   assert.match(manifest.source_sha,/^[0-9a-f]{40}$/);
-  assert.equal(manifest.files.length,95);
+  assert.equal(manifest.files.length,98);
   for(const row of manifest.files){
     assert.ok(row.target.startsWith('supabase/functions/'));
     assert.equal(gitBlobHash(readFileSync(path(row.target))),row.sha,row.target+' diverged from its reviewed origin');
@@ -57,5 +57,21 @@ test('Office Terminplan is read-only and project-bounded, while D1 leaves review
   assert.ok(ENGINE_FUNCTIONS.has('isabella-chat'));
   for(const x of ['window-mcp','sofia-chat','isabella-push','isabella-ideas','isabella-feed','isabella-code-preparation']){
     assert.ok(!existsSync(path('supabase/functions/'+x+'/index.ts')),x+' must remain excluded from Office deployable tree');
+  }
+});
+
+test('Phases 3–6: shared Window browser modules match the pinned source Git blobs',()=>{
+  const manifest=JSON.parse(read('docs/sync-window-app-manifest.json'));
+  assert.equal(manifest.source_repository,'gari01234/minds');
+  assert.match(manifest.source_sha,/^[0-9a-f]{40}$/);
+  assert.equal(manifest.mode,'app');
+  assert.deepEqual(manifest.files.map(x=>x.target).sort(),[
+    'app/ai.js','app/assistant-i18n.js','app/chat-stream-recovery.js',
+    'app/final-round.js','app/live/canonical.js','app/live/live.css','app/live/live.js',
+    'app/live/transcript.js','app/office-personal.js','app/turn-integrity.js','app/voice-output.js'
+  ]);
+  for(const entry of manifest.files){
+    assert.equal(gitBlobHash(readFileSync(path(entry.target))),entry.sha,entry.target+' is not the same code as Window');
+    assert.equal(readFileSync(path(entry.target)).length,entry.bytes,entry.target+' byte count drift');
   }
 });

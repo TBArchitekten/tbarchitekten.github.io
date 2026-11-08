@@ -69,8 +69,9 @@ test('Functions deploy manually from the repo, like Window',()=>{
 
 test('Romy chat in German: no Isabella or Spanish in the send and voice flow',()=>{
   const app=read('app/app.js');
-  assert.match(app,/setChatActivity\('Sende an Romy …'\);orb\('thinking','Denke nach …'\)/);
-  assert.match(app,/setChatActivity\('Romy bereitet die Antwort vor …'\)/);
+  // Since the shared Window chat (08.11.2026) the German texts come from assistant-i18n (de).
+  assert.match(app,/setChatActivity\('Wird an Romy gesendet…'\);orb\('thinking','Romy denkt nach…'\)/);
+  assert.match(app,/setChatActivity\('Romy bereitet die Antwort vor…'\)/);
   for(const es of ["'Enviando a Isabella…'","'Escuchando…'","primary.textContent='Enviar'","Respuesta interrumpida"])
     assert.ok(!app.includes(es),es);
   assert.doesNotMatch(read('app/dashboard.js'),/ eventos</);

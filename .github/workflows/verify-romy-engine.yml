@@ -48,3 +48,5 @@ jobs:
             supabase/functions/isabella-transcribe/index.ts \
             supabase/functions/isabella-work-ingest-runner/index.ts \
             supabase/functions/window-akte-pflege/index.ts
+      - name: Type-check OAuth-scoped Office MCP connector
+        run: deno check supabase/functions/office-mcp/index.ts

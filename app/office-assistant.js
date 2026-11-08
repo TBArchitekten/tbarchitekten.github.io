@@ -3,6 +3,9 @@
 // renderer, navigation and modal to Office's per-employee Supabase history.
 (()=>{
 'use strict';
+// The reviewed common Window engine is the default; this file only runs as
+// an explicitly selected fallback. No automatic downgrade after errors.
+if(window.APP_CHAT_RUNTIME!=='legacy')return;
 const sb=window.MINDS_SUPABASE;
 const screen=document.getElementById('assistantScreen');
 const app=()=>window.ISABELLA_APP;
