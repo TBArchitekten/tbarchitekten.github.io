@@ -1,5 +1,19 @@
 # TBA Office · Estado actual
 
+**Stand 08.11.2026 · ChatGPT · Phase 6: Sprachmodus und Office-MCP im Review-Branch vorbereitet; keine Produktionsänderung.**
+
+## Phase 6 · Romy Live und OAuth-Projektakte
+
+Romy verwendet den synchronisierten GPT-Live-WebRTC-Client des Window-Motors. Die deutsche Office-Seite `app/live/index.html` lädt ausschließlich die Office-Supabase-Sitzung, das serverseitige Profil `ASSISTANT_PROFILE=office` muss vor der Freischaltung gesetzt werden. Ein diskreter Live-Zugang ergänzt das bestehende Diktiermikrofon, statt es zu ersetzen. Die vier gemeinsamen Live-Clientdateien sind bytegleich mit ihrem über Commit-SHA gepinnten minds-Ursprung; `scripts/sync-window.mjs` hält diese Zuordnung für künftige Sync-PRs fest.
+
+Die Live-Funktion akzeptiert nur gültige Office-JWTs von aktiven Mitgliedern mit abgeschlossener Erstpasswortänderung. Die Identität stammt aus `office_members`, nie aus dem Browser. Office kann weder Isabellas individuell erstellte Originalstimme verwenden noch eine ungeprüfte Sprachausgabe als kanonische Romy-Nachricht abspeichern. Sprachbasierte Aufträge werden vor jeder Aktion an `isabella-chat` mit dem üblichen Freigabe- und Belegverfahren übergeben.
+
+`office-mcp` verwendet weiterhin den OAuth-Login des Office-Projekts. Neue lesende Werkzeuge eröffnen Projektakte und Themenblatt, suchen nach seitenbezogenen Quellen und zeigen private, inhaltsfreie Turn-Diagnosen. Neben RLS wird die explizite Mitgliedschaft in `office_project_members` vor jedem Projektzugriff geprüft; eine nicht zugewiesene Admin-Rolle reicht nicht. Es gibt keine neue Schreibbefugnis für Akten-Claims.
+
+**Automatisierte Abnahme (synthetisch):** Window-/Office-Profiltests in minds, Deno-Typprüfung, Chrome/Chromium mit simuliertem SDP/WebRTC, OAuth/JWT-Doubles und Projekten ohne reale Personen. Die letzte verifizierte CI in Office am Stand der Code-Änderungen umfasste Synced Engine, Chromium und lokales PostgreSQL; nach Dokumentations-Commits ist der HEAD erneut zu prüfen. Die Einzeltests beweisen noch keine echte Sprachübertragung, keine OpenAI-Nutzung und kein Live-OAuth mit Mitarbeitern.
+
+**Betrieb:** kein Merge, kein Deploy, keine Produktionsmigration. Für Office benötigt die Freischaltung die Prüfung von `ASSISTANT_PROFILE`, `OPENAI_API_KEY`, Office-Supabase-Konfiguration und dem manuellen Deploy von `isabella-live-session` und `office-mcp`. Geplante Push-/Originalstimmen-Credentials gehören ausdrücklich nicht dazu. Fachliche Abnahme mit rechtmäßig freigegebenen Testdokumenten und realer Browser-/Gerätesitzung bleibt nach der Code-Review offen.
+
 **Stand 08.11.2026 · ChatGPT · Phase 5: Projektakte ausschließlich auf Branch vorbereitet; keine Live-Änderungen.**
 
 ## Phase 5 · Gemeinsame Projektakte, quellengestützte Vorschläge
