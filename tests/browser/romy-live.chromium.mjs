@@ -15,7 +15,12 @@ const makePage=async()=>{
   const html=readFileSync(source('live/index.html'),'utf8')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
     .replace(/<link[^>]*>/gi,'');
-  await page.setContent(html);
+  // A real HTTPS Office page is a secure context with crypto.randomUUID.
+  // Chromium about:blank is not; route a synthetic HTTPS document instead.
+  await page.route('https://office.fixture.invalid/app/live/',route=>route.fulfill({
+    status:200,contentType:'text/html',body:html
+  }));
+  await page.goto('https://office.fixture.invalid/app/live/');
   await page.evaluate(()=>{
     window.APP_PROFILE='office';
     window.MINDS_SUPABASE_CONFIG={url:'https://office.fixture.invalid',publishableKey:'fixture-publishable'};
