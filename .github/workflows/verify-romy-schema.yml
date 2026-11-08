@@ -42,6 +42,7 @@ jobs:
             supabase/migrations/20261108201000_office_window_engine_project_tables_v1.sql \
             supabase/migrations/20261108201500_office_window_engine_compat_unique_keys_v1.sql \
             supabase/migrations/20261108202000_office_window_engine_foreign_keys_v1.sql \
+            supabase/migrations/20261108202500_office_window_engine_views_v1.sql \
             supabase/migrations/20261108203000_office_window_engine_rls_v1.sql \
             supabase/migrations/20261108204000_office_window_engine_storage_v1.sql \
             supabase/migrations/20261108205000_office_window_engine_heartbeat_template_v1.sql \
