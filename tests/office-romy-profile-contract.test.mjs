@@ -16,7 +16,7 @@ test('Phase 0: Office documents verified code acceptance without deployment/migr
   const state = read('docs/ESTADO.md');
   const journal = read('docs/BITACORA.md');
   assert.match(state, /fase 0 ha pasado las pruebas de perfil y la CI de los dos repositorios/i);
-  assert.match(state, /no hay cambios en producción/i);
+  assert.match(state, /sin cambios en producción, migraciones ni despliegues/i);
   assert.match(journal, /Validación de fase 0/i);
   assert.match(journal, /aplicada en Supabase: no/i);
   assert.match(journal, /CI de Office y de minds correctas/i);
