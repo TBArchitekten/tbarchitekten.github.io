@@ -17,7 +17,7 @@ export const ENGINE_FUNCTIONS=new Set([
 ]);
 export const APP_SHARED_FILES=new Set([
   'ai.js','turn-integrity.js','chat-stream-recovery.js','final-round.js',
-  'voice-output.js','assistant-i18n.js'
+  'voice-output.js','assistant-i18n.js','office-personal.js'
 ]);
 const EXT=/\.(?:ts|mjs|js|json)$/i;
 export function selectWindowFiles(tree,mode='engine'){
