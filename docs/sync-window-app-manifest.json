@@ -1,0 +1,43 @@
+{
+  "source_repository": "gari01234/minds",
+  "source_sha": "e25b9c586a34731df4d3117f2473ec2852da10ad",
+  "mode": "app",
+  "files": [
+    {
+      "source": "apps/isabella/ai.js",
+      "target": "app/ai.js",
+      "sha": "00ecb0a3f988fa52e7b124ae0a017d94bbd30c25",
+      "bytes": 38228
+    },
+    {
+      "source": "apps/isabella/turn-integrity.js",
+      "target": "app/turn-integrity.js",
+      "sha": "78e7df59586672bbaae4c9bf19df720eb1b158f3",
+      "bytes": 9356
+    },
+    {
+      "source": "apps/isabella/chat-stream-recovery.js",
+      "target": "app/chat-stream-recovery.js",
+      "sha": "4c65e4a419f55df6b6541e77b9c82bb2757932c2",
+      "bytes": 1386
+    },
+    {
+      "source": "apps/isabella/final-round.js",
+      "target": "app/final-round.js",
+      "sha": "659ba5e63b71c3b74af3bea277224e7666b3bddc",
+      "bytes": 1588
+    },
+    {
+      "source": "apps/isabella/voice-output.js",
+      "target": "app/voice-output.js",
+      "sha": "9bf69f02fa7407b4e44b79eb195372fe36724b2b",
+      "bytes": 2466
+    },
+    {
+      "source": "apps/isabella/assistant-i18n.js",
+      "target": "app/assistant-i18n.js",
+      "sha": "c46f2358a31085d389da012e71f37dce397d39e8",
+      "bytes": 6888
+    }
+  ]
+}
