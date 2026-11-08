@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "3826ae7f89f01eca058764ae8f5807a2fc2eff96",
+  "source_sha": "8c2a0095c5435745b6f9b79c67891c9be2c727ad",
   "mode": "app",
   "files": [
     {
@@ -38,6 +38,12 @@
       "target": "app/assistant-i18n.js",
       "sha": "c46f2358a31085d389da012e71f37dce397d39e8",
       "bytes": 6888
+    },
+    {
+      "source": "apps/isabella/office-personal.js",
+      "target": "app/office-personal.js",
+      "sha": "7f629a115a2740a6dac9c66c32ec3ca9918601e3",
+      "bytes": 6925
     }
   ]
 }
