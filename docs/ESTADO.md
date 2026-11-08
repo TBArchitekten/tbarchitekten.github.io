@@ -6,11 +6,11 @@
 
 Romy corre con el motor de Isabella (`isabella-chat` y compañía, perfil `ASSISTANT_PROFILE=office`), sincronizado byte a byte desde `gari01234/minds` (`scripts/sync-window.mjs`, manifiestos en `docs/`). Mismo contrato de relación que Isabella; los nombres se adaptan al miembro (Gari→nombre del miembro, Isabella→Romy, Window→TBA Office) y habla el idioma en que le escriben.
 
-**Orden de migraciones** (con `apply-migration.yml`, una por una, tras el merge): las 19 de las fases en el orden de `verify-romy-schema.yml`, después `20261108220000_office_window_engine_owner_writes_v1.sql` y `20261108221000_office_romy_append_notice_v1.sql`.
+**Orden de migraciones** (con `apply-migration.yml`, una por una, tras el merge): las 19 de las fases en el orden de `verify-romy-schema.yml`, después `20261108220000_office_window_engine_owner_writes_v1.sql`, `20261108221000_office_romy_append_notice_v1.sql` y `20261108222000_office_romy_runner_schedule_v1.sql` (secretos aleatorios de los runners generados dentro de la base y pg_cron para chat-runner, rutinas, misiones, documentos generados y lectura de documentos; sin delivery-runner ni self-review en Office).
 
 **Funciones a desplegar** (`deploy-functions.yml`): `isabella-chat isabella-chat-runner isabella-delivery-runner isabella-heartbeat isabella-dream isabella-presence isabella-routine-runner isabella-mission-runner isabella-capability-runner isabella-capability-runtime isabella-artifact isabella-artifact-intake isabella-live-session isabella-transcribe isabella-work-ingest-runner window-akte-pflege office-mcp`.
 
-**Configuración:** secreto `ASSISTANT_PROFILE=office`; `isabella_runtime_secrets` con `heartbeat_url` y `heartbeat_runner` (valor aleatorio generado en SQL, nunca en el repo). Opcional: `DOCLING_SERVE_URL`/`DOCLING_SERVE_API_KEY` para leer documentos.
+**Configuración:** `ASSISTANT_PROFILE=office` lo fija `deploy-functions.yml` en cada deploy; los secretos de los runners y `heartbeat_url` los rellena la migración `…222000` (nunca en el repo). Opcional: `DOCLING_SERVE_URL`/`DOCLING_SERVE_API_KEY` para leer documentos.
 
 **Permisos:** el navegador y el motor escriben solo filas propias de un miembro activo; las de la Akte además exigen el equipo del proyecto. Solo de servidor: las respuestas de Romy, recibos, autoridad D1, claims de la Akte, grants y secretos. Los avisos de la app entran por `office_romy_append_notice` y quedan marcados como aviso del sistema.
 

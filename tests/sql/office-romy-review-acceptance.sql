@@ -17,6 +17,16 @@ VALUES ('3aaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','31111111-1111-4111-8111-11111111
 INSERT INTO public.isabella_return_queue(id,user_id,kind,title,reason,status)
 VALUES ('3bbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','32222222-2222-4222-8222-222222222222','conversation_thread','Beta','fixture','ready');
 
+DO $runners$
+BEGIN
+  IF (SELECT count(*) FROM public.isabella_runtime_secrets
+      WHERE key IN ('heartbeat_runner','chat_runner','routine_runner','mission_runner','capability_runner','work_ingest_runner')
+        AND length(value)>=32)<>6
+    THEN RAISE EXCEPTION 'runner secrets were not generated'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.isabella_runtime_secrets WHERE key='heartbeat_url' AND value LIKE 'https://%/functions/v1/isabella-heartbeat')
+    THEN RAISE EXCEPTION 'heartbeat url missing'; END IF;
+END $runners$;
+
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','31111111-1111-4111-8111-111111111111',true);
 DO $test$
