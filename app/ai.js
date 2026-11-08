@@ -1,0 +1,554 @@
+(()=>{'use strict';
+const sb=window.MINDS_SUPABASE;
+function dateISO(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`}
+function localTemporal(){
+  const d=new Date(),p=n=>String(n).padStart(2,'0'),h=d.getHours();
+  return {
+    current_local_datetime:`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(h)}:${p(d.getMinutes())}`,
+    current_local_time:`${p(h)}:${p(d.getMinutes())}`,
+    current_daypart:h<5?'night':h<12?'morning':h<18?'afternoon':h<22?'evening':'night'
+  };
+}
+// Edge Function failures carry a JSON body ({error,status,detail}). Read it so the chat
+// says what actually happened instead of a generic "non-2xx status code".
+async function functionErrorMessage(error){
+  let body=null;
+  try{const res=error?.context;if(res&&typeof res.clone==='function')body=await res.clone().json()}catch{}
+  if(!body||typeof body!=='object')return '';
+  const status=Number(body.status||0),detail=String(body.detail||body.message||'');
+  // Step 3a: the server's notice is also what stays in the conversation; show the same words.
+  if(body.error==='openai_error'&&body.message)return String(body.message);
+  if(body.error==='openai_error'&&status===429&&/credit|quota|billing/i.test(detail))
+    return 'No puedo responder ahora: la cuenta de OpenAI que uso se quedó sin créditos. En cuanto se recargue el saldo (platform.openai.com → Billing), vuelve a enviarme el mensaje.';
+  if(body.error==='openai_error'&&status===429)return 'OpenAI está limitando las solicitudes en este momento. Inténtalo de nuevo en un minuto.';
+  if(body.error==='openai_error')return 'El servicio de IA no respondió'+(status?' ('+status+')':'')+'. Inténtalo de nuevo en un momento.';
+  if(body.error==='another_chat_turn_in_progress')return String(body.message||'Estoy terminando la respuesta anterior. Espera un momento.');
+  return String(body.message||body.detail||body.error||'');
+}
+function compact(state){
+  const td=dateISO(),temporal=localTemporal();
+  const catName=id=>(state.categories||[]).find(x=>x.id===id)?.name||id||null;
+  const projectName=id=>(state.projects||[]).find(x=>x.id===id)?.name||id||null;
+  const todayEvents=(state.events||[]).filter(x=>x.date===td).map(x=>({id:x.id,title:x.title,date:x.date,start:x.start,duration_minutes:x.duration||60,category:catName(x.categoryId),project:projectName(x.projectId)}));
+  // Multi-day tasks (start_date <= today < due date) are part of today too, flagged as in progress.
+  const spansToday=x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x.startDate||''))&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.date||''))&&x.startDate<=td&&td<x.date;
+  const todayTasks=(state.tasks||[]).filter(x=>(x.date===td||spansToday(x))&&!x.done&&!x.archivedAt).sort((a,b)=>(Number(a.date!==td)-Number(b.date!==td))||(Number(a.sortOrder||0)-Number(b.sortOrder||0))).map(x=>({id:x.id,title:x.title,date:x.date,category:catName(x.categoryId),project:projectName(x.projectId),reminder_time:x.reminderTime||null,sort_order:Number(x.sortOrder||0),...(x.date!==td?{in_progress:true,start_date:x.startDate,due_date:x.date}:{})}));
+  const undatedTasks=(state.tasks||[]).filter(x=>!x.date&&!x.done&&!x.archivedAt).sort((a,b)=>(Number(a.sortOrder||0)-Number(b.sortOrder||0))).slice(0,30).map(x=>({id:x.id,title:x.title,category:catName(x.categoryId),project:projectName(x.projectId),sort_order:Number(x.sortOrder||0)}));
+  const upcoming=[
+    ...(state.events||[]).filter(x=>x.date>=td).slice(0,30).map(x=>({kind:'event',id:x.id,date:x.date,time:x.start,title:x.title,duration_minutes:x.duration||60,category:catName(x.categoryId),project:projectName(x.projectId)})),
+    ...(state.tasks||[]).filter(x=>x.date&&x.date>=td&&!x.done&&!x.archivedAt).sort((a,b)=>(a.date+String(Number(a.sortOrder||0)).padStart(6,'0')).localeCompare(b.date+String(Number(b.sortOrder||0)).padStart(6,'0'))).slice(0,30).map(x=>({kind:'task',id:x.id,date:x.date,title:x.title,category:catName(x.categoryId),project:projectName(x.projectId),reminder_time:x.reminderTime||null,sort_order:Number(x.sortOrder||0)}))
+  ].sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||''))).slice(0,30);
+  const recentLocal=(state.messages||[]).slice(-20).map(m=>({role:m.role==='assistant'?'assistant':'user',content:String(m.text||'').trim(),created_at:m.at||null,reply_to:m.replyTo?.id?{id:String(m.replyTo.id),role:m.replyTo.role==='assistant'?'assistant':'user',content:String(m.replyTo.text||'').trim()}:null})).filter(m=>m.content);
+  return {
+    routine_review_version:window.MINDS_ROUTINE_REVIEW_VERSION===1?1:0,
+    work_context:window.MINDS_WORK?.context?.()||null,
+    current_date:td,
+    ...temporal,
+    timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin',
+    today_events:todayEvents,
+    today_tasks:todayTasks,
+    undated_tasks:undatedTasks,
+    upcoming,
+    recent_local_conversation:recentLocal,
+    pending_intent:state.pendingIntent||null,
+    memories:(state.memory||[]).filter(m=>typeof m!=='object'||m.status!=='deleted').slice(-40).map(m=>typeof m==='object'?{kind:m.kind,content:m.content,confidence:m.confidence}:m),
+    taxonomy:{
+      categories:(state.categories||[]).map(x=>({name:x.name})),
+      projects:(state.projects||[]).map(x=>({name:x.name,category:catName(x.categoryId)}))
+    },
+    locale:navigator.language||'es-ES',
+    preferences:{
+      feed_instructions:String(state.feedPreferences?.instructions||'').trim(),
+      weather_location:String(state.feedPreferences?.weatherLocation||'').trim(),
+      assistant_behavior_rules:Array.isArray(state.assistantPreferences?.behaviorRules)?state.assistantPreferences.behaviorRules:[],
+      operating_rules:Array.isArray(window.ISABELLA_OPERATING_RULES)?window.ISABELLA_OPERATING_RULES.slice(0,12):[],
+      curiosity_enabled:state.assistantPreferences?.curiosityEnabled!==false
+    }
+  };
+}
+function fastCreateCandidate(message){
+  const t=String(message||'').trim().replace(/\s+/g,' ').toLowerCase();
+  if(!t||t.length>320||/[?¿]/.test(t))return false;
+  if(/\b(si|unless|excepto|salvo|depende|cuando tenga sentido|como antes|como hablamos|como dijimos|lo anterior|eso|esto|aquello|lo de)\b/i.test(t))return false;
+  if(/\b(y|además|también|also|und)\s+(agrega|añade|crea|pon|apunta|add|create|erstelle|füge)\b/i.test(t))return false;
+  return /\b(agrega|agregar|añade|añadir|crea|crear|pon|poner|apunta|apuntar|add|create|erstelle|hinzufügen|füge)\b/i.test(t);
+}
+function parseFastSse(buffer,onEvent){
+  let rest=buffer;
+  while(true){
+    const i=rest.indexOf('\n\n');if(i<0)break;
+    const block=rest.slice(0,i);rest=rest.slice(i+2);
+    const data=block.split('\n').filter(x=>x.startsWith('data:')).map(x=>x.slice(5).trim()).join('\n');
+    if(!data||data==='[DONE]')continue;
+    try{onEvent(JSON.parse(data))}catch{}
+  }
+  return rest;
+}
+async function askFastStream(message,state,options={}){
+  const {data:{session}}=await sb.auth.getSession();if(!session)return null;
+  const cfg=window.MINDS_SUPABASE_CONFIG;if(!cfg?.url||!cfg?.publishableKey)return null;
+  const clientRequestId=options.fastRequestId||globalThis.crypto?.randomUUID?.();
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      const response=await fetch(cfg.url+'/functions/v1/isabella-fast-stream',{
+        method:'POST',
+        headers:{apikey:cfg.publishableKey,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json',Accept:'text/event-stream'},
+        body:JSON.stringify({message:String(message),context:compact(state),permission_protocol:'contextual_v1',client_request_id:clientRequestId})
+      });
+      if(response.status===409)return null;
+      if(!response.ok||!response.body)throw new Error('fast_http_'+response.status);
+      const reader=response.body.getReader(),decoder=new TextDecoder();
+      let buffer='',result=null,fallback=false,streamError=null,streamedText='';
+      while(true){
+        const {done,value}=await reader.read();if(done)break;
+        buffer+=decoder.decode(value,{stream:true});
+        buffer=parseFastSse(buffer,event=>{
+          if(event?.type==='status')options.onProgress?.(event);
+          else if(event?.type==='text_delta'){streamedText+=String(event.delta||'');options.onTextDelta?.(String(event.delta||''),streamedText)}
+          else if(event?.type==='result')result={...event,streamed_text:streamedText};
+          else if(event?.type==='fallback')fallback=true;
+          else if(event?.type==='error')streamError=event.message||'fast_stream_error';
+        });
+      }
+      if(result)return result;
+      if(fallback){options.onTextReset?.();return null}
+      if(streamError)throw new Error(streamError);
+      throw new Error('fast_stream_incomplete');
+    }catch(e){
+      lastError=e;
+      options.onTextReset?.();
+      if(attempt===0){options.onProgress?.({type:'status',phase:'retry',label:'Reconectando…'});continue}
+    }
+  }
+  await window.ISABELLA_SYNC_PULL_NOW?.();
+  throw new Error('Perdí la conexión al guardar. Ya comprobé tu agenda; si no aparece la tarea, inténtalo de nuevo.');
+}
+function needsCalendarAssessment(message=''){
+  const t=String(message||'').toLocaleLowerCase('es');
+  return /(semana|week|woche|agenda|calendario|lunes|martes|mi[eé]rcoles|jueves|viernes|pr[oó]xim|siguiente)/i.test(t)
+    && /(qu[eé] tal pinta|c[oó]mo pinta|como pinta|qu[eé] tengo|que tengo|qu[eé] hay|que hay|viene|ocupad|cargad|hueco|conflict|organiza|planifica|disponib|libre|pendiente)/i.test(t);
+}
+/* Informational Chat uses durable background provider execution when the
+ * existing server route confirms that no tools or user approvals are involved.
+ * No transport error ever triggers an implicit second model invocation.
+ */
+async function askDurableChat(message,state,options,replyContext){
+  const requestId=String(options?.durableRequestId||"");
+  if(!requestId)return null;
+  const cfg=window.MINDS_SUPABASE_CONFIG;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session||!cfg?.url||!cfg?.publishableKey)return null;
+  const response=await fetch(cfg.url+'/functions/v1/isabella-chat',{
+    method:'POST',headers:{apikey:cfg.publishableKey,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},
+    body:JSON.stringify({message:String(message),context:{...compact(state),reply_context:replyContext},
+      background:false,attachments:[],stream:false,durable:true,surface:'chat_browser',client_message_id:requestId})
+  });
+  if(response.status===409)return null; // tool/approval path, nothing was launched
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(String(data?.message||data?.detail||'No pude confirmar que Isabella recibiera la solicitud.'));
+  if(data?.durable&&data.job_id)return {durable:true,durable_job_id:data.job_id,
+    durable_request_id:requestId,durable_status:data.status||'running'};
+  return null;
+}
+
+async function askDirectStream(message,state,options={},replyContext=''){
+  const {data:{session}}=await sb.auth.getSession();if(!session)return null;
+  const cfg=window.MINDS_SUPABASE_CONFIG;if(!cfg?.url||!cfg?.publishableKey)return null;
+  const streamRequestId=globalThis.crypto?.randomUUID?.()||null;
+  const response=await fetch(cfg.url+'/functions/v1/isabella-chat',{
+    method:'POST',
+    headers:{apikey:cfg.publishableKey,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json',Accept:'text/event-stream'},
+    body:JSON.stringify({
+      message:String(message),
+      context:{...compact(state),reply_context:replyContext},
+      background:false,attachments:[],stream:true,
+      work_thread_id:options.workThread?.id||null,
+      surface:'chat_browser',client_message_id:streamRequestId
+    })
+  });
+  if(response.status===409){options.onTextReset?.();return null}
+  if(!response.ok||!response.body)throw new Error('No pude iniciar la respuesta en streaming.');
+  const reader=response.body.getReader(),decoder=new TextDecoder();
+  let buffer='',result=null,streamError=null,streamedText='',transportError=null;
+  try{
+    while(true){
+      const {done,value}=await reader.read();if(done)break;
+      buffer+=decoder.decode(value,{stream:true});
+      buffer=parseFastSse(buffer,event=>{
+        if(event?.type==='status')options.onProgress?.(event);
+        else if(event?.type==='text_delta'){streamedText+=String(event.delta||'');options.onTextDelta?.(String(event.delta||''),streamedText)}
+        else if(event?.type==='result')result={...event,streamed_text:streamedText};
+        else if(event?.type==='error')streamError=event.message||'stream_error';
+      });
+    }
+  }catch(e){transportError=e}
+  if(result)return result;
+  options.onProgress?.({type:'status',phase:'recovering',label:'Comprobando la respuesta terminada…'});
+  const recovered=await window.MINDS_CHAT_STREAM_RECOVERY?.(streamRequestId);
+  if(recovered)return {...recovered,streamed_text:streamedText};
+  // No terminal result: do not retry the request implicitly.
+  if(streamedText.trim()){
+    options.onProgress?.({type:'status',phase:'incomplete',label:'La respuesta se interrumpió; el texto recibido quedará marcado como parcial.'});
+    return {reply:streamedText.trim(),streamed_text:streamedText,incomplete:true,incomplete_reason:streamError||String(transportError?.message||'missing_result_event')};
+  }
+  options.onTextReset?.();
+  throw new Error(String(streamError||transportError?.message||'missing_result_event'));
+}
+function messageMentionsKnownProject(message,state){
+  const hay=String(message||'').toLowerCase();
+  return (state?.projects||[]).some(p=>{
+    const name=String(p?.name||'').trim().toLowerCase();
+    return name&&name.length>2&&hay.includes(name);
+  });
+}
+
+function readOnlyDailyAgendaIntent(message=''){
+  const t=String(message||'').toLocaleLowerCase('es');
+  if(!/\b(mañana|manana|lunes|martes|mi[eé]rcoles|jueves|viernes|sábado|sabado|domingo)\b/i.test(t))return false;
+  if(!/(qu[eé] tengo|que tengo|qu[eé] hay|que hay|dame una lista|lista de lo que|rev[ií]salo bien|revisalo bien|tengo muchas tareas|tareas tengo|pendientes tengo)/i.test(t))return false;
+  return !/\b(agrega|añade|crea|mueve|cambia|borra|elimina|reprograma|reserva|env[ií]a|manda|agenda|programa|termina|completa)\b/i.test(t);
+}
+async function ask(message,state,options={}){
+  if(!sb)throw new Error('Supabase no está disponible.');
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session)throw new Error('Conecta la memoria de Isabella para activar la IA.');
+  const replyContext=options.replyTo?.text?`\nGari está respondiendo específicamente a este mensaje previo de ${options.replyTo.role==='assistant'?'Isabella':'Gari'}:\n“${String(options.replyTo.text).slice(0,1200)}”\nInterpreta su nuevo mensaje como respuesta a ese fragmento, no como un turno aislado.\n`:'';
+  const attachments=Array.isArray(options.attachments)?options.attachments.slice(0,3):[];
+  if(!options.continuation&&!options.workThread&&!options.background&&!attachments.length&&!options.replyTo&&!messageMentionsKnownProject(message,state)&&fastCreateCandidate(message)){
+    const {data:calendarMode,error:modeError}=typeof sb.from==='function'
+      ?await sb.from('minds_calendar_execution_preferences')
+        .select('create_mode').maybeSingle()
+      :{data:null,error:null};
+    if(modeError)throw modeError;
+    if(calendarMode?.create_mode!=='direct')try{
+      const fast=await askFastStream(message,state,{...options,fastRequestId:options.durableRequestId||options.fastRequestId});
+      if(fast)return fast;
+      options.onProgress?.({type:'status',phase:'fallback',label:'Revisando contexto…'});
+    }catch(e){
+      // The fast path already retries idempotently with one client request id and refreshes
+      // canonical state before surfacing an ambiguous transport failure. Never fall through
+      // to full Isabella as a fresh proposal.
+      options.onTextReset?.();throw e;
+    }
+  }
+  // P0 turn-capability contract: an unclassified conversational turn must
+  // retain access to the governed tools, proposals, and approval receipts.
+  // Durable text-only and direct text streaming lack those capabilities.
+  // Do not infer read-only intent from the absence of a known action phrase.
+  // They remain available to a future server-verified read-only contract,
+  // never as the browser's default for an ordinary conversation.
+  const body={message:String(message),context:{...compact(state),reply_context:replyContext},background:!!options.background,attachments:Array.isArray(options.attachments)?options.attachments.slice(0,3):[],work_thread_id:options.workThread?.id||null,surface:options.background?'background':'chat_browser',client_message_id:options.durableRequestId||null,
+    continuation:options.continuation||null};
+  const cfg=window.MINDS_SUPABASE_CONFIG;
+  if(!options.background&&body.client_message_id&&typeof window.ISABELLA_FINAL_ROUND?.ask==='function'&&cfg?.url&&cfg?.publishableKey){
+    const recover=async()=>{
+      for(let i=0;i<85;i++){
+        const {data,error}=await sb.from('minds_chat_stream_delivery_receipts').select('final_delivery')
+          .eq('request_id',body.client_message_id).maybeSingle();
+        if(error)return null;
+        if(data?.final_delivery?.terminal)return data.final_delivery.terminal.body;
+        await new Promise(resolve=>setTimeout(resolve,1400));
+      }
+      return null;
+    };
+    const send=()=>fetch(cfg.url+'/functions/v1/isabella-chat',{method:'POST',
+      headers:{apikey:cfg.publishableKey,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json',Accept:'text/event-stream'},
+      body:JSON.stringify({...body,stream_mode:'final_round'})});
+    let data=await window.ISABELLA_FINAL_ROUND.ask({send,recover,onDelta:options.onTextDelta,onReset:options.onTextReset});
+    if(data?.pending)data=await recover();
+    if(!data)throw new Error('No pude recuperar el resultado de este turno.');
+    if(data.error&&data.execution_started!==false)throw new Error(data.message||data.error);
+    if(!data.error)return data;
+    // The server explicitly declined before starting execution. Reuse the original request identity.
+  }
+  const {data,error}=await sb.functions.invoke('isabella-chat',{body});
+  if(error){
+    // Network/proxy transport failure does not imply the server stopped working.
+    // Recover the same completed read-only request by its owner-scoped receipt;
+    // NEVER re-submit the model or replay any action/proposal.
+    const transportFailure=error.name==='FunctionsFetchError'||error.name==='FunctionsRelayError';
+    if(transportFailure&&options.durableRequestId&&typeof window.MINDS_CHAT_STREAM_RECOVERY==='function'){
+      options.onProgress?.({type:'status',phase:'recovering',label:'Isabella está terminando. Recuperando la respuesta sin repetir la consulta…'});
+      const recovered=await window.MINDS_CHAT_STREAM_RECOVERY(options.durableRequestId,{attempts:85,intervalMs:1400});
+      if(recovered?.reply)return {...recovered,proposal:null,proposals:[],question:null,memory_candidates:[]};
+    }
+    const readable=await functionErrorMessage(error);
+    if(readable)throw new Error(readable);
+    throw error;
+  }
+  if(data?.error)throw new Error(data.message||data.detail||data.error);
+  return data||{reply:'Te escucho.',proposal:null,question:null,memory_candidates:[]};
+}
+
+async function brief(state){
+  return ask("Prepara mi briefing de la mañana. Incluye: 1) eventos y tareas pendientes de hoy, 2) pronóstico breve del clima usando la ubicación configurada si existe y sin inventar ubicación, y 3) como máximo tres observaciones situacionales derivadas de mi agenda, pendientes, proyectos y contexto que realmente merezcan atención. No incluyas noticias generales ni contenido por intereses. No propongas cambios ni crees tareas en este resumen.",state,{background:true});
+}
+async function nudge(state){
+  return ask("Evalúa si existe exactamente un seguimiento personal u operativo que valga la pena traerme ahora: algo pendiente, una respuesta esperada, una tarea que estoy dejando atrás, una cita cercana o algo significativo que te conté y que razonablemente merezca seguimiento. Revisa también los mensajes recientes: si Isabella ya recordó ese mismo evento, tarea o asunto recientemente, NO lo repitas aunque puedas reformularlo; un recordatorio por tema es suficiente salvo que exista un cambio material. Si no hay nada suficientemente útil, responde exactamente NO_NUDGE. Si sí lo hay, escribe solo un mensaje breve y natural, sin crear ni modificar nada.",state,{background:true});
+}
+async function curiosity(state){
+  return ask("Evalúa si falta UNA preferencia operativa concreta que de verdad mejoraría cómo Isabella ayuda al usuario. Antes de preguntar, revisa la conversación reciente, las reglas de comportamiento confirmadas y la memoria disponible; usa search_memory si existe una posibilidad razonable de que esa preferencia ya se haya hablado. No vuelvas a preguntar una preferencia ya respondida aunque no esté formulada como regla. No preguntes por categorías de contenido del Feed, noticias, arquitectura, arte, tecnología u ocio: el Feed ya está definido como situacional, personal y productivo, no como un feed de intereses. Tampoco reabras cómo proteger bloques de concentración si ya existe una preferencia sobre cuándo Isabella puede escribir. No preguntes por salud, religión, política, sexualidad, finanzas, contraseñas, ubicación exacta ni otros datos sensibles. Si no hay una pregunta nueva, claramente útil y todavía no resuelta, responde exactamente NO_QUESTION. Si sí la hay, escribe únicamente una pregunta breve y conversacional.",state,{background:true});
+}
+async function listSkills(){
+  if(!sb)return [];
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session)return [];
+  const [isabellaQ,isabellaUserQ,sofiaQ,sofiaUserQ]=await Promise.all([
+    sb.from('isabella_skills').select('slug,name,description,preferred_tools,version').eq('enabled',true).order('name',{ascending:true}),
+    sb.from('minds_user_skills').select('id,slug,name,description,instructions,preferred_tools,version,enabled').eq('agent','isabella').order('name',{ascending:true}),
+    sb.from('sofia_skills').select('slug,name,description,preferred_tools,version').eq('enabled',true).order('name',{ascending:true}),
+    sb.from('minds_user_skills').select('id,slug,name,description,instructions,preferred_tools,version,enabled').eq('agent','sofia').order('name',{ascending:true})
+  ]);
+  for(const q of [isabellaQ,isabellaUserQ,sofiaQ,sofiaUserQ])if(q.error)throw q.error;
+  const map=new Map();
+  for(const x of isabellaQ.data||[])map.set('isabella:'+x.slug,{...x,agent:'isabella',source:'system'});
+  for(const x of isabellaUserQ.data||[])map.set('isabella:'+x.slug,{...x,agent:'isabella',source:'personal'});
+  for(const x of sofiaQ.data||[])map.set('sofia:'+x.slug,{...x,agent:'sofia',source:'system'});
+  for(const x of sofiaUserQ.data||[])map.set('sofia:'+x.slug,{...x,agent:'sofia',source:'personal'});
+  return [...map.values()].sort((a,b)=>String(a.agent).localeCompare(String(b.agent))||String(a.name).localeCompare(String(b.name)));
+}
+function parseSurface(raw){
+  const text=String(raw||'').trim().replace(/^\s*```(?:json)?/i,'').replace(/```\s*$/i,'').trim();
+  try{const v=JSON.parse(text);return Array.isArray(v)?v:(Array.isArray(v?.items)?v.items:[])}catch{}
+  const a=text.indexOf('['),b=text.lastIndexOf(']');
+  if(a>=0&&b>a){try{const v=JSON.parse(text.slice(a,b+1));return Array.isArray(v)?v:[]}catch{}}
+  return [];
+}
+function feedPreferenceSignature(state){
+  const p=state.feedPreferences||{},stable=x=>[...(x||[])].sort((a,b)=>String(a?.id||a?.client_key||a?.name||'').localeCompare(String(b?.id||b?.client_key||b?.name||'')));
+  const raw=JSON.stringify({
+    date:new Date().toISOString().slice(0,10),
+    instructions:String(p.instructions||''),weatherLocation:String(p.weatherLocation||''),
+    events:stable(state.events).map(x=>({id:x.id||x.client_key,title:x.title,date:x.date,start:x.start,end:x.end,allDay:!!x.allDay,projectId:x.projectId||null})),
+    tasks:stable(state.tasks).filter(x=>!x.archivedAt).map(x=>({id:x.id||x.client_key,title:x.title,date:x.date||null,done:!!x.done,reminder:x.reminderTime||x.reminder_time||null,projectId:x.projectId||null})),
+    projects:stable(state.projects).map(x=>({id:x.id,name:x.name,categoryId:x.categoryId||null}))
+  });
+  let h=2166136261;for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
+  return 'feed11-'+(h>>>0).toString(16);
+}
+async function saveSurface(surface,agent,items){
+  if(!sb||!Array.isArray(items)||!items.length)return items||[];
+  const {data:{session}}=await sb.auth.getSession();if(!session)return items;
+  const generationId=globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(16).slice(2);
+  const rows=items.slice(0,12).map(x=>({
+    user_id:session.user.id,surface,agent,
+    title:String(x.title||'').trim()||'Idea',
+    body:String(x.body||'').trim(),
+    action_prompt:String(x.action_prompt||x.prompt||'').trim()||null,
+    icon:String(x.icon||'').trim()||null,
+    metadata:{
+      source:x.source||null,
+      section:String(x.section||(surface==='feed'?'now':'for_me')).toLowerCase(),
+      kind:String(x.kind||'').trim()||null,
+      surface_version:surface==='feed'?11:surface==='idea'?4:1,
+      preference_signature:String(x.preference_signature||x.metadata?.preference_signature||'').trim()||null,
+      generation_id:generationId,
+      details:Array.isArray(x.details)?x.details.slice(0,8):[],
+      entities:Array.isArray(x.entities)?x.entities.slice(0,4):[],
+      detail:String(x.detail||'').trim()||null,
+      image_url:/^https?:\/\//i.test(String(x.image_url||'').trim())?String(x.image_url).trim():null,
+      image_alt:String(x.image_alt||'').trim()||null,
+      weather_location:String(x.weather_location||'').trim()||null,
+      source_title:String(x.source_title||'').trim()||null,
+      source_url:/^https?:\/\//i.test(String(x.source_url||'').trim())?String(x.source_url).trim():null,
+      why:String(x.why||'').trim()||null,
+      deliverable:String(x.deliverable||x.metadata?.deliverable||'').trim()||null,
+      work_type:String(x.work_type||x.metadata?.work_type||'').trim()||null
+    },
+    lifecycle_state:'new',
+    expires_at:new Date(Date.now()+12*60*60*1000).toISOString()
+  }));
+  const {data,error}=await sb.from('minds_surface_items').insert(rows).select('*');
+  return error?items:(data||items);
+}
+async function loadSurface(surface,agent=null,options={}){
+  if(!sb)return [];
+  const {data:{session}}=await sb.auth.getSession();if(!session)return [];
+  let q=sb.from('minds_surface_items').select('*').eq('surface',surface).eq('status','active');
+  if(surface!=='feed'&&!options.allowStale)q=q.gt('expires_at',new Date().toISOString());
+  if(agent)q=q.eq('agent',agent);
+  const {data,error}=await q.order('generated_at',{ascending:false}).limit(40);if(error)return [];
+  const rows=data||[],generation=rows.find(x=>x?.metadata?.generation_id)?.metadata?.generation_id;
+  if(surface==='feed'){
+    const cutoff=Date.now()-24*60*60*1000;
+    return rows.filter(x=>{
+      if(generation&&x?.metadata?.generation_id===generation)return true;
+      const engaged=String(x?.lifecycle_state||'')==='seen'||String(x?.user_feedback||'')==='liked';
+      const generated=x?.generated_at?Date.parse(x.generated_at):0;
+      return engaged&&generated>=cutoff;
+    }).slice(0,16);
+  }
+  return generation?rows.filter(x=>x?.metadata?.generation_id===generation):rows;
+}
+async function startFeedRefresh(state,{force=false,currentItems=[]}={}){
+  if(!sb)return {accepted:false,skipped:true,generation_id:null};
+  const signature=feedPreferenceSignature(state);
+  const cached=await loadSurface('feed','isabella',{allowStale:true});
+  const newest=cached[0]?.generated_at?Date.parse(cached[0].generated_at):0;
+  const cacheMatches=cached.length&&cached.every(x=>Number(x?.metadata?.surface_version||0)>=11&&String(x?.metadata?.preference_signature||'')===signature);
+  if(!force&&cacheMatches&&newest&&Date.now()-newest<2*60*60*1000){
+    return {accepted:false,skipped:true,generation_id:cached[0]?.metadata?.generation_id||null,signature,items:cached};
+  }
+  const currentTitles=(currentItems||[]).map(x=>String(x?.title||'').trim()).filter(Boolean).slice(0,12);
+  const {data,error}=await sb.functions.invoke('isabella-feed',{body:{
+    context:compact(state),
+    current_titles:currentTitles,
+    force:!!force,
+    preference_signature:signature
+  }});
+  if(error||data?.error)throw new Error(data?.detail||data?.error||error?.message||'No pude iniciar la actualización del Feed.');
+  return {accepted:!!data?.accepted,skipped:false,generation_id:data?.generation_id||null,status:data?.status||'queued',signature,reused:!!data?.reused};
+}
+async function feedJobStatus(generationId){
+  if(!sb||!generationId)return null;
+  const {data,error}=await sb.from('minds_feed_jobs')
+    .select('generation_id,status,error,created_at,started_at,completed_at')
+    .eq('generation_id',generationId)
+    .maybeSingle();
+  if(error)return null;
+  return data||null;
+}
+async function waitForFeedRefresh(generationId,{timeoutMs=90000,intervalMs=1600}={}){
+  if(!generationId)return null;
+  const started=Date.now();
+  while(Date.now()-started<timeoutMs){
+    const job=await feedJobStatus(generationId);
+    if(job?.status==='succeeded'){
+      const rows=await loadSurface('feed','isabella',{allowStale:true});
+      return {status:'succeeded',items:rows,job};
+    }
+    if(job?.status==='failed')throw new Error(job.error||'No pude actualizar el Feed.');
+    await new Promise(r=>setTimeout(r,intervalMs));
+  }
+  return {status:'pending',items:await loadSurface('feed','isabella',{allowStale:true}),job:await feedJobStatus(generationId)};
+}
+async function feed(state,{force=false,currentItems=[]}={}){
+  const cached=await loadSurface('feed','isabella',{allowStale:true});
+  try{await startFeedRefresh(state,{force,currentItems})}catch{}
+  return cached;
+}
+async function startResearch(){
+  if(!sb)return {accepted:false,skipped:true};
+  const {data:{session}}=await sb.auth.getSession();if(!session)return {accepted:false,skipped:true};
+  const {data,error}=await sb.functions.invoke('isabella-research',{body:{}});
+  if(error)return {accepted:false,error:error.message||String(error)};
+  return data||{accepted:false};
+}
+async function loadResearchReady(){
+  if(!sb)return [];
+  const {data:{session}}=await sb.auth.getSession();if(!session)return [];
+  const {data,error}=await sb.from('isabella_research_queue')
+    .select('id,title,question,rationale,result,priority,completed_at')
+    .eq('status','ready')
+    .order('priority',{ascending:false})
+    .order('completed_at',{ascending:false})
+    .limit(4);
+  if(error)return [];
+  return (data||[]).map(r=>{
+    const summary=String(r?.result?.summary||'').trim();
+    const sources=Array.isArray(r?.result?.sources)?r.result.sources:[];
+    const first=sources[0]||{};
+    return {
+      id:'research:'+r.id,
+      research_id:r.id,
+      agent:'isabella',
+      section:'work',
+      kind:'research',
+      title:r.title,
+      body:summary.length>360?summary.slice(0,357)+'…':summary,
+      detail:summary,
+      why:String(r.rationale||'').trim(),
+      source_title:String(first.title||'').trim(),
+      source_url:String(first.url||'').trim(),
+      entities:[],
+      metadata:{section:'work',kind:'research',why:String(r.rationale||'').trim(),source_table:'isabella_research_queue',sources}
+    };
+  });
+}
+async function feedStory(item,state,question='',history=[]){
+  if(!sb)throw new Error('Supabase no está disponible.');
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Conecta la memoria para ampliar el Feed.');
+  const request=sb.functions.invoke('isabella-feed-story',{body:{item,context:compact(state),question:String(question||''),history:(history||[]).slice(-12)}});
+  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('La ampliación está tardando demasiado. Inténtalo de nuevo.')),45000));
+  const {data,error}=await Promise.race([request,timeout]);
+  if(error)throw error;
+  if(data?.error)throw new Error(data.detail||data.error);
+  return data||{reply:'',sources:[]};
+}
+async function createArtifact({kind,title,content='',instruction='',size='',quality='',workspaceId=null}={}){
+  if(!sb)throw new Error('Supabase no está disponible.');
+  const {data,error}=await sb.functions.invoke('isabella-artifact',{body:{kind,title,content,instruction,size,quality,workspace_id:workspaceId}});
+  if(error||data?.error)throw new Error(data?.detail||data?.error||error?.message||'No pude crear el artefacto.');
+  return data?.artifact||null;
+}
+async function ideaWork(workspace,message,history=[],state=null){
+  if(!sb)throw new Error('Supabase no está disponible.');
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Conecta la memoria para trabajar en esta idea.');
+  const {data,error}=await sb.functions.invoke('minds-idea-worker',{body:{
+    workspace:{id:workspace?.id,title:workspace?.title,brief:workspace?.brief,why:workspace?.why,artifact_title:workspace?.artifact_title,artifact_content:workspace?.artifact_content},
+    context:state?compact(state):{},
+    message:String(message||''),history:(history||[]).slice(-16)
+  }});
+  if(error){const readable=await functionErrorMessage(error);if(readable)throw new Error(readable);throw error}
+  if(data?.error)throw new Error(data.detail||data.error);
+  const result=data||{reply:'',artifact:null,sources:[]};
+  // A complete JSON answer that arrived as text is split into prose + draft before it is stored.
+  const parts=typeof ideaWorkerParts==='function'?ideaWorkerParts(result.reply):null;
+  if(parts&&parts.complete){
+    result.reply=String(parts.reply||'').trim()||'He avanzado el trabajo.';
+    if(!result.artifact&&parts.artifact)result.artifact={title:parts.artifact.title||workspace?.title||'Artefacto',format:'markdown',content:parts.artifact.content};
+  }
+  if(result?.file_request){
+    const req=result.file_request,kind=String(req.kind||''),content=(kind==='docx'||kind==='pdf')?String(result?.artifact?.content||workspace?.artifact_content||''):'';
+    result.generated_artifact=await createArtifact({kind,title:req.title||workspace?.title||'Artefacto',content,instruction:req.instruction||'',workspaceId:workspace?.id||null});
+  }
+  return result;
+}
+async function ideas(state,{force=false}={}){
+  if(!sb)return [];
+  if(!force){const cached=await loadSurface('idea','isabella');if(cached.length&&cached.every(x=>Number(x?.metadata?.surface_version||0)>=4))return cached}
+  const {data,error}=await sb.functions.invoke('isabella-ideas',{body:{context:compact(state),force:!!force}});
+  if(error||data?.error)throw new Error(data?.detail||data?.error||error?.message||'No pude generar Ideas.');
+  return saveSurface('idea','isabella',Array.isArray(data?.items)?data.items:[]);
+}
+async function sofiaSurface(kind,{force=false}={}){
+  if(!sb)return [];
+  if(!force){
+    const cached=await loadSurface(kind,'sofia');
+    if(cached.length)return cached;
+  }
+  const {data:{session}}=await sb.auth.getSession();if(!session)return [];
+  const request=kind==='idea'
+    ?'Analiza mis Readings, subrayados, notas e hilos activos y genera máximo 2 propuestas que puedan convertirse en trabajo real dentro de MINDS. No devuelvas meras conexiones interesantes: cada propuesta debe poder producir un artefacto concreto. Devuelve EXCLUSIVAMENTE JSON válido como array de {"kind":"idea","title":"...","body":"qué se propone desarrollar","deliverable":"artefacto concreto","work_type":"research|analysis|document|other","why":"por qué surge ahora","action_prompt":"","icon":""}. Si no hay una propuesta suficientemente fuerte, devuelve [].'
+    :'Genera como máximo 1 señal para mi Feed desde Readings, y solo si realmente merece reaparecer ahora: algo que haya quedado vivo, una pregunta abierta o una lectura/hilo que convenga retomar. Devuelve EXCLUSIVAMENTE JSON válido como array de {"section":"for_me","kind":"reading","title":"...","body":"...","action_prompt":"...","icon":"..."}. Si no hay una señal suficientemente fuerte, devuelve [].';
+  const {data,error}=await sb.functions.invoke('sofia-chat',{body:{message:request,background:true,structured:true}});
+  if(error)return [];
+  const items=Array.isArray(data?.structured)?data.structured:parseSurface(data?.reply);
+  return saveSurface(kind,'sofia',items);
+}
+
+async function transcribe(blob){
+  if(!sb)throw new Error('Supabase no está disponible.');
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session)throw new Error('Conecta la memoria de Isabella para usar voz multilingüe.');
+  const cfg=window.MINDS_SUPABASE_CONFIG;
+  if(!cfg?.url||!cfg?.publishableKey)throw new Error('Falta la configuración de Supabase.');
+  const form=new FormData();
+  const type=blob?.type||'audio/webm';
+  const ext=type.includes('mp4')||type.includes('m4a')?'m4a':type.includes('ogg')?'ogg':type.includes('wav')?'wav':'webm';
+  form.append('file',blob,'isabella-voice.'+ext);
+  const response=await fetch(cfg.url+'/functions/v1/isabella-transcribe',{
+    method:'POST',
+    headers:{
+      apikey:cfg.publishableKey,
+      Authorization:'Bearer '+session.access_token
+    },
+    body:form
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data?.detail||data?.error||'No pude transcribir el audio.');
+  return String(data?.text||'').trim();
+}
+window.ISABELLA_AI={ask,brief,nudge,curiosity,transcribe,listSkills,feed,startFeedRefresh,waitForFeedRefresh,feedJobStatus,startResearch,loadResearchReady,feedStory,createArtifact,ideaWork,ideas,sofiaSurface,loadSurface};
+})();
