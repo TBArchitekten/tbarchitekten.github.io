@@ -256,7 +256,9 @@ async function showPendingProposals(){
             ?(p.kind==='remember'?'Erinnerung bestätigt und gespeichert.':p.kind==='start_mission'?'Auftrag bestätigt. Die Ausführung ist vorgesehen, noch nicht abgeschlossen.':p.kind==='control_mission'?'Auftragsstatus bestätigt.':'Änderung bestätigt und im Office gespeichert.')
             :'Vorschlag verworfen.');
           await window.ISABELLA_SYNC_PULL_NOW?.();
-          void showPendingProposals();
+          // The server wrote the receipt into the conversation: show it as a system line.
+          if(threadId)await loadThread(threadId,{internal:true,skipRuns:true});
+          else void showPendingProposals();
         }catch(error){
           status('Der Vorschlag konnte nicht angewendet werden. Bitte prüfen Sie die Berechtigung.');
           actions.querySelectorAll('button').forEach(b=>b.disabled=false);

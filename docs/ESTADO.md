@@ -1,9 +1,34 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 07.11.2026, por Claude: revisión de PR #16–#39, decisiones de Gari, correcciones (PR #41) y **un solo modelo de datos** (PR #42), en la sección siguiente. La versión anterior era del 05.11.2026, de ChatGPT, tras el PR #35.
+**Actualizado:** 08.11.2026, por Claude: Romy como Isabella en cinco puntos (sección siguiente). Antes: 07.11.2026, por Claude: revisión de PR #16–#39, decisiones de Gari, correcciones (PR #41) y **un solo modelo de datos** (PR #42). La versión anterior era del 05.11.2026, de ChatGPT, tras el PR #35.
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 
 ---
+
+## Romy como Isabella · 08.11.2026 (Claude)
+Gari decidió pasar a Romy cinco puntos de Isabella (Window). Lo demás de Isabella, que es personal, **no** se pasa: el repaso nocturno, cómo dijo la persona que estaba, escribir primero y los seguimientos propios. Están en `supabase/functions/office-assistant/romy-continuity.mjs`.
+1. **Ningún mensaje sin respuesta.**
+   - Si Romy no puede contestar (sin guardar del proveedor, sin texto, error, tiempo agotado), el servidor guarda en la conversación un aviso honesto: «Keine Antwort möglich: …», con `metadata.author:"system"`.
+   - Un turno sin texto se reintenta una vez sin herramientas.
+2. **Los avisos de la app no son Romy.** Las filas con `metadata.author:"system"` se ven como línea de sistema, gris y centrada, en el chat (`app/app.js`, `isEventMessage`) y en los Threads de Work.
+3. **Respuestas que se escriben mientras llegan, aunque se cierre la app.**
+   - El envío es de mejor esfuerzo.
+   - El turno sigue con `EdgeRuntime.waitUntil`, se guarda en el servidor y la app lo recupera releyendo Supabase.
+4. **El historial como conversación.**
+   - Los mensajes de la persona llevan su hora local.
+   - Los de Romy van como suyos.
+   - Los avisos de la app van marcados como «Hinweis der App».
+5. **Radar e iniciativa.**
+   - Cada turno lleva un `ARBEITSRADAR` pequeño:
+     - Fristen de los próximos 14 días (hitos de los Terminpläne);
+     - los Threads propios activos;
+     - las tareas propias vencidas;
+     - los vorschläge abiertos.
+   - Instrucción `ROMY_INITIATIVE`: mencionar lo importante en una o dos frases y ofrecer algo concreto. Ningún cambio sin confirmación.
+- **Arreglos vistos el mismo día en Window:**
+  - **Responsables:** `list_tasks` lleva `responsable`, con los nombres de la persona principal y del equipo de Work.
+  - **Recibo tras confirmar:** al confirmar o descartar un vorschlag, el servidor escribe en la conversación «Bestätigt: …» o «Verworfen: …». Así Romy ya no dice que algo sigue pendiente de confirmar.
+- **Sin migraciones.** Función a desplegar: `office-assistant`.
 
 ## Revisión de Claude · 07.11.2026 (leer primero)
 Revisión completa de PR #16–#39 (código, migraciones, Supabase en vivo, funciones, pruebas). Esta sección **corrige** datos de más abajo que quedaron viejos.

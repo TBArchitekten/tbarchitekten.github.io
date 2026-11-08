@@ -45,7 +45,8 @@ test('Attachment-only messages survive the database nonempty text constraint wit
   const backend=read('supabase/functions/office-assistant/index.ts');
   assert.ok(backend.includes('content:message||"Datei(en) angehängt"'));
   assert.ok(backend.includes('requestId,history,message,attachmentInputs:attached.inputs'));
-  assert.ok(backend.includes('officeLocalNow()'));
-  assert.ok(backend.includes('Europe/Berlin'));
+  const continuity=read('supabase/functions/office-assistant/romy-continuity.mjs');
+  assert.ok(continuity.includes('officeLocalNow()'));
+  assert.ok(continuity.includes('Europe/Berlin'));
   assert.ok(backend.includes('loadRomyAttachments(db,uid,attachments)'));
 });

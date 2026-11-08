@@ -37,7 +37,7 @@ test('Office loads only its own assistant, not personal Window AI modules',()=>{
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
   assert.match(src('work.js'),/window\.MINDS_WORK=/);
-  assert.match(appIndex,/src="\.\/work\.js\?v=office41"/,'Window Work is back since 07.11.2026');
+  assert.match(appIndex,/src="\.\/work\.js\?v=office42"/,'Window Work is back since 07.11.2026');
 });
 
 test('Sync: members only, everyone sees the projects, own calendar, no realtime',()=>{

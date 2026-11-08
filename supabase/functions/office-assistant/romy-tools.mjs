@@ -1,5 +1,6 @@
 import { validOfficeDate, berlinDateRangeUtc, parseExplicitZonedInstant, officeLocalNow } from "./romy-time.mjs";
 import { searchRomySemanticMemory } from "./romy-semantic-memory.mjs";
+import { taskResponsibles } from "./romy-continuity.mjs";
 // Adapted tool boundary for Romy using Window's explicit tool/approval discipline.
 // Queries execute with the employee's JWT and the Office RLS policies,
 // never with a shared service-role reader.
@@ -26,7 +27,7 @@ const ALL_ROMY_TOOLS=[
  },required:["objective","completion_criterion"],additionalProperties:false}},
  {type:"function",name:"propose_control_mission",description:"Request employee approval to resume or cancel their own mission. It must be reviewed; no silent control.",strict:false,parameters:{type:"object",properties:{mission_id:{type:"string"},action:{type:"string",enum:["resume","cancel"]}},required:["mission_id","action"],additionalProperties:false}},
  {type:"function",name:"list_projects",description:"Read the office project catalog (shared with active office members).",strict:false,parameters:{type:"object",properties:{},additionalProperties:false}},
- {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. For 'what is pending today' use range:'today': open tasks due today or earlier (overdue ones carry overdue:true) plus multi-day tasks already started (in_progress:true). range:'week' does the same for the next 7 days. For another day, such as tomorrow, use day:'YYYY-MM-DD' (Europe/Berlin): open tasks due that day or earlier, so tasks still open from before are included (overdue:true), plus multi-day tasks running that day. Never say nothing is pending without checking overdue tasks; never use due_from/due_to for such questions. due_from/due_to filter by exact due dates; project_id by project UUID. mine:true marks tasks this employee created or is assigned to.",strict:false,parameters:{type:"object",properties:{range:{type:"string",enum:["today","week"]},day:{type:"string",description:"YYYY-MM-DD, for 'what is pending on <day>' (e.g. tomorrow)"},project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
+ {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. For 'what is pending today' use range:'today': open tasks due today or earlier (overdue ones carry overdue:true) plus multi-day tasks already started (in_progress:true). range:'week' does the same for the next 7 days. For another day, such as tomorrow, use day:'YYYY-MM-DD' (Europe/Berlin): open tasks due that day or earlier, so tasks still open from before are included (overdue:true), plus multi-day tasks running that day. Never say nothing is pending without checking overdue tasks; never use due_from/due_to for such questions. due_from/due_to filter by exact due dates; project_id by project UUID. mine:true marks tasks this employee created or is assigned to; responsable names who carries a task in the team (absent = nobody assigned).",strict:false,parameters:{type:"object",properties:{range:{type:"string",enum:["today","week"]},day:{type:"string",description:"YYYY-MM-DD, for 'what is pending on <day>' (e.g. tomorrow)"},project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments overlapping an inclusive date range in Europe/Berlin. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_files",description:"List filenames and metadata in the shared Office or project Desktop. project_id can be omitted for the shared Büro root.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},search:{type:"string"},scope:{type:"string",enum:["office","project","all"]}},additionalProperties:false}},
  {type:"function",name:"read_text_file",description:"Read text/markdown/CSV/JSON source material from a shared Desktop file by exact file UUID. Other formats may require an attachment; do not pretend to read them.",strict:false,parameters:{type:"object",properties:{file_id:{type:"string"}},required:["file_id"],additionalProperties:false}},
@@ -185,8 +186,10 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
   if(a.due_from)q=q.gte("due_date",a.due_from);
   if(a.due_to)q=q.lte("due_date",a.due_to);
   const rows=safeArray(await checkedQuery(q.order("due_date",{ascending:true,nullsFirst:false}).limit(250)),250);
-  const assigned=await assignedTaskIds(userDb,userId,rows.map(t=>t.id));
-  return {today,day,range:range||null,tasks:shapeTaskRows(rows,{day,range,userId,assigned,today}),
+  const [assigned,who]=await Promise.all([assignedTaskIds(userDb,userId,rows.map(t=>t.id)),taskResponsibles(userDb,rows)]);
+  // responsable: who carries it in the team (08.11.2026: «¿es todo para mí?» needs names, not only mine).
+  const tasks=shapeTaskRows(rows,{day,range,userId,assigned,today}).map(t=>{const l=who.get(String(t.id));return l&&l.length?{...t,responsable:l}:t});
+  return {today,day,range:range||null,tasks,
     scope:"RLS-visible office project tasks plus this employee's personal tasks"};
  }
  if(name==="list_calendar"){

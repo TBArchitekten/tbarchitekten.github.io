@@ -11,7 +11,9 @@ test('Romy sees the last 24 messages, like Window, and keeps a cacheable prompt'
   assert.match(src,/\.slice\(0,HISTORY_LIMIT\)\.reverse\(\)/);
   assert.doesNotMatch(src,/range\(from,from\+999\)/,'no full replay of the conversation');
   // The clock lives in the turn input, not in the instructions, so the stable prefix can be cached.
-  assert.match(src,/const clockNote=\(\)=>\(\{role:"developer",content:"Aktuelles Datum und Ortszeit \(Europe\/Berlin\): "\+officeLocalNow\(\)\}\);/);
+  // Since 08.11 the clock note is built with the dialogue in romy-continuity.mjs (still in the turn input).
+  assert.match(src,/const apiInput=romyDialogueInput;/);
+  assert.match(read('supabase/functions/office-assistant/romy-continuity.mjs'),/const clock=\{role:"developer",content:"Aktuelles Datum und Ortszeit \(Europe\/Berlin\): "\+officeLocalNow\(\)\};/);
   const request=src.slice(src.indexOf('async function requestModel'),src.indexOf('async function runRomy'));
   assert.doesNotMatch(request,/officeLocalNow/);
   assert.match(src,/Du siehst nur die letzten Nachrichten dieses Gesprächs\. Für Früheres nutze search_semantic_history oder search_conversation_history/);

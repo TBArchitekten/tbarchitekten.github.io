@@ -13,7 +13,7 @@ test('Office Desktop has shared office root and per-project tree without activat
   assert.match(work,/project\?\.id\|\|null/);
   assert.match(shell,/data-work-view="desktop">Desktop/);
   assert.match(html,/office-desktop-ops\.js\?v=office3/);
-  assert.match(html,/work\.js\?v=office41/);
+  assert.match(html,/work\.js\?v=office42/);
   assert.match(work,/const SHOW_BURO=false;/,'Büro Desktop hidden for now (Gari, 07.11.2026)');
 });
 test('Nested folder operations are real and deletion requires explicit confirmation',()=>{
