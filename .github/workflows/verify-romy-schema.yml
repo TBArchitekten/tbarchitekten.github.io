@@ -51,7 +51,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-phase1-acceptance.sql
       - name: Verify schema-only dump, no rows or project content
         run: |
-          pg_dump --schema-only --no-owner --no-acl \
+          docker run --rm --network=host -e PGHOST=127.0.0.1 -e PGPORT=5432 -e PGUSER=postgres -e PGDATABASE=romy_schema_fixture pgvector/pgvector:pg17 \
+            pg_dump --schema-only --no-owner --no-acl \
             --exclude-table-data='*' \
             --table=public.conversations \
             --table=public.conversation_messages \
