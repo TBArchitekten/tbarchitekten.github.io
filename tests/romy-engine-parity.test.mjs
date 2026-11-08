@@ -12,7 +12,7 @@ test('Pinned Window engine is byte-identical to the 95 Git blobs in its committe
   const manifest=JSON.parse(read('docs/sync-window-engine-manifest.json'));
   assert.equal(manifest.source_repository,'gari01234/minds');
   assert.match(manifest.source_sha,/^[0-9a-f]{40}$/);
-  assert.equal(manifest.files.length,95);
+  assert.equal(manifest.files.length,96);
   for(const row of manifest.files){
     assert.ok(row.target.startsWith('supabase/functions/'));
     assert.equal(gitBlobHash(readFileSync(path(row.target))),row.sha,row.target+' diverged from its reviewed origin');
