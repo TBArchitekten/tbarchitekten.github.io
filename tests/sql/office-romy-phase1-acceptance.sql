@@ -262,5 +262,24 @@ begin
 end
 $test$;
 
+-- RPC parity / authority: an authenticated member may inspect only their Watch channels;
+-- worker mutation functions cannot be invoked through the browser Data API.
+do $rpc$
+begin
+  if to_regprocedure('public.claim_due_isabella_routines(integer)') is null
+    or to_regprocedure('public.minds_record_watch_check(uuid,uuid,uuid,jsonb)') is null
+    or to_regprocedure('public.minds_finalize_watch_fire(uuid,uuid,uuid,jsonb)') is null
+    or to_regprocedure('public.minds_watch_capabilities()') is null
+  then raise exception 'required Office background/watch RPC is absent'; end if;
+  if has_function_privilege('authenticated','public.claim_due_isabella_routines(integer)','EXECUTE')
+    or has_function_privilege('authenticated','public.minds_record_watch_check(uuid,uuid,uuid,jsonb)','EXECUTE')
+    or has_function_privilege('authenticated','public.minds_finalize_watch_fire(uuid,uuid,uuid,jsonb)','EXECUTE')
+  then raise exception 'worker RPC exposed to authenticated browser'; end if;
+  if not has_function_privilege('authenticated','public.minds_watch_capabilities()','EXECUTE')
+  then raise exception 'owner Watch catalog read unavailable'; end if;
+  if to_regprocedure('public.minds_store_vapid_pair_if_absent(text,text)') is not null
+  then raise exception 'Office must not install VAPID private-key generator'; end if;
+end $rpc$;
+
 reset role;
 rollback;
