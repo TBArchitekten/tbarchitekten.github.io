@@ -371,7 +371,7 @@ begin
 
   select r.id,to_jsonb(r) into v_revision_id,v_revision
   from public.minds_project_model_revisions r
-  where r.r.project_id=p_project_id and r.status='current'
+  where r.project_id=p_project_id and r.status='current'
   order by r.created_at desc limit 1;
 
   select jsonb_build_object(
