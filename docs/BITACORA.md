@@ -17,6 +17,34 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy como Isabella: sin silencios, avisos del sistema, streaming robusto, historial, radar · Claude
+- **Qué cambió y por qué:**
+  - Gari pidió pasar a Romy cinco puntos de Isabella (Window). Lo personal no se pasa.
+    - **Sin silencios:** aviso honesto en la conversación si no hay respuesta y un reintento si llega vacía.
+    - **Avisos de la app como línea de sistema.**
+    - **Streaming que sobrevive a cerrar la app.**
+    - **Historial como diálogo:** con hora local y los avisos marcados.
+    - **Radar de Fristen y Threads con iniciativa.**
+  - Además, dos fallos que Gari vio hoy en Isabella:
+    - `list_tasks` no decía quién lleva cada tarea (ahora `responsable`).
+    - Tras confirmar un vorschlag, el asistente no lo sabía. Ahora queda un «Bestätigt: …» en la conversación.
+- **Archivos:**
+  - `supabase/functions/office-assistant/romy-continuity.mjs` (nuevo), `index.ts`, `romy-tools.mjs`.
+  - App:
+    - `app/app.js` (office46): `isEventMessage` y la clase `is-event`;
+    - `app/app.css` (v70);
+    - `app/office-assistant.js` (office37): recarga tras revisar;
+    - `app/work.js` (office42): líneas de sistema en los Threads.
+  - Tests: `tests/office-romy-like-isabella.test.mjs` (nuevo), más los pins de versión y tres pins de estructura.
+- **Base de datos:** ninguna. Las filas usan `office_assistant_messages`: rol `assistant`, `metadata.author:"system"` y, para los recibos, un `request_id` nuevo.
+- **Deploy de funciones:** `office-assistant` (workflow «Deploy Supabase Edge Functions»).
+- **Cómo se probó:**
+  - 196 tests en verde.
+  - `deno check` de `office-assistant`: 100 errores de tipos heredados (106 en `main`), ninguno nuevo.
+- **Quedó pendiente o sin probar:** el comportamiento real del radar en el chat de Office (cuánto menciona y cuándo).
+- **Riesgos o decisiones que necesitan a Gari:** ninguno. Lo personal de Isabella se quedó fuera, como decidió.
+- **PR:** (este)
+
 ### 2026-11-07 · Romy y «mañana», sin Kategorie en Office, formulario completo al crear · Claude
 - **Qué cambió y por qué (tres peticiones de Gari):**
   - **Romy para mañana:** a la pregunta «¿tengo algo pendiente para mañana?» contestó que nada, aunque «Test» (fällig 04.11) seguía abierta.

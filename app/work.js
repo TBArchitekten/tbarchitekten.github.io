@@ -1299,6 +1299,8 @@ function threadMessageMarkup(m){
   const deliverables=groups.deliverables.length?`<div class="work-thread-artifacts">${groups.deliverables.slice(0,8).map(a=>a?.storage_path?`<a href="#" data-thread-artifact="${esc(a.storage_path)}"><span>${esc(threadArtifactLabel(a.kind))}</span>${esc(a.title||'Archivo')}</a>`:'').join('')}</div>`:'';
   // Messages Claude saved through the Window connector carry their author.
   const author=m.metadata?.source==='claude_connector'&&role==='assistant'?'<div class="work-thread-author">Claude</div>':'';
+  // App notices (Bestätigt, Verworfen, Keine Antwort möglich) are system lines, not Romy (08.11.2026).
+  if(role==='assistant'&&m.metadata?.author==='system')return `<article class="work-thread-message assistant is-event"><div class="work-thread-message-copy">${esc(m.content||'')}</div></article>`;
   return `<article class="work-thread-message ${role}${author?' from-claude':''}">${author}${copy?`<div class="work-thread-message-copy">${window.ISABELLA_APP?.formatMessageText?.(copy)||esc(copy).replace(/\n/g,'<br>')}</div>`:''}${previews}${deliverables}${sources.length?`<details><summary>Quellen</summary>${sources.slice(0,6).map(s=>`<div class="small">${esc(s.title||s.url||'Fuente')}</div>`).join('')}</details>`:''}${!OFFICE&&role==='assistant'&&!sources.length&&!author?'<div class="work-thread-source-boundary">Esta respuesta no incluye fuentes citadas verificables.</div>':''}${role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete">Antwort unterbrochen. Der Text ist unvollständig.<button type="button" data-thread-continue="${esc(m.client_key||m.id||'')}">Continuar respuesta</button></div>`:''}</article>`;
 }
 async function hydrateThreadArtifacts(root=document){
@@ -1435,7 +1437,8 @@ async function renderThreadProposals(thread){
     if(actionError||result?.error){setStatus('Der Vorschlag konnte nicht angewendet werden.');card.querySelectorAll('button').forEach(b=>b.disabled=false);return}
     setStatus(button.dataset.proposalDecision==='apply'?'Vorschlag übernommen.':'Vorschlag verworfen.');
     await window.ISABELLA_SYNC_PULL_NOW?.();
-    void renderThreadProposals(thread);
+    // The receipt is now in the conversation: reopen the thread so it shows (and Romy reads it).
+    if(activeThreadId===thread.id)await renderThreadConversation(thread.id);else void renderThreadProposals(thread);
   }));
 }
 async function sendThreadMessage(thread,overrideMessage=null){
