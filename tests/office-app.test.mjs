@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const appIndex=read('app/index.html');
 const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z-]+\.js)\?v=[^"]+"><\/script>/g)].map(m=>m[1]);
@@ -21,6 +22,17 @@ test('The app connects only to TBA Office, with the office sign-in',()=>{
     assert.doesNotMatch(s,/[a-z]{20}\.supabase\.co|sb_publishable_|service_role|sb_secret_/,f+' carries no project address or key');
   }
   assert.doesNotMatch(appIndex,/serviceWorker|sw\.js|oauth-consent/);
+});
+
+test('Office browser profile selects German shared assistant labels, never Window session settings',()=>{
+  const root={APP_PROFILE:'office'};
+  runInNewContext(src('assistant-i18n.js'),{window:root,globalThis:root});
+  assert.equal(root.ASSISTANT_I18N.locale,'de');
+  assert.equal(root.ASSISTANT_I18N.t('undo'),'Rückgängig');
+  assert.equal(root.ASSISTANT_I18N.t('review_confirm'),'Bestätigen');
+  assert.equal(root.ASSISTANT_I18N.t('saved'),'Gespeichert.');
+  assert.match(root.ASSISTANT_I18N.t('memory_title'),/Romy/);
+  assert.ok(loaded.includes('assistant-i18n.js'));
 });
 
 test('Office loads only its own assistant, not personal Window AI modules',()=>{
