@@ -5,7 +5,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const appIndex=read('app/index.html');
-const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z-]+\.js)\?v=[^"]+"><\/script>/g)].map(m=>m[1]);
+const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z0-9-]+\.js)\?v=[^"]+"><\/script>/g)].map(m=>m[1]);
 const src=f=>read('app/'+f);
 
 test('The app connects only to TBA Office, with the office sign-in',()=>{
