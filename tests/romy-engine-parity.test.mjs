@@ -59,3 +59,18 @@ test('Office Terminplan is read-only and project-bounded, while D1 leaves review
     assert.ok(!existsSync(path('supabase/functions/'+x+'/index.ts')),x+' must remain excluded from Office deployable tree');
   }
 });
+
+test('Phase 3: six shared Window browser modules exactly match the pinned source Git blobs',()=>{
+  const manifest=JSON.parse(read('docs/sync-window-app-manifest.json'));
+  assert.equal(manifest.source_repository,'gari01234/minds');
+  assert.match(manifest.source_sha,/^[0-9a-f]{40}$/);
+  assert.equal(manifest.mode,'app');
+  assert.deepEqual(manifest.files.map(x=>x.target).sort(),[
+    'app/ai.js','app/assistant-i18n.js','app/chat-stream-recovery.js',
+    'app/final-round.js','app/turn-integrity.js','app/voice-output.js'
+  ]);
+  for(const entry of manifest.files){
+    assert.equal(gitBlobHash(readFileSync(path(entry.target))),entry.sha,entry.target+' is not the same code as Window');
+    assert.equal(readFileSync(path(entry.target)).length,entry.bytes,entry.target+' byte count drift');
+  }
+});
