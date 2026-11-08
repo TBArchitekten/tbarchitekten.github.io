@@ -1,11 +1,18 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 08.11.2026, por ChatGPT: fase 1 (esquema Window-compatible) propuesta en rama, sin aplicar migraciones ni modificar producción.
+**Actualizado:** 08.11.2026, por ChatGPT: fase 1 preparada y verificada en PostgreSQL efímero; migraciones y funciones **no aplicadas ni desplegadas**.
 
-## Fase 1 · Base de datos Office (PR apilado, no aplicado)
-Preparadas seis migraciones nuevas (tablas, claves externas, RLS, Storage y heartbeat inerte) para los nombres que emplea el motor de Window: 74 tablas personales/operativas y 16 tablas de Projektakte. Se preservan todas las tablas anteriores de Romy. La RLS propuesta limita el material privado al propietario y la Projektakte al equipo; se prohíben los writes directos a recibos y decisiones. Se añade CI aislada con Supabase local y pruebas ficticias A/B y proyectos P/Q bajo `ROLLBACK`.
+## Fase 1 · Base de datos Office (PR #57, rama sin fusionar)
 
-**Estado:** integración y aceptación de fase 1 todavía pendientes. Ninguna migración aplicada, ni secret configurado, ni función desplegada. Falta comprobar el esquema integral, los RPC y su política de ejecución en CI. Un `CREATE TABLE` sin comprobación de compatibilidad funcional no equivale a motor listo.
+Se han preparado 16 migraciones no destructivas para la compatibilidad estructural de Window: 90 tablas nuevas (74 de ejecución/memoria y 16 de Projektakte), claves, vistas, índices, políticas RLS activadas explícitamente, Storage, heartbeat inerte y RPCs de consulta, autoridad, acciones supervisadas, memoria, misiones, rutinas e ingesta. Ningún registro personal, de empleados ni de proyectos se ha trasladado desde Window. Los datos existentes de Romy no se borran ni modifican.
+
+El contrato exige `auth.uid() = user_id` y membresía activa para lo personal. La lectura compartida de la Projektakte exige pertenencia a `office_project_members`, incluso para administradores. Los recibos de acciones y las decisiones no aceptan escrituras REST sin la autoridad del motor. Los RPC de runners/Watch no son ejecutables desde el navegador. El único RPC de secretos VAPID se excluye porque Office no habilitará push móvil.
+
+**Verificación:** en la rama, suites de Office Node, PostgreSQL 17 efímero con todas las migraciones, pruebas de aislamiento A/B y proyectos P/Q, controles negativos de privilegios y `pg_dump --schema-only` con cliente PostgreSQL 17. Los workflows `Verify Romy Office schema`, `Verify Romy engine schema` y `Verify Terminplan dependency audit` registraron ejecuciones satisfactorias el 08.11.2026. La última revisión de dependencias RPC añadió cuatro procedimientos de rutinas/Watch. Si un commit posterior aún está en CI, la aceptación corresponde al último SHA verde, no al commit nuevo por anticipado.
+
+**Estado de producción:** no hay merges, migraciones aplicadas, secretos configurados, nuevos endpoints desplegados ni sesiones reales probadas. La aceptación SQL no es una prueba funcional end-to-end de Romy. El runtime `office-assistant` sigue intacto como respaldo; fase 2 incorporará el código del motor sincronizado.
+
+**Decisión conservadora:** las dependencias de Lecturas, Thoughts, Ideas y Feed no se importan. `minds_store_vapid_pair_if_absent` se excluye explícitamente, sin generar credenciales ni activar push. Las escrituras de modelos y decisiones de proyecto se limitarán a RPC revisadas.
 
 ## Encargo vigente · Romy = Isabella (08.11.2026)
 La referencia es `gari01234/minds/docs/ROMY-MOTOR-ISABELLA-ENCARGO.md`. Sustituye para este trabajo la decisión anterior que excluía lo personal de Romy: el nuevo objetivo incluye continuidad privada por persona y Projektakte compartida por equipo. La fase 0 ha pasado las pruebas de perfil y la CI de los dos repositorios. Preparados el perfil de servidor por usuario, los prompts de background y el diccionario de chat; el motor y la PWA aún no están sincronizados ni activados en Office. El runtime `office-assistant` permanece como respaldo y el despliegue activo de Office no cambia.
