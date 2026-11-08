@@ -40,6 +40,7 @@ jobs:
           for file in \
             supabase/migrations/20261108200000_office_window_engine_runtime_tables_v1.sql \
             supabase/migrations/20261108201000_office_window_engine_project_tables_v1.sql \
+            supabase/migrations/20261108201500_office_window_engine_compat_unique_keys_v1.sql \
             supabase/migrations/20261108202000_office_window_engine_foreign_keys_v1.sql \
             supabase/migrations/20261108203000_office_window_engine_rls_v1.sql \
             supabase/migrations/20261108204000_office_window_engine_storage_v1.sql \
