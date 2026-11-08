@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "c95f9d9c2910d705838cb057117a5fd708dc78a7",
+  "source_sha": "c7a916b45814068a848cecfef977996e72223404",
   "mode": "engine",
   "files": [
     {
@@ -180,8 +180,8 @@
     {
       "source": "supabase/functions/_shared/live-context.mjs",
       "target": "supabase/functions/_shared/live-context.mjs",
-      "sha": "6248e5a055a2cc6730beb128d9ba0ebe8e790e27",
-      "bytes": 7441
+      "sha": "3a9ad50969059a1e118bea613b44802a3e316e17",
+      "bytes": 8718
     },
     {
       "source": "supabase/functions/_shared/local-agenda.mjs",
@@ -218,6 +218,18 @@
       "target": "supabase/functions/_shared/office-akte-access.mjs",
       "sha": "06ef559e9d1196614f68c15b458f843237d4d1b1",
       "bytes": 1157
+    },
+    {
+      "source": "supabase/functions/_shared/office-live-contract.mjs",
+      "target": "supabase/functions/_shared/office-live-contract.mjs",
+      "sha": "dd859b8c5e7eab9b41e154da648d02f789d66d70",
+      "bytes": 1888
+    },
+    {
+      "source": "supabase/functions/_shared/office-live-policy.mjs",
+      "target": "supabase/functions/_shared/office-live-policy.mjs",
+      "sha": "3fb74ebb7421289956e61eb5341cd50f18ae041d",
+      "bytes": 1944
     },
     {
       "source": "supabase/functions/_shared/office-terminplan.mjs",
@@ -510,8 +522,8 @@
     {
       "source": "supabase/functions/isabella-live-session/index.ts",
       "target": "supabase/functions/isabella-live-session/index.ts",
-      "sha": "85eb1cb96934005614aaadec1f5db718f8fd3ae2",
-      "bytes": 10702
+      "sha": "316c8e4f9249c37ccfce86805aeecd718f176cfe",
+      "bytes": 11470
     },
     {
       "source": "supabase/functions/isabella-mission-runner/index.ts",
