@@ -2,6 +2,114 @@
 -- Runs only on an ephemeral local database. Transaction rolls back synthetic rows.
 begin;
 
+-- Verify that every expected new table exists and RLS is actually enabled.
+-- A CREATE POLICY statement without ENABLE ROW LEVEL SECURITY is ineffective.
+do $rls$
+declare unprotected text[];
+begin
+  with expected(name) as (values
+    ('conversation_messages'),
+    ('conversations'),
+    ('isabella_activity_log'),
+    ('isabella_embeddings'),
+    ('isabella_entities'),
+    ('isabella_entity_links'),
+    ('isabella_followups'),
+    ('isabella_memories'),
+    ('isabella_model_claims'),
+    ('isabella_proposal_feedback'),
+    ('isabella_return_queue'),
+    ('isabella_routines'),
+    ('isabella_runtime_secrets'),
+    ('isabella_skill_runs'),
+    ('isabella_skills'),
+    ('isabella_task_reminders'),
+    ('minds_action_policies'),
+    ('minds_agent_runs'),
+    ('minds_ai_usage'),
+    ('minds_artifact_intake'),
+    ('minds_artifacts'),
+    ('minds_attention_events'),
+    ('minds_autonomy_executions'),
+    ('minds_calendar_action_receipts'),
+    ('minds_calendar_execution_preferences'),
+    ('minds_capability_runs'),
+    ('minds_chat_jobs'),
+    ('minds_chat_stream_delivery_receipts'),
+    ('minds_commitment_events'),
+    ('minds_commitment_signal_links'),
+    ('minds_commitment_workspace_items'),
+    ('minds_commitment_workspaces'),
+    ('minds_commitments'),
+    ('minds_contextual_permissions'),
+    ('minds_continuity_signals'),
+    ('minds_delivery_attempts'),
+    ('minds_delivery_intents'),
+    ('minds_expectation_reviews'),
+    ('minds_expectations'),
+    ('minds_exposure_receipts'),
+    ('minds_heartbeat_events'),
+    ('minds_intent_deliveries'),
+    ('minds_memory_flushes'),
+    ('minds_memory_forget_tombstones'),
+    ('minds_memory_lineage'),
+    ('minds_mission_run_events'),
+    ('minds_mission_runs'),
+    ('minds_mission_runtime_events'),
+    ('minds_mission_runtime_executions'),
+    ('minds_model_claim_reviews'),
+    ('minds_model_independence_runs'),
+    ('minds_operating_model_evidence'),
+    ('minds_operating_model_hypotheses'),
+    ('minds_operating_model_observations'),
+    ('minds_operating_model_reviews'),
+    ('minds_outcome_feedback'),
+    ('minds_permission_reviews'),
+    ('minds_post_action_feedback_candidates'),
+    ('minds_push_subscriptions'),
+    ('minds_review_admission_events'),
+    ('minds_review_receipts'),
+    ('minds_routine_action_receipts'),
+    ('minds_routine_deliveries'),
+    ('minds_runtime_capability_grants'),
+    ('minds_self_review_proposals'),
+    ('minds_self_review_reports'),
+    ('minds_self_review_settings'),
+    ('minds_shadow_decisions'),
+    ('minds_skill_proposals'),
+    ('minds_standing_intents'),
+    ('minds_user_skill_versions'),
+    ('minds_user_skills'),
+    ('minds_watch_channels'),
+    ('minds_watch_checks'),
+    ('minds_project_model_elements'),
+    ('minds_project_model_revisions'),
+    ('minds_project_model_variants'),
+    ('minds_project_perimeter'),
+    ('minds_project_referents'),
+    ('minds_project_source_comparison_items'),
+    ('minds_project_source_comparisons'),
+    ('minds_project_source_ingestions'),
+    ('minds_work_claim_relations'),
+    ('minds_work_claims'),
+    ('minds_work_docling_page_chunks'),
+    ('minds_work_evidence'),
+    ('minds_work_ingest_queue'),
+    ('minds_work_memory'),
+    ('minds_work_source_segments'),
+    ('minds_work_source_text_receipts')
+  )
+  select array_agg(e.name) into unprotected
+  from expected e
+  left join pg_class c on c.relname=e.name and c.relnamespace='public'::regnamespace and c.relkind in ('r','p')
+  where c.oid is null or not c.relrowsecurity;
+  if cardinality(unprotected)>0 then
+    raise exception 'missing or unprotected Romy tables: %',unprotected;
+  end if;
+end
+$rls$;
+
+
 -- Three fictional users: two distinct project teams and an admin with no team.
 insert into auth.users (id,instance_id,aud,role,email,encrypted_password,created_at,updated_at)
 values
