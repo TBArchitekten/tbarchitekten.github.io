@@ -1,13 +1,13 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "e25b9c586a34731df4d3117f2473ec2852da10ad",
+  "source_sha": "3826ae7f89f01eca058764ae8f5807a2fc2eff96",
   "mode": "app",
   "files": [
     {
       "source": "apps/isabella/ai.js",
       "target": "app/ai.js",
-      "sha": "00ecb0a3f988fa52e7b124ae0a017d94bbd30c25",
-      "bytes": 38228
+      "sha": "f5d7f3d6aba73c7c1fc1a65bdee9f79c1e12f0f4",
+      "bytes": 38510
     },
     {
       "source": "apps/isabella/turn-integrity.js",
