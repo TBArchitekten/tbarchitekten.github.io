@@ -3,6 +3,9 @@
 -- Project-scoped reads explicitly require Office team membership, not uploader identity.
 -- No user data, contacts, client information or secret values were copied.
 begin;
+-- Window's entity recall uses similarity(); Office must install pg_trgm in public
+-- because the copied SQL function deliberately uses search_path='public'.
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 -- isabella_entity_recall: Window owner read under Office RLS
 CREATE OR REPLACE FUNCTION public.isabella_entity_recall(p_query text, p_limit integer DEFAULT 12)
  RETURNS TABLE(source_type text, source_id text, content text, occurred_at timestamp with time zone, score real)
