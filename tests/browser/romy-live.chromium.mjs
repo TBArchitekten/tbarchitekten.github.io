@@ -90,9 +90,12 @@ test('Chromium Live: Office WebRTC broker is authenticated and no model voice te
       listener({data:JSON.stringify({type:'session.input_transcript.delta',delta:'Hallo aus dem Test',event_id:'owner-1',start_ms:0,end_ms:400})});
       listener({data:JSON.stringify({type:'session.output_transcript.delta',delta:'Ungeprüfte Agentenstimme',event_id:'agent-1',start_ms:500,end_ms:900})});
     });
-    await page.locator('#liveStop').click();
-    await page.waitForFunction(()=>window.__fixture.requests.some(x=>x.body.action==='save_transcript'));
+    // The owner utterance is flushed on the speaker transition. Verify its
+    // receipt BEFORE stopping so an async queue cannot race a closed page.
+    await page.waitForFunction(()=>window.__fixture.requests.some(x=>x.body.action==='save_transcript'),
+      null,{timeout:10000});
     const all=await page.evaluate(()=>window.__fixture.requests);
+    await page.locator('#liveStop').click();
     assert.equal(all.filter(x=>x.body.action==='save_transcript').length,1);
     assert.deepEqual(all.filter(x=>x.body.action==='save_transcript').map(x=>x.body.author),['gari']);
     assert.match(await page.locator('#liveStatus').textContent(),/Gespräch beendet/);
