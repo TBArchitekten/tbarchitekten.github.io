@@ -91,6 +91,42 @@ grant select on public.isabella_preferences to authenticated;
 create policy fixture_prefs_owner on public.isabella_preferences
 for select to authenticated using (user_id=(select auth.uid()));
 
+-- Existing Office calendar events are owner-specific and are not migrated anew.
+create table public.isabella_events(
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id),
+  title text not null,
+  starts_at timestamptz not null,
+  ends_at timestamptz not null,
+  all_day boolean not null default false,
+  category_id uuid,
+  project_id uuid references public.office_projects(id),
+  recurrence jsonb not null default '{}'::jsonb,
+  notes text not null default '',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  client_key text not null default 'event-fixture-key'
+);
+alter table public.isabella_events enable row level security;
+create policy fixture_events_owner on public.isabella_events for all to authenticated
+using (user_id=(select auth.uid())) with check (user_id=(select auth.uid()));
+grant select,insert,update,delete on public.isabella_events to authenticated;
+create table public.isabella_categories(
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id),
+  name text not null,
+  sort_order integer not null default 0,
+  color text,
+  client_key text not null default 'category-fixture-key',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.isabella_categories enable row level security;
+create policy fixture_categories_owner on public.isabella_categories for all to authenticated
+using (user_id=(select auth.uid())) with check (user_id=(select auth.uid()));
+grant select,insert,update,delete on public.isabella_categories to authenticated;
+
 create table public.minds_work_threads(
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id),
