@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy = Isabella · fase 1, propuesta de esquema (no aplicada) · ChatGPT
+- Qué cambió y por qué: migraciones estructurales basadas exclusivamente en metadatos del esquema de Window; owner RLS personal y lectura por `office_project_members` en Projektakte; Storage privado y cron sin valores activos.
+- Archivos: seis migraciones `20261108200000` a `20261108205000`, `tests/sql/office-romy-phase1-acceptance.sql`, `.github/workflows/verify.yml`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: migraciones nuevas y no destructivas — aplicada en Supabase: no.
+- Deploy de funciones: ninguno.
+- Cómo se probó: se ha preparado prueba transaccional SQL ficticia sobre PostgreSQL efímero; pendiente resultado de CI y verificación de RPC del motor.
+- Quedó pendiente o sin probar: aplicar todas las migraciones en CI, resolver posibles dependencias, revisar RPC/autoridad, Storage y aceptación antes de fase 2.
+- Riesgos o decisiones que necesitan a Gari: las dependencias de Ideas/Lecturas/Thoughts de Window se excluyen por ausencia de esos dominios en Office. Opción prudente: documentar referencias externas omitidas sin crear tablas de contenido que no pertenezca a Office.
+- PR: rama `romy-isabella/phase-1-office-schema`, apilada sobre fase 0. No fusionar ni desplegar.
+
 ### 2026-11-08 · Validación de fase 0 · ChatGPT
 - Qué cambió y por qué: se comprobó el perfil de servidor de Office por usuario, el diccionario alemán compartido y el orden explícito de inicialización en la PWA. Una prueba de carga se corrigió para aceptar nombres de módulos con dígitos sin perder la aserción de dependencia.
 - Archivos: app/assistant-i18n.js, app/index.html, tests/office-app.test.mjs, docs/ESTADO.md y docs/BITACORA.md; la implementación del perfil reside en el PR de fase 0 de minds.
