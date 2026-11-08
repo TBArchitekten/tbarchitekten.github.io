@@ -29,6 +29,10 @@ const makePage=async()=>{
     })}};
     const requests=[];
     window.__fixture={requests,channels:[]};
+    // setContent uses about:blank, an insecure test origin; production uses HTTPS.
+    let sequence=0;
+    Object.defineProperty(window.crypto,'randomUUID',{configurable:true,value:()=>
+      '11111111-1111-4111-8111-'+String(++sequence).padStart(12,'0')});
     const audioTrack={kind:'audio',stop(){}};
     Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{
       getUserMedia:async()=>({getTracks:()=>[audioTrack],getAudioTracks:()=>[audioTrack]})
