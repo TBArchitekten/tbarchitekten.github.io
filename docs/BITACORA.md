@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy = Isabella · fase 0 (borrador, sin activación) · ChatGPT
+- Qué cambió y por qué: se alinea la regla D1/D2 de AGENTS.md con el encargo del 08.11. Se documenta el estado de la preparación de perfil en el repositorio minds. La fase 0 no está aceptada ni activada.
+- Archivos: AGENTS.md, docs/ESTADO.md, docs/BITACORA.md.
+- Base de datos: ninguna migración — aplicada en Supabase: no.
+- Deploy de funciones: ninguno; office-assistant sigue siendo el respaldo actual.
+- Cómo se probó: lectura de AGENTS, ESTADO y las entradas recientes de BITACORA; CI y aceptación de fase pendientes.
+- Quedó pendiente o sin probar: procesos nocturnos, localización integral del chat, prueba byte a byte de Window, CI de ambos repositorios y PRs de las fases 1–6.
+- Riesgos o decisiones que necesitan a Gari: el runtime Office no se puede activar con prompts de background aún no adaptados; opción prudente: dejar esas rutas desconectadas hasta verificar aislamiento.
+- PR: rama romy-isabella/phase-0-office-contract (borrador).
+
 ### 2026-11-08 · Romy: los turnos ligeros llevan menos · Claude
 - **Qué cambió y por qué:**
   - En Window, un «¡Gracias!» costó ~370k caracteres porque se precargó un proyecto entero. Gari: «esto no puede pasar», también en Office.
