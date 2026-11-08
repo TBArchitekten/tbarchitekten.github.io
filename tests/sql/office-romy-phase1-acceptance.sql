@@ -115,13 +115,15 @@ insert into auth.users (id,instance_id,aud,role,email,encrypted_password,created
 values
 ('11111111-1111-4111-8111-111111111111','00000000-0000-0000-0000-000000000000','authenticated','authenticated','u1@fixture.invalid','',now(),now()),
 ('22222222-2222-4222-8222-222222222222','00000000-0000-0000-0000-000000000000','authenticated','authenticated','u2@fixture.invalid','',now(),now()),
-('33333333-3333-4333-8333-333333333333','00000000-0000-0000-0000-000000000000','authenticated','authenticated','u3@fixture.invalid','',now(),now())
+('33333333-3333-4333-8333-333333333333','00000000-0000-0000-0000-000000000000','authenticated','authenticated','u3@fixture.invalid','',now(),now()),
+('55555555-5555-4555-8555-555555555555','00000000-0000-0000-0000-000000000000','authenticated','authenticated','u4@fixture.invalid','',now(),now())
 on conflict (id) do nothing;
 insert into public.office_members(user_id,email,display_name,role,is_active,must_change_password)
 values
 ('11111111-1111-4111-8111-111111111111','u1@fixture.invalid','Fixture Alpha','member',true,false),
 ('22222222-2222-4222-8222-222222222222','u2@fixture.invalid','Fixture Beta','member',true,false),
-('33333333-3333-4333-8333-333333333333','u3@fixture.invalid','Fixture Admin','admin',true,false)
+('33333333-3333-4333-8333-333333333333','u3@fixture.invalid','Fixture Admin','admin',true,false),
+('55555555-5555-4555-8555-555555555555','u4@fixture.invalid','Fixture Member','member',true,false)
 on conflict (user_id) do nothing;
 insert into public.office_projects(id,number,name,created_by,status)
 values
@@ -131,7 +133,8 @@ on conflict (id) do nothing;
 insert into public.office_project_members(project_id,user_id,added_by)
 values
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','11111111-1111-4111-8111-111111111111'),
-('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','22222222-2222-4222-8222-222222222222')
+('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','22222222-2222-4222-8222-222222222222'),
+('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','55555555-5555-4555-8555-555555555555','11111111-1111-4111-8111-111111111111')
 on conflict do nothing;
 
 insert into public.minds_agent_runs(user_id,feature)
@@ -218,6 +221,23 @@ begin
   end if;
 end
 $test$;
+
+-- Another member of project P must see the Akte written by member A,
+-- but not A's personal conversation or any Akte of project Q.
+select set_config('request.jwt.claim.sub','55555555-5555-4555-8555-555555555555',true);
+do $team$
+begin
+  if (select count(*) from public.minds_work_claims where statement like 'Synthetic%')<>1 then
+    raise exception 'project teammate must read P regardless of claim author';
+  end if;
+  if (select count(*) from public.minds_work_files where name like 'fixture-%')<>1 then
+    raise exception 'project teammate must read P files regardless of uploader';
+  end if;
+  if (select count(*) from public.conversation_messages where content like 'Synthetic%')<>0 then
+    raise exception 'project teammate may not read A or B personal chat';
+  end if;
+end
+$team$;
 
 -- An administrator who is not part of either team has no implicit personal/Akte visibility.
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
