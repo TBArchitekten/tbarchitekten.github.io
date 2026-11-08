@@ -38,17 +38,21 @@
 <link rel="stylesheet" href="./office-assistant.css?v=office8">
 </head>
 <body class="office-app">
-<!-- TBA Office: Window's web app (gari01234/minds apps/isabella), connected to the TBA Office project.
-     Isabella AI runtime and personal memory are not part of the Office. The Window chat UI is reused with an Office-only data adapter. -->
+<!-- TBA Office uses the reviewed Window engine under the Office profile and Office database.
+     The former Office assistant remains an explicit legacy fallback; no Window credentials or data. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="../office-config.js?v=1"></script>
-<script>window.APP_PROFILE="office";</script>
+<script>window.APP_PROFILE="office";window.APP_CHAT_RUNTIME=localStorage.getItem("tba_office_chat_backend")==="legacy"?"legacy":"window";</script>
 <script src="./assistant-i18n.js?v=office1"></script>
 <script src="../shared/supabase-client.js?v=office3"></script>
 <script src="../office-core.js?v=office35"></script>
 <script src="../shared/human-surface.js?v=2"></script>
 <script src="./shell.js?v=office43"></script>
-<script src="./turn-integrity.js?v=office2"></script>
+<script src="./turn-integrity.js?v=romy3"></script>
+<script src="./final-round.js?v=romy3"></script>
+<script src="./chat-stream-recovery.js?v=romy3"></script>
+<script src="./voice-output.js?v=romy3"></script>
+<script src="./ai.js?v=romy3"></script>
 <script src="./calendar-plan.js?v=office3"></script>
 <script src="./day-layout.js?v=office2"></script>
 <script src="./dashboard-model.js?v=office2"></script>
@@ -67,6 +71,7 @@
 <script src="./dashboard.js?v=office40"></script>
 <script src="./romy-transport.js?v=office27"></script>
 <script src="./office-assistant.js?v=office37"></script>
+<script src="./office-engine-chat.js?v=romy3"></script>
 <script src="./office-projects.js?v=office40"></script>
 </body>
 </html>
