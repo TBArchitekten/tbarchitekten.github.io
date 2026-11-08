@@ -1,5 +1,110 @@
 # TBA Office · Estado actual
 
+**Stand 08.11.2026 · Claude · Revisión de las fases 1–6 terminada; publicación en curso (merge, migraciones, deploy).**
+
+## Romy = Isabella · revisión y publicación
+
+Romy corre con el motor de Isabella (`isabella-chat` y compañía, perfil `ASSISTANT_PROFILE=office`), sincronizado byte a byte desde `gari01234/minds` (`scripts/sync-window.mjs`, manifiestos en `docs/`). Mismo contrato de relación que Isabella; los nombres se adaptan al miembro (Gari→nombre del miembro, Isabella→Romy, Window→TBA Office) y habla el idioma en que le escriben.
+
+**Orden de migraciones** (con `apply-migration.yml`, una por una, tras el merge): las 19 de las fases en el orden de `verify-romy-schema.yml`, después `20261108220000_office_window_engine_owner_writes_v1.sql`, `20261108221000_office_romy_append_notice_v1.sql` y `20261108222000_office_romy_runner_schedule_v1.sql` (secretos aleatorios de los runners generados dentro de la base y pg_cron para chat-runner, rutinas, misiones, documentos generados y lectura de documentos; sin delivery-runner ni self-review en Office).
+
+**Funciones a desplegar** (`deploy-functions.yml`): `isabella-chat isabella-chat-runner isabella-delivery-runner isabella-heartbeat isabella-dream isabella-presence isabella-routine-runner isabella-mission-runner isabella-capability-runner isabella-capability-runtime isabella-artifact isabella-artifact-intake isabella-live-session isabella-transcribe isabella-work-ingest-runner window-akte-pflege office-mcp`.
+
+**Configuración:** `ASSISTANT_PROFILE=office` lo fija `deploy-functions.yml` en cada deploy; los secretos de los runners y `heartbeat_url` los rellena la migración `…222000` (nunca en el repo). Opcional: `DOCLING_SERVE_URL`/`DOCLING_SERVE_API_KEY` para leer documentos.
+
+**Permisos:** el navegador y el motor escriben solo filas propias de un miembro activo; las de la Akte además exigen el equipo del proyecto. Solo de servidor: las respuestas de Romy, recibos, autoridad D1, claims de la Akte, grants y secretos. Los avisos de la app entran por `office_romy_append_notice` y quedan marcados como aviso del sistema.
+
+**Fallos previos detectados (no de estas fases):** `minds_work_set_task_assignees` no existe en Office (asignar responsables desde la ficha de tarea falla); varios paneles avanzados copiados de Window llaman RPC no portadas (modelo operativo, expectativas, push, revisión de conocimiento).
+
+**Stand 08.11.2026 · ChatGPT · Phase 6: Sprachmodus und Office-MCP im Review-Branch vorbereitet; keine Produktionsänderung.**
+
+## Phase 6 · Romy Live und OAuth-Projektakte
+
+Romy verwendet den synchronisierten GPT-Live-WebRTC-Client des Window-Motors. Die deutsche Office-Seite `app/live/index.html` lädt ausschließlich die Office-Supabase-Sitzung, das serverseitige Profil `ASSISTANT_PROFILE=office` muss vor der Freischaltung gesetzt werden. Ein diskreter Live-Zugang ergänzt das bestehende Diktiermikrofon, statt es zu ersetzen. Die vier gemeinsamen Live-Clientdateien sind bytegleich mit ihrem über Commit-SHA gepinnten minds-Ursprung; `scripts/sync-window.mjs` hält diese Zuordnung für künftige Sync-PRs fest.
+
+Die Live-Funktion akzeptiert nur gültige Office-JWTs von aktiven Mitgliedern mit abgeschlossener Erstpasswortänderung. Die Identität stammt aus `office_members`, nie aus dem Browser. Office kann weder Isabellas individuell erstellte Originalstimme verwenden noch eine ungeprüfte Sprachausgabe als kanonische Romy-Nachricht abspeichern. Sprachbasierte Aufträge werden vor jeder Aktion an `isabella-chat` mit dem üblichen Freigabe- und Belegverfahren übergeben.
+
+`office-mcp` verwendet weiterhin den OAuth-Login des Office-Projekts. Neue lesende Werkzeuge eröffnen Projektakte und Themenblatt, suchen nach seitenbezogenen Quellen und zeigen private, inhaltsfreie Turn-Diagnosen. Neben RLS wird die explizite Mitgliedschaft in `office_project_members` vor jedem Projektzugriff geprüft; eine nicht zugewiesene Admin-Rolle reicht nicht. Es gibt keine neue Schreibbefugnis für Akten-Claims.
+
+**Automatisierte Abnahme (synthetisch):** Window-/Office-Profiltests in minds, Deno-Typprüfung, Chrome/Chromium mit simuliertem SDP/WebRTC, OAuth/JWT-Doubles und Projekten ohne reale Personen. Die letzte verifizierte CI in Office am Stand der Code-Änderungen umfasste Synced Engine, Chromium und lokales PostgreSQL; nach Dokumentations-Commits ist der HEAD erneut zu prüfen. Die Einzeltests beweisen noch keine echte Sprachübertragung, keine OpenAI-Nutzung und kein Live-OAuth mit Mitarbeitern.
+
+**Betrieb:** kein Merge, kein Deploy, keine Produktionsmigration. Für Office benötigt die Freischaltung die Prüfung von `ASSISTANT_PROFILE`, `OPENAI_API_KEY`, Office-Supabase-Konfiguration und dem manuellen Deploy von `isabella-live-session` und `office-mcp`. Geplante Push-/Originalstimmen-Credentials gehören ausdrücklich nicht dazu. Fachliche Abnahme mit rechtmäßig freigegebenen Testdokumenten und realer Browser-/Gerätesitzung bleibt nach der Code-Review offen.
+
+**Stand 08.11.2026 · ChatGPT · Phase 5: Projektakte ausschließlich auf Branch vorbereitet; keine Live-Änderungen.**
+
+## Phase 5 · Gemeinsame Projektakte, quellengestützte Vorschläge
+
+Die bereits in Phase 1 angelegten Window-kompatiblen Tabellen für Projektsteckbrief, Themen, Entscheidungen, Claims, Modell, Dokumentsegmente und Docling werden im selben Engine-Profil verwendet. Projektakten sind ausschließlich für aktive `office_project_members` des zugehörigen Projekts lesbar, auch eine nicht zugewiesene Administratorin erhält keinen impliziten Zugriff. Persönliche Threads bleiben privat.
+
+Die Quelle `gari01234/minds` hat die projektspezifische, deutschsprachige `Akte-Pflege` ergänzt. Ein nächtlicher Office-Workflow mit GitHub-OIDC soll nach späterem Review pro aktivem Projekt nur neu indexierte Dokumente lesen. Das Ergebnis sind ausschließlich `proposed`-Einträge mit wörtlichem Quellenzitat, Dokumentversion und `requires_human_review`, keine still bestätigten Entscheidungen. Der serverseitige Autor wird als `system` kenntlich gemacht, eine technische Mitglieds-ID ist keine Aussage über menschliche Autorenschaft. Pro Projekt existiert eine tägliche Claim-/Lease-Sperre.
+
+`isabella-work-ingest-runner` prüft vor jeder Office-Docling-Verarbeitung zusätzlich aktiven Projektstatus, Besitzer und aktuelle Teammitgliedschaft. Revozierte Mitglieder können keine Projektdateien über den Worker weiter verarbeiten. Kein Zugriff auf fremde private Chats und keine automatische Freigabe von Aufgaben.
+
+**Neue, nicht angewendete Migration:** `20261108215000_office_romy_akte_maintenance_state_v1.sql`. Die Quellcode-Manifeste pinnen 96 Engine-Dateien, einschließlich des neuen Zugriffswächters. Die isolierten Tests enthalten fiktionale Projekte und prüfen RLS, den täglichen Claim, fehlende Rechte und vorgeschlagene Quellzitate; Produktions-E2E ist ausdrücklich ausstehend.
+
+**Es wurde nichts gemergt, deployed oder auf dem echten Supabase-Schema ausgeführt.** Keine Zugangsdaten oder Kundendaten wurden übernommen. Offen: eine explizite System-Autor-Spalte statt technischer Mitglieds-ID und eine spätere produktive Abnahme mit rechtmäßig freigegebenen Quellen.
+
+
+**Stand: 08.11.2026 · ChatGPT · Phase 4 auf Branch (nicht live).** Romy nutzt für persönliche Kontinuität eine eigene Speicherung pro angemeldetem Office-Mitglied; keine Produktionseingriffe.
+
+## Phase 4 · Persönliche Erinnerung und Präsenz (unveröffentlicht)
+
+Der Source-of-Truth liegt in `gari01234/minds`. Das Office-Deployment synchronisiert die freigegebenen Engine-Dateien mit Git-SHA und startet persönliche Abläufe ausschließlich mit dem Serverprofil `office`. Nächtlicher Rückblick und proaktive Nachrichten beachten `user_id`, aktive Mitgliedschaft und personengebundene Zeit- und Häufigkeitsgrenzen. Kein Office-Push, keine Vermischung mit persönlichen Window-Anweisungen. Die Texte zu persönlichen Terminen im Heartbeat erscheinen für Office auf Deutsch; Window bleibt unverändert.
+
+Das Menü „Was Romy über mich weiß“ zeigt nur dem eingeloggten Mitglied zugeordnete gespeicherte Einträge; „Romy darf mir von sich aus schreiben“ steuert die persistierte persönliche Einstellung. „Vergessen“ erfordert eine Bestätigung und ein tatsächliches Server-Receipt. Die neue Migration `20261108214000_office_romy_owner_forget_v1.sql` enthält die eigenständig geprüfte Besitzberechtigung. Sie ist **nicht** angewendet. Bestehende ältere Romy-Daten werden nicht automatisch übernommen oder gelöscht.
+
+**Prüfung:** isolierte Testdaten für zwei Personen, Office-RLS und Vergessens-RPC in PostgreSQL 17, Window-Regressionssuite, Quellcode-Hashes und Browser-CI. Diese automatisierte Prüfung ersetzt keine authentifizierte E2E-Abnahme in Office. **Keine Merges, Deployments, echten Tokens oder Datenbankänderungen.** Die Fase-3- und älteren Einträge unten bleiben als Historie erhalten.
+
+
+**Actualizado:** 08.11.2026 · ChatGPT: fase 3, chat canónico compartido preparado en rama, sin producción.
+
+## Fase 3 · Chat de Window en Office (PR apilado, no desplegado)
+
+La PWA de Office carga los seis módulos de chat compartidos desde minds con procedencia y hashes registrados en `docs/sync-window-app-manifest.json`. La pestaña Romy pasa por `isabella-chat` de **Office**, `conversations` y `conversation_messages` propias bajo RLS. `office-engine-chat.js` muestra historial privado por usuario y reconcilia la respuesta canónica. La ruta anterior `office-assistant` sigue intacta, pero solo se utiliza si se selecciona expresamente como alternativa, nunca por fallo automático.
+
+Se sincronizó un ajuste de `ai.js` en el repo fuente para que el contexto de respuestas citadas diga Romy y el primer nombre del miembro Office, conservando el texto de Window literalmente cuando `APP_PROFILE=window`. El chat conserva SSE, lectura tras cerrar, propuestas tipadas, recibos D1 con Deshacer y líneas de sistema. No se convierten mensajes de otro usuario en propios ni se atribuyen avisos de app a Romy.
+
+**Pruebas:** suites Node y Deno heredadas, comparación de hashes exactos y una suite Chromium de navegador offline con SSE fragmentado, identidad A/B, propuesta/recibo de ejecución y destino Office. Esta última prueba verifica el transporte y el adaptador de datos mediante dobles; la prueba de la interfaz completa contra Office autenticado sigue pendiente para la revisión final. Ninguna prueba contacta con Supabase ni OpenAI reales.
+
+**Sin cambios en producción:** no hay merges, migraciones aplicadas, claves configuradas ni funciones desplegadas. Las conversaciones antiguas de Office se conservan; no se migran automáticamente al esquema nuevo.
+
+**Actualizado:** 08.11.2026 · ChatGPT: fase 2 (motor copiado, sin activación) preparada en rama apilada. Ningún merge, ninguna migración aplicada, ninguna función desplegada.
+
+## Fase 2 · Motor Window bajo perfil Office (PR en preparación)
+
+El motor fuente es `gari01234/minds` commit `30451152a0a59bd9bd0243f35fb164f03147866d`. Se copiaron exactamente 95 archivos (1.014.726 bytes), comparados todos contra sus hashes de blob Git, incluidos los módulos `_shared` y 20 funciones habilitadas en el catálogo. No se incluyen Sofía, Ideas, Feed, código de Window, Window MCP ni el push iPhone. El script `scripts/sync-window.mjs` y el workflow manual `sync-window-engine.yml` crean futuros PRs revisables desde un SHA explícito, nunca despliegan ni fusionan.
+
+El perfil Office de servidor resuelve el nombre mediante la cuenta autenticada activa. `search_calendar` y radar incorporan los hitos Terminplan únicamente de proyectos pertenecientes al usuario; `responsable` sigue del motor base. El modo ligero Work evita precargar proyectos completos. Las mutaciones del Terminplan siguen pendientes de integración con propuestas revisables, sin cambios silenciosos.
+
+**D1:** migración preparada `20261108213000_office_window_direct_create_default_v1.sql`: la persona activa puede crear directamente lo solicitado de forma explícita, con cita y recibo verificado por las RPC existentes, y Deshacer acotado. La preferencia `review` no se sobrescribe; D2 (mover, modificar, completar, eliminar sin confirmación) continúa prohibido. La migración no se ha aplicado.
+
+**CI:** `Verify Romy synced engine (offline tests + Deno)` en verde con 176 tests y 0 fallidos, Deno check de las 20 funciones; `Verify Romy Office schema (ephemeral PostgreSQL)` en verde, también con casos D1 y aislamiento ficticio. `Verify Romy stacked phases (isolated)` de minds en verde. No equivale a E2E autenticado en Office ni habilita activación automática.
+
+**Pendiente:** configurar exclusivamente por el administrador `ASSISTANT_PROFILE=office`, credenciales de OpenAI/Docling y las autorizaciones de runners; validar los flujos compartidos con los datos de Office, adaptar URLs y autenticación de voz y cuidado nocturno, y añadir la PWA común (fases 3–6). `office-assistant` queda de respaldo. No se ha alterado el sistema publicado.
+
+## Fase 1 · Base de datos Office (PR #57, rama sin fusionar)
+
+Se han preparado 16 migraciones no destructivas para la compatibilidad estructural de Window: 90 tablas nuevas (74 de ejecución/memoria y 16 de Projektakte), claves, vistas, índices, políticas RLS activadas explícitamente, Storage, heartbeat inerte y RPCs de consulta, autoridad, acciones supervisadas, memoria, misiones, rutinas e ingesta. Ningún registro personal, de empleados ni de proyectos se ha trasladado desde Window. Los datos existentes de Romy no se borran ni modifican.
+
+El contrato exige `auth.uid() = user_id` y membresía activa para lo personal. La lectura compartida de la Projektakte exige pertenencia a `office_project_members`, incluso para administradores. Los recibos de acciones y las decisiones no aceptan escrituras REST sin la autoridad del motor. Los RPC de runners/Watch no son ejecutables desde el navegador. El único RPC de secretos VAPID se excluye porque Office no habilitará push móvil.
+
+**Verificación:** en la rama, suites de Office Node, PostgreSQL 17 efímero con todas las migraciones, pruebas de aislamiento A/B y proyectos P/Q, controles negativos de privilegios y `pg_dump --schema-only` con cliente PostgreSQL 17. Los workflows `Verify Romy Office schema`, `Verify Romy engine schema` y `Verify Terminplan dependency audit` registraron ejecuciones satisfactorias el 08.11.2026. La última revisión de dependencias RPC añadió cuatro procedimientos de rutinas/Watch. Si un commit posterior aún está en CI, la aceptación corresponde al último SHA verde, no al commit nuevo por anticipado.
+
+**Estado de producción:** no hay merges, migraciones aplicadas, secretos configurados, nuevos endpoints desplegados ni sesiones reales probadas. La aceptación SQL no es una prueba funcional end-to-end de Romy. El runtime `office-assistant` sigue intacto como respaldo; fase 2 incorporará el código del motor sincronizado.
+
+**Decisión conservadora:** las dependencias de Lecturas, Thoughts, Ideas y Feed no se importan. `minds_store_vapid_pair_if_absent` se excluye explícitamente, sin generar credenciales ni activar push. Las escrituras de modelos y decisiones de proyecto se limitarán a RPC revisadas.
+
+## Encargo vigente · Romy = Isabella (08.11.2026)
+La referencia es `gari01234/minds/docs/ROMY-MOTOR-ISABELLA-ENCARGO.md`. Sustituye para este trabajo la decisión anterior que excluía lo personal de Romy: el nuevo objetivo incluye continuidad privada por persona y Projektakte compartida por equipo. La fase 0 ha pasado las pruebas de perfil y la CI de los dos repositorios. Preparados el perfil de servidor por usuario, los prompts de background y el diccionario de chat; el motor y la PWA aún no están sincronizados ni activados en Office. El runtime `office-assistant` permanece como respaldo y el despliegue activo de Office no cambia.
+
+**Seguridad y permisos:** los cambios personales requieren RLS por propietario; la Projektakte, RLS por proyecto. Ninguna prueba usa servicios reales. D1 permitirá crear directamente lo dictado con comprobación y Deshacer, pero D2 (modificar, completar o borrar sin confirmación) sigue prohibido. Nada de este trabajo se ha fusionado, desplegado ni aplicado a Supabase.
+
+**Verificación automatizada (08.11.2026):** GitHub Actions «Verify Terminplan dependency audit» en la rama de fase 0: 200 pruebas, 200 superadas, 0 fallidas; comprobación de scripts del navegador PASS. Esta verificación no es aceptación funcional del motor ni autoriza comenzar fase 1.
+
+**Pendiente:** completar la fase 0 y verificar los prompts de background, todo el chat en alemán y la equivalencia byte a byte de Window; las migraciones de fase 1 todavía no se han iniciado. La pregunta abierta sobre el alcance de prompts de background se resuelve provisionalmente con exclusión de Office hasta que estén aislados, probados y configurados por persona.
+
+---
+
 **Actualizado:** 08.11.2026, por Claude: Romy como Isabella en cinco puntos (sección siguiente). Antes: 07.11.2026, por Claude: revisión de PR #16–#39, decisiones de Gari, correcciones (PR #41) y **un solo modelo de datos** (PR #42). La versión anterior era del 05.11.2026, de ChatGPT, tras el PR #35.
 Este archivo describe el estado *de ahora*. La historia de los cambios está en `docs/BITACORA.md`. Las reglas para agentes están en `AGENTS.md`.
 

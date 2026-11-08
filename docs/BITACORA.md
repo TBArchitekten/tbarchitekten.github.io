@@ -17,6 +17,108 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-08 · Romy = Isabella · revisión de las 6 fases y correcciones · Claude
+- Qué cambió y por qué: revisión completa del trabajo de ChatGPT antes de publicarlo. Correcciones: (1) el motor compartido escribe con el JWT del miembro filas que la fase 1 dejó solo en lectura (memoria que aprende, seguimientos, uso, ejecuciones, artefactos, panel de skills/rutinas, decisiones propias de la Akte): nueva migración con permisos mínimos y una política por cada llamada real; siguen solo de servidor las filas de Romy, recibos, autoridad D1, claims, grants y secretos. (2) Los avisos de la app («Gespeichert.», recibos de confirmación) ahora quedan en la conversación por una función estrecha (`office_romy_append_notice`), marcados como aviso del sistema, nunca como Romy. (3) `app/app.js` de Office era una copia antigua: fusionado a tres vías con el de Window (Deshacer, avisos, recuperación) conservando lo de Office y todo el texto visible en alemán. (4) Romy usa el mismo contrato de relación que Isabella (decisión de Gari: iguales). (5) Clave de OpenAI con alternativa `TBA_OFFICE_OPENAI_API_KEY`. (6) Workflow manual `apply-migration.yml` como en Window. (7) Sin runner, una pregunta informativa (que el motor manda a ejecución durable) nunca recibía respuesta: nueva migración que programa chat-runner, rutinas, misiones, documentos generados y lectura de documentos con secretos aleatorios creados dentro de la base. (8) `deploy-functions.yml` fija `ASSISTANT_PROFILE=office` antes de cada deploy y acepta 4xx de los runners que validan su propio secreto.
+- Archivos: `app/app.js`, `app/index.html` (app.js v=office47), motor sincronizado desde minds `68d8856` y manifiestos, `supabase/migrations/20261108220000_office_window_engine_owner_writes_v1.sql`, `supabase/migrations/20261108221000_office_romy_append_notice_v1.sql`, `tests/sql/office-romy-review-acceptance.sql`, `.github/workflows/verify-romy-schema.yml`, `.github/workflows/apply-migration.yml`, tests con textos alemanes.
+- Base de datos: las 19 migraciones de las fases + estas 3 (`…220000`, `…221000`, `…222000`) — aplicadas en Supabase: se aplican tras el merge con `apply-migration.yml`, en orden (ver ESTADO).
+- Deploy de funciones: tras el merge, con `deploy-functions.yml` (ver ESTADO).
+- Cómo se probó: `node --test` 221/221, Chromium 7/7, `deno check` de todas las funciones del perfil Office, las 21 migraciones y las 5 pruebas de aceptación en PostgreSQL efímero (dos miembros ficticios, un externo; todo revertido). Comprobado contra producción, solo lectura: ninguna tabla, función o política nueva choca con lo existente; 0 archivos en `minds-work`.
+- Quedó pendiente o sin probar: prueba real con el móvil (voz Live, micrófono en Safari); algunos paneles avanzados heredados de Window llaman RPC que Office no tiene (modelo operativo, expectativas, push, conocimiento con `minds_save_work_claim`) — ya fallaban antes; asignar responsables desde la ficha de tarea llama `minds_work_set_task_assignees`, que no existe en Office (fallo previo, no de estas fases). Docling necesita `DOCLING_SERVE_URL`/`DOCLING_SERVE_API_KEY` en los secretos de Office.
+- Riesgos o decisiones que necesitan a Gari: ninguno nuevo; nada destructivo.
+- PR: cadena Romy #56–#62.
+
+### 2026-11-08 · Romy = Isabella · Phase 6 · Live und MCP · ChatGPT
+- Änderung und Zweck: Romy Live als separate deutsche WebRTC-Oberfläche, dieselben gepinnten Window-Clientmodule, individuelle Office-JWT-Prüfung; neue read-only Projektakte/Themenblatt/Quellen-/Diagnose-Werkzeuge mit OAuth und expliziter Projektmitgliedschaft. Diktiermikrofon bleibt unverändert.
+- Dateien: `app/live/*`, `app/office-live-entry.js`, `app/index.html`, gemeinsame Engine und Sync-Manifeste, `supabase/functions/office-mcp/index.ts`, `office-akte.mjs`, Tests unter `tests/browser/` und `tests/office-romy-phase6-mcp.test.mjs`, `AGENTS.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Datenbank: keine neue Phase-6-Migration — in Supabase angewendet: **nein**.
+- Deploy: keiner; später nach Review `isabella-live-session` und `office-mcp` gemäß Office-Konfiguration.
+- Prüfung: Chromium mit synthetischen WebRTC-, Audio- und OAuth-Doubles; nur Owner-Transkript wird gespeichert, Agenten-Sprachausgaben nicht, kanonische Aktionen benötigen Bestätigung; OAuth-Projektakte nur im berechtigten Team. Office Engine/Chromium/PG17 und minds-Regressionen erfolgreich am verifizierten Code-Stand; finaler PR-HEAD in CI erneut prüfen.
+- Ausstehend: reale Sprachqualität, Mikrofonberechtigungen auf iPhone/Safari, echte OAuth-Anmeldung und Provider-Integration; keine Produktions-E2E-Behauptung.
+- Risiko/Entscheidung: keine original persönliche Isabella-Stimme in Office, kein Office-Mobile-Push, keine Akten-Schreibrechte über MCP. Kein Secret-Wert im Repository.
+- PR: Phase 6 (apilado sobre Phase 5), ohne Merge, Migration oder Deploy.
+
+
+### 2026-11-08 · Romy = Isabella · Phase 5 · Projektakte und Docling · ChatGPT
+- Was geändert wurde: eine gemeinsame Projektakte nur für Projektmitglieder; Quellenzitate und Versionen als Zulassungsbedingung, neue Inhalte ausschließlich als Vorschläge. Tägliches serverseitiges Projekt-Leasing verhindert doppelte Nachtläufe.
+- Dateien: Engine `_shared/akte-pflege.mjs`, `_shared/office-akte-access.mjs`, `isabella-work-ingest-runner`, `window-akte-pflege`, Quellcode-Manifest, SQL-Migration, SQL- und Node-Tests, `.github/workflows/romy-akte-pflege.yml`, ESTADO und BITACORA.
+- Datenbank: `20261108215000_office_romy_akte_maintenance_state_v1.sql` – in Supabase angewendet: **nein**.
+- Deploy: keiner. Erst nach Review kommen `window-akte-pflege` und `isabella-work-ingest-runner` in Frage.
+- Tests: zwei fiktive Projekte, RLS-Teamgrenze, Admin ohne Projektzuordnung, einmaliger Tages-Claim und source-first Projekt-Werkzeuge; CI-Status muss auf finalem Branch-HEAD bestätigt werden.
+- Noch offen: vollständige produktive E2E-Ingesta von PDF, DOCX und XLSX mit Docling sowie die menschliche Bestätigung der Aktenvorschläge.
+- Risiken und Entscheidung: bestehendes Mitglieds-UUID nur als technische Speicherung, niemals als menschliche Urheberschaft; `author_kind='system'`, ausschließlich vorgeschlagene Einträge.
+- PR: Phase-5-Branches auf Phase 4, ungeprüft von Claude, nicht gemergt.
+
+### 2026-11-08 · Romy = Isabella · Phase 4, persönliche Kontinuität · ChatGPT
+- Änderung und Begründung: nächtliches Gedächtnis und proaktive Präsenz verwenden ausschließlich den aktiven Office-Kontoinhaber, mit eigenem Tagesbudget. Neuer persönlicher Speicher-/Präsenzdialog aus der gemeinsamen Window-Quelle; keine mobile Office-Push-Benachrichtigung.
+- Dateien: `app/office-personal.js`, aktualisierte Engine-Module, `app/index.html`, Quellcode-Manifeste, SQL-Migration und isolierte Tests, sowie diese Dokumentation.
+- Datenbank: `20261108214000_office_romy_owner_forget_v1.sql` vorbereitet — in Supabase angewendet: **nein**.
+- Funktionen: keine deployed; später `isabella-heartbeat`, `isabella-dream`, `isabella-presence`, `isabella-routine-runner` nur mit geprüftem Office-Profil.
+- Tests: Testpersonen und Projektbezeichnungen sind erfunden; Node/Deno, SQL A/B in transaktionaler Einweg-Datenbank und Offline-Chromium. CI-Ergebnis ist vor dem Merge anhand des finalen HEAD zu bestätigen.
+- Noch offen: echte Anmeldesitzung und End-to-End-Überprüfung der Erinnerung, Besuch im Browser und Abnahme durch Claude.
+- Risiko / gewählte Option: Vergessen invalidiert persönliche Erinnerungen mit Provenienz statt destruktiver Löschung; ältere Chat-Historie bleibt unangetastet.
+- PR: Phase-4-Branch auf Phase 3, nicht gemergt.
+
+### 2026-11-08 · Romy = Isabella · fase 3: chat común y Chromium · ChatGPT
+- Qué cambió y por qué: el chat de Office usa el cliente de Window y respuestas canónicas del motor Office, sin mezclar identidades. El chat heredado queda accesible únicamente mediante elección manual.
+- Archivos: `app/office-engine-chat.js`, `app/index.html`, `app/ai.js` y otros cinco módulos compartidos, `docs/sync-window-app-manifest.json`, `tests/office-app.test.mjs`, `tests/browser/romy-chat.chromium.mjs`, workflow de Chromium y documentación.
+- Base de datos: ninguna migración nueva en fase 3 — aplicada en Supabase: no.
+- Deploy de funciones: ninguno. El backend nuevo no está activado en producción.
+- Cómo se probó: CI de Node/Edge Deno y tests aislados de Chromium para streaming, propuestas, recibos y aislamiento entre dos cuentas ficticias. E2E con sesión real pendiente.
+- Quedó pendiente o sin probar: enlace de voz real, revisión del chat integrado en Safari, verificación de Deshacer con Office desplegado y sincronización de historial anterior (deliberadamente no automática).
+- Riesgos y preguntas: se conserva `office-assistant` como respaldo elegible, sin fallbacks silenciosos ni importación de su historial.
+- PR: apilado sobre #58, todavía sin fusionar.
+
+### 2026-11-08 · Romy = Isabella · fase 2, motor sincronizado sin activar · ChatGPT
+- Qué cambió y por qué: se copiaron desde minds `30451152a0a5` los 95 archivos del motor habilitado, todos verificados por SHA; se añadió sincronización reproducible y workflow que solo abre PR, perfil Office del motor y adaptador team-scoped de Terminpläne.
+- Archivos: `supabase/functions/_shared`, 20 Edge Functions de `supabase/functions`, `supabase/config.toml`, `scripts/sync-window.mjs`, `.github/workflows/sync-window-engine.yml`, `verify-romy-engine.yml`, tests, y manifiesto `docs/sync-window-engine-manifest.json`.
+- Base de datos: `20261108213000_office_window_direct_create_default_v1.sql` D1, con opt-out `review` preservado — aplicada en Supabase: no.
+- Deploy de funciones: ninguno. Se conservará `office-assistant` hasta aceptación.
+- Cómo se probó: 95 hashes de blob iguales; CI Offline Node 176/176; Deno check de 20 funciones; PG17 efímero con D1 y pruebas de aislamiento de dos personas.
+- Quedó pendiente o sin probar: Origin/OAuth/credenciales de runner, integración PWA común de chat y voz, rutinas, Proyectoakte y aceptación E2E. Los endpoints sin adaptaciones no se activan.
+- Riesgos o decisiones que necesitan revisión: Office no tendrá push iPhone; D1 sí, D2 no; las modificaciones de Terminplan deben seguir propuesta + confirmación.
+- PR: rama `romy-isabella/phase-2-engine-sync` apilada en fase 1, pendiente de revisión.
+
+### 2026-11-08 · Romy = Isabella · fase 1 · aceptación estructural con RPC · ChatGPT
+- Qué cambió y por qué: se completó la compatibilidad estructural del motor con 90 tablas y RPCs auditadas; se activó RLS en todas las nuevas tablas y se verificaron denegaciones de acceso entre miembros/proyectos. Se añadió el contrato de rutinas/Watch con ejecución exclusivamente de worker y sin VAPID de Office.
+- Archivos: 16 migraciones `2026110820…`–`20261108212700`, workflows `.github/workflows/verify.yml` y `verify-romy-schema.yml`, pruebas SQL sintéticas, `docs/ESTADO.md` y este registro.
+- Base de datos: nuevas migraciones no destructivas — aplicada en Supabase: **no**.
+- Deploy de funciones: ninguno.
+- Cómo se probó: PostgreSQL 17 efímero y Supabase local; verificaciones SQL de propietario, equipo, administrador no miembro, inserción falsificada y permisos de RPC; Node tests y `pg_dump --schema-only` sin contenido. CI verde en los SHA previos; el SHA final debe verificarse antes de iniciar fase 2.
+- Quedó pendiente o sin probar: acceso de una persona real, herramientas del motor desplegadas, rendimiento, uso real de la Projektakte y cualquier integración de voz.
+- Riesgos o decisiones que necesitan revisión: los dominios de Window que no existen en Office quedan excluidos; `minds_store_vapid_pair_if_absent` no se copia; futuras migraciones de producción deben revisarse en orden por Claude.
+- PR: Office #57 / minds #319, ambos apilados y sin fusionar.
+
+
+### 2026-11-08 · Romy = Isabella · fase 1, propuesta de esquema (no aplicada) · ChatGPT
+- Qué cambió y por qué: migraciones estructurales basadas exclusivamente en metadatos del esquema de Window; owner RLS personal y lectura por `office_project_members` en Projektakte; Storage privado y cron sin valores activos.
+- Archivos: seis migraciones `20261108200000` a `20261108205000`, `tests/sql/office-romy-phase1-acceptance.sql`, `.github/workflows/verify.yml`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: migraciones nuevas y no destructivas — aplicada en Supabase: no.
+- Deploy de funciones: ninguno.
+- Cómo se probó: se ha preparado prueba transaccional SQL ficticia sobre PostgreSQL efímero; pendiente resultado de CI y verificación de RPC del motor.
+- Quedó pendiente o sin probar: aplicar todas las migraciones en CI, resolver posibles dependencias, revisar RPC/autoridad, Storage y aceptación antes de fase 2.
+- Riesgos o decisiones que necesitan a Gari: las dependencias de Ideas/Lecturas/Thoughts de Window se excluyen por ausencia de esos dominios en Office. Opción prudente: documentar referencias externas omitidas sin crear tablas de contenido que no pertenezca a Office.
+- PR: rama `romy-isabella/phase-1-office-schema`, apilada sobre fase 0. No fusionar ni desplegar.
+
+### 2026-11-08 · Validación de fase 0 · ChatGPT
+- Qué cambió y por qué: se comprobó el perfil de servidor de Office por usuario, el diccionario alemán compartido y el orden explícito de inicialización en la PWA. Una prueba de carga se corrigió para aceptar nombres de módulos con dígitos sin perder la aserción de dependencia.
+- Archivos: app/assistant-i18n.js, app/index.html, tests/office-app.test.mjs, docs/ESTADO.md y docs/BITACORA.md; la implementación del perfil reside en el PR de fase 0 de minds.
+- Base de datos: ninguna migración — aplicada en Supabase: no.
+- Deploy de funciones: ninguno; office-assistant sigue siendo el respaldo actual.
+- Cómo se probó: CI de Office y de minds correctas. En minds, 1211 tests aprobados y Deno check correcto, con `promptComponentSizes()` en fixture sintético.
+- Quedó pendiente o sin probar: compatibilidad SQL y datos multiusuario de fase 1, sincronización, runtime, PWA y aceptación operativa de Office de fases 2–6.
+- Riesgos o decisiones que necesitan a Gari: procesos proactivos de Office sin activar hasta confirmar aislamiento por miembro; sin push móvil para Office.
+- PR: #56 (Office) y #318 (minds), sin fusionar.
+
+### 2026-11-08 · Romy = Isabella · fase 0 (borrador, sin activación) · ChatGPT
+- Qué cambió y por qué: se alinea la regla D1/D2 de AGENTS.md con el encargo del 08.11. Se documenta el estado de la preparación de perfil en el repositorio minds. La fase 0 no está aceptada ni activada.
+- Archivos: AGENTS.md, docs/ESTADO.md, docs/BITACORA.md.
+- Base de datos: ninguna migración — aplicada en Supabase: no.
+- Deploy de funciones: ninguno; office-assistant sigue siendo el respaldo actual.
+- Cómo se probó: lectura de AGENTS, ESTADO y las entradas recientes de BITACORA; CI Office 200/200 tests PASS, comprobación de scripts del navegador PASS. No hay todavía aceptación funcional completa de la fase.
+- Quedó pendiente o sin probar: procesos nocturnos, localización integral del chat, prueba byte a byte de Window, CI de ambos repositorios y PRs de las fases 1–6.
+- Riesgos o decisiones que necesitan a Gari: el runtime Office no se puede activar con prompts de background aún no adaptados; opción prudente: dejar esas rutas desconectadas hasta verificar aislamiento.
+- PR: rama romy-isabella/phase-0-office-contract (borrador).
+
 ### 2026-11-08 · Romy: los turnos ligeros llevan menos · Claude
 - **Qué cambió y por qué:**
   - En Window, un «¡Gracias!» costó ~370k caracteres porque se precargó un proyecto entero. Gari: «esto no puede pasar», también en Office.

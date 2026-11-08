@@ -1,0 +1,70 @@
+name: Apply a Supabase migration
+# Manual on purpose, like the deploy: merging a migration never changes the database by itself.
+# Same pattern as Window (gari01234/minds). Gari decided on 08.11.2026 that Claude may apply reviewed
+# migrations this way. It applies one file that is already on main, through the Management API, so it
+# is recorded in the migration history (under the full file name, so two files with the same
+# description never look alike). Destructive statements are refused here; those need Gari's explicit
+# OK for that specific change and are applied by hand. Idempotent seed inserts (ON CONFLICT DO
+# NOTHING) are allowed; deletes, updates and truncates at the top level are not.
+on:
+  workflow_dispatch:
+    inputs:
+      migration:
+        description: 'File name in supabase/migrations (e.g. 20261108221000_office_romy_append_notice_v1.sql)'
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: supabase-migration
+  cancel-in-progress: false
+jobs:
+  apply:
+    if: github.repository == 'TBArchitekten/tbarchitekten.github.io' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: supabase
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ynzsbemisjvfgbqcqliq
+      MIGRATION: ${{ inputs.migration }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check the file and refuse destructive statements
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then echo "::error::SUPABASE_ACCESS_TOKEN is missing in the 'supabase' environment."; exit 1; fi
+          if ! [[ "$MIGRATION" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]] || [ ! -f "supabase/migrations/$MIGRATION" ]; then
+            echo "::error::Unknown migration: $MIGRATION"; exit 1
+          fi
+          python3 - "supabase/migrations/$MIGRATION" <<'PY'
+          import re,sys
+          sql=open(sys.argv[1]).read()
+          code=re.sub(r'--[^\n]*','',sql)  # comments may say "no DROP"; only statements count
+          bad=re.search(r'\b(drop\s+(table|schema|policy|column|database|view|materialized|trigger|index|function|type|extension)|truncate|alter\s+table[^;]*\sdrop)\b',code,re.I)
+          if bad: sys.exit(f"::error::destructive statement ({bad.group(0)[:40]}); needs Gari's explicit OK and is applied by hand.")
+          for m in re.finditer(r'^(delete|update|insert)\b[^;]*;',code,re.I|re.M):
+            stmt=m.group(0)
+            if not (stmt.lower().startswith('insert') and re.search(r'on\s+conflict[^;]*do\s+nothing',stmt,re.I)):
+              sys.exit("::error::top-level data change; it is applied by hand after Gari's OK.")
+          print('lines',sql.count('\n'))
+          PY
+      - name: Apply through the Management API
+        run: |
+          set -euo pipefail
+          name="${MIGRATION%.sql}"
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/database/migrations"
+          auth=(-H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")
+          # Already applied under the same name: nothing to do.
+          code=$(curl -sS -o history.json -w '%{http_code}' "${auth[@]}" "$api")
+          if [ "$code" = "200" ] && jq -e --arg n "$name" 'any(.[]?; .name==$n)' history.json >/dev/null; then
+            echo "already_applied"; exit 0
+          fi
+          jq -n --rawfile q "supabase/migrations/$MIGRATION" --arg n "$name" '{query:$q,name:$n}' > body.json
+          code=$(curl -sS -o result.json -w '%{http_code}' -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+            -H "Idempotency-Key: $MIGRATION" --data @body.json "$api")
+          echo "status=$code"
+          # Only the error message, never the SQL or any data.
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then jq -r '.message // .error // "failed"' result.json | head -c 600; echo; exit 1; fi
+          echo "applied"
