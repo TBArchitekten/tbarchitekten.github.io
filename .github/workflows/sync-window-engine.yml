@@ -1,0 +1,52 @@
+name: Sync Window engine to Office (review-only)
+# Manual. Creates a PR; never merges, deploys, runs migrations or writes to Office Supabase.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Exact 40-character commit SHA from gari01234/minds'
+        type: string
+        required: true
+      mode:
+        description: 'Allowlisted files to synchronize'
+        type: choice
+        options: [engine, app, all]
+        default: engine
+        required: true
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  sync:
+    if: github.repository == 'TBArchitekten/tbarchitekten.github.io' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate allowlist with synthetic tests
+        run: node --test tests/sync-window.test.mjs
+      - name: Fetch pinned Window public blobs and write exact manifest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          SYNC_MODE: ${{ inputs.mode }}
+        run: node scripts/sync-window.mjs "--sha=$SOURCE_SHA" "--mode=$SYNC_MODE"
+      - name: Create review PR, never publish code directly
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ github.token }}
+          base: main
+          branch: sync/window-${{ inputs.mode }}-${{ inputs.source_sha }}
+          commit-message: 'Sync Window ${{ inputs.mode }} from ${{ inputs.source_sha }}'
+          title: 'Sync Window ${{ inputs.mode }} → Office (${{ inputs.source_sha }})'
+          body: |
+            Source: gari01234/minds commit ${{ inputs.source_sha }}.
+            Mode: ${{ inputs.mode }}.
+            The changed file paths and original Git blob SHAs are recorded in docs/sync-window-${{ inputs.mode }}-manifest.json.
+            Review all changes before merging. No secrets, production DB writes, deployment or automatic approval.
+          delete-branch: false
