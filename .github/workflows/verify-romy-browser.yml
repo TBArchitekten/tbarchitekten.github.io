@@ -25,4 +25,4 @@ jobs:
       - name: Exercise real browser transport, receipts and per-member chat using synthetic doubles
         env:
           CI: 'true'
-        run: node --test tests/browser/romy-chat.chromium.mjs
+        run: node --test tests/browser/romy-chat.chromium.mjs tests/browser/romy-live.chromium.mjs

@@ -1,5 +1,35 @@
 # TBA Office · Estado actual
 
+**Stand 08.11.2026 · Claude · Revisión de las fases 1–6 terminada; publicación en curso (merge, migraciones, deploy).**
+
+## Romy = Isabella · revisión y publicación
+
+Romy corre con el motor de Isabella (`isabella-chat` y compañía, perfil `ASSISTANT_PROFILE=office`), sincronizado byte a byte desde `gari01234/minds` (`scripts/sync-window.mjs`, manifiestos en `docs/`). Mismo contrato de relación que Isabella; los nombres se adaptan al miembro (Gari→nombre del miembro, Isabella→Romy, Window→TBA Office) y habla el idioma en que le escriben.
+
+**Orden de migraciones** (con `apply-migration.yml`, una por una, tras el merge): las 19 de las fases en el orden de `verify-romy-schema.yml`, después `20261108220000_office_window_engine_owner_writes_v1.sql` y `20261108221000_office_romy_append_notice_v1.sql`.
+
+**Funciones a desplegar** (`deploy-functions.yml`): `isabella-chat isabella-chat-runner isabella-delivery-runner isabella-heartbeat isabella-dream isabella-presence isabella-routine-runner isabella-mission-runner isabella-capability-runner isabella-capability-runtime isabella-artifact isabella-artifact-intake isabella-live-session isabella-transcribe isabella-work-ingest-runner window-akte-pflege office-mcp`.
+
+**Configuración:** secreto `ASSISTANT_PROFILE=office`; `isabella_runtime_secrets` con `heartbeat_url` y `heartbeat_runner` (valor aleatorio generado en SQL, nunca en el repo). Opcional: `DOCLING_SERVE_URL`/`DOCLING_SERVE_API_KEY` para leer documentos.
+
+**Permisos:** el navegador y el motor escriben solo filas propias de un miembro activo; las de la Akte además exigen el equipo del proyecto. Solo de servidor: las respuestas de Romy, recibos, autoridad D1, claims de la Akte, grants y secretos. Los avisos de la app entran por `office_romy_append_notice` y quedan marcados como aviso del sistema.
+
+**Fallos previos detectados (no de estas fases):** `minds_work_set_task_assignees` no existe en Office (asignar responsables desde la ficha de tarea falla); varios paneles avanzados copiados de Window llaman RPC no portadas (modelo operativo, expectativas, push, revisión de conocimiento).
+
+**Stand 08.11.2026 · ChatGPT · Phase 6: Sprachmodus und Office-MCP im Review-Branch vorbereitet; keine Produktionsänderung.**
+
+## Phase 6 · Romy Live und OAuth-Projektakte
+
+Romy verwendet den synchronisierten GPT-Live-WebRTC-Client des Window-Motors. Die deutsche Office-Seite `app/live/index.html` lädt ausschließlich die Office-Supabase-Sitzung, das serverseitige Profil `ASSISTANT_PROFILE=office` muss vor der Freischaltung gesetzt werden. Ein diskreter Live-Zugang ergänzt das bestehende Diktiermikrofon, statt es zu ersetzen. Die vier gemeinsamen Live-Clientdateien sind bytegleich mit ihrem über Commit-SHA gepinnten minds-Ursprung; `scripts/sync-window.mjs` hält diese Zuordnung für künftige Sync-PRs fest.
+
+Die Live-Funktion akzeptiert nur gültige Office-JWTs von aktiven Mitgliedern mit abgeschlossener Erstpasswortänderung. Die Identität stammt aus `office_members`, nie aus dem Browser. Office kann weder Isabellas individuell erstellte Originalstimme verwenden noch eine ungeprüfte Sprachausgabe als kanonische Romy-Nachricht abspeichern. Sprachbasierte Aufträge werden vor jeder Aktion an `isabella-chat` mit dem üblichen Freigabe- und Belegverfahren übergeben.
+
+`office-mcp` verwendet weiterhin den OAuth-Login des Office-Projekts. Neue lesende Werkzeuge eröffnen Projektakte und Themenblatt, suchen nach seitenbezogenen Quellen und zeigen private, inhaltsfreie Turn-Diagnosen. Neben RLS wird die explizite Mitgliedschaft in `office_project_members` vor jedem Projektzugriff geprüft; eine nicht zugewiesene Admin-Rolle reicht nicht. Es gibt keine neue Schreibbefugnis für Akten-Claims.
+
+**Automatisierte Abnahme (synthetisch):** Window-/Office-Profiltests in minds, Deno-Typprüfung, Chrome/Chromium mit simuliertem SDP/WebRTC, OAuth/JWT-Doubles und Projekten ohne reale Personen. Die letzte verifizierte CI in Office am Stand der Code-Änderungen umfasste Synced Engine, Chromium und lokales PostgreSQL; nach Dokumentations-Commits ist der HEAD erneut zu prüfen. Die Einzeltests beweisen noch keine echte Sprachübertragung, keine OpenAI-Nutzung und kein Live-OAuth mit Mitarbeitern.
+
+**Betrieb:** kein Merge, kein Deploy, keine Produktionsmigration. Für Office benötigt die Freischaltung die Prüfung von `ASSISTANT_PROFILE`, `OPENAI_API_KEY`, Office-Supabase-Konfiguration und dem manuellen Deploy von `isabella-live-session` und `office-mcp`. Geplante Push-/Originalstimmen-Credentials gehören ausdrücklich nicht dazu. Fachliche Abnahme mit rechtmäßig freigegebenen Testdokumenten und realer Browser-/Gerätesitzung bleibt nach der Code-Review offen.
+
 **Stand 08.11.2026 · ChatGPT · Phase 5: Projektakte ausschließlich auf Branch vorbereitet; keine Live-Änderungen.**
 
 ## Phase 5 · Gemeinsame Projektakte, quellengestützte Vorschläge
