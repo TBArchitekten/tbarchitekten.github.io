@@ -1,0 +1,62 @@
+name: Verify Romy Office schema (ephemeral PostgreSQL)
+on:
+  push:
+    branches: ['romy-isabella/**']
+  pull_request:
+    branches: [main, 'romy-isabella/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  schema:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: romy_schema_fixture
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d romy_schema_fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGDATABASE: romy_schema_fixture
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install isolated PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Build synthetic Office base schema
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-phase1-fixture.sql
+      - name: Apply Phase 1 migrations in strict order (ephemeral PostgreSQL only)
+        run: |
+          for file in \
+            supabase/migrations/20261108200000_office_window_engine_runtime_tables_v1.sql \
+            supabase/migrations/20261108201000_office_window_engine_project_tables_v1.sql \
+            supabase/migrations/20261108202000_office_window_engine_foreign_keys_v1.sql \
+            supabase/migrations/20261108203000_office_window_engine_rls_v1.sql \
+            supabase/migrations/20261108204000_office_window_engine_storage_v1.sql \
+            supabase/migrations/20261108205000_office_window_engine_heartbeat_template_v1.sql
+          do
+            psql -X -v ON_ERROR_STOP=1 -f "$file"
+          done
+      - name: Verify public table RLS and cross-user/project negative cases
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-phase1-acceptance.sql
+      - name: Verify schema-only dump, no rows or project content
+        run: |
+          pg_dump --schema-only --no-owner --no-acl \
+            --exclude-table-data='*' \
+            --table=public.conversations \
+            --table=public.conversation_messages \
+            --table=public.minds_work_claims \
+            --table=public.minds_project_referents \
+            > /tmp/romy-schema-only.sql
+          grep -q 'CREATE TABLE public.conversations' /tmp/romy-schema-only.sql
+          grep -q 'CREATE TABLE public.minds_work_claims' /tmp/romy-schema-only.sql
