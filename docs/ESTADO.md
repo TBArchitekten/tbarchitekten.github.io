@@ -1,6 +1,18 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 08.11.2026, por ChatGPT: fase 1 preparada y verificada en PostgreSQL efímero; migraciones y funciones **no aplicadas ni desplegadas**.
+**Actualizado:** 08.11.2026 · ChatGPT: fase 2 (motor copiado, sin activación) preparada en rama apilada. Ningún merge, ninguna migración aplicada, ninguna función desplegada.
+
+## Fase 2 · Motor Window bajo perfil Office (PR en preparación)
+
+El motor fuente es `gari01234/minds` commit `30451152a0a59bd9bd0243f35fb164f03147866d`. Se copiaron exactamente 95 archivos (1.014.726 bytes), comparados todos contra sus hashes de blob Git, incluidos los módulos `_shared` y 20 funciones habilitadas en el catálogo. No se incluyen Sofía, Ideas, Feed, código de Window, Window MCP ni el push iPhone. El script `scripts/sync-window.mjs` y el workflow manual `sync-window-engine.yml` crean futuros PRs revisables desde un SHA explícito, nunca despliegan ni fusionan.
+
+El perfil Office de servidor resuelve el nombre mediante la cuenta autenticada activa. `search_calendar` y radar incorporan los hitos Terminplan únicamente de proyectos pertenecientes al usuario; `responsable` sigue del motor base. El modo ligero Work evita precargar proyectos completos. Las mutaciones del Terminplan siguen pendientes de integración con propuestas revisables, sin cambios silenciosos.
+
+**D1:** migración preparada `20261108213000_office_window_direct_create_default_v1.sql`: la persona activa puede crear directamente lo solicitado de forma explícita, con cita y recibo verificado por las RPC existentes, y Deshacer acotado. La preferencia `review` no se sobrescribe; D2 (mover, modificar, completar, eliminar sin confirmación) continúa prohibido. La migración no se ha aplicado.
+
+**CI:** `Verify Romy synced engine (offline tests + Deno)` en verde con 176 tests y 0 fallidos, Deno check de las 20 funciones; `Verify Romy Office schema (ephemeral PostgreSQL)` en verde, también con casos D1 y aislamiento ficticio. `Verify Romy stacked phases (isolated)` de minds en verde. No equivale a E2E autenticado en Office ni habilita activación automática.
+
+**Pendiente:** configurar exclusivamente por el administrador `ASSISTANT_PROFILE=office`, credenciales de OpenAI/Docling y las autorizaciones de runners; validar los flujos compartidos con los datos de Office, adaptar URLs y autenticación de voz y cuidado nocturno, y añadir la PWA común (fases 3–6). `office-assistant` queda de respaldo. No se ha alterado el sistema publicado.
 
 ## Fase 1 · Base de datos Office (PR #57, rama sin fusionar)
 
