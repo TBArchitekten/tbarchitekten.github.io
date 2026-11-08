@@ -130,110 +130,6 @@ async function openHistory(){
     row.append(open);body.appendChild(row);
   }
 }
-// Every panel read and subsequent action rechecks the member's current session.
-async function activeOwner(){
-  const current=await authenticated();
-  return current&&current===ownerId?current:null;
-}
-async function privateMemory(){
-  const userId=await activeOwner();
-  if(!userId){status('Bitte erneut im Office anmelden.');return}
-  const [mem,claims]=await Promise.all([
-    sb.from('isabella_memories').select('id,client_key,kind,content,status')
-      .eq('user_id',userId).eq('status','active').limit(80),
-    sb.from('isabella_model_claims').select('id,claim,status,evidence')
-      .eq('user_id',userId).in('status',['hypothesis','confirmed']).limit(80)
-  ]);
-  if(mem.error||claims.error){status('Private Erinnerungen konnten nicht geladen werden.');return}
-  app()?.openModal?.('Was Romy über mich weiß','');
-  const body=document.getElementById('modalBody');if(!body)return;
-  body.replaceChildren();
-  body.appendChild(node('p','Nur du kannst diese Erinnerungen sehen oder zurücknehmen. Vorschläge sind keine bestätigten Fakten.','small'));
-  const memories=node('section',null,'office-private-memory');
-  memories.appendChild(node('h3','Erinnerungen'));
-  for(const item of mem.data||[]){
-    const row=node('div',null,'office-memory-row');
-    row.appendChild(node('p',String(item.content||'').slice(0,2000)));
-    const button=node('button','Vergessen','secondary');button.type='button';
-    button.addEventListener('click',async()=>{
-      if(!await activeOwner())return;
-      if(!window.confirm('Diese eigene Erinnerung zurücknehmen?'))return;
-      button.disabled=true;
-      const result=await sb.rpc('minds_forget_memory',{p_client_key:item.client_key});
-      if(result.error||!['forgotten','invalidated','ok'].includes(result.data?.status)&&result.data?.status!=='not_found'){
-        button.disabled=false;status('Die Änderung konnte nicht bestätigt werden.');return;
-      }
-      row.remove();status('Erinnerung zurückgenommen.');
-    });
-    row.appendChild(button);memories.appendChild(row);
-  }
-  if(!mem.data?.length)memories.appendChild(node('p','Keine aktiven Erinnerungen.','small'));
-  body.appendChild(memories);
-  const model=node('section',null,'office-private-memory');
-  model.appendChild(node('h3','Persönliche Annahmen und bestätigte Angaben'));
-  for(const claim of claims.data||[]){
-    const row=node('div',null,'office-memory-row');
-    row.appendChild(node('p',String(claim.claim||'').slice(0,2000)));
-    row.appendChild(node('small',claim.status==='confirmed'?'Bestätigt':'Unbestätigte Hypothese'));
-    const button=node('button','Zurücknehmen','secondary');button.type='button';
-    button.addEventListener('click',async()=>{
-      if(!await activeOwner())return;
-      if(!window.confirm('Diese eigene Angabe zurücknehmen?'))return;
-      button.disabled=true;
-      const result=await sb.rpc('minds_review_model_claim',{
-        p_claim_id:claim.id,p_status:'contradicted',p_request_id:crypto.randomUUID(),
-        p_confirmed:true
-      });
-      if(result.error||!['updated','already_reviewed'].includes(result.data?.status)){
-        button.disabled=false;status('Die Überprüfung konnte nicht bestätigt werden.');return;
-      }
-      row.remove();status('Angabe zurückgenommen.');
-    });
-    row.appendChild(button);model.appendChild(row);
-  }
-  if(!claims.data?.length)model.appendChild(node('p','Keine Angaben vorhanden.','small'));
-  body.appendChild(model);
-}
-async function presenceSettings(){
-  const userId=await activeOwner();
-  if(!userId){status('Bitte erneut im Office anmelden.');return}
-  const {data,error}=await sb.from('isabella_preferences').select('value')
-    .eq('user_id',userId).eq('preference_key','assistant').maybeSingle();
-  if(error){status('Einstellung derzeit nicht verfügbar.');return}
-  const current=data?.value&&typeof data.value==='object'&&!Array.isArray(data.value)?data.value:{};
-  app()?.openModal?.('Romy · Persönliche Initiative','');
-  const body=document.getElementById('modalBody');if(!body)return;
-  body.replaceChildren();
-  const label=node('label',null,'settings-check');
-  const toggle=document.createElement('input');toggle.type='checkbox';
-  toggle.checked=current.curiosityEnabled!==false;
-  label.append(toggle,node('span','Romy darf mir zuerst schreiben'));
-  body.appendChild(label);
-  body.appendChild(node('p','Nur Chat-Nachrichten im eigenen Office-Konto; keine iPhone-Push-Mitteilungen.','small'));
-  const button=node('button','Einstellung speichern','primary');button.type='button';
-  button.addEventListener('click',async()=>{
-    if(!await activeOwner()){status('Deine Anmeldung hat sich geändert.');return}
-    button.disabled=true;
-    // Refresh before writing so unrelated assistant settings cannot be overwritten.
-    const fresh=await sb.from('isabella_preferences').select('value')
-      .eq('user_id',userId).eq('preference_key','assistant').maybeSingle();
-    if(fresh.error){button.disabled=false;status('Einstellung nicht gespeichert.');return}
-    const merged=fresh.data?.value&&typeof fresh.data.value==='object'&&!Array.isArray(fresh.data.value)?fresh.data.value:{};
-    const result=await sb.from('isabella_preferences').upsert({
-      user_id:userId,preference_key:'assistant',
-      value:{...merged,curiosityEnabled:toggle.checked},status:'confirmed',confidence:1,
-      evidence:[{source:'explicit_user_setting',kind:'presence_opt_in'}],
-      updated_at:new Date().toISOString()
-    },{onConflict:'user_id,preference_key'}).select('user_id').maybeSingle();
-    button.disabled=false;
-    if(result.error||result.data?.user_id!==userId){
-      status('Einstellung nicht bestätigt.');return;
-    }
-    status('Einstellung gespeichert.');
-    app()?.closeModal?.();
-  });
-  body.appendChild(button);
-}
 function showAttachmentNotice(){
   status('Diese Datei kann zurzeit nicht überprüft werden. Kein Upload gilt als erfolgreich.');
 }
@@ -255,12 +151,10 @@ async function initialize(){
   // app.js declares ISABELLA_APP in the same synchronous document execution.
   addMenu('officeEngineHistory','Meine Gespräche',openHistory);
   addMenu('officeEngineNewChat','Neues Gespräch',startNew);
-  addMenu('officeEnginePrivateMemory','Was Romy über mich weiß',privateMemory);
-  addMenu('officeEnginePresence','Romy darf mir zuerst schreiben',presenceSettings);
   addMenu('officeEngineFallback','Vorherige Romy-Version',toggleLegacy);
   await reconcile();
 }
-window.TBA_OFFICE_ENGINE_CHAT=Object.freeze({reconcile,openHistory,startNew,privateMemory,presenceSettings,showAttachmentNotice,
+window.TBA_OFFICE_ENGINE_CHAT=Object.freeze({reconcile,openHistory,startNew,showAttachmentNotice,
   currentConversationId:()=>activeId});
 sb.auth.onAuthStateChange?.((_evt,session)=>{
   if(ownerId&&session?.user?.id!==ownerId){
