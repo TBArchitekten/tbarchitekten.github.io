@@ -54,21 +54,37 @@ create table public.office_project_members(
 create table public.isabella_tasks(
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id),
-  title text,
+  project_id uuid references public.office_projects(id),
+  title text not null default 'Synthetic task',
+  due_date date, completed_at timestamptz, archived_at timestamptz,
+  work_status text not null default 'not_started', priority text not null default 'normal',
+  work_bucket_id uuid, start_date date,
+  client_key text not null default 'fixture-key',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
   unique(id,user_id)
 );
 create table public.minds_work_threads(
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id),
-  project_id uuid references public.office_projects(id)
+  project_id uuid references public.office_projects(id),
+  conversation_id uuid,
+  title text not null default 'Synthetic thread',
+  created_at timestamptz not null default now()
 );
 create table public.minds_work_files(
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id),
   project_id uuid references public.office_projects(id),
   name text not null,
+  folder_id uuid,
+  mime_type text not null default 'application/octet-stream',
   size_bytes bigint not null default 0,
-  storage_path text not null
+  storage_path text not null,
+  source_kind text not null default 'file',
+  index_status text not null default 'stored',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
 );
 create table public.minds_work_folders(
   id uuid primary key default gen_random_uuid(),
