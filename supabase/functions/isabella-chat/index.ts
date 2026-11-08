@@ -18,7 +18,7 @@ import {exactOwnerExcerpt,exactFieldExcerpt,exactOwnerTitle,directOwnerTexts,dir
 import {leanConversationEligible,leanConversationContext,lightWorkConversationContext,LIGHT_CONVERSATION_INSTRUCTIONS,promptComponentSizes,contextFootprintSignal} from "../_shared/light-conversation-context.mjs";
 import {isabellaCoreInstructions,coreConversationContext,workCoreConversationContext,ISABELLA_CORE_VERSION} from "../_shared/isabella-core.mjs";
 import {CORE_DETAILS} from "../_shared/isabella-core-details.mjs";
-import {resolveAssistantProfile,profileFirstName,profileInstructions,profileTools,officeToolAllowed} from "../_shared/assistant-profile.mjs";
+import {resolveAssistantProfile,profileFirstName,profileInstructions,profileTools,officeToolAllowed,OFFICE_RELATIONSHIP_POLICY} from "../_shared/assistant-profile.mjs";
 import {verifiedPendingProse} from "../_shared/reply-verification.mjs";
 import {workRadar} from "../_shared/isabella-radar.mjs";
 import {readOfficeTerminplanMilestones} from "../_shared/office-terminplan.mjs";
@@ -4116,7 +4116,10 @@ pregunta cuál.`;
       skills:(skills||[]).map((s:any)=>skillPromptSummary(s)),scheduleAssessment,light:leanSurface,route,context:resolvedContext})+
       (workCoreEligible?"\n\nDETALLE WORK PARA ESTE TURNO\n"+CORE_DETAILS.work:""):
     system+(scheduleAssessment?"\nPara una evaluación de agenda por días, consulta search_calendar con el intervalo pertinente antes de concluir, distingue eventos de tareas y no inventes ocupaciones. Si faltan datos, indica el límite.":""));
-  const providerInstructions=profileInstructions(modelInstructions,assistantProfile.id,assistantOwner);
+  const safeModelInstructions=assistantProfile.multi_user
+    ?modelInstructions.replaceAll(relationshipPolicy("conversation"),OFFICE_RELATIONSHIP_POLICY)
+    :modelInstructions;
+  const providerInstructions=profileInstructions(safeModelInstructions,assistantProfile.id,assistantOwner);
   const turnText=effectiveMessage;
   const continuationEvidence=verifiedContinuation?boundedContinuationEvidence({
     sourceMessage:verifiedContinuation.source_message,question:verifiedContinuation.question,
