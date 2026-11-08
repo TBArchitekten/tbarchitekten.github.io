@@ -54,7 +54,8 @@ jobs:
             supabase/migrations/20261108212100_office_window_engine_rpc_workers_v1.sql \
             supabase/migrations/20261108212500_office_window_engine_rpc_project_v1.sql \
             supabase/migrations/20261108212700_office_window_engine_rpc_watch_routines_v1.sql \
-            supabase/migrations/20261108213000_office_window_direct_create_default_v1.sql
+            supabase/migrations/20261108213000_office_window_direct_create_default_v1.sql \
+            supabase/migrations/20261108214000_office_romy_owner_forget_v1.sql
           do
             psql -X -v ON_ERROR_STOP=1 -f "$file"
           done
@@ -62,6 +63,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-phase1-acceptance.sql
       - name: Verify D1 owner-isolated default and explicit review opt-out
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-phase2-d1-acceptance.sql
+      - name: Verify Phase 4 private-memory RLS and forgetting
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-phase4-acceptance.sql
       - name: Verify schema-only dump, no rows or project content
         run: |
           docker run --rm --network=host -e PGHOST=127.0.0.1 -e PGPORT=5432 -e PGUSER=postgres -e PGDATABASE=romy_schema_fixture pgvector/pgvector:pg17 \
