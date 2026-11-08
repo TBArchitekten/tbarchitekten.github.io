@@ -1,6 +1,11 @@
 # TBA Office · Estado actual
 
-**Actualizado:** 08.11.2026, por ChatGPT: fase 0 de `Romy = Isabella` validada en CI; preparación únicamente en ramas, sin cambios en producción, migraciones ni despliegues.
+**Actualizado:** 08.11.2026, por ChatGPT: fase 1 (esquema Window-compatible) propuesta en rama, sin aplicar migraciones ni modificar producción.
+
+## Fase 1 · Base de datos Office (PR apilado, no aplicado)
+Preparadas seis migraciones nuevas (tablas, claves externas, RLS, Storage y heartbeat inerte) para los nombres que emplea el motor de Window: 74 tablas personales/operativas y 16 tablas de Projektakte. Se preservan todas las tablas anteriores de Romy. La RLS propuesta limita el material privado al propietario y la Projektakte al equipo; se prohíben los writes directos a recibos y decisiones. Se añade CI aislada con Supabase local y pruebas ficticias A/B y proyectos P/Q bajo `ROLLBACK`.
+
+**Estado:** integración y aceptación de fase 1 todavía pendientes. Ninguna migración aplicada, ni secret configurado, ni función desplegada. Falta comprobar el esquema integral, los RPC y su política de ejecución en CI. Un `CREATE TABLE` sin comprobación de compatibilidad funcional no equivale a motor listo.
 
 ## Encargo vigente · Romy = Isabella (08.11.2026)
 La referencia es `gari01234/minds/docs/ROMY-MOTOR-ISABELLA-ENCARGO.md`. Sustituye para este trabajo la decisión anterior que excluía lo personal de Romy: el nuevo objetivo incluye continuidad privada por persona y Projektakte compartida por equipo. La fase 0 ha pasado las pruebas de perfil y la CI de los dos repositorios. Preparados el perfil de servidor por usuario, los prompts de background y el diccionario de chat; el motor y la PWA aún no están sincronizados ni activados en Office. El runtime `office-assistant` permanece como respaldo y el despliegue activo de Office no cambia.
