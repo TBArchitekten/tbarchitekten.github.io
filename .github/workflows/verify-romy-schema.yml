@@ -49,7 +49,8 @@ jobs:
             supabase/migrations/20261108211000_office_window_engine_rpc_read_v1.sql \
             supabase/migrations/20261108211200_office_window_engine_private_helpers_v1.sql \
             supabase/migrations/20261108211500_office_window_engine_rpc_authority_v1.sql \
-            supabase/migrations/20261108211800_office_window_engine_rpc_owner_v1.sql
+            supabase/migrations/20261108211800_office_window_engine_rpc_owner_v1.sql \
+            supabase/migrations/20261108212100_office_window_engine_rpc_workers_v1.sql
           do
             psql -X -v ON_ERROR_STOP=1 -f "$file"
           done
