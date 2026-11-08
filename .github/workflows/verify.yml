@@ -1,0 +1,71 @@
+name: Verify Romy engine schema (ephemeral)
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+      - 'tests/sql/office-romy-*.sql'
+      - 'tests/office-romy-*.test.mjs'
+      - '.github/workflows/verify.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  office-schema:
+    name: Isolated Supabase migrations and RLS acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run all Office Node tests without production connections
+        run: node --test tests/*.test.cjs tests/*.test.mjs
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 3.0.0
+      - name: Start offline local Supabase
+        run: |
+          if ! supabase start -x realtime,studio,imgproxy,logflare,vector,edge-runtime,supavisor,mailpit >/tmp/office-local-start.log 2>&1; then
+            echo "Ephemeral Supabase startup failed (no production connections)."
+            node - <<'JS'
+          const fs = require('node:fs');
+          // Print only synthetically safe, redacted failure classifications; never the
+          // startup response, which contains credentials for the local sandbox.
+          const lines=fs.readFileSync('/tmp/office-local-start.log','utf8').split(/\r?\n/);
+          for(const raw of lines.filter(x=>/\b(ERROR|failed|not found|does not exist|syntax error|Error:)\b/i.test(x)).slice(-12)){
+            const safe=raw.replace(/(?:https?:\/\/|postgres(?:ql)?:\/\/)\S+/gi,'[url]')
+              .replace(/\b(?:eyJ|sk-|sb_secret_|sb_publishable_)[A-Za-z0-9._-]+/g,'[redacted]')
+              .replace(/[A-Za-z0-9._-]{40,}/g,'[redacted]')
+              .replace(/(['"])([^'"]*)\1/g,(whole,q,value)=>/^[a-z_][a-z0-9_]*$/i.test(value)?whole:q+'[redacted]'+q)
+              .slice(0,220);
+            console.log('Local schema startup diagnosis: '+safe);
+          }
+          JS
+            exit 1
+          fi
+      - name: Reapply Office migrations locally, never on a linked database
+        run: |
+          if ! supabase db reset --local >/tmp/office-local-reset.log 2>&1; then
+            echo "Ephemeral Office schema migrations failed; detailed logs suppressed."
+            exit 1
+          fi
+      - name: Verify two-owner and two-project SQL isolation in a rolled-back transaction
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          if [ -z "$container" ]; then echo "Ephemeral database container not found"; exit 1; fi
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-romy-phase1-acceptance.sql
+      - name: Verify D1 creation mode defaults without client write authority
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-romy-phase2-d1-acceptance.sql
+      - name: Verify no generated fixtures persist in the ephemeral database
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            -c "do \$\$ begin if exists(select 1 from public.conversations where id='44444444-4444-4444-8444-444444444441') then raise exception 'synthetic fixture survived rollback'; end if; end \$\$;"

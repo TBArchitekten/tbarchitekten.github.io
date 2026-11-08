@@ -130,3 +130,7 @@
  .office-app[data-section="work"] .work-body .work-bucket-scroll{max-height:calc(100dvh - 250px)}
  .office-app .office-plan-library-heading+.office-projects-list{grid-template-columns:1fr}
 }
+
+/* Romy Live · voluntary voice route; the existing microphone stays intact. */
+.office-live-entry{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:inherit;border:1px solid currentColor;border-radius:999px;padding:6px 12px;font-size:12px;line-height:1.2;white-space:nowrap;opacity:.7;min-height:30px}
+.office-live-entry:focus-visible{outline:2px solid currentColor;outline-offset:3px}

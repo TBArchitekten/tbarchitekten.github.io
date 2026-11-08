@@ -9,7 +9,7 @@ const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z0-9-]+\.js)\?v=[^"]+">
 const src=f=>read('app/'+f);
 
 test('The app connects only to TBA Office, with the office sign-in',()=>{
-  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
+  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME=localStorage\.getItem\("tba_office_chat_backend"\)==="legacy"\?"legacy":"window";<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
   const client=read('shared/supabase-client.js');
   assert.match(client,/const office = window\.TBA_OFFICE_CONFIG;/);
   assert.match(client,/storageKey: office\.storageKey,/,'one session with the start page');
@@ -35,23 +35,30 @@ test('Office browser profile selects German shared assistant labels, never Windo
   assert.ok(loaded.includes('assistant-i18n.js'));
 });
 
-test('Office loads only its own assistant, not personal Window AI modules',()=>{
-  for(const f of ['ai.js','bandeja.js','ambient.js','akte-skills.js','credit.js','situation.js','chat-stream-recovery.js'])
-    assert.ok(!loaded.includes(f),f+' is not loaded');
+test('Office runs the shared Window chat under Office profile and isolates legacy fallback',()=>{
+  // D1/D2, chat continuity, and German copy are shared. Separate identity/
+  // database and disabled personal navigation remain Office responsibilities.
+  for(const f of ['ai.js','chat-stream-recovery.js','turn-integrity.js','final-round.js','voice-output.js','office-engine-chat.js'])
+    assert.ok(loaded.includes(f),f+' is part of the canonical Office chat');
+  for(const f of ['bandeja.js','ambient.js','akte-skills.js','credit.js','situation.js'])
+    assert.ok(!loaded.includes(f),f+' is excluded from Office');
   for(const f of ['shell.js','app.js','work.js','ahora.js','sync.js','task-detail.js','office-fristen.js','office-assistant.js'])
     assert.ok(loaded.includes(f),f+' is loaded');
   assert.ok(loaded.indexOf('office-fristen.js')<loaded.indexOf('app.js'));
+  assert.ok(loaded.indexOf('ai.js')<loaded.indexOf('app.js'),'common AI initializes before canonical app');
+  assert.ok(loaded.indexOf('office-engine-chat.js')>loaded.indexOf('app.js'));
+  assert.match(src('office-assistant.js'),/if\(window\.APP_CHAT_RUNTIME!==['"]legacy['"]\)return/,'old runtime only via explicit choice');
+  assert.match(src('office-engine-chat.js'),/if\(window\.APP_PROFILE!==['"]office['"]\|\|window\.APP_CHAT_RUNTIME===['"]legacy['"]\)return/);
   const shell=src('shell.js');
   for(const nav of ['bandeja','readings','thoughts'])
     assert.match(shell,new RegExp(`data-nav="${nav}"[^>]*hidden`),nav+' stays hidden');
   assert.match(shell,/data-nav="assistant" aria-label="Romy"/);
-  assert.match(shell,/<button data-work-view="desktop">Desktop<\/button>/,'Desktop is now available');
+  assert.match(shell,/<button data-work-view="desktop">Desktop<\/button>/,'Desktop remains available');
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
   assert.match(src('work.js'),/window\.MINDS_WORK=/);
-  assert.match(appIndex,/src="\.\/work\.js\?v=office42"/,'Window Work is back since 07.11.2026');
+  assert.match(appIndex,/src="\.\/work\.js\?v=office42"/);
 });
-
 test('Sync: members only, everyone sees the projects, own calendar, no realtime',()=>{
   const sync=src('sync.js');
   assert.match(sync,/if\(!user\)\{openLogin\(\);return\}/);

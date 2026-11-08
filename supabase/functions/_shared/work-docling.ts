@@ -1,0 +1,92 @@
+/** Private, authenticated, asynchronous Docling Serve v1 bridge.
+ * Submit once; poll task status on later server runs; no browser involvement.
+ */
+import {doclingConnection,validDoclingTaskId,doclingTaskState,doclingConvertResult} from "./work-docling-contract.mjs";
+// Optional server-only runtime config, loaded after the ingest-runner secret is verified.
+// The canonical secret table is service-role-only; never expose these values to clients.
+let runtimeDocling:null|{origin:string;key:string}=null;
+export function configureDoclingRuntime(endpoint:string|null,key:string|null){
+  runtimeDocling=doclingConnection(endpoint,key);
+  return !!runtimeDocling;
+}
+const settings=()=>runtimeDocling||doclingConnection(Deno.env.get("DOCLING_SERVE_URL"),Deno.env.get("DOCLING_SERVE_API_KEY"));
+export const isDoclingConfigured=()=>!!settings();
+const secureFetch=async(url:string,key:string,init:RequestInit={},ms=35000)=>{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),ms);
+  try{
+    const result=await fetch(url,{...init,signal:controller.signal,redirect:"error",
+      headers:{"Accept":"application/json","X-Api-Key":key,...(init.headers||{})}});
+    if(!result.ok)throw Error("docling_http_"+result.status);
+    return result.json();
+  }finally{clearTimeout(timer)}
+};
+export async function isDoclingReady(){
+  const conf=settings();if(!conf)return false;
+  try{
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);
+    try{
+      const response=await fetch(conf.origin+"/ready",{
+        method:"GET",headers:{"X-Api-Key":conf.key,"Accept":"application/json"},
+        redirect:"error",signal:controller.signal
+      });
+      return response.status===200;
+    }finally{clearTimeout(timer)}
+  }catch{return false}
+}
+export function doclingSupportedExtension(ext:string){
+  return ["pdf","docx","pptx","png","jpg","jpeg"].includes(ext);
+}
+export async function convertWithDocling(
+ file:{name:string;mime_type:string},bytes:Uint8Array,taskId:string|null=null,
+ options:{page_range?:[number,number]}={}
+){
+  const conf=settings();if(!conf)return null;
+  if(taskId){
+    if(!validDoclingTaskId(taskId))throw Error("docling_invalid_task_id");
+    let poll:any;
+    try{poll=await secureFetch(
+      conf.origin+"/v1/status/poll/"+encodeURIComponent(taskId),conf.key,{},20000)}
+    catch(error){
+      // A sleeping/restarted container may lose ephemeral async task state.
+      if(error instanceof Error&&error.message==="docling_http_404")
+        throw new Error("docling_task_lost");
+      throw error;
+    }
+    const state=doclingTaskState(poll);
+    if(state.kind==="pending")return {pending:true,taskId};
+    try{
+      const result=await secureFetch(conf.origin+"/v1/result/"+encodeURIComponent(taskId),conf.key,{},65000);
+      return doclingConvertResult(result);
+    }catch(error){
+      // Single-use results can expire after conversion. The original remains in Storage.
+      if(error instanceof Error&&error.message==="docling_http_404")
+        throw new Error("docling_result_expired");
+      throw error;
+    }
+  }
+  // No signed URL is passed to Docling. The original is streamed by MINDS
+  // as multipart data from private Storage to the authenticated converter.
+  const data=new FormData();
+  const original=new ArrayBuffer(bytes.byteLength);new Uint8Array(original).set(bytes);
+  data.append("files",new File([original],file.name,
+    {type:file.mime_type||"application/octet-stream"}));
+  data.append("to_formats","md");
+  data.append("to_formats","json");
+  data.append("image_export_mode","placeholder");
+  data.append("do_ocr","true");
+  data.append("abort_on_error","false");
+  // Docling Serve v1.36.0 (examples/split_processing.py) accepts a
+  // 1-based inclusive page_range tuple via repeated form fields.
+  if(options.page_range){
+    const [start,end]=options.page_range;
+    if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||
+       start<1||end<start||end>200)throw Error("docling_page_range_invalid");
+    if(!file.name.toLowerCase().endsWith(".pdf"))
+      throw Error("docling_page_range_pdf_only");
+    data.append("page_range",String(start));
+    data.append("page_range",String(end));
+  }
+  const started=doclingTaskState(await secureFetch(
+    conf.origin+"/v1/convert/file/async",conf.key,{method:"POST",body:data},60000));
+  return {pending:true,taskId:started.taskId};
+}

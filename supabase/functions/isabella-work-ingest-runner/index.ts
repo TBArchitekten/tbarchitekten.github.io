@@ -1,0 +1,259 @@
+/* MINDS Work ingestion runner: authenticated by a dedicated internal secret.
+ * Claim is lease-locked in PostgreSQL; no browser session is required.
+ */
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import {createClient} from "npm:@supabase/supabase-js@2";
+import {processWorkFile} from "../_shared/work-ingest-core.ts";
+import {isDoclingReady,isDoclingConfigured,configureDoclingRuntime} from "../_shared/work-docling.ts";
+import {hasDoclingWork,doclingTaskIsLost,heldPdfPageBatchEligible} from "../_shared/work-ingest-policy.mjs";
+import {configurePageBatchRuntime,pageModeEnabled} from "../_shared/work-docling-page-runtime.ts";
+import {costlyDocumentImage,decideDoclingFailure} from "../_shared/work-docling-failure-policy.mjs";
+import {resolveAssistantProfile} from "../_shared/assistant-profile.mjs";
+import {officeIngestAuthorized} from "../_shared/office-akte-access.mjs";
+const json=(v:any,status=200)=>new Response(JSON.stringify(v),{status,headers:{"Content-Type":"application/json"}});
+Deno.serve(async(req:Request)=>{
+  if(req.method!=="POST")return json({error:"method_not_allowed"},405);
+  let body:any={};try{body=await req.json()}catch{return json({error:"invalid_json"},400)}
+  const url=Deno.env.get("SUPABASE_URL")||"",key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
+  if(!url||!key)return json({error:"server_unconfigured"},503);
+  const sb=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  const officeProfile=resolveAssistantProfile(Deno.env.get("ASSISTANT_PROFILE")||"window").multi_user;
+  const {data:secret}=await sb.from("isabella_runtime_secrets").select("value").eq("key","work_ingest_runner").maybeSingle();
+  if(!secret?.value||String(body.secret||"")!==String(secret.value))return json({error:"unauthorized"},401);
+  // Runtime secret lookup happens only after the private runner has authenticated.
+  // The table permits service_role and postgres, never anon/authenticated.
+  const {data:doclingSecrets,error:doclingSecretError}=await sb.from("isabella_runtime_secrets")
+    .select("key,value").in("key",["docling_serve_url","docling_serve_key","docling_page_batches_enabled"]);
+  if(doclingSecretError)console.error("work_docling_config_unavailable");
+  const credentials=new Map((doclingSecrets||[]).map((s:any)=>[s.key,s.value]));
+  configureDoclingRuntime(credentials.get("docling_serve_url")||null,credentials.get("docling_serve_key")||null);
+  configurePageBatchRuntime(credentials.get("docling_page_batches_enabled")||null);
+  // Discover new originals without touching Railway. Readiness is expensive:
+  // an HTTP request can wake a sleeping 2-3 GB Docling container.
+  const {error:reconcileError}=await sb.rpc("minds_reconcile_work_ingest",{
+    p_limit:1,p_docling_ready:false
+  });
+  if(reconcileError)return json({error:"intake_reconciliation_failed"},500);
+  const now=new Date().toISOString();
+  const staleLock=new Date(Date.now()-8*60*1000).toISOString();
+  const probes=await Promise.all([
+    sb.from("minds_work_ingest_queue").select("id")
+      .in("status",["queued","docling_pending"]).lte("next_attempt_at",now).limit(1),
+    sb.from("minds_work_ingest_queue").select("id")
+      .eq("status","processing").lt("locked_at",staleLock).limit(1),
+    sb.from("minds_work_ingest_queue").select("id")
+      .eq("status","waiting_parser")
+      .in("last_error",pageModeEnabled()
+        ?["docling_required_large_source","needs_private_docling_image","pdf_page_batch_acceptance_pending"]
+        :["docling_required_large_source","needs_private_docling_image"]).limit(1),
+    sb.from("minds_work_ingest_queue").select("id")
+      .eq("status","completed").eq("parser_name","existing-provider-file-input").limit(1)
+  ]);
+  if(probes.some(p=>p.error))return json({error:"work_probe_unavailable"},500);
+  const hasWork=hasDoclingWork(probes);
+  const doclingReady=hasWork?await isDoclingReady():false;
+  if(doclingReady){
+    const {error:resumeError}=await sb.rpc("minds_reconcile_work_ingest",{
+      p_limit:1,p_docling_ready:true
+    });
+    if(resumeError)return json({error:"intake_resume_failed"},500);
+  }
+  // A cold boot or transient 502 must not consume a document's attempt budget.
+  if(hasWork&&isDoclingConfigured()&&!doclingReady)
+    return json({ok:true,claimed:0,deferred:"docling_not_ready"});
+  // Explicit, bounded recovery of PDFs held for page-batch acceptance.
+  // The gate stays off without a service-role-only operator setting.
+  // Only one original per run; never requeue images or arbitrary failures.
+  if(doclingReady&&pageModeEnabled()){
+    const {data:held,error:heldError}=await sb.from("minds_work_ingest_queue")
+      .select("id,file_id,user_id,project_id,status,last_error")
+      .eq("status","waiting_parser")
+      .eq("last_error","pdf_page_batch_acceptance_pending")
+      .order("updated_at",{ascending:true}).limit(1);
+    if(heldError)return json({error:"pdf_batch_recovery_lookup_failed"},500);
+    if(held?.length){
+      const job=held[0];
+      const {data:file,error:fileError}=await sb.from("minds_work_files")
+        .select("id,user_id,project_id,name,size_bytes").eq("id",job.file_id)
+        .eq("user_id",job.user_id).eq("project_id",job.project_id).maybeSingle();
+      if(fileError)return json({error:"pdf_batch_original_lookup_failed"},500);
+      if(file&&heldPdfPageBatchEligible(job,file,pageModeEnabled())){
+        const now=new Date().toISOString();
+        const {data:resumed,error:resumeError}=await sb.from("minds_work_ingest_queue")
+          .update({status:"queued",attempts:0,last_error:null,locked_at:null,
+            completed_at:null,docling_task_id:null,docling_started_at:null,
+            next_attempt_at:now,updated_at:now})
+          .eq("id",job.id).eq("user_id",job.user_id)
+          .eq("status","waiting_parser")
+          .eq("last_error","pdf_page_batch_acceptance_pending").select("id");
+        if(resumeError)return json({error:"pdf_batch_resume_failed"},500);
+        if(resumed?.length===1){
+          const {error:displayError}=await sb.from("minds_work_files")
+            .update({index_status:"queued",updated_at:now})
+            .eq("id",file.id).eq("user_id",job.user_id);
+          if(displayError)console.error("pdf_batch_resume_display_pending");
+        }
+      }
+    }
+  }
+  // Enrich one historic, Claims-only PDF per cron run, without losing its
+  // existing source ingestion/Claims or displacing newly queued originals.
+  if(doclingReady){
+    const {data:historic,error:historicError}=await sb.from("minds_work_ingest_queue")
+      .select("id,file_id").eq("status","completed")
+      .eq("parser_name","existing-provider-file-input")
+      .order("completed_at",{ascending:true}).limit(1);
+    if(historicError)console.error("work_historic_enrichment_lookup_failed");
+    else if(historic?.length){
+      const job=historic[0];
+      const {data:receipt,error:receiptError}=await sb.from("minds_work_source_text_receipts")
+        .select("id").eq("file_id",job.file_id).limit(1);
+      if(receiptError)console.error("work_historic_receipt_lookup_failed");
+      else{
+        const now=new Date().toISOString();
+        const alreadyReadable=!!receipt?.length;
+        const {error:enrichError}=await sb.from("minds_work_ingest_queue").update(
+          alreadyReadable?{parser_name:"source_first_existing",updated_at:now}:{
+            status:"queued",parser_name:"docling_enrichment",attempts:0,
+            is_backfill:true,last_error:null,locked_at:null,completed_at:null,
+            docling_task_id:null,docling_started_at:null,
+            next_attempt_at:now,updated_at:now
+          }).eq("id",job.id).eq("status","completed")
+          .eq("parser_name","existing-provider-file-input");
+        if(enrichError)console.error("work_historic_enrichment_queue_failed");
+      }
+    }
+  }
+  const {data:jobs,error:claimError}=await sb.rpc("minds_claim_work_ingest",{p_limit:1});
+  if(claimError)return json({error:"queue_claim_failed"},500);
+  const results:any[]=[];
+  for(const job of jobs||[]){
+    try{
+      if(officeProfile&&!await officeIngestAuthorized(sb,job)){
+        const {error:blockedError}=await sb.from("minds_work_ingest_queue")
+          .update({status:"failed",last_error:"office_project_access_revoked",locked_at:null,
+            updated_at:new Date().toISOString()})
+          .eq("id",job.id).eq("user_id",job.user_id).eq("status","processing");
+        if(blockedError)throw new Error("office_ingest_guard_write_failed");
+        results.push({status:"blocked"});
+        continue;
+      }
+      const x=await processWorkFile(sb,job),now=new Date().toISOString();
+      if(x.status==="docling_pending"){
+        // Polling in later Heartbeats does not increment extraction attempts.
+        // The original remains queued, and neither text nor Claims are invented.
+        const {error:pendingError}=await sb.from("minds_work_ingest_queue")
+          .update({status:"docling_pending",docling_task_id:x.taskId,
+            docling_started_at:job.docling_started_at||now,
+            source_version:x.version||job.source_version||null,
+            locked_at:null,next_attempt_at:new Date(Date.now()+120000).toISOString(),
+            updated_at:now})
+          .eq("id",job.id).eq("status","processing").eq("attempts",job.attempts);
+        if(pendingError)throw pendingError;
+        results.push({status:"docling_pending"});
+        continue;
+      }
+      if(x.status==="page_batch_advance"){
+        // A checkpoint was committed. Advance to the next range without
+        // incrementing attempts or retaining a now-consumed task ID.
+        const {error:advanceError}=await sb.from("minds_work_ingest_queue")
+          .update({status:"docling_pending",docling_task_id:null,
+            docling_started_at:null,locked_at:null,
+            source_version:x.version||job.source_version,
+            next_attempt_at:new Date(Date.now()+120000).toISOString(),
+            updated_at:now})
+          .eq("id",job.id).eq("status","processing").eq("attempts",job.attempts);
+        if(advanceError)throw advanceError;
+        results.push({status:"page_batch_advance"});
+        continue;
+      }
+      const indexed=x.status==="completed";
+      const needsParser=x.status==="waiting_parser";
+      const preserveClaims=needsParser&&job.parser_name==="docling_enrichment";
+      const metadata=preserveClaims
+        ?{...(x.file?.metadata||{}),knowledge_intake:{
+          ...(x.file?.metadata?.knowledge_intake||{}),
+          structured_text:{status:"needs_review",reason:x.reason||"pdf_batch_review"}
+        }}
+        :{...(x.file?.metadata||{}),knowledge_intake:{
+          ...(x.file?.metadata?.knowledge_intake||{}),
+          status:x.status,parser:x.parser||null,coverage:x.coverage||"none",
+          reason:x.reason||null,source_version:x.version||null,claim_count:x.claims||0,
+          structured_text:x.structuredText||{status:"not_supported"}}};
+      const {error:fileError}=await sb.from("minds_work_files")
+        .update({index_status:preserveClaims?"indexed":needsParser?"waiting_parser":indexed?"indexed":"failed",
+          metadata,updated_at:now})
+        .eq("id",job.file_id).eq("user_id",job.user_id);
+      if(fileError)throw fileError;
+      const {error:finishError}=await sb.from("minds_work_ingest_queue")
+        .update({status:needsParser?"waiting_parser":indexed?"completed":"skipped",parser_name:x.parser||null,
+          source_version:x.version||null,last_error:x.reason||null,locked_at:null,
+          completed_at:now,updated_at:now})
+        .eq("id",job.id).eq("status","processing").eq("attempts",job.attempts);
+      if(finishError)throw finishError;
+      results.push({status:x.status,claim_count:x.claims||0});
+    }catch(e){
+      const lastError=String(e instanceof Error?e.message:e).slice(0,160);
+      // Internal diagnostics omit source contents; needed to distinguish
+      // parser crashes from malformed cells without exposing documents.
+      console.error("work_source_intake_failure",JSON.stringify({
+        queue_id:job.id,error:lastError,
+        stack:String(e instanceof Error?e.stack||"": "").slice(0,900)
+      }));
+      // Inspect file type only on errors; never re-upload large images blindly
+      // after a task 404, an explicit failure, or an unreadable result.
+      const {data:source,error:sourceError}=await sb.from("minds_work_files")
+        .select("name,size_bytes,metadata").eq("id",job.file_id).eq("user_id",job.user_id).maybeSingle();
+      const now=new Date().toISOString();
+      const decision=sourceError||!source
+        ?{action:"hold",reason:"source_metadata_unavailable"}
+        :decideDoclingFailure({
+          reason:lastError,previousError:job.last_error,taskId:job.docling_task_id,
+          costlyImage:costlyDocumentImage(source.name,source.size_bytes),
+          attempts:job.attempts
+        });
+      if(decision.action==="repoll"){
+        // The registry may be momentarily inconsistent: recheck the SAME task
+        // once, without incrementing attempts or uploading the source again.
+        const {error:repollError}=await sb.from("minds_work_ingest_queue").update({
+          status:"docling_pending",last_error:decision.reason,locked_at:null,
+          next_attempt_at:new Date(Date.now()+120000).toISOString(),updated_at:now
+        }).eq("id",job.id).eq("status","processing").eq("attempts",job.attempts);
+        if(repollError)return json({error:"docling_repoll_state_failed"},500);
+        results.push({status:"docling_repoll_scheduled"});
+        continue;
+      }
+      const expired=doclingTaskIsLost(lastError);
+      const terminal=decision.action==="hold"||Number(job.attempts)>=4;
+      const terminalStatus=decision.action==="hold"||expired?"waiting_parser":"failed";
+      const recovery=expired?{docling_task_id:null,docling_started_at:null}:{};
+      const {error:retryError}=await sb.from("minds_work_ingest_queue").update({
+        status:terminal?terminalStatus:"queued",
+        last_error:decision.reason,locked_at:null,...recovery,
+        next_attempt_at:new Date(Date.now()+Math.min(30,Math.pow(2,Number(job.attempts)))*60000).toISOString(),
+        completed_at:terminal?now:null,updated_at:now
+      }).eq("id",job.id).eq("status","processing").eq("attempts",job.attempts);
+      if(retryError)return json({error:"work_ingest_retry_state_failed"},500);
+      // Preserve the already indexed Claims, but expose a terminal extraction
+      // failure as a separate reading status. A failed enrichment does not
+      // establish that the original document was fully read.
+      if(terminal){
+        const enriched=job.parser_name==="docling_enrichment";
+        const patch=enriched?{
+          metadata:{...(source?.metadata||{}),knowledge_intake:{
+            ...(source?.metadata?.knowledge_intake||{}),
+            structured_text:{status:"needs_review",reason:decision.reason,
+              source:"docling_enrichment"}
+          }},
+          updated_at:now
+        }:{index_status:terminalStatus,updated_at:now};
+        const {error:displayError}=await sb.from("minds_work_files")
+          .update(patch).eq("id",job.file_id).eq("user_id",job.user_id);
+        if(displayError)console.error("work_intake_failure_status_sync_pending");
+      }
+      results.push({status:terminal?terminalStatus:"retry_scheduled"});
+    }
+  }
+  return json({ok:true,claimed:(jobs||[]).length,results,
+    docling_probed:hasWork,docling_ready:doclingReady});
+});
