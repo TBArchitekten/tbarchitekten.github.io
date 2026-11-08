@@ -67,6 +67,7 @@ create table public.minds_work_files(
   user_id uuid not null references auth.users(id),
   project_id uuid references public.office_projects(id),
   name text not null,
+  size_bytes bigint not null default 0,
   storage_path text not null
 );
 create table public.minds_work_folders(
