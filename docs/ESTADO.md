@@ -1,5 +1,16 @@
 # TBA Office · Estado actual
 
+**Stand: 08.11.2026 · ChatGPT · Phase 4 auf Branch (nicht live).** Romy nutzt für persönliche Kontinuität eine eigene Speicherung pro angemeldetem Office-Mitglied; keine Produktionseingriffe.
+
+## Phase 4 · Persönliche Erinnerung und Präsenz (unveröffentlicht)
+
+Der Source-of-Truth liegt in `gari01234/minds`. Das Office-Deployment synchronisiert die freigegebenen Engine-Dateien mit Git-SHA und startet persönliche Abläufe ausschließlich mit dem Serverprofil `office`. Nächtlicher Rückblick und proaktive Nachrichten beachten `user_id`, aktive Mitgliedschaft und personengebundene Zeit- und Häufigkeitsgrenzen. Kein Office-Push, keine Vermischung mit persönlichen Window-Anweisungen. Die Texte zu persönlichen Terminen im Heartbeat erscheinen für Office auf Deutsch; Window bleibt unverändert.
+
+Das Menü „Was Romy über mich weiß“ zeigt nur dem eingeloggten Mitglied zugeordnete gespeicherte Einträge; „Romy darf mir von sich aus schreiben“ steuert die persistierte persönliche Einstellung. „Vergessen“ erfordert eine Bestätigung und ein tatsächliches Server-Receipt. Die neue Migration `20261108214000_office_romy_owner_forget_v1.sql` enthält die eigenständig geprüfte Besitzberechtigung. Sie ist **nicht** angewendet. Bestehende ältere Romy-Daten werden nicht automatisch übernommen oder gelöscht.
+
+**Prüfung:** isolierte Testdaten für zwei Personen, Office-RLS und Vergessens-RPC in PostgreSQL 17, Window-Regressionssuite, Quellcode-Hashes und Browser-CI. Diese automatisierte Prüfung ersetzt keine authentifizierte E2E-Abnahme in Office. **Keine Merges, Deployments, echten Tokens oder Datenbankänderungen.** Die Fase-3- und älteren Einträge unten bleiben als Historie erhalten.
+
+
 **Actualizado:** 08.11.2026 · ChatGPT: fase 3, chat canónico compartido preparado en rama, sin producción.
 
 ## Fase 3 · Chat de Window en Office (PR apilado, no desplegado)
