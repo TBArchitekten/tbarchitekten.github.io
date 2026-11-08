@@ -3,6 +3,9 @@
 // proactive cycles are switched off (OFFICE); calendar, Heute, tasks and Work run as in Window.
 const OFFICE=true;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const assistantUi=(key,span)=>window.APP_PROFILE==='office'&&window.ASSISTANT_I18N
+  ?window.ASSISTANT_I18N.t(key):span;
+
 const KEY='tba-office-window-v1';
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 const pad=n=>String(n).padStart(2,'0');
@@ -45,13 +48,13 @@ async function signedAssetUrl(bucket,path,expires=3600){
 }
 function messageRenderKey(messages){
   return JSON.stringify((messages||[]).map(m=>[
-    m.id,m.role,m.text,m.reaction,m.replyTo?.id||'',m.replyTo?.text||'',
+    m.id,m.role,m.text,m.reaction,m.metadata?.author||'',m.replyTo?.id||'',m.replyTo?.text||'',
     (m.attachments||[]).map(a=>[a.path,a.name]),
     (m.artifacts||[]).map(a=>[a.id,a.storage_path,a.kind,a.title]),
     (m.sources||[]).map(s=>[s.url,s.title]),
     !!m.metadata?.incomplete_response,
     (m.metadata?.review_proposals||[]).map(p=>p.request_id),
-    m.metadata?.review_state||'',
+    m.metadata?.review_state||'',m.metadata?.direct_undo?.status||'',m.metadata?.direct_undo?.expires_at||'',
     (m.quickReplies||[]).map(q=>[q.label,q.value])
   ]));
 }
@@ -321,12 +324,28 @@ function init(){
     if(WINDOW_SECTIONS.includes(section))show(section);
   });
   if(reviewId)setTimeout(()=>void handleReviewDeepLink(),0);
+  void markPresenceSeen();
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='visible'){
-      if(!OFFICE){void syncDurableChatJobs();void recoverReviewedTaskReceipts();}
+      void markPresenceSeen();
+      if(!OFFICE||window.APP_CHAT_RUNTIME!=='legacy'){void syncDurableChatJobs();void recoverReviewedTaskReceipts();}
       if(state.screen==='calendar')window.ISABELLA_SYNC_PULL_NOW?.();
     }
   });
+}
+// Phase 1, step 8 v2: «Gari opened the app» is one of the real moments in which Isabella may write first
+// (isabella-presence). One small write, at most every 10 minutes, shared by all devices.
+async function markPresenceSeen(){
+  try{
+    const key='isabella-presence-seen-at',last=Number(localStorage.getItem(key)||0),now=Date.now();
+    if(now-last<10*60*1000)return;
+    const sb=window.MINDS_SUPABASE;if(!sb)return;
+    const {data:{session}}=await sb.auth.getSession();if(!session?.user?.id)return;
+    localStorage.setItem(key,String(now));
+    const at=new Date(now).toISOString();
+    await sb.from('isabella_preferences').upsert({user_id:session.user.id,preference_key:'presence_seen',value:{at},status:'confirmed',
+      confidence:1,evidence:[{source:'isabella_client',kind:'app_visible',at}],updated_at:at},{onConflict:'user_id,preference_key'});
+  }catch{}
 }
 let proactiveCycleBusy=false,proactiveNudgeBusy=false,curiosityBusy=false;
 function proactiveTerms(text){
@@ -420,8 +439,8 @@ async function afterSync(){
     void maybePrewarmResearch();
     void maybeReactivateIdeas();
     void refreshOperatingModel(false);
-    const nudged=await maybeProactiveNudge();
-    if(!nudged)await maybeCuriosityQuestion();
+    // Phase 1, step 8: Isabella's own messages come from the server (isabella-presence), at most once
+    // a day for all devices. The browser no longer runs background "nudge" or profile-question turns.
   }finally{proactiveCycleBusy=false}
 }
 /* Dear: Thoughts stays authoritative in Architectures.
@@ -715,7 +734,7 @@ async function openIdeaWorkspaceFromIdea(key){
   const item=surfaceItemByKey(key);if(!item)return;
   const sb=window.MINDS_SUPABASE;if(!sb)return;
   try{
-    const {data:{session}}=await sb.auth.getSession();if(!session){say('assistant','Conecta la memoria para abrir un espacio de trabajo persistente.');return}
+    const {data:{session}}=await sb.auth.getSession();if(!session){sayEvent('Conecta la memoria para abrir un espacio de trabajo persistente.');return}
     const sourceId=dbSurfaceId(item),deliverable=String(item.deliverable||item.metadata?.deliverable||'').trim();
     let workspace=null;
     if(sourceId){
@@ -843,7 +862,7 @@ function renderIdeaWorkspace(){
   }else{artifact.classList.add('hidden');artifact.innerHTML=''}
   const thread=$('#ideaWorkspaceThread');
   thread.innerHTML=(w.messages||[]).map(m=>{const parts=m.role==='assistant'?ideaWorkerParts(m.content):null,draft=parts?.artifact&&!content?parts.artifact:null;
-    return `<div class="idea-workspace-message ${m.role}"><div>${formatMessageText(parts?parts.reply:(m.content||''))}</div>${draft?`<div class="idea-message-draft"><div class="idea-artifact-label">${esc(draft.title||'BORRADOR')}</div><div class="idea-markdown-render">${formatMessageText(draft.content)}</div>${parts.complete?'':'<p class="idea-draft-cut">El borrador llegó incompleto. Pide a Isabella que lo continúe.</p>'}</div>`:''}${Array.isArray(m.sources)&&m.sources.length?`<div class="feed-thread-sources">${m.sources.map(s=>`<a href="${/^https?:\/\//i.test(String(s.url||''))?esc(s.url):'#'}" target="_blank" rel="noopener">${esc(s.title||'Fuente')}</a>`).join('')}</div>`:''}</div>`}).join('');
+    return `<div class="idea-workspace-message ${m.role}"><div>${formatMessageText(parts?parts.reply:(m.content||''))}</div>${draft?`<div class="idea-message-draft"><div class="idea-artifact-label">${esc(draft.title||'BORRADOR')}</div><div class="idea-markdown-render">${formatMessageText(draft.content)}</div>${parts.complete?'':'<p class="idea-draft-cut">El borrador llegó incompleto. Pide a Isabella que lo continúe.</p>'}</div>`:''}${Array.isArray(m.sources)&&m.sources.length?`<div class="feed-thread-sources">${m.sources.map(s=>`<a href="${/^https?:\/\//i.test(String(s.url||''))?esc(s.url):'#'}" target="_blank" rel="noopener">${esc(s.title||'Quelle')}</a>`).join('')}</div>`:''}</div>`}).join('');
   requestAnimationFrame(()=>{const sc=$('#ideaWorkspaceScroll');if(sc)sc.scrollTop=sc.scrollHeight});
 }
 function downloadIdeaArtifact(w){
@@ -1174,15 +1193,19 @@ window.addEventListener('message',e=>{
   document.body.classList.toggle('sofia-chat-open',open);
 });
 let pendingReplyTo=null;
-// App notices (confirmations, failures) are system lines, not Romy speaking (from Window, 08.11.2026).
-function isEventMessage(m){return m?.role==='assistant'&&m.metadata?.author==='system'}
-function replyAuthor(reply){return reply?.role==='assistant'?(isEventMessage(reply)?'Hinweis':(OFFICE?'Romy':'Isabella')):(OFFICE?'Sie':'Tú')}
+function isEventMessage(m){
+  return m?.role==='assistant'&&(m.metadata?.author==='system'||!!window.MINDS_TURN_INTEGRITY?.isSystemNotice?.(m.text));
+}
+function replyAuthor(reply){
+  if(window.APP_PROFILE==='office')return reply?.role==='assistant'?(isEventMessage(reply)?'Hinweis':'Romy'):'Du';
+  return reply?.role==='assistant'?(isEventMessage(reply)?'Aviso':'Isabella'):'Tú';
+}
 function replySnippet(text){return String(text||'').replace(/\s+/g,' ').trim().slice(0,180)}
 function renderReplyPreview(){
   const box=$('#chatReplyPreview');if(!box)return;
   if(!pendingReplyTo){box.classList.add('hidden');box.innerHTML='';return}
   box.classList.remove('hidden');
-  box.innerHTML=`<div><strong>Respondiendo a ${esc(replyAuthor(pendingReplyTo))}</strong><span>${esc(replySnippet(pendingReplyTo.text))}</span></div><button type="button" data-cancel-reply aria-label="Cancelar respuesta">×</button>`;
+  box.innerHTML=`<div><strong>${esc('Antwort an')} ${esc(replyAuthor(pendingReplyTo))}</strong><span>${esc(replySnippet(pendingReplyTo.text))}</span></div><button type="button" data-cancel-reply aria-label="${esc('Antwort abbrechen')}">×</button>`;
   box.querySelector('[data-cancel-reply]')?.addEventListener('click',()=>{pendingReplyTo=null;renderReplyPreview()});
 }
 function setReplyTarget(id){
@@ -1204,7 +1227,65 @@ function streamAssistantDelta(_delta,fullText){
 function clearAssistantStream(){
   liveAssistantStream?.remove();liveAssistantStream=null;
 }
+// App notices, receipts and confirmations: shown as system lines, never signed as Isabella, and
+// passed to her model as "sistema" (Phase 1, step 3). Role stays assistant so cards and sync work.
+// A receipt («La tarea queda para el miércoles.») belongs to the conversation Isabella reads: without a
+// scope it stayed on the phone and she kept saying a confirmed change was pending (08.11.2026). It takes
+// the scope of the latest scoped message, the turn it answers.
+function latestExposureScope(){
+  for(let i=(state.messages||[]).length-1;i>=0;i--){
+    const s=state.messages[i]?.metadata?.exposure_scope;
+    if(s&&s.version===1&&typeof s.key==='string'&&s.key&&s.key!=='legacy')return {...s};
+  }
+  return null;
+}
+// Office (08.11.2026, review of the Romy phases): receipts in German, and kept in the conversation
+// Romy reads. The browser may not write assistant rows there; the RPC checks the owner and accepts
+// only a short system notice. Without it, Romy kept saying a confirmed change was still pending.
+const OFFICE_NOTICE_DE=[
+  [/^Sin cambios\.$/,'Keine Änderung.'],
+  [/^Guardado\.$/,'Gespeichert.'],
+  [/^No pude guardar el cambio, así que no lo doy por hecho: /,'Die Änderung konnte nicht gespeichert werden und gilt nicht als erledigt: '],
+  [/^No pude guardar todos los cambios: /,'Nicht alle Änderungen konnten gespeichert werden: '],
+  [/^No pude identificar el proyecto\. Corrige su nombre antes de guardar\.$/,'Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.'],
+  [/^No se pudo verificar el resultado; no se confirmó ningún cambio\.$/,'Das Ergebnis konnte nicht geprüft werden. Keine Änderung ist bestätigt.']
+];
+function officeNotice(text){let t=String(text??'');for(const [re,de] of OFFICE_NOTICE_DE)t=t.replace(re,de);return t}
+async function persistOfficeNotice(message){
+  try{
+    const conversation=window.TBA_OFFICE_ENGINE_CHAT?.currentConversationId?.();
+    const sb=window.MINDS_SUPABASE;
+    if(!sb||!conversation||!message?.id||!String(message.text||'').trim())return;
+    await sb.rpc('office_romy_append_notice',{p_conversation_id:conversation,p_client_key:String(message.id),p_content:String(message.text).slice(0,600)});
+  }catch{/* the line stays visible here; the next reconcile shows what the server kept */}
+}
+function sayEvent(text,meta={}){
+  const metadata={...(meta.metadata&&typeof meta.metadata==='object'?meta.metadata:{}),author:'system'};
+  if(!metadata.exposure_scope){const scope=latestExposureScope();if(scope)metadata.exposure_scope=scope}
+  const message=say('assistant',OFFICE?officeNotice(text):text,{...meta,metadata});
+  if(OFFICE&&window.APP_CHAT_RUNTIME!=='legacy')void persistOfficeNotice(message);
+  return message;
+}
+// Step 3a: Isabella's answer to a browser turn has a key derived from the request id. The server
+// writes it into the conversation too (supabase/functions/_shared/chat-delivery.mjs, same rule), so
+// the app's copy updates that row instead of adding another, and a closed app is no longer a silence.
+function assistantKeyFor(requestId){
+  const id=String(requestId||'').toLowerCase();
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id))return null;
+  return id.slice(0,14)+(id[14]==='5'?'3':'5')+id.slice(15);
+}
+function sayKeyed(id,role,text,meta={}){
+  const existing=id&&state.messages.find(m=>m.id===id);
+  if(!existing)return say(role,text,id?{...meta,id}:meta);
+  existing.text=text;
+  existing.metadata={...(existing.metadata||{}),...(meta.metadata&&typeof meta.metadata==='object'?meta.metadata:{})};
+  if(Array.isArray(meta.sources))existing.sources=meta.sources;
+  save();renderMessages();
+  return existing;
+}
 function say(role,text,meta={}){
+  if(role==='assistant'&&text==='Isabella sigue trabajando…')
+    text=assistantUi('chat_working',text);
   const message={
     id:meta.id||uid(),role,text,at:meta.at||new Date().toISOString(),reaction:null,
     replyTo:meta.replyTo&&meta.replyTo.id?{id:String(meta.replyTo.id),role:meta.replyTo.role==='assistant'?'assistant':'user',text:String(meta.replyTo.text||'')}:null,
@@ -1255,8 +1336,8 @@ function resolvedReviewText(m){
   const state=m?.metadata?.review_state,items=m?.metadata?.review_proposals;
   if(!Array.isArray(items)||!items.length)return null;
   if(state==='applied_verified')return confirmationText(items);
-  if(state==='rejected')return 'Propuesta cancelada. No se aplicó el cambio.';
-  if(state==='reviewed_locally')return 'Hecho. Échale un vistazo para comprobar que quedó como querías.';
+  if(state==='rejected')return typeof window!=='undefined'&&window.APP_PROFILE==='office' ? window.ASSISTANT_I18N?.t('review_cancelled')||'Propuesta cancelada. No se aplicó el cambio.' : 'Propuesta cancelada. No se aplicó el cambio.';
+  if(state==='reviewed_locally')return typeof window!=='undefined'&&window.APP_PROFILE==='office' ? window.ASSISTANT_I18N?.t('review_locally')||'Hecho. Échale un vistazo para comprobar que quedó como querías.' : 'Hecho. Échale un vistazo para comprobar que quedó como querías.';
   return null;
 }
 // Isabella confirms like a person: one short sentence with what changed and when, in natural dates.
@@ -1270,27 +1351,64 @@ function naturalDay(day,now=new Date()){
   return 'el '+weekday+' '+d+' de '+target.toLocaleDateString('de-DE',{month:'long'})+(y!==now.getFullYear()?' de '+y:'');
 }
 function naturalList(values){const xs=values.filter(Boolean);return xs.length<2?(xs[0]||''):xs.slice(0,-1).join(', ')+' y '+xs[xs.length-1]}
-function confirmationText(items,now=new Date()){
+// Office receipts in German (same content as Window's).
+function naturalDayDe(day,now=new Date()){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(day||'')))return '';
+  const [y,m,d]=String(day).split('-').map(Number),target=new Date(y,m-1,d),base=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const diff=Math.round((target-base)/864e5);
+  if(diff===0)return 'heute';if(diff===1)return 'morgen';if(diff===-1)return 'gestern';
+  const weekday=target.toLocaleDateString('de-DE',{weekday:'long'});
+  if(diff>1&&diff<7)return 'am '+weekday;
+  return 'am '+weekday+', '+d+'. '+target.toLocaleDateString('de-DE',{month:'long'})+(y!==now.getFullYear()?' '+y:'');
+}
+function confirmationTextDe(items,now=new Date()){
   const list=(Array.isArray(items)?items:[items]).filter(Boolean);
-  if(!list.length)return 'Listo.';
+  if(!list.length)return 'Gespeichert.';
+  const title=p=>String(p.title||p.target_title||'').trim(),when=p=>naturalDayDe(p.date,now);
+  const isCreate=p=>(p.action||'create')==='create';
+  const and=xs=>{const v=xs.filter(Boolean);return v.length<2?(v[0]||''):v.slice(0,-1).join(', ')+' und '+v[v.length-1]};
+  if(list.length===1){
+    const p=list[0],t=title(p),w=when(p);
+    if(isCreate(p))return p.kind==='event'?'«'+t+'» steht im Kalender'+(w?' ('+w+')':'')+(p.duration_defaulted?' · 1 Std. · änderbar':'')+'.':'«'+t+'» steht in den Aufgaben'+(w?' für '+w:'')+'.';
+    if(t)return w?'«'+t+'» ist jetzt '+w+' geplant.':'Aktualisiert: «'+t+'».';
+    return w?'Die Aufgabe ist jetzt '+w+' geplant.':'Aktualisiert.';
+  }
+  if(list.every(isCreate))return list.length+' Einträge angelegt: '+and(list.map(p=>title(p)+(when(p)?' ('+when(p)+')':'')))+'.';
+  return list.length+' Änderungen gespeichert.';
+}
+function confirmationText(items,now=new Date()){
+  if(OFFICE)return confirmationTextDe(items,now);
+  // System receipt (Phase 1, step 3): states what is now in the calendar or tasks, without speaking as Isabella.
+  const list=(Array.isArray(items)?items:[items]).filter(Boolean);
+  if(!list.length)return 'Guardado.';
   const title=p=>String(p.title||p.target_title||'').trim(),when=p=>naturalDay(p.date,now);
   const isCreate=p=>(p.action||'create')==='create';
   if(list.length===1){
     const p=list[0],t=title(p),w=when(p);
-    if(isCreate(p))return p.kind==='event'?'Listo, «'+t+'» está en tu calendario'+(w?' '+w:'')+'.':'Listo, «'+t+'» está en tus tareas'+(w?' para '+w:'')+'.';
-    if(t)return w?'Listo, «'+t+'» queda para '+w+'.':'Listo, actualicé «'+t+'».';
-    return w?'Listo, la tarea queda para '+w+'.':'Listo, ya está actualizada.';
+    if(isCreate(p))return p.kind==='event'?'«'+t+'» está en tu calendario'+(w?' '+w:'')+(p.duration_defaulted?' · 1 h · editable':'')+'.':'«'+t+'» está en tus tareas'+(w?' para '+w:'')+'.';
+    if(t)return w?'«'+t+'» queda para '+w+'.':'Actualizado: «'+t+'».';
+    return w?'La tarea queda para '+w+'.':'Actualizado.';
   }
   if(list.every(isCreate)){
     const kinds=new Set(list.map(p=>p.kind)),noun=kinds.size===1&&kinds.has('event')?'eventos':kinds.size===1?'tareas':'elementos';
+    const done=noun==='tareas'?'añadidas':'añadidos';
     const days=new Set(list.map(when));
-    if(days.size===1){const w=[...days][0];return 'Listo, añadí '+list.length+' '+noun+(w?' para '+w:'')+': '+naturalList(list.map(title))+'.'}
-    return 'Listo, añadí '+list.length+' '+noun+': '+naturalList(list.map(p=>title(p)+(when(p)?' ('+when(p)+')':'')))+'.';
+    if(days.size===1){const w=[...days][0];return list.length+' '+noun+' '+done+(w?' para '+w:'')+': '+naturalList(list.map(title))+'.'}
+    return list.length+' '+noun+' '+done+': '+naturalList(list.map(p=>title(p)+(when(p)?' ('+when(p)+')':'')))+'.';
   }
-  return 'Listo, guardé los '+list.length+' cambios.';
+  return 'Guardados '+list.length+' cambios.';
 }
 
+function directUndoEligible(message,index,now=Date.now()){
+  const u=message?.metadata?.direct_undo;
+  return message?.role==='assistant'&&u?.status==='ready'&&
+    Array.isArray(u.items)&&u.items.length>=1&&u.items.length<=20&&
+    Date.parse(u.expires_at)>now&&!state.messages.slice(index+1).some(m=>m.role==='user');
+}
 function renderMessages(forceBottom=false){
+  // Keep the renderer executable by itself in the original Window regression harness.
+  const assistantUi=(key,span)=>typeof window!=='undefined'&&window.APP_PROFILE==='office'&&window.ASSISTANT_I18N
+    ?window.ASSISTANT_I18N.t(key):span;
   const box=$('#messages');
   state.messages=normalizeMessages(state.messages);
   const nextRenderKey=messageRenderKey(state.messages);
@@ -1300,19 +1418,32 @@ function renderMessages(forceBottom=false){
     return;
   }
   const snapshot=captureAssistantScroll();
-  box.innerHTML=state.messages.map(m=>{
+  box.innerHTML=state.messages.map((m,index)=>{
+    const directUndo=directUndoEligible(m,index);
     const reply=m.replyTo?.id?`<div class="message-reply-reference"><strong>${esc(replyAuthor(m.replyTo))}</strong><span>${esc(replySnippet(m.replyTo.text))}</span></div>`:'';
     const artifactSurface=artifactSurfaceGroups(m.artifacts);
     const displayText=resolvedReviewText(m)??cleanGeneratedDeliverableText(m.text,m.artifacts);
     const previews=artifactSurface.previews.length?`<div class="message-artifact-previews">${artifactSurface.previews.slice(0,2).map(a=>artifactPreviewMarkup(a,true)).join('')}</div>`:'';
     const deliverables=artifactSurface.deliverables.length?`<div class="message-artifacts">${artifactSurface.deliverables.slice(0,8).map(a=>artifactMarkup(a,true)).join('')}</div>`:'';
     const event=isEventMessage(m);
-    return `<div class="message ${m.role}${event?' is-event':''}" data-message-id="${esc(m.id||'')}">${reply}${Array.isArray(m.attachments)&&m.attachments.length?`<div class="message-attachments">${m.attachments.map(a=>{const path=String(a.path||''),mime=String(a.mime||''),name=String(a.name||'Archivo');if(mime.startsWith('image/'))return `<img loading="lazy" data-chat-image-path="${esc(path)}" alt="${esc(name)}">`;const ext=(name.split('.').pop()||'FILE').toUpperCase();return `<a class="message-file" data-chat-file-path="${esc(path)}" data-chat-file-name="${esc(name)}" target="_blank" rel="noopener"><span>${esc(ext)}</span><strong>${esc(name)}</strong></a>`}).join('')}</div>`:''}${displayText?`<span class="message-text">${formatMessageText(displayText)}</span>`:''}${m.role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete" role="status">Antwort unterbrochen. Der empfangene Text ist unvollständig.<button type="button" data-continue-incomplete="${esc(m.id||'')}">Antwort fortsetzen</button></div>`:''}${previews}${deliverables}${m.role==='assistant'&&Array.isArray(m.metadata?.review_proposals)&&m.metadata.review_proposals.length&&
-      !m.metadata?.review_state?`<div class="message-review-action"><button type="button" class="secondary" data-review-message="${esc(m.id||'')}">Offenen Vorschlag prüfen</button></div>`:''}${m.role==='assistant'&&m.reaction?`<button type="button" class="message-reaction-badge" data-message-react="${esc(m.id||'')}" aria-label="Reaktion ändern">${typographicReaction(m.reaction,true)}</button>`:''}${m.role==='assistant'?`<div class="message-actions"><button class="message-react" data-message-react="${esc(m.id||'')}" aria-label="Reagieren">＋</button><button class="message-reply" data-message-reply="${esc(m.id||'')}" aria-label="Auf diese Nachricht antworten">↩︎</button></div>`:''}${Array.isArray(m.sources)&&m.sources.length?`<div class="message-sources">${m.sources.map(s=>`<a href="${/^https?:\/\//i.test(String(s.url||''))?esc(s.url):'#'}" target="_blank" rel="noopener">${esc(s.title||'Fuente')}</a>`).join('')}</div>`:''}${m.role==='assistant'&&Array.isArray(m.quickReplies)&&m.quickReplies.length?`<div class="message-quick-replies">${m.quickReplies.map((q,i)=>`<button data-quick-message="${esc(m.id||'')}" data-quick-index="${i}">${esc(q.label)}</button>`).join('')}</div>`:''}</div>`;
+    return `<div class="message ${m.role}${event?' is-event':''}" data-message-id="${esc(m.id||'')}">${reply}${Array.isArray(m.attachments)&&m.attachments.length?`<div class="message-attachments">${m.attachments.map(a=>{const path=String(a.path||''),mime=String(a.mime||''),name=String(a.name||'Archivo');if(mime.startsWith('image/'))return `<img loading="lazy" data-chat-image-path="${esc(path)}" alt="${esc(name)}">`;const ext=(name.split('.').pop()||'FILE').toUpperCase();return `<a class="message-file" data-chat-file-path="${esc(path)}" data-chat-file-name="${esc(name)}" target="_blank" rel="noopener"><span>${esc(ext)}</span><strong>${esc(name)}</strong></a>`}).join('')}</div>`:''}${displayText?`<span class="message-text">${formatMessageText(displayText)}</span>`:''}${m.role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete" role="status">${esc('Antwort unterbrochen. Der erhaltene Text ist unvollständig.')}<button type="button" data-continue-incomplete="${esc(m.id||'')}">${esc('Antwort fortsetzen')}</button></div>`:''}${previews}${deliverables}${directUndo?`<div class="message-review-action"><button type="button" class="secondary" data-direct-undo-message="${esc(m.id||'')}">${esc('Rückgängig')}</button></div>`:''}${m.role==='assistant'&&Array.isArray(m.metadata?.review_proposals)&&m.metadata.review_proposals.length&&
+      !m.metadata?.review_state?`<div class="message-review-action"><button type="button" class="secondary" data-review-message="${esc(m.id||'')}">${esc('Vorschlag prüfen')}</button></div>`:''}${m.role==='assistant'&&!event&&m.reaction?`<button type="button" class="message-reaction-badge" data-message-react="${esc(m.id||'')}" aria-label="${esc('Reaktion ändern')}">${typographicReaction(m.reaction,true)}</button>`:''}${m.role==='assistant'&&!event?`<div class="message-actions"><button class="message-react" data-message-react="${esc(m.id||'')}" aria-label="Reaccionar">＋</button><button class="message-reply" data-message-reply="${esc(m.id||'')}" aria-label="${esc('Auf diese Nachricht antworten')}">↩︎</button></div>`:''}${Array.isArray(m.sources)&&m.sources.length?`<div class="message-sources">${m.sources.map(s=>`<a href="${/^https?:\/\//i.test(String(s.url||''))?esc(s.url):'#'}" target="_blank" rel="noopener">${esc(s.title||'Fuente')}</a>`).join('')}</div>`:''}${m.role==='assistant'&&Array.isArray(m.quickReplies)&&m.quickReplies.length?`<div class="message-quick-replies">${m.quickReplies.map((q,i)=>`<button data-quick-message="${esc(m.id||'')}" data-quick-index="${i}">${esc(q.label)}</button>`).join('')}</div>`:''}</div>`;
   }).join('');
   lastMessagesRenderKey=nextRenderKey;
+  if(typeof window!=='undefined'&&window.APP_PROFILE==='office')box.querySelectorAll('.message-react').forEach(el=>el.setAttribute('aria-label','Reagieren'));
   void hydrateChatImages();void hydrateArtifactFiles();
   try{bindMessageReactions()}catch(err){console.warn('reaction binding failed',err)}
+  document.querySelectorAll('[data-direct-undo-message]').forEach(b=>{
+    const id=b.dataset.directUndoMessage;
+    b.onclick=()=>void undoDirectCalendarMessage(id);
+    const expires=state.messages.find(m=>m.id===id)?.metadata?.direct_undo?.expires_at;
+    setTimeout(()=>{
+      const current=state.messages.find(m=>m.id===id);
+      if(current?.metadata?.direct_undo?.status==='ready'&&Date.parse(expires)<=Date.now()){
+        current.metadata.direct_undo=null;save();renderMessages();
+      }
+    },Math.max(0,Date.parse(expires)-Date.now())+1);
+  });
   document.querySelectorAll('[data-review-message]').forEach(b=>b.onclick=()=>{
     const m=state.messages.find(x=>x.id===b.dataset.reviewMessage);
     const items=Array.isArray(m?.metadata?.review_proposals)?m.metadata.review_proposals:[];
@@ -1683,7 +1814,7 @@ function proposalEditor(p,onDone){
   const cats=state.categories.map(x=>`<option value="${esc(x.name)}" ${x.name===categoryName?'selected':''}>${esc(x.name)}</option>`).join('');
   const projects='<option value="">Ohne Projekt</option>'+state.projects.map(x=>`<option value="${esc(x.name)}" ${x.name===projectName?'selected':''}>${esc(x.name)}</option>`).join('');
   const specific=p.kind==='event'
-    ?`<label>Hora<input id="proposalTime" type="time" value="${esc(time||'09:00')}"></label><label>Dauer (min)<input id="proposalDuration" type="number" min="5" step="5" value="${Number(duration||60)}"></label>`
+    ?`<label>Hora<input id="proposalTime" type="time" value="${esc(time||'09:00')}"></label><label>Dauer (min)<input id="proposalDuration" type="number" min="5" step="5" value="${Number(duration||60)}"></label>${p.duration_defaulted?'<div class="small">1 h · editable (duración predeterminada)</div>':''}`
     :`<label>Recordatorio<input id="proposalReminder" type="time" value="${esc(reminder||'')}"></label>`;
   modal('Revisar antes de confirmar',`<div class="form proposal-editor">
     <label>Nombre<input id="proposalTitle" value="${esc(title)}"></label>
@@ -1795,7 +1926,7 @@ function confirmProposal(p){
   p={...p,request_id:p.request_id||crypto.randomUUID()};
   const reviewHint=p.kind==='routine'?'Puedes confirmar tal cual o corregir el contenido y el horario antes de guardarlo.':p.kind==='standing_intent'?'Se activará cuando el contexto reaparezca en la conversación. No es vigilancia externa.':p.kind==='expectation'?'Esto seguirá un hecho futuro del mundo; una fecha vencida sin evidencia no se tratará como fallo.':p.kind==='commitment'?'Esto mantendrá el objetivo vivo, pero no ejecutará acciones por sí solo.':p.kind==='work_claim'?'Revisa especialmente estado y procedencia: una fuente no equivale automáticamente a un hecho confirmado.':p.kind==='skill_proposal'?'Esta habilidad será personal y solo se activa al confirmar.':p.kind==='feed_preferences'?'Puedes revisar la constelación y los temas antes de modificar tu Feed.':p.kind==='assistant_preferences'?'Puedes revisar esta mejora antes de incorporarla al comportamiento de Isabella.':'Puedes confirmar tal cual o corregir nombre, fecha, hora, categoría o proyecto antes de guardarlo.';
   modal('Confirmar',`<div class="row"><div class="row-main"><b>${esc(proposalLabel(p))}</b><div class="small" style="margin-top:7px">${esc(reviewHint)}</div>${proposalDetails(p)}</div></div><div class="proposal-actions"><button id="proposalCancel" class="secondary">Cancelar</button><button id="proposalEdit" class="secondary">Corregir</button><button id="proposalConfirm" class="primary">Confirmar</button></div>`);
-  $('#proposalCancel').onclick=()=>{state.pendingIntent=null;save();proposalFeedback('rejected',p);finalizeInlineReview(p,'rejected');closeModal();say('assistant','De acuerdo, no hice ningún cambio.')};
+  $('#proposalCancel').onclick=()=>{state.pendingIntent=null;save();proposalFeedback('rejected',p);finalizeInlineReview(p,'rejected');closeModal();sayEvent('Sin cambios.')};
   $('#proposalEdit').onclick=()=>proposalEditor(p,q=>{if(q)confirmProposal(reviewedProposal(p,q));else confirmProposal(p)});
   $('#proposalConfirm').onclick=()=>{
     const b=$('#proposalConfirm');if(b.disabled)return;
@@ -1808,9 +1939,9 @@ function confirmProposal(p){
     Promise.resolve().then(()=>applyProposal(p,{quiet:true})).then(()=>{
       if(verified){state.pendingIntent=null;save();proposalFeedback('accepted',p);}
       const marked=finalizeInlineReview(p,verified?'applied_verified':'reviewed_locally');
-      if(verified&&p.kind==='task'&&!marked)say('assistant',confirmationText([p]));
+      if(verified&&p.kind==='task'&&!marked)sayEvent(confirmationText([p]));
     }).catch(e=>{
-      say('assistant','No pude guardar el cambio, así que no lo doy por hecho: '+(e?.message||String(e)));
+      sayEvent('No pude guardar el cambio, así que no lo doy por hecho: '+(e?.message||String(e)));
       if(b.isConnected){b.disabled=false;b.textContent='Confirmar'}
     }).finally(()=>{if(b.isConnected&&b.disabled){b.disabled=false;b.textContent='Confirmar'}});
   };
@@ -1819,9 +1950,9 @@ function confirmProposals(list){
   const items=(list||[]).filter(Boolean).map(p=>({...p,request_id:p.request_id||crypto.randomUUID()}));
   if(!items.length)return;
   if(items.length===1){confirmProposal(items[0]);return}
-  modal('Confirmar cambios',`<div class="proposal-list">${items.map((p,i)=>`<div class="proposal-row"><span>${esc(proposalLabel(p))}${proposalDetails(p)}</span><button data-proposal-edit="${i}" class="proposal-inline-edit">Editar</button></div>`).join('')}</div><div class="small" style="margin-top:10px">Puedes revisar cada cambio antes de confirmar todos.</div><div class="confirm-actions" style="margin-top:18px"><button id="proposalBatchCancel" class="secondary">Cancelar</button><button id="proposalBatchConfirm" class="primary">Confirmar todo</button></div>`);
+  modal('Confirmar cambios',`<div class="proposal-list">${items.map((p,i)=>`<div class="proposal-row"><span>${esc(proposalLabel(p))}${proposalDetails(p)}</span><button data-proposal-edit="${i}" class="proposal-inline-edit">Bearbeiten</button></div>`).join('')}</div><div class="small" style="margin-top:10px">Puedes revisar cada cambio antes de confirmar todos.</div><div class="confirm-actions" style="margin-top:18px"><button id="proposalBatchCancel" class="secondary">Cancelar</button><button id="proposalBatchConfirm" class="primary">Confirmar todo</button></div>`);
   $$('[data-proposal-edit]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.proposalEdit);proposalEditor(items[i],q=>{if(q)items[i]=reviewedProposal(items[i],q);confirmProposals(items)})});
-  $('#proposalBatchCancel').onclick=()=>{state.pendingIntent=null;save();for(const p of items)proposalFeedback('rejected',p);finalizeInlineReview(items,'rejected');closeModal();say('assistant','De acuerdo, no hice ningún cambio.')};
+  $('#proposalBatchCancel').onclick=()=>{state.pendingIntent=null;save();for(const p of items)proposalFeedback('rejected',p);finalizeInlineReview(items,'rejected');closeModal();sayEvent('Keine Änderung.')};
   $('#proposalBatchConfirm').onclick=async()=>{const b=$('#proposalBatchConfirm');if(b.disabled)return;b.disabled=true;b.textContent='Speichere …';state.pendingIntent=null;save();const appliedTasks=[];let marked=false;try{for(const p of items){
       const verified=p.kind==='routine'||(p.kind==='task'&&['update','create'].includes(p.action||'create'));
       if(!verified)proposalFeedback('accepted',p);
@@ -1829,7 +1960,7 @@ function confirmProposals(list){
       if(verified)proposalFeedback('accepted',p);
       if(verified&&p.kind==='task')appliedTasks.push(p);
       marked=finalizeInlineReview(p,verified?'applied_verified':'reviewed_locally')||marked;
-    }closeModal();if(appliedTasks.length&&!marked)say('assistant',confirmationText(appliedTasks))}catch(e){if(appliedTasks.length)say('assistant',confirmationText(appliedTasks));say('assistant','No pude guardar todos los cambios: '+(e?.message||String(e)));if(b.isConnected){b.disabled=false;b.textContent='Confirmar todo'}}};
+    }closeModal();if(appliedTasks.length&&!marked)sayEvent(confirmationText(appliedTasks))}catch(e){if(appliedTasks.length)sayEvent(confirmationText(appliedTasks));sayEvent('No pude guardar todos los cambios: '+(e?.message||String(e)));if(b.isConnected){b.disabled=false;b.textContent='Confirmar todo'}}};
 }
 function findTarget(p){
   const list=p.kind==='task'?state.tasks:state.events;
@@ -1856,7 +1987,7 @@ async function createRoutineProposal(p){
   closeModal();
   const verb={create:'Programé',update:'Actualicé',pause:'Pausé',resume:'Reactivé',delete:'Eliminé'}[p.action||'create'];
   const row=receipt.after;
-  say('assistant',`Listo. ${verb} la rutina “${row?.title||p.title}”.`+
+  sayEvent(`Listo. ${verb} la rutina “${row?.title||p.title}”.`+
     (row?.enabled&&row?.next_run_at?` Próxima ejecución: ${new Date(row.next_run_at).toLocaleString('de-DE',{timeZone:row.timezone})} (${row.timezone}).`:''));
   return receipt;
 }
@@ -1867,11 +1998,11 @@ async function dbWorkProjectByName(name){
   return (data||[]).find(x=>String(x.client_key||'').toLowerCase()===key)||(data||[]).find(x=>String(x.name||'').toLowerCase()===key)||null;
 }
 async function createStandingIntentProposal(p){
-  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();say('assistant','Necesito la memoria conectada para guardar este recordatorio.');return}
+  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Necesito la memoria conectada para guardar este recordatorio.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
   const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
-  if(!String(p.trigger_text||'').trim()||!String(p.reminder_text||'').trim()){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','Faltan la situación y el recordatorio.');return}
+  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
+  if(!String(p.trigger_text||'').trim()||!String(p.reminder_text||'').trim()){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Faltan la situación y el recordatorio.');return}
   const expires=new Date(Date.now()+Math.max(1,Math.min(365,Number(p.expires_days||90)))*86400000).toISOString();
   const spec={
     mode:'reminder',observation_mode:'via_user',channel_kind:'conversation',
@@ -1885,17 +2016,17 @@ async function createStandingIntentProposal(p){
   const {error}=await sb.rpc('minds_create_prospective_memory',{
     p_spec:spec,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true
   });
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No pude guardar ese recordatorio todavía: '+error.message);return}
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude guardar ese recordatorio todavía: '+error.message);return}
   closeModal();
-  say('assistant','Listo. Lo guardaré como recordatorio por situación. No estaré vigilando una fuente externa: te lo recordaré cuando ese contexto vuelva a aparecer en nuestra conversación.');
+  sayEvent('Listo. Lo guardaré como recordatorio por situación. No estaré vigilando una fuente externa: te lo recordaré cuando ese contexto vuelva a aparecer en nuestra conversación.');
 }
 async function createExpectationProposal(p){
-  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();say('assistant','Necesito la memoria conectada para seguir esta expectativa.');return}
+  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Necesito la memoria conectada para seguir esta expectativa.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
   const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
+  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
   if(!String(p.title||'').trim()||!String(p.expected_event||'').trim()||!String(p.due_date||'').trim()){
-    const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','La expectativa necesita un nombre, qué se espera y una fecha.');return
+    const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('La expectativa necesita un nombre, qué se espera y una fecha.');return
   }
   const time=String(p.due_time||'').trim()||null;
   const timezone=String(p.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin');
@@ -1916,18 +2047,18 @@ async function createExpectationProposal(p){
     p_request_id:p.request_id||crypto.randomUUID(),
     p_confirmed:true
   });
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No pude guardar esa expectativa todavía: '+error.message);return}
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude guardar esa expectativa todavía: '+error.message);return}
   closeModal();
   const row=data?.expectation||{};
   const due=row.due_at?new Date(row.due_at).toLocaleString('de-DE',{timeZone:row.timezone||timezone,dateStyle:'medium',...(row.due_precision==='datetime'?{timeStyle:'short'}:{})}):p.due_date;
   say('assistant',`Listo. Mantendré “${row.title||p.title}” pendiente hasta ${due}. Si llega ese momento sin confirmación, te diré que sigue sin comprobar; no asumiré que no ocurrió.`);
 }
 async function createCommitmentProposal(p){
-  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();say('assistant','Necesito la memoria conectada para mantener esto vivo entre conversaciones.');return}
+  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Necesito la memoria conectada para mantener esto vivo entre conversaciones.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
   const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
-  if(!String(p.title||'').trim()||!String(p.objective||'').trim()){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','El trabajo necesita un nombre y un objetivo claros.');return}
+  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
+  if(!String(p.title||'').trim()||!String(p.objective||'').trim()){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('El trabajo necesita un nombre y un objetivo claros.');return}
   const persistent=!!p.persistent_work;
   const skillTrace=Array.isArray(p.skill_trace)?p.skill_trace.slice(0,4).map(x=>({
     slug:String(x?.slug||'').slice(0,80),name:String(x?.name||'').slice(0,180),
@@ -1952,16 +2083,16 @@ async function createCommitmentProposal(p){
     }
   };
   const {data,error}=await sb.rpc('minds_create_commitment',{p_commitment:payload,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No pude mantener este objetivo vivo todavía: '+error.message);return}
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude mantener este objetivo vivo todavía: '+error.message);return}
   if(!persistent){
-    closeModal();say('assistant',`Listo. Mantendré “${data?.title||p.title}” vivo. No lo convertiré automáticamente en tareas ni acciones.`);return;
+    closeModal();sayEvent(`Listo. Mantendré “${data?.title||p.title}” vivo. No lo convertiré automáticamente en tareas ni acciones.`);return;
   }
 
   const {data:workspaceResult,error:workspaceError}=await sb.rpc('minds_ensure_commitment_workspace',{p_commitment_id:data?.id});
   const workspace=workspaceResult?.workspace||null;
   if(workspaceError||workspaceResult?.status!=='ok'||!workspace?.id){
     closeModal();
-    say('assistant',`Mantendré “${data?.title||p.title}” vivo, pero no pude empezar el trabajo persistente todavía. El objetivo no se perdió; puedo reintentarlo.`);
+    sayEvent(`Mantendré “${data?.title||p.title}” vivo, pero no pude empezar el trabajo persistente todavía. El objetivo no se perdió; puedo reintentarlo.`);
     return;
   }
 
@@ -1973,30 +2104,30 @@ async function createCommitmentProposal(p){
   });
   if(missionError||!['ok','already_active'].includes(String(missionResult?.status||''))){
     closeModal();
-    say('assistant',`Mantendré “${data?.title||p.title}” vivo, pero no pude arrancar el trabajo en segundo plano. El objetivo quedó guardado y puedo retomarlo.`);
+    sayEvent(`Mantendré “${data?.title||p.title}” vivo, pero no pude arrancar el trabajo en segundo plano. El objetivo quedó guardado y puedo retomarlo.`);
     return;
   }
   const run=missionResult?.run||{};
   closeModal();
-  say('assistant',`Listo. Me encargo de “${data?.title||p.title}”. Puedes cerrar MINDS; seguiré avanzando y volveré a ti si necesito una decisión o cuando haya algo que realmente merezca tu atención.`);
+  sayEvent(`Listo. Me encargo de “${data?.title||p.title}”. Puedes cerrar MINDS; seguiré avanzando y volveré a ti si necesito una decisión o cuando haya algo que realmente merezca tu atención.`);
 }
 async function createWorkClaimProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();return}
   const proj=await dbWorkProjectByName(p.project);
-  if(!proj){say('assistant','No pude identificar ese proyecto de Work.');return}
-  if(!String(p.statement||'').trim()){say('assistant','Escribe el contenido del conocimiento antes de guardarlo.');return}
+  if(!proj){sayEvent('No pude identificar ese proyecto de Work.');return}
+  if(!String(p.statement||'').trim()){sayEvent('Escribe el contenido del conocimiento antes de guardarlo.');return}
   const evidence=Array.isArray(p.evidence)?p.evidence:(p.source_file_id||p.evidence_excerpt)?[{source_file_id:p.source_file_id||null,source_message_id:p.source_message_id||null,excerpt:p.evidence_excerpt||null,source_kind:p.source_file_id?'work_file':'conversation',stance:p.evidence_stance||'supports',locator:p.locator||{}}]:[];
   const {data,error}=await sb.rpc('minds_save_work_claim',{p_claim:{...p,project_id:proj.id},p_evidence:evidence,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No se guardó el conocimiento ni su evidencia: '+error.message);return}
-  closeModal();say('assistant',`Guardé el conocimiento en ${proj.name} como ${data?.status==='confirmed'?'confirmado':'propuesto'}, junto con su evidencia.`);
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No se guardó el conocimiento ni su evidencia: '+error.message);return}
+  closeModal();sayEvent(`Guardé el conocimiento en ${proj.name} como ${data?.status==='confirmed'?'confirmado':'propuesto'}, junto con su evidencia.`);
   window.MINDS_WORK?.refresh?.();
 }
 async function createSkillProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();return}
-  if(!String(p.instructions||'').trim()||!String(p.name||'').trim()){say('assistant','La habilidad necesita un nombre e instrucciones.');return}
+  if(!String(p.instructions||'').trim()||!String(p.name||'').trim()){sayEvent('La habilidad necesita un nombre e instrucciones.');return}
   const {data,error}=await sb.rpc('minds_apply_personal_skill',{p_skill:p,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;say('assistant','No pude activar la habilidad: '+error.message);return}
-  closeModal();say('assistant',`La habilidad “${data.name}” quedó activa para ${data.agent==='sofia'?'Sofía':'Isabella'} como v${data.version}.`);
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude activar la habilidad: '+error.message);return}
+  closeModal();sayEvent(`La habilidad “${data.name}” quedó activa para ${data.agent==='sofia'?'Sofía':'Isabella'} como v${data.version}.`);
 }
 function applyFeedPreferencesProposal(p){
   const prefs={...base.feedPreferences,...(state.feedPreferences||{})};
@@ -2031,7 +2162,7 @@ function applyFeedPreferencesProposal(p){
   state.feedPreferences={...prefs,topics,customTopics,followGraph:graph,following:graph.map(x=>x.name),instructions,weatherLocation};
   save();closeModal();renderFeed(true);
   const added=(p.add_entities||[]).length,removed=(p.remove_entities||[]).length,weatherChanged=Object.prototype.hasOwnProperty.call(p,'weather_location');
-  say('assistant',`Listo. Actualicé tu Feed${added?' y añadí '+added+(added===1?' seguimiento':' seguimientos'):''}${removed?'; quité '+removed:''}${weatherChanged?(weatherLocation?'; usaré '+weatherLocation+' como lugar habitual para el clima':'; dejé el clima sin ubicación habitual'):''}. La próxima edición ya usará estos ajustes.`);
+  sayEvent(`Listo. Actualicé tu Feed${added?' y añadí '+added+(added===1?' seguimiento':' seguimientos'):''}${removed?'; quité '+removed:''}${weatherChanged?(weatherLocation?'; usaré '+weatherLocation+' como lugar habitual para el clima':'; dejé el clima sin ubicación habitual'):''}. La próxima edición ya usará estos ajustes.`);
 }
 function applyAssistantPreferencesProposal(p){
   const prefs={...base.assistantPreferences,...(state.assistantPreferences||{})};
@@ -2041,7 +2172,7 @@ function applyAssistantPreferencesProposal(p){
   for(const raw of p.add_rules||[]){const rule=String(raw||'').trim();if(rule&&!rules.some(x=>key(x)===key(rule)))rules.push(rule)}
   state.assistantPreferences={...prefs,behaviorRules:rules.slice(0,20)};
   save();closeModal();
-  say('assistant','Listo. Adopté esta mejora como una preferencia de comportamiento. Puedes revisarla o quitarla desde Proactividad de Isabella.');
+  sayEvent('Listo. Adopté esta mejora como una preferencia de comportamiento. Puedes revisarla o quitarla desde Proactividad de Isabella.');
 }
 /* Canonical, reviewed task UPDATE: no optimistic local mutation.
  * The RPC owns the transaction, shadow decision and idempotent receipt.
@@ -2081,7 +2212,7 @@ async function applyVerifiedTaskUpdate(p,opts={}){
     item.updatedAt=canonical.updated_at;
   }
   save();renderCalendar();closeModal();
-  if(!opts.quiet)say('assistant',confirmationText([{kind:'task',action:'update',title:canonical.title,date:canonical.due_date}]));
+  if(!opts.quiet)sayEvent(confirmationText([{kind:'task',action:'update',title:canonical.title,date:canonical.due_date}]));
   return {receipt_id:receipt.receipt_id,entity_client_key:canonical.client_key};
 }
 /* Reviewed create_task is an owned atomic database action, not a local
@@ -2128,7 +2259,7 @@ async function applyVerifiedTaskCreate(p,opts={}){
   if(original)Object.assign(original,item);
   else state.tasks.push(item);
   save();renderCalendar();closeModal();
-  if(!opts.quiet)say('assistant',confirmationText([{kind:'task',action:'create',title:canonical.title,date:canonical.due_date}]));
+  if(!opts.quiet)sayEvent(confirmationText([{kind:'task',action:'create',title:canonical.title,date:canonical.due_date}]));
   return {receipt_id:receipt.receipt_id,entity_client_key:canonical.client_key};
 }
 /* The prior user instruction authorizes only an already admitted create action.
@@ -2174,8 +2305,69 @@ async function applyDirectCalendarCreate(p){
   return {receipt_id:receipt.receipt_id,request_id:p.request_id,
     kind:p.kind,title:row.title,action:'create',
     date:p.kind==='task'?(row.due_date||null):new Date(row.starts_at).toLocaleDateString('sv-SE'),
+    duration_defaulted:p.kind==='event'&&p.duration_defaulted===true,
     when:p.kind==='task'?(row.due_date||'sin fecha'):new Date(row.starts_at).toLocaleString('de-DE'),
-    entity_client_key:receipt.entity_client_key};
+    entity_client_key:receipt.entity_client_key,entity_id:receipt.entity_id};
+}
+// This is a narrow reversal of an owner-quoted create, not a general delete.
+async function undoDirectCalendarMessage(messageId){
+  const message=state.messages.find(m=>m.id===messageId),idx=state.messages.indexOf(message);
+  if(idx<0||!directUndoEligible(message,idx))return;
+  const undo=message.metadata.direct_undo;
+  const requests=undo.items.map(x=>({request_id:x.request_id,receipt_id:x.receipt_id}));
+  if(!requests.length||requests.some(x=>!x.request_id||!x.receipt_id))return;
+  undo.status='processing';save();renderMessages();
+  const sb=window.MINDS_SUPABASE;
+  try{
+    if(!sb)throw new Error('Office ist nicht verbunden.');
+    const {data:sessionData,error:authError}=await sb.auth.getSession();
+    const owner=sessionData?.session?.user?.id;
+    if(authError||!owner)throw new Error('Deine Sitzung ist nicht angemeldet.');
+    // One atomic server transaction: either the entire original batch reverses
+    // or none does. Never retry on an ambiguous network error.
+    const {data:result,error:undoError}=await sb.rpc('minds_undo_direct_calendar_batch_v01',{p_items:requests});
+    if(undoError||result?.status!=='undone'||result?.count!==requests.length||
+       !Array.isArray(result.receipts)||result.receipts.length!==requests.length)
+      throw new Error(undoError?.message||'Kein vollständiger Beleg für Rückgängig.');
+    for(let i=0;i<undo.items.length;i++){
+      const original=undo.items[i],receipt=result.receipts[i];
+      if(receipt?.status!=='undone'||!receipt.undo_receipt_id||
+         receipt.request_id!==original.request_id||
+         receipt.original_receipt_id!==original.receipt_id||
+         receipt.entity_client_key!==original.entity_client_key||
+         receipt.entity_kind!==original.kind)
+        throw new Error('Der Beleg passt nicht zum Original.');
+    }
+    // A write receipt is necessary but not sufficient. Verify canonical state
+    // for each item before showing "Deshecho".
+    for(const original of undo.items){
+      const table=original.kind==='task'?'isabella_tasks':'isabella_events';
+      const {data:row,error:readError}=await sb.from(table)
+        .select(original.kind==='task'?'client_key,archived_at':'client_key')
+        .eq('user_id',owner).eq('client_key',original.entity_client_key).maybeSingle();
+      if(readError||(original.kind==='task'?!row?.archived_at:!!row))
+        throw new Error('Die Rücknahme konnte nicht geprüft werden.');
+    }
+    for(const original of undo.items){
+      if(original.kind==='task'){
+        const task=state.tasks.find(t=>t.id===original.entity_client_key||t.clientKey===original.entity_client_key);
+        if(task)task.archivedAt=new Date().toISOString();
+      }else{
+        state.events=state.events.filter(e=>e.id!==original.entity_client_key&&e.clientKey!==original.entity_client_key);
+      }
+    }
+    undo.status='undone';message.metadata.direct_undo=null;
+    save();renderCalendar();renderMessages();
+    if(typeof window.ISABELLA_SYNC_PULL_NOW==='function'){
+      try{await window.ISABELLA_SYNC_PULL_NOW()}catch{}
+    }
+    sayEvent('Rückgängig gemacht.');
+  }catch(e){
+    // The transaction may have committed before the network was lost.
+    // Disable replay; direct deletions require a new reviewed operation.
+    message.metadata.direct_undo=null;save();renderMessages();
+    sayEvent('Rückgängig konnte nicht bestätigt werden. Bitte Aufgaben und Kalender prüfen, bevor du es erneut versuchst.');
+  }
 }
 function directCreationBatch(result,integrity){
   const direct=result?.direct_authorization;
@@ -2210,17 +2402,17 @@ function applyProposal(p,opts={}){
   const date=p.kind==='event'?(p.date||today()):(p.date||null);
   if(action==='update'||action==='delete'||action==='complete'||action==='archive'){
     const target=findTarget(p);
-    if(!target){closeModal();say('assistant','No pude identificar con seguridad cuál elemento quieres cambiar. Dime cuál y lo intento de nuevo.');return}
+    if(!target){closeModal();sayEvent('No quedó claro qué elemento cambiar.');return}
     const before=clone(target);
     if(action==='complete'&&p.kind==='task'){
       target.done=true;target.completedAt=new Date().toISOString();
       mutation('task','complete',before,target,'assistant');
-      save();renderCalendar();closeModal();say('assistant','Listo. La marqué como completada.');return;
+      save();renderCalendar();closeModal();sayEvent('Marcada como completada.');return;
     }
     if(action==='archive'&&p.kind==='task'){
       target.archivedAt=new Date().toISOString();
       mutation('task','archive',before,target,'assistant');
-      save();renderCalendar();closeModal();say('assistant','Listo. La archivé.');return;
+      save();renderCalendar();closeModal();sayEvent('Archivada.');return;
     }
     if(action==='delete'){
       const list=p.kind==='task'?state.tasks:state.events;
@@ -2228,7 +2420,7 @@ function applyProposal(p,opts={}){
       if(idx>=0)list.splice(idx,1);
       tombstone(p.kind,target.id);
       mutation(p.kind,'delete',before,null,'assistant');
-      save();renderCalendar();closeModal();say('assistant','Listo. Ya quedó eliminado.');return;
+      save();renderCalendar();closeModal();sayEvent('Eliminado.');return;
     }
     if(p.title!=null&&String(p.title).trim())target.title=String(p.title).trim();
     if(p.kind==='task'&&p.clear_date)target.date=null;
@@ -2247,18 +2439,18 @@ function applyProposal(p,opts={}){
     if(p.recurrence!==undefined&&p.recurrence!==null)target.recurrence=p.recurrence?{text:p.recurrence}:{};
     if(p.notes!==undefined&&p.notes!==null)target.notes=p.notes||'';
     mutation(p.kind,'update',before,target,'assistant');
-    save();renderCalendar();closeModal();say('assistant','Listo. Ya quedó actualizado.');return;
+    save();renderCalendar();closeModal();sayEvent('Actualizado.');return;
   }
   const createCategoryId=categoryId||'personal';
   if(p.kind==='event'){
-    if(!p.time){closeModal();say('assistant','Me falta una hora para crear ese evento.');return}
+    if(!p.time){closeModal();sayEvent('Falta la hora del evento.');return}
     const item={id:uid(),title:p.title||'Evento',date,start:p.time,duration:Number(p.duration_minutes||60),allDay:!!p.all_day,categoryId:createCategoryId,projectId:projectId||null,recurrence:p.recurrence?{text:p.recurrence}:{},notes:p.notes||'',metadata:{source:'isabella'}};
     state.events.push(item);mutation('event','create',null,item,'assistant');
   }else{
     const item={id:uid(),title:p.title||'Tarea',date,done:false,completedAt:null,archivedAt:null,sortOrder:nextTaskOrder(date),categoryId:createCategoryId,projectId:projectId||null,recurrence:p.recurrence?{text:p.recurrence}:{},reminderTime:date?(p.reminder_time||null):null,notes:p.notes||'',metadata:{source:'isabella'}};
     state.tasks.push(item);mutation('task','create',null,item,'assistant');
   }
-  save();renderCalendar();closeModal();say('assistant','Listo. Ya quedó agregado.');
+  save();renderCalendar();closeModal();sayEvent('Agregado.');
 }
 async function acknowledgeIntentDelivery(delivery){
   const sb=window.MINDS_SUPABASE;if(!sb)return;
@@ -2283,7 +2475,7 @@ async function reconcileReadOnlyBrowserReceipts(){
   const pending=state.messages.filter(m=>m.role==='user'&&m.metadata?.durable_request_id
     &&m.metadata?.durable_status!=='completed'
     &&Number.isFinite(Date.parse(m.at||''))
-    &&now-Date.parse(m.at)>15000&&now-Date.parse(m.at)<30*60000).slice(-3);
+    &&now-Date.parse(m.at)>15000&&now-Date.parse(m.at)<24*60*60000).slice(-3);
   if(!pending.length)return;
   browserReceiptSyncBusy=true;
   try{
@@ -2296,10 +2488,10 @@ async function reconcileReadOnlyBrowserReceipts(){
       if(!result?.reply)continue;
       if(assistant){
         assistant.text=result.reply;
-        assistant.metadata={...assistant.metadata,durable_status:result.incomplete?'incomplete':'completed',
+        assistant.metadata={...assistant.metadata,author:null,durable_status:result.incomplete?'incomplete':'completed',
           incomplete_response:!!result.incomplete,incomplete_reason:result.incomplete_reason||null,delivery_recovered:true};
       }else{
-        say('assistant',result.reply,{metadata:{durable_request_id:requestId,
+        sayKeyed(assistantKeyFor(requestId),'assistant',result.reply,{metadata:{durable_request_id:requestId,
           durable_status:result.incomplete?'incomplete':'completed',
           incomplete_response:!!result.incomplete,incomplete_reason:result.incomplete_reason||null,delivery_recovered:true}});
       }
@@ -2348,14 +2540,14 @@ async function syncDurableChatJobs(){
       const resolved=['completed','incomplete','failed'].includes(status);
       const reply=status==='completed'?String(job.reply||''):
         status==='incomplete'?String(job.reply||'')||'La respuesta quedó interrumpida.':
-        status==='failed'?'Isabella no pudo terminar esta respuesta. Puedes intentarlo de nuevo.':
-        'Isabella sigue trabajando…';
+        status==='failed'?'Romy konnte diese Antwort nicht abschließen. Du kannst es erneut versuchen.':
+        'Romy arbeitet noch…';
       const desiredMeta={durable_request_id:key,durable_status:status,
         incomplete_response:status==='incomplete',
         incomplete_reason:status==='incomplete'?job.incomplete_reason||'provider_incomplete':null};
       if(!answer){answer=say('assistant',reply,{metadata:desiredMeta});changed=true}
       else if(answer.text!==reply||answer.metadata?.durable_status!==status){
-        answer.text=reply;answer.metadata={...(answer.metadata||{}),...desiredMeta};changed=true;
+        answer.text=reply;answer.metadata={...(answer.metadata||{}),...desiredMeta,author:null};changed=true;
       }
       if(resolved&&user.metadata?.durable_status!==status){
         user.metadata={...(user.metadata||{}),durable_status:status};changed=true;
@@ -2369,15 +2561,19 @@ async function syncDurableChatJobs(){
   finally{durableChatSyncBusy=false;void reconcileReadOnlyBrowserReceipts()}
 }
 
-async function handle(text,attachments=[],replyTo=null){
-  // Reuse Window's composer and message renderer. Office has its own authenticated
-  // conversation service; never invoke Isabella's runtime, proposals or local fallback.
+let voiceTurnEpoch=0;
+async function handle(text,attachments=[],replyTo=null,options={}){
+  // Office: the former assistant only as an explicitly chosen fallback.
   if(OFFICE&&window.APP_CHAT_RUNTIME==='legacy'){
     clearReplyTarget();
     if(!window.TBA_OFFICE_ASSISTANT?.send)return;
     await window.TBA_OFFICE_ASSISTANT.send(text,{attachments,replyTo});
     return;
   }
+  const voiceTurn=++voiceTurnEpoch;
+  // A new owner message closes the previous ten-minute Undo option.
+  for(const m of state.messages)if(m.metadata?.direct_undo)m.metadata.direct_undo=null;
+  window.ISABELLA_VOICE_OUTPUT?.stop();
   const copy=(attachments||[]).map(x=>({path:x.path,mime:x.mime,name:x.name}));
   clearAssistantStream();
   // Persist the binding atomically with the first user turn; syncing between
@@ -2389,13 +2585,13 @@ async function handle(text,attachments=[],replyTo=null){
     Date.now()-Date.parse(pending.issued_at||'')<=45*60*1000&&
     Date.now()>=Date.parse(pending.issued_at||'')
     ?{source_turn_id:pending.source_turn_id,receipt_id:pending.receipt_id}:null;
-  const userTurn=say('user',text||'Te envío esta imagen.',{id:durableRequestId||undefined,attachments:copy,replyTo,
+  const userTurn=say('user',text||'Ich sende dir dieses Bild.',{id:durableRequestId||undefined,attachments:copy,replyTo,
     metadata:durableRequestId?{durable_request_id:durableRequestId}:{} });
-  clearReplyTarget();setChatActivity('Sende an Romy …');orb('thinking','Denke nach …');setWorking($('#sendButton'),true);
+  clearReplyTarget();setChatActivity('Wird an Romy gesendet…');orb('thinking','Romy denkt nach…');setWorking($('#sendButton'),true);
   try{
     if(window.ISABELLA_AI?.ask){
-      setChatActivity('Romy bereitet die Antwort vor …');
-      const result=await window.ISABELLA_AI.ask(text||'Ich sende dir dieses Bild.',state,{attachments:copy,replyTo,durableRequestId,continuation:candidate,onProgress:event=>{if(event?.label){orb('thinking',event.label);setChatActivity(event.label)}},onTextDelta:(delta,full)=>{setChatActivity('Isabella está respondiendo…');streamAssistantDelta(delta,full)},onTextReset:()=>clearAssistantStream()});
+      setChatActivity('Romy bereitet die Antwort vor…');
+      const result=await window.ISABELLA_AI.ask(text||'Ich sende dir dieses Bild.',state,{attachments:copy,replyTo,durableRequestId,continuation:candidate,onProgress:event=>{if(event?.label){orb('thinking',event.label);setChatActivity(event.label)}},onTextDelta:(delta,full)=>{setChatActivity('Romy antwortet…');streamAssistantDelta(delta,full)},onTextReset:()=>clearAssistantStream()});
       state.pendingIntent=null;
       clearAssistantStream();
       if(result?.durable){
@@ -2417,11 +2613,16 @@ async function handle(text,attachments=[],replyTo=null){
       userTurn.metadata={...(userTurn.metadata||{}),exposure_scope:exposure};
       const integrity=window.MINDS_TURN_INTEGRITY?.validate(result);
       if(!integrity?.ok){
-        say('assistant','Ich konnte das Ergebnis dieses Vorgangs nicht prüfen. Keine Änderung ist bestätigt.',{metadata:{exposure_scope:exposure,turn_receipt_error:integrity?.reason||'validator_unavailable'}});
+        sayEvent('Ich konnte das Ergebnis dieses Vorgangs nicht prüfen. Keine Änderung ist bestätigt.',{metadata:{exposure_scope:exposure,turn_receipt_error:integrity?.reason||'validator_unavailable'}});
         return;
       }
+      // Phase 1, step 7: on a turn with changes, the server sends Isabella's own words only when they
+      // do not claim the change is done; they go above the app's line, never instead of it.
+      const isabellaProse=integrity.proposals.length&&typeof result?.isabella_reply==='string'&&result.isabella_reply.trim()&&
+        !window.MINDS_TURN_INTEGRITY.isSystemNotice?.(result.isabella_reply)?result.isabella_reply.trim().slice(0,1500):'';
       const directBatch=directCreationBatch(result,integrity);
       if(directBatch){
+        if(isabellaProse)say('assistant',isabellaProse,{metadata:{exposure_scope:exposure,commentary_for:'direct_creation'}});
         const committed=[],failed=[];
         for(const p of directBatch){
           try{committed.push(await applyDirectCalendarCreate(p))}
@@ -2432,31 +2633,47 @@ async function handle(text,attachments=[],replyTo=null){
         const report=failed.length
           ?(text?text+' ':'')+'Nicht gespeichert: '+naturalList(missing)+'. '+(failed.length===1?'Es gilt nicht als erledigt':'Sie gelten nicht als erledigt')+'. Unten kannst du es prüfen.'
           :text;
-        say('assistant',report,{metadata:{exposure_scope:exposure,
+        const undoItems=committed.map(x=>({request_id:x.request_id,receipt_id:x.receipt_id,
+          kind:x.kind,entity_client_key:x.entity_client_key}));
+        const directUndo=undoItems.length?{
+          status:'ready',expires_at:new Date(Date.now()+10*60*1000).toISOString(),items:undoItems
+        }:null;
+        sayEvent(report,{metadata:{exposure_scope:exposure,
           turn_outcome:failed.length?'partial_or_unverified':'action_applied',
-          action_receipts:committed.map(x=>({request_id:x.request_id,receipt_id:x.receipt_id,
-            kind:x.kind,entity_client_key:x.entity_client_key})),
+          action_receipts:undoItems,direct_undo:directUndo,
           review_proposals:failed.map(x=>x.proposal)}});
         save();
         return;
       }
-      const verifiedReply=window.MINDS_TURN_INTEGRITY.summary(integrity)||String(result?.reply||'');
+      const receiptText=window.MINDS_TURN_INTEGRITY.summary(integrity);
+      const verifiedReply=receiptText||String(result?.reply||'');
+      const authorMeta=receiptText?{author:'system'}:{};
       if(verifiedReply||result?.artifacts?.length){
         const delivered=state.messages.find(m=>m.role==='assistant'&&m.metadata?.durable_request_id===durableRequestId&&m.metadata?.delivery_recovered);
         if(delivered){
           // A receipt may have arrived while the original fetch was still pending.
           // Never duplicate the same provider result in the conversation.
           delivered.text=verifiedReply||delivered.text;
-          delivered.metadata={...delivered.metadata,exposure_scope:exposure,
+          delivered.metadata={...delivered.metadata,...authorMeta,exposure_scope:exposure,
             incomplete_response:!!result?.incomplete,incomplete_reason:result?.incomplete_reason||null,
             review_proposals:integrity.proposals,turn_outcome:integrity.outcome};
           save();renderMessages();
-        }else say('assistant',verifiedReply||'No hubo una respuesta de texto.',{
-          metadata:{exposure_scope:exposure,incomplete_response:!!result?.incomplete,
+        }else{
+          if(isabellaProse&&receiptText)say('assistant',isabellaProse,{metadata:{exposure_scope:exposure,commentary_for:'review'}});
+          sayKeyed(receiptText?null:assistantKeyFor(durableRequestId),'assistant',verifiedReply||'No hubo una respuesta de texto.',{
+          metadata:{...authorMeta,exposure_scope:exposure,incomplete_response:!!result?.incomplete,
             incomplete_reason:result?.incomplete_reason||null,
             review_proposals:integrity.proposals,turn_outcome:integrity.outcome,
             ...(result?.pending_clarification?{pending_clarification:result.pending_clarification}:{})},
           sources:result.sources||[],quickReplies:result.quick_replies||[],artifacts:result.artifacts||[]});
+        }
+      }
+      // Only this explicitly opted-in microphone turn may be spoken. A browser
+      // re-render, background delivery, proposal or ambiguous result stays silent.
+      if(options.speakReply&&voiceTurn===voiceTurnEpoch&&state.screen==='assistant'&&
+         integrity.typed&&integrity.outcome==='answered'&&!result?.incomplete&&
+         !result?.question&&!result?.artifacts?.length&&verifiedReply){
+        window.ISABELLA_VOICE_OUTPUT?.speak(verifiedReply);
       }
       if(result?.reply&&!result?.incomplete&&result?.standing_intent_delivery)void acknowledgeIntentDelivery(result.standing_intent_delivery);
       if(result?.question&&result.question!==result.reply)say('assistant',result.question,{metadata:{exposure_scope:exposure},quickReplies:result?.reply?[]:(result.quick_replies||[])});
@@ -2464,12 +2681,12 @@ async function handle(text,attachments=[],replyTo=null){
       if(result?.autonomy_execution)await window.ISABELLA_SYNC_PULL_NOW?.();
       if(integrity.proposals.length){state.pendingIntent=null;save();confirmProposals(integrity.proposals)}
       else save();
-    }else say('assistant',localFallback(text));
+    }else sayEvent(localFallback(text));
   }catch(e){
     clearAssistantStream();
-    say('assistant',e?.message||localFallback(text),{metadata:durableRequestId?{
+    sayKeyed(assistantKeyFor(durableRequestId),'assistant',e?.message||localFallback(text),{metadata:{author:'system',...(durableRequestId?{
       durable_request_id:durableRequestId,durable_status:'unconfirmed'
-    }:{}});
+    }:{})}});
     void syncDurableChatJobs();
   }
   finally{
@@ -2581,7 +2798,7 @@ function bind(){
  i.addEventListener('focus',()=>syncOrbCompact(true));
  const autosize=()=>{i.style.height='auto';i.style.height=Math.min(i.scrollHeight,156)+'px'};
  attachButton.onclick=()=>imageInput.click();
- imageInput.onchange=()=>{const chosen=[...imageInput.files||[]],next=chosen.filter(chatUploadSupported);if(chosen.length&&!next.length)say('assistant','Dieses Format wird noch nicht unterstützt. Möglich sind PDF, Office-Dokumente, Text, CSV, JSON oder Bilder.');pendingChatFiles=[...pendingChatFiles,...next].slice(0,3);imageInput.value='';renderPendingChatFiles()};
+ imageInput.onchange=()=>{const chosen=[...imageInput.files||[]],next=chosen.filter(chatUploadSupported);if(chosen.length&&!next.length)sayEvent('Dieses Format wird noch nicht unterstützt. Möglich sind PDF, Office-Dokumente, Text, CSV, JSON oder Bilder.');pendingChatFiles=[...pendingChatFiles,...next].slice(0,3);imageInput.value='';renderPendingChatFiles()};
  let chatSending=false;
  const send=async()=>{
    if(chatSending)return;
@@ -2593,7 +2810,7 @@ function bind(){
      const attachments=files.length?await uploadChatFiles(files):[];
      clearSentChatFiles();i.value='';autosize();
      await handle(t,attachments,replyTo);
-   }catch(e){say('assistant',e?.message||'Die Datei konnte nicht gesendet werden.')}
+   }catch(e){sayEvent(e?.message||'Die Datei konnte nicht gesendet werden.')}
    finally{chatSending=false;$('#sendButton').disabled=false;attachButton.disabled=false}
  };
  $('#sendButton').onclick=send;i.addEventListener('input',autosize);i.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();send()}});autosize();
@@ -2671,6 +2888,12 @@ function initVoice(){
   const R=window.SpeechRecognition||window.webkitSpeechRecognition;
   let recorder=null,stream=null,chunks=[],discard=false,fallbackRec=null,phase='idle';
   const transcript=$('#focusTranscript'),primary=$('#focusStop'),secondary=$('#focusKeyboard');
+  const speakChoice=$('#focusSpeakReply');
+  if(speakChoice&&!window.ISABELLA_VOICE_OUTPUT?.available()){
+    speakChoice.checked=false;speakChoice.disabled=true;
+    speakChoice.closest('label')?.classList.add('is-unavailable');
+    speakChoice.closest('label')?.setAttribute('title','La respuesta hablada no está disponible en este navegador.');
+  }
   const setText=t=>{if(transcript){transcript.value=t||'';transcript.textContent=t||''}};
   const getText=()=>String(transcript?.value||transcript?.textContent||'').trim();
   const stopTracks=()=>{try{stream?.getTracks().forEach(t=>t.stop())}catch{}stream=null};
@@ -2702,6 +2925,7 @@ function initVoice(){
     }catch{phase='error';$('#focusStatus').textContent='Mikrofon konnte nicht gestartet werden'}
   };
   const start=async()=>{
+    window.ISABELLA_VOICE_OUTPUT?.stop();
     discard=false;openFocus();orb('listening','Höre zu …');phase='recording';
     transcript.readOnly=true;setText('');$('#focusStatus').textContent='Höre zu …';primary.textContent='Stopp';secondary.textContent='Abbrechen';
     if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder||!window.ISABELLA_AI?.transcribe){browserFallback();return}
@@ -2728,7 +2952,9 @@ function initVoice(){
     }
     if(phase==='review'){
       const text=getText();if(!text)return;
-      closeFocus();phase='idle';handle(text);return;
+      // Explicit per-session choice. Never speak replies to typed or background turns.
+      const speakReply=!!speakChoice?.checked&&!speakChoice.disabled;
+      closeFocus();phase='idle';void handle(text,[],null,{speakReply});return;
     }
     closeFocus();phase='idle';
   };
@@ -2737,8 +2963,11 @@ function initVoice(){
     if(phase==='recording'||phase==='transcribing'){cancel();return}
     cancel();
   };
-  $('#micButton').onclick=start;
+  $('#micButton').onclick=()=>{if(window.ISABELLA_VOICE_OUTPUT?.isSpeaking()){window.ISABELLA_VOICE_OUTPUT.stop();return;}void start()};
   $('#focusClose').onclick=cancel;primary.onclick=stop;secondary.onclick=secondaryAction;
+  // Same mic/Focus surface: close dictation before navigating to continuous Live.
+  // The real link remains navigable without JavaScript and preserves the old flow.
+  $('#focusLiveLink').onclick=()=>{cancel();window.ISABELLA_VOICE_OUTPUT?.stop();};
 }
 function openFocus(){$('#focusMode').classList.remove('hidden');$('#focusStatus').textContent='Höre zu …';const t=$('#focusTranscript');if(t){t.value='';t.textContent='';t.readOnly=true}}function closeFocus(){$('#focusMode').classList.add('hidden');orb()}
 function startWeek(d){const x=new Date(d);const day=(x.getDay()+6)%7;return addDays(x,-day)} function weekNo(d){const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=x.getUTCDay()||7;x.setUTCDate(x.getUTCDate()+4-n);const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}
@@ -3705,7 +3934,7 @@ async function missionRunControlUI(runId,action,workspaceId){
     const {data,error}=await sb.rpc(rpc,params);if(error)throw error;
     if(data?.status!=='ok')throw new Error(data?.status||'No disponible');
     await missionWorkspacePanel(workspaceId);
-  }catch(e){say('assistant','No pude cambiar ese trabajo ahora mismo: '+(e?.message||String(e)))}
+  }catch(e){sayEvent('No pude cambiar ese trabajo ahora mismo: '+(e?.message||String(e)))}
 }
 async function missionWorkspacePanel(id){
   const sb=window.MINDS_SUPABASE;if(!sb||!id)return;
@@ -4322,8 +4551,8 @@ function assistantPreferencesPanel(){
   const attention=canonicalAttentionPreferences(prefs.attention);
   const rules=[...(prefs.behaviorRules||[])];
   modal('Proactividad de Isabella',`<div class="form assistant-preferences">
-    <label class="settings-check"><input id="curiosityEnabled" type="checkbox" ${prefs.curiosityEnabled!==false?'checked':''}><span>Hacerme preguntas ocasionales para conocerme mejor</span></label>
-    <label>Frecuencia máxima<select id="curiosityCadence"><option value="24" ${Number(prefs.curiosityCadenceHours)<=24?'selected':''}>Aproximadamente una al día</option><option value="30" ${Number(prefs.curiosityCadenceHours)>24&&Number(prefs.curiosityCadenceHours)<48?'selected':''}>Cada 1–2 días</option><option value="72" ${Number(prefs.curiosityCadenceHours)>=48?'selected':''}>Unas dos por semana</option></select></label>
+    <label class="settings-check"><input id="curiosityEnabled" type="checkbox" ${prefs.curiosityEnabled!==false?'checked':''}><span>${esc('Romy darf mir zuerst schreiben (höchstens einmal täglich, nur wenn sinnvoll)')}</span></label>
+    <div class="small">Lo decide cada día a partir de lo que hablasteis y de tu agenda; si no hay nada que valga la pena, no escribe.</div>
     <div class="small section-label">Cuándo quieres que te avise</div>
     <div class="small">Puedo mantener cosas vivas y trabajar en segundo plano sin interrumpirte cada vez. Si me dices explícitamente “avísame cuando termines”, esa petición tiene prioridad sobre estas reglas.</div>
     <label>Cuando termino un trabajo en segundo plano<select id="attentionMissionCompleted">${attentionRouteOptions(attention.missionCompleted)}</select></label>
@@ -4358,7 +4587,7 @@ function assistantPreferencesPanel(){
       quietStart:$('#attentionQuietStart').value,
       quietEnd:$('#attentionQuietEnd').value
     });
-    state.assistantPreferences={...prefs,attention:nextAttention,curiosityEnabled:$('#curiosityEnabled').checked,curiosityCadenceHours:Number($('#curiosityCadence').value||30),behaviorRules:state.assistantPreferences?.behaviorRules||rules};
+    state.assistantPreferences={...prefs,attention:nextAttention,curiosityEnabled:$('#curiosityEnabled').checked,curiosityCadenceHours:Number(prefs.curiosityCadenceHours||30),behaviorRules:state.assistantPreferences?.behaviorRules||rules};
     save();closeModal();
   };
 }
@@ -4414,7 +4643,7 @@ async function reviewExpectation(id,decision){
     });
     if(error)throw error;
     await standingIntentsPanel();
-  }catch(e){say('assistant','No pude actualizar esa expectativa: '+(e?.message||String(e)))}
+  }catch(e){sayEvent('No pude actualizar esa expectativa: '+(e?.message||String(e)))}
 }
 function rescheduleExpectation(row){
   const local=expectationLocalParts(row);
@@ -4444,7 +4673,7 @@ function rescheduleExpectation(row){
       });
       if(error)throw error;
       await standingIntentsPanel();
-    }catch(e){say('assistant','No pude cambiar la fecha: '+(e?.message||String(e)))}
+    }catch(e){sayEvent('No pude cambiar la fecha: '+(e?.message||String(e)))}
   };
 }
 async function standingIntentsPanel(){
@@ -4509,7 +4738,7 @@ async function standingIntentsPanel(){
     document.querySelectorAll('[data-expectation-reschedule]').forEach(b=>b.onclick=()=>{const row=expectations.find(x=>x.id===b.dataset.expectationReschedule);if(row)rescheduleExpectation(row)});
     document.querySelectorAll('[data-intent-cancel]').forEach(b=>b.onclick=async()=>{
       const {error}=await sb.rpc('minds_cancel_prospective_memory',{p_id:b.dataset.intentCancel,p_confirmed:true});
-      if(error)say('assistant','No pude cancelar ese elemento de memoria futura: '+error.message);
+      if(error)sayEvent('No pude cancelar ese elemento de memoria futura: '+error.message);
       await standingIntentsPanel();
     });
   }catch{modal('Memoria futura','<div class="small">No pude cargarla ahora mismo.</div>')}
@@ -4597,14 +4826,14 @@ async function skillsPanel(){
     const installPack=$('#installAktePack');
     if(installPack)installPack.onclick=async()=>{installPack.disabled=true;installPack.textContent='Instalando…';
       const {error}=await window.MINDS_SUPABASE.from('minds_user_skills').insert(missing);
-      if(error){installPack.disabled=false;installPack.textContent='Reintentar';say('assistant','No pude instalar el paquete de habilidades: '+error.message);return}
+      if(error){installPack.disabled=false;installPack.textContent='Reintentar';sayEvent('No pude instalar el paquete de habilidades: '+error.message);return}
       void skillsPanel()};
     $$('[data-skill-edit]').forEach(b=>b.onclick=()=>window.MINDS_PROPOSALS.edit({...list[Number(b.dataset.skillEdit)],kind:'skill_proposal',request_id:crypto.randomUUID()}));
-    $$('[data-skill-toggle]').forEach(b=>b.onclick=async()=>{b.disabled=true;const x=list[Number(b.dataset.skillToggle)];const {error}=await window.MINDS_SUPABASE.from('minds_user_skills').update({enabled:x.enabled===false,updated_at:new Date().toISOString()}).eq('id',x.id);if(error){b.disabled=false;say('assistant','No pude cambiar la habilidad: '+error.message)}else void skillsPanel()});
+    $$('[data-skill-toggle]').forEach(b=>b.onclick=async()=>{b.disabled=true;const x=list[Number(b.dataset.skillToggle)];const {error}=await window.MINDS_SUPABASE.from('minds_user_skills').update({enabled:x.enabled===false,updated_at:new Date().toISOString()}).eq('id',x.id);if(error){b.disabled=false;sayEvent('No pude cambiar la habilidad: '+error.message)}else void skillsPanel()});
     $$('[data-skill-history]').forEach(b=>b.onclick=async()=>{
       const x=list[Number(b.dataset.skillHistory)];
       const {data,error}=await window.MINDS_SUPABASE.from('minds_user_skill_versions').select('version,snapshot,created_at').eq('skill_id',x.id).order('version',{ascending:false});
-      if(error){say('assistant','No pude leer las versiones: '+error.message);return}
+      if(error){sayEvent('No pude leer las versiones: '+error.message);return}
       modal('Versiones de '+x.name,`<div class="skill-history">${(data||[]).map((v,i)=>`<details><summary>v${v.version} · ${new Date(v.created_at).toLocaleString('de-DE')}</summary><pre>${esc(v.snapshot.instructions)}</pre><button data-restore-skill="${i}" class="secondary">Revisar como nueva versión</button></details>`).join('')||'<p>Aún no hay versiones registradas.</p>'}</div>`);
       $$('[data-restore-skill]').forEach(b=>b.onclick=()=>window.MINDS_PROPOSALS.edit({...data[Number(b.dataset.restoreSkill)].snapshot,kind:'skill_proposal',request_id:crypto.randomUUID()}));
     });
@@ -4638,31 +4867,69 @@ async function reviewOperatingHypothesis(id,decision,finalStatement=null){
   const sb=window.MINDS_SUPABASE;if(!sb||!id)return;
   try{
     const {data,error}=await sb.rpc('minds_review_operating_hypothesis',{p_hypothesis_id:id,p_decision:decision,p_final_statement:finalStatement,p_request_id:crypto.randomUUID(),p_confirmed:true});
-    if(error||data?.error)throw new Error(data?.error||error?.message||'No pude registrar la revisión.');
+    if(error||data?.error)throw new Error(data?.error||error?.message||'Die Prüfung konnte nicht gespeichert werden.');
     await loadOperatingModel();await memoryPanel();
-  }catch(e){say('assistant','No pude actualizar esa regla ahora mismo: '+(e?.message||String(e)))}
+  }catch(e){sayEvent('No pude actualizar esa regla ahora mismo: '+(e?.message||String(e)))}
 }
 function correctOperatingHypothesis(id,current){
-  modal('Corregir regla de trabajo',`<div class="form"><div class="small">La corrección se guardará como la regla aceptada. La formulación original y tu revisión quedan en el historial.</div><label>Formulación correcta<textarea id="operatingCorrection" rows="5">${esc(current||'')}</textarea></label><button id="saveOperatingCorrection" class="primary">Usar esta regla</button></div>`);
+  modal('Corregir regla de trabajo',`<div class="form"><div class="small">Die Korrektur wird als bestätigte Regel gespeichert. Die ursprüngliche Formulierung und deine Prüfung bleiben im Verlauf.</div><label>Richtige Formulierung<textarea id="operatingCorrection" rows="5">${esc(current||'')}</textarea></label><button id="saveOperatingCorrection" class="primary">Usar esta regla</button></div>`);
   $('#saveOperatingCorrection').onclick=async()=>{const text=$('#operatingCorrection').value.trim();if(!text)return;await reviewOperatingHypothesis(id,'correct',text)};
+}
+// Isabella's nightly dreaming (08.11.2026): what she understood, the threads she wants to come back
+// to (Gari can dismiss them) and her diary of the night. Read-only except dismissing a thread.
+const DREAM_PAGE_LABELS={gari:'Tú',person:'Persona',topic:'Tema',relationship:'Nosotros',isabella:'Isabella'};
+function dreamSectionHtml(dream){
+  const diary=(dream.runs||[]).filter(r=>r?.metadata?.diario).slice(0,3).map(r=>`<div class="memory-row"><div class="row-main"><div>${esc(r.metadata.diario)}</div><div class="small">${esc(new Date(r.started_at).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'}))}</div></div></div>`).join('')||'<div class="small">Noch kein nächtlicher Rückblick.</div>';
+  const pages=(dream.pages||[]).map(e=>`<div class="memory-row"><div class="row-main"><div><strong>${esc(e.name)}</strong> · <span class="small">${esc(DREAM_PAGE_LABELS[e.entity_type]||e.entity_type)}</span></div><div class="small">${esc(e.metadata?.page?.resumen||'')}</div></div></div>`).join('')||'<div class="small">Noch nichts.</div>';
+  // Her own follow-ups (point 4f) say when she will come back; «Cancelar» closes them like any thread.
+  const when=iso=>{const d=new Date(iso);return isNaN(d)?'':d.toLocaleString('de-DE',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})};
+  const threads=(dream.threads||[]).map(t=>{const own=t.metadata?.kind==='seguimiento_propio';return `<div class="memory-row"><div class="row-main"><div>${esc(t.title)}</div>${own?`<div class="small">Kommt darauf zurück: ${esc(when(t.metadata.due_at))}</div>`:t.metadata?.quote?`<div class="small">«${esc(t.metadata.quote)}»</div>`:''}</div><button type="button" class="ghost small" data-dream-thread-dismiss="${esc(t.id)}">${own?'Cancelar':'Descartar'}</button></div>`}).join('')||'<div class="small">Ninguno ahora.</div>';
+  const temporary=(dream.temporary||[]).map(x=>`<div class="memory-row"><div class="row-main">«${esc(x.cita)}»<div class="small">${esc(x.fecha)}</div></div></div>`).join('');
+  return `${temporary?'<div class="small section-label memory-section-title">Wie es mir ging</div>'+temporary+'<button type="button" data-dream-clear-state>Borrar estas notas</button>':''}<div class="small section-label memory-section-title">Repaso de la noche</div>${diary}<div class="small section-label memory-section-title">Lo que Isabella entiende</div>${pages}<div class="small section-label memory-section-title">Hilos que quiere retomar</div>${threads}`;
+}
+async function loadDreamSection(sb){
+  // Order matches the queries below (review of PR #311).
+  const [temporary,runs,pages,threads]=await Promise.all([
+    sb.from('isabella_preferences').select('value').eq('preference_key','isabella_estado').maybeSingle(),
+    sb.from('minds_agent_runs').select('started_at,metadata').eq('feature','isabella_dream').eq('status','success').order('started_at',{ascending:false}).limit(3),
+    sb.from('isabella_entities').select('entity_type,name,metadata').not('metadata->page','is',null).is('metadata->>forgotten_at',null).order('updated_at',{ascending:false}).limit(30),
+    sb.from('isabella_return_queue').select('id,title,metadata').eq('kind','conversation_thread').eq('status','ready').order('created_at',{ascending:false}).limit(10)
+  ]);
+  return {temporary:(temporary.data?.value?.items||[]).filter(x=>x.cita&&Date.parse(x.expires_at)>Date.now()),runs:runs.data||[],pages:pages.data||[],threads:threads.data||[]};
 }
 async function memoryPanel(){
   const items=(state.memory||[]).filter(m=>typeof m!=='object'||m.status!=='deleted');
-  let claims=[],operating=emptyOperatingModel();
+  let claims=[],operating=emptyOperatingModel(),dream={runs:[],pages:[],threads:[]};
   try{
     const sb=window.MINDS_SUPABASE,{data:{session}}=await sb.auth.getSession();
     if(session){
+      try{dream=await loadDreamSection(sb)}catch{}
       const [{data:claimRows},model]=await Promise.all([sb.from('isabella_model_claims').select('id,claim_type,claim,status,confidence,source_type,last_seen_at').in('status',['confirmed','hypothesis']).order('status',{ascending:true}).order('confidence',{ascending:false}).limit(60),loadOperatingModel()]);
       claims=claimRows||[];operating=model||emptyOperatingModel();
     }
   }catch{}
-  const modelHtml=claims.length?claims.map(c=>`<div class="model-claim-row ${esc(c.status)}"><div class="row-main"><div>${esc(c.claim)}</div><div class="small">${c.status==='confirmed'?'Confirmado':'Hipótesis'} · ${esc(c.claim_type)} · ${Math.round(Number(c.confidence||0)*100)}%</div></div><div class="model-claim-actions">${c.status==='hypothesis'?`<button data-model-confirm="${esc(c.id)}">Confirmar</button><button data-model-reject="${esc(c.id)}">No</button>`:''}<button data-model-correct="${esc(c.id)}" data-model-text="${esc(c.claim)}">Corregir</button></div></div>`).join(''):'<div class="small">Todavía no hay hipótesis estructuradas sobre ti.</div>';
+  const modelHtml=claims.length?claims.map(c=>`<div class="model-claim-row ${esc(c.status)}"><div class="row-main"><div>${esc(c.claim)}</div><div class="small">${c.status==='confirmed'?'Confirmado':'Hipótesis'} · ${esc(c.claim_type)} · ${Math.round(Number(c.confidence||0)*100)}%</div></div><div class="model-claim-actions">${c.status==='hypothesis'?`<button data-model-confirm="${esc(c.id)}">Confirmar</button><button data-model-reject="${esc(c.id)}">No</button>`:''}<button data-model-correct="${esc(c.id)}" data-model-text="${esc(c.claim)}">Corregir</button></div></div>`).join(''):'<div class="small">Noch keine Annahmen über dich.</div>';
   const accepted=operating.accepted||[],proposed=operating.proposed||[];
-  const acceptedHtml=accepted.length?accepted.map(x=>`<div class="model-claim-row confirmed"><div class="row-main"><div>${esc(x.accepted_statement||x.statement||'')}</div><div class="small">Confirmado · ${esc(operatingDimensionLabels[x.dimension]||x.dimension)}</div></div><div class="model-claim-actions"><button data-operating-retire="${esc(x.id)}">Retirar</button></div></div>`).join(''):'<div class="small">Todavía no hay reglas de trabajo confirmadas.</div>';
-  const proposedHtml=proposed.length?proposed.map(x=>{const evidence=Array.isArray(x.evidence)?x.evidence:[];return `<div class="model-claim-row hypothesis"><div class="row-main"><div>${esc(x.statement||'')}</div><div class="small">Propuesta · ${esc(operatingDimensionLabels[x.dimension]||x.dimension)}</div>${x.rationale?`<p class="small">${esc(x.rationale)}</p>`:''}${evidence.length?`<details class="human-tech"><summary>Por qué lo propongo</summary>${evidence.map(e=>`<div class="small">${esc(e.summary||'')} · ${esc(e.provenance_class||'')}</div>`).join('')}</details>`:''}</div><div class="model-claim-actions"><button data-operating-accept="${esc(x.id)}">Sí, úsalo</button><button data-operating-correct="${esc(x.id)}" data-operating-text="${esc(x.statement||'')}">Corregir</button><button data-operating-reject="${esc(x.id)}">No</button></div></div>`}).join(''):'<div class="small">No hay nuevas reglas por revisar.</div>';
-  const operatingHtml=`<div class="small">Isabella puede observar patrones operativos, pero ninguna inferencia cambia cómo trabaja contigo hasta que la confirmes.</div><div class="small section-label">Reglas confirmadas</div>${acceptedHtml}<div class="small section-label memory-section-title">Por revisar</div>${proposedHtml}<div class="small">Observaciones disponibles: ${Number(operating.observation_count||0)}</div>`;
-  const memoryHtml=items.length?items.map((m,i)=>{const text=typeof m==='object'?m.content:String(m),kind=typeof m==='object'?(m.kind||'context'):'context';const id=typeof m==='object'?(m.id||String(i)):String(i);return `<div class="memory-row"><div class="row-main"><div>${esc(text)}</div><div class="small">${esc(kind)}</div></div><button data-memory-edit="${esc(id)}">Editar</button><button data-memory-delete="${esc(id)}">×</button></div>`}).join(''):'<div class="small">Todavía no he guardado memoria personal.</div>';
-  modal('Lo que Isabella sabe de mí',`<div class="small section-label">Modelo personal</div><div class="personal-model-list">${modelHtml}</div><div class="small section-label memory-section-title">Cómo trabajo</div><div class="personal-model-list">${operatingHtml}</div><div class="small section-label memory-section-title">Memoria explícita</div>${memoryHtml}`);
+  const acceptedHtml=accepted.length?accepted.map(x=>`<div class="model-claim-row confirmed"><div class="row-main"><div>${esc(x.accepted_statement||x.statement||'')}</div><div class="small">Confirmado · ${esc(operatingDimensionLabels[x.dimension]||x.dimension)}</div></div><div class="model-claim-actions"><button data-operating-retire="${esc(x.id)}">Zurücknehmen</button></div></div>`).join(''):'<div class="small">Noch keine bestätigten Arbeitsregeln.</div>';
+  const proposedHtml=proposed.length?proposed.map(x=>{const evidence=Array.isArray(x.evidence)?x.evidence:[];return `<div class="model-claim-row hypothesis"><div class="row-main"><div>${esc(x.statement||'')}</div><div class="small">Propuesta · ${esc(operatingDimensionLabels[x.dimension]||x.dimension)}</div>${x.rationale?`<p class="small">${esc(x.rationale)}</p>`:''}${evidence.length?`<details class="human-tech"><summary>Warum ich das vorschlage</summary>${evidence.map(e=>`<div class="small">${esc(e.summary||'')} · ${esc(e.provenance_class||'')}</div>`).join('')}</details>`:''}</div><div class="model-claim-actions"><button data-operating-accept="${esc(x.id)}">Ja, übernehmen</button><button data-operating-correct="${esc(x.id)}" data-operating-text="${esc(x.statement||'')}">Corregir</button><button data-operating-reject="${esc(x.id)}">No</button></div></div>`}).join(''):'<div class="small">No hay nuevas reglas por revisar.</div>';
+  const operatingHtml=`<div class="small">Romy kann Arbeitsmuster beobachten, aber keine Vermutung ändert ihre Arbeitsweise, bevor du sie bestätigst.</div><div class="small section-label">Reglas confirmadas</div>${acceptedHtml}<div class="small section-label memory-section-title">Por revisar</div>${proposedHtml}<div class="small">Observaciones disponibles: ${Number(operating.observation_count||0)}</div>`;
+  const memoryHtml=items.length?items.map((m,i)=>{const text=typeof m==='object'?m.content:String(m),kind=typeof m==='object'?(m.kind||'context'):'context';const id=typeof m==='object'?(m.id||String(i)):String(i);return `<div class="memory-row"><div class="row-main"><div>${esc(text)}</div><div class="small">${esc(kind)}</div></div><button data-memory-edit="${esc(id)}">Bearbeiten</button><button data-memory-delete="${esc(id)}">×</button></div>`}).join(''):'<div class="small">Noch keine persönlichen Notizen gespeichert.</div>';
+  modal('Was Romy über mich weiß',`<div class="small section-label">Modelo personal</div><div class="personal-model-list">${modelHtml}</div><div class="small section-label memory-section-title">Wie ich arbeite</div><div class="personal-model-list">${operatingHtml}</div><div class="small section-label memory-section-title">Gespeicherte Notizen</div>${memoryHtml}${dreamSectionHtml(dream)}`);
+  const clearState=document.querySelector('[data-dream-clear-state]');
+  if(clearState)clearState.onclick=async()=>{
+    clearState.disabled=true;
+    try{
+      const sb=window.MINDS_SUPABASE,{data:{user}}=await sb.auth.getUser();
+      if(!user)throw new Error();
+      const result=await sb.from('isabella_preferences').update({value:{items:[],forgot_before:Date.now()},updated_at:new Date().toISOString()})
+        .eq('user_id',user.id).eq('preference_key','isabella_estado').select('updated_at').single();
+      if(result.error||!result.data)throw new Error();
+      await memoryPanel();
+    }catch{clearState.disabled=false;clearState.textContent='No pude borrarlas. Reintentar';}
+  };
+  document.querySelectorAll('[data-dream-thread-dismiss]').forEach(b=>b.onclick=async()=>{
+    try{const sb=window.MINDS_SUPABASE;await sb.from('isabella_return_queue').update({status:'dismissed',updated_at:new Date().toISOString()}).eq('id',b.dataset.dreamThreadDismiss);b.closest('.memory-row')?.remove()}catch{}
+  });
   document.querySelectorAll('[data-model-confirm]').forEach(b=>b.onclick=()=>void setModelClaimStatus(b.dataset.modelConfirm,'confirmed'));
   document.querySelectorAll('[data-model-reject]').forEach(b=>b.onclick=()=>void setModelClaimStatus(b.dataset.modelReject,'contradicted'));
   document.querySelectorAll('[data-model-correct]').forEach(b=>b.onclick=()=>correctModelClaim(b.dataset.modelCorrect,b.dataset.modelText||''));
@@ -4683,7 +4950,7 @@ async function setModelClaimStatus(id,status){
   memoryPanel();
 }
 function correctModelClaim(id,current){
-  modal('Corregir lo que Isabella cree',`<div class="form"><label>Formulación correcta<textarea id="modelClaimCorrection" rows="4">${esc(current)}</textarea></label><button id="saveModelClaimCorrection" class="primary">Guardar corrección</button></div>`);
+  modal('Corregir lo que Isabella cree',`<div class="form"><label>Richtige Formulierung<textarea id="modelClaimCorrection" rows="4">${esc(current)}</textarea></label><button id="saveModelClaimCorrection" class="primary">Guardar corrección</button></div>`);
   $('#saveModelClaimCorrection').onclick=async()=>{
     const claim=$('#modelClaimCorrection').value.trim();if(!claim)return;
     const sb=window.MINDS_SUPABASE;

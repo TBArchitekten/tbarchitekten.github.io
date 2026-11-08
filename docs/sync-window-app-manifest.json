@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "8c2a0095c5435745b6f9b79c67891c9be2c727ad",
+  "source_sha": "68d88565e60c1dfb8e9c0a3f9b11d497a4415d6a",
   "mode": "app",
   "files": [
     {
@@ -10,10 +10,10 @@
       "bytes": 38510
     },
     {
-      "source": "apps/isabella/turn-integrity.js",
-      "target": "app/turn-integrity.js",
-      "sha": "78e7df59586672bbaae4c9bf19df720eb1b158f3",
-      "bytes": 9356
+      "source": "apps/isabella/assistant-i18n.js",
+      "target": "app/assistant-i18n.js",
+      "sha": "c46f2358a31085d389da012e71f37dce397d39e8",
+      "bytes": 6888
     },
     {
       "source": "apps/isabella/chat-stream-recovery.js",
@@ -28,22 +28,46 @@
       "bytes": 1588
     },
     {
-      "source": "apps/isabella/voice-output.js",
-      "target": "app/voice-output.js",
-      "sha": "9bf69f02fa7407b4e44b79eb195372fe36724b2b",
-      "bytes": 2466
+      "source": "apps/isabella/live/canonical.js",
+      "target": "app/live/canonical.js",
+      "sha": "d6143ede9052a4530802feb88360655bf12447bb",
+      "bytes": 3493
     },
     {
-      "source": "apps/isabella/assistant-i18n.js",
-      "target": "app/assistant-i18n.js",
-      "sha": "c46f2358a31085d389da012e71f37dce397d39e8",
-      "bytes": 6888
+      "source": "apps/isabella/live/live.css",
+      "target": "app/live/live.css",
+      "sha": "422a03b8e8d5d44b9c3dc0f83c0be5aacf65d9b4",
+      "bytes": 4591
+    },
+    {
+      "source": "apps/isabella/live/live.js",
+      "target": "app/live/live.js",
+      "sha": "73f2f0ffc25b4e596239d8347f71e810c2fc22dd",
+      "bytes": 24063
+    },
+    {
+      "source": "apps/isabella/live/transcript.js",
+      "target": "app/live/transcript.js",
+      "sha": "3b8fc97031f10fc646845abac62cd49308a52cf3",
+      "bytes": 1996
     },
     {
       "source": "apps/isabella/office-personal.js",
       "target": "app/office-personal.js",
       "sha": "7f629a115a2740a6dac9c66c32ec3ca9918601e3",
       "bytes": 6925
+    },
+    {
+      "source": "apps/isabella/turn-integrity.js",
+      "target": "app/turn-integrity.js",
+      "sha": "78e7df59586672bbaae4c9bf19df720eb1b158f3",
+      "bytes": 9356
+    },
+    {
+      "source": "apps/isabella/voice-output.js",
+      "target": "app/voice-output.js",
+      "sha": "9bf69f02fa7407b4e44b79eb195372fe36724b2b",
+      "bytes": 2466
     }
   ]
 }
