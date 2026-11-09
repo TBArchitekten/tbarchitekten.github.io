@@ -163,17 +163,41 @@ function newPlan(project){
     '<p class="small">Projekt: '+esc(project.number)+' · '+esc(project.name)+'</p>'+
     '<label>Muster<select name="template" required>'+options+'</select></label>'+
     '<label>Projektstart<input type="date" name="start" required value="'+core.todayKey()+'"></label>'+
-    '<p class="small">Das Muster bleibt unverändert. Erst nach Ihrer Bestätigung wird ein Projektterminplan angelegt.</p>'+
+    '<p id="officeCreatePlanPreview" class="small" aria-live="polite"></p>'+
+    '<p class="small">Auch ein Startdatum in der Vergangenheit ist möglich. Die Mustertermine werden entsprechend verschoben; Fortschritte werden nicht automatisch als erledigt markiert. Das Muster bleibt unverändert.</p>'+
     '<p id="officeCreatePlanError" class="small" role="alert"></p>'+
     '<button type="submit" class="primary">Terminplan anlegen</button></form>');
   const form=document.getElementById('officeCreatePlanForm');
   if(!form)return;
+  const preview=document.getElementById('officeCreatePlanPreview');
+  function updatePlanPreview(){
+    const chosen=available.find(x=>x.id===form.elements.template.value);
+    const start=form.elements.start.value;
+    if(!chosen||!/^\d{4}-\d{2}-\d{2}$/.test(start)){
+      preview.textContent='Bitte Muster und Projektstart wählen.';return;
+    }
+    const parsed=core.parseDate(start);
+    if(!Number.isFinite(parsed.getTime())||core.isWeekend(parsed)){
+      preview.textContent='Bitte einen gültigen Werktag wählen.';return;
+    }
+    try{
+      const draft=core.cloneStateForProject(chosen.state,{
+        start,number:project.number,name:project.name,phase:chosen.phase,
+        version:chosen.version,today:core.todayKey()
+      });
+      preview.textContent=(draft.tasks||[]).length+' Vorgänge und Meilensteine · Voraussichtliches Ende: '+
+        core.formatDate(draft.project.end)+'. Alle Termine bleiben nach dem Anlegen bearbeitbar.';
+    }catch(_){preview.textContent='Die Vorlage kann mit diesem Datum nicht verschoben werden.';}
+  }
+  form.elements.template.addEventListener('change',updatePlanPreview);
+  form.elements.start.addEventListener('input',updatePlanPreview);
+  updatePlanPreview();
   form.addEventListener('submit',async event=>{
     event.preventDefault();
     const template=available.find(x=>x.id===form.elements.template.value);
     const start=form.elements.start.value;
     const error=document.getElementById('officeCreatePlanError');
-    if(!template||!start||core.isWeekend(core.parseDate(start))){
+    if(!template||!/^\d{4}-\d{2}-\d{2}$/.test(start)||!Number.isFinite(core.parseDate(start).getTime())||core.isWeekend(core.parseDate(start))){
       error.textContent='Bitte einen gültigen Werktag und ein Muster wählen.';return;
     }
     const submit=form.querySelector('[type="submit"]');submit.disabled=true;
