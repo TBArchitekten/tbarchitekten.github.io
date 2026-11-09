@@ -309,10 +309,13 @@ function init(){
   bind();
   initSituationPullRefresh();
   renderMessages(true);
-  if(!OFFICE)void recoverReviewedTaskReceipts();
+  // Office on the shared engine (09.11.2026): same durable-answer polling and receipts as Window;
+  // without it an informational answer stayed «Romy arbeitet noch…» until the tab changed.
+  const engineChat=!OFFICE||window.APP_CHAT_RUNTIME!=='legacy';
+  if(engineChat)void recoverReviewedTaskReceipts();
   renderToday();
   renderCalendar();
-  if(!OFFICE){
+  if(engineChat){
     void syncDurableChatJobs();
     setInterval(()=>{if(!document.hidden)void syncDurableChatJobs()},7000);
   }
@@ -1248,7 +1251,12 @@ const OFFICE_NOTICE_DE=[
   [/^No pude guardar el cambio, así que no lo doy por hecho: /,'Die Änderung konnte nicht gespeichert werden und gilt nicht als erledigt: '],
   [/^No pude guardar todos los cambios: /,'Nicht alle Änderungen konnten gespeichert werden: '],
   [/^No pude identificar el proyecto\. Corrige su nombre antes de guardar\.$/,'Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.'],
-  [/^No se pudo verificar el resultado; no se confirmó ningún cambio\.$/,'Das Ergebnis konnte nicht geprüft werden. Keine Änderung ist bestätigt.']
+  [/^No se pudo verificar el resultado; no se confirmó ningún cambio\.$/,'Das Ergebnis konnte nicht geprüft werden. Keine Änderung ist bestätigt.'],
+  [/^No pude guardar ese recordatorio todavía: /,'Die Erinnerung konnte noch nicht gespeichert werden: '],
+  [/^No pude guardar esa expectativa todavía: /,'Die Erwartung konnte noch nicht gespeichert werden: '],
+  [/^No pude mantener este objetivo vivo todavía: /,'Das Ziel konnte noch nicht gespeichert werden: '],
+  [/^No pude activar la habilidad: /,'Die Fähigkeit konnte nicht aktiviert werden: '],
+  [/^No pude identificar ese proyecto de Work\.$/,'Das Projekt wurde nicht erkannt.']
 ];
 function officeNotice(text){let t=String(text??'');for(const [re,de] of OFFICE_NOTICE_DE)t=t.replace(re,de);return t}
 async function persistOfficeNotice(message){
@@ -1455,7 +1463,7 @@ function renderMessages(forceBottom=false){
     if(index<0)return;
     const m=state.messages[index],preceding=state.messages.slice(0,index).reverse().find(x=>x.role==='user');
     const previousQuestion=String(preceding?.text||'').trim().slice(0,900);
-    void handle('Continúa la respuesta anterior desde el punto donde se interrumpió, sin repetir lo ya escrito. Pregunta original: '+previousQuestion,[],{id:String(m.id),role:'assistant',text:String(m.text||'')});
+    void handle('Setze die vorherige Antwort dort fort, wo sie unterbrochen wurde, ohne Bereits-Geschriebenes zu wiederholen. Ursprüngliche Frage: '+previousQuestion,[],{id:String(m.id),role:'assistant',text:String(m.text||'')});
   });
   document.querySelectorAll('[data-quick-message]').forEach(b=>b.onclick=()=>{
     const m=state.messages.find(x=>x.id===b.dataset.quickMessage),q=m?.quickReplies?.[Number(b.dataset.quickIndex)];
@@ -1610,7 +1618,7 @@ function bindMessageReactions(){
 function renderToday(){const d=today(),ev=state.events.filter(x=>x.date===d).sort((a,b)=>a.start.localeCompare(b.start)),ta=state.tasks.filter(x=>(x.date===d||taskSpansDay(x,d))&&activeTask(x));$('#todaySummary').textContent=`${ev.length} ${ev.length===1?'Termin':'Termine'} · ${ta.length} ${ta.length===1?'Aufgabe':'Aufgaben'}`;$('#todayNext').textContent=ev[0]?`${ev[0].start} · ${ev[0].title}`:'Kein nächster Termin'}
 function orb(mode='idle',label=''){const o=$('#orbButton');if(!o)return;o.classList.remove('listening','thinking');if(mode!=='idle')o.classList.add(mode);const s=$('#orbStatus');if(s)s.textContent=label}
 function setWorking(el,on){if(el)el.classList.toggle('is-working',!!on)}
-function localFallback(text){const n=text.toLowerCase();if(/qué tengo hoy|que tengo hoy|agenda de hoy/.test(n)){const d=today(),e=state.events.filter(x=>x.date===d),t=state.tasks.filter(x=>x.date===d&&activeTask(x));return `Hoy tienes ${e.length} ${e.length===1?'evento':'eventos'} y ${t.length} ${t.length===1?'tarea pendiente':'tareas pendientes'}.`}if(/calendario|agenda/.test(n)){show('calendar');return 'Te abro el calendario.'}return 'Te escucho. Para usar la IA, conecta la memoria desde el menú •••.'}
+function localFallback(text){const n=text.toLowerCase();if(/was habe ich heute|was steht heute|heute an|qué tengo hoy|que tengo hoy/.test(n)){const d=today(),e=state.events.filter(x=>x.date===d),t=state.tasks.filter(x=>x.date===d&&activeTask(x));return `Heute: ${e.length} ${e.length===1?'Termin':'Termine'} und ${t.length} ${t.length===1?'offene Aufgabe':'offene Aufgaben'}.`}if(/kalender|calendario|agenda/.test(n)){show('calendar');return 'Ich öffne den Kalender.'}return 'Romy ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.'}
 function rememberCandidates(items){for(const m of items||[]){if(!m?.content)continue;const exists=(state.memory||[]).some(x=>(typeof x==='object'?x.content:String(x))===m.content);if(!exists)state.memory.push({id:uid(),kind:normalizeMemoryKind(m.kind),content:m.content,confidence:Number(m.confidence??.7),status:'active',source:m.source||'ai_derived',metadata:{...(m.metadata||{}),derived:true,accepted_fact:false}})}save()}
 function proposalLabel(p){
   if(p.kind==='routine'){
@@ -2539,7 +2547,7 @@ async function syncDurableChatJobs(){
       const status=String(job.status||'');
       const resolved=['completed','incomplete','failed'].includes(status);
       const reply=status==='completed'?String(job.reply||''):
-        status==='incomplete'?String(job.reply||'')||'La respuesta quedó interrumpida.':
+        status==='incomplete'?String(job.reply||'')||'Die Antwort wurde unterbrochen.':
         status==='failed'?'Romy konnte diese Antwort nicht abschließen. Du kannst es erneut versuchen.':
         'Romy arbeitet noch…';
       const desiredMeta={durable_request_id:key,durable_status:status,
@@ -2660,7 +2668,7 @@ async function handle(text,attachments=[],replyTo=null,options={}){
           save();renderMessages();
         }else{
           if(isabellaProse&&receiptText)say('assistant',isabellaProse,{metadata:{exposure_scope:exposure,commentary_for:'review'}});
-          sayKeyed(receiptText?null:assistantKeyFor(durableRequestId),'assistant',verifiedReply||'No hubo una respuesta de texto.',{
+          sayKeyed(receiptText?null:assistantKeyFor(durableRequestId),'assistant',verifiedReply||'Es kam keine Textantwort.',{
           metadata:{...authorMeta,exposure_scope:exposure,incomplete_response:!!result?.incomplete,
             incomplete_reason:result?.incomplete_reason||null,
             review_proposals:integrity.proposals,turn_outcome:integrity.outcome,
@@ -2892,7 +2900,7 @@ function initVoice(){
   if(speakChoice&&!window.ISABELLA_VOICE_OUTPUT?.available()){
     speakChoice.checked=false;speakChoice.disabled=true;
     speakChoice.closest('label')?.classList.add('is-unavailable');
-    speakChoice.closest('label')?.setAttribute('title','La respuesta hablada no está disponible en este navegador.');
+    speakChoice.closest('label')?.setAttribute('title','Gesprochene Antworten sind in diesem Browser nicht verfügbar.');
   }
   const setText=t=>{if(transcript){transcript.value=t||'';transcript.textContent=t||''}};
   const getText=()=>String(transcript?.value||transcript?.textContent||'').trim();
@@ -2967,7 +2975,7 @@ function initVoice(){
   $('#focusClose').onclick=cancel;primary.onclick=stop;secondary.onclick=secondaryAction;
   // Same mic/Focus surface: close dictation before navigating to continuous Live.
   // The real link remains navigable without JavaScript and preserves the old flow.
-  $('#focusLiveLink').onclick=()=>{cancel();window.ISABELLA_VOICE_OUTPUT?.stop();};
+  const liveLink=$('#focusLiveLink');if(liveLink)liveLink.onclick=()=>{cancel();window.ISABELLA_VOICE_OUTPUT?.stop();};
 }
 function openFocus(){$('#focusMode').classList.remove('hidden');$('#focusStatus').textContent='Höre zu …';const t=$('#focusTranscript');if(t){t.value='';t.textContent='';t.readOnly=true}}function closeFocus(){$('#focusMode').classList.add('hidden');orb()}
 function startWeek(d){const x=new Date(d);const day=(x.getDay()+6)%7;return addDays(x,-day)} function weekNo(d){const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=x.getUTCDay()||7;x.setUTCDate(x.getUTCDate()+4-n);const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}

@@ -30,7 +30,7 @@ test('Office tabs in the app: Romy, Heute, Kalender, Work, Tools; switch to Pers
   assert.match(shell,/includes\('account\.switch'\)/);
   assert.match(shell,/native\.call\('account\.switch',\{to:'personal'\}\)/);
   const index=read('app/index.html');
-  for(const s of ['../shared/supabase-client.js?v=office3','./shell.js?v=office43','./app.js?v=office47','./sync.js?v=office5'])
+  for(const s of ['../shared/supabase-client.js?v=office3','./shell.js?v=office44','./app.js?v=office48','./sync.js?v=office5'])
     assert.ok(index.includes(s),s);
 });
 
