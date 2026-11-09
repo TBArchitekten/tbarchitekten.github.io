@@ -1118,8 +1118,10 @@ body.read-only .editor-only{display:none!important}
       if(!matches)return;
       rows.push({kind:'group',...g});
       if(!g.collapsed){
-        gt.filter(t=>!q||(t.name+' '+t.owner+' '+t.note).toLowerCase().includes(q)||g.name.toLowerCase().includes(q))
-          .forEach((t,i)=>rows.push({kind:'task',wbs:g.wbs+'.'+String(i+1).padStart(2,'0'),...t}));
+        gt.forEach((t,i)=>{
+          if(q&&!(t.name+' '+t.owner+' '+t.note).toLowerCase().includes(q)&&!g.name.toLowerCase().includes(q))return;
+          rows.push({kind:'task',wbs:g.wbs+'.'+String(i+1).padStart(2,'0'),...t});
+        });
       }
     });
   }
