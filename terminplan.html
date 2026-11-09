@@ -2600,15 +2600,25 @@ body.read-only .editor-only{display:none!important}
     download(stem+'.json',JSON.stringify(data,null,2),'application/json');
   }
   function exportCsv(){
-    const header=['PSP','Vorgang','Typ','Sammelvorgang','Verantwortlich','Anfang','Ende','Dauer_AT','Fortschritt','Status','Vorgänger','Kritisch','Notiz'];
+    const header=['PSP','Vorgang','Typ','Sammelvorgang','Verantwortlich','Anfang','Ende','Dauer_AT','Fortschritt','Status','Vorgänger','Manuelle_Risikomarkierung','Notiz',
+      'Deadline','Geschützter_Abgabetermin','Aufwand_h','Ist_Anfang','Ist_Ende','Gesamtpuffer_AT','Freier_Puffer_AT','Rechnerisch_kritisch','Basisplan','Basisplan_Anfang','Basisplan_Ende','Abweichung_Ende_KT'];
     const lines=[header];
+    const planning=window.TBATerminplanPlanning;
+    const network=planning?.analyze(data);
+    const baseline=planning?.selectedBaseline(data);
+    const variance=planning?.baselineVariance(data,baseline)||{};
     data.groups.forEach(g=>{
       data.tasks.filter(t=>t.group===g.id).sort((a,b)=>a.start.localeCompare(b.start)).forEach((t,i)=>{
         const pred=taskDependencies(t).map(dep=>{
           const name=data.tasks.find(x=>x.id===dep.pred)?.name||dep.pred;
           return name+' ('+(dep.rel||'EA')+', '+(dep.lagDays??0)+' AT)';
         }).join(' | ');
-        lines.push([g.wbs+'.'+String(i+1).padStart(2,'0'),t.name,t.type||'task',g.name,t.owner,t.start,t.end,t.type==='milestone'?0:workDuration(t.start,t.end),t.progress,t.status,pred,t.critical?'Ja':'Nein',t.note]);
+        const info=network?.valid?network.byId[t.id]:null;
+        const delta=variance[t.id];
+        lines.push([g.wbs+'.'+String(i+1).padStart(2,'0'),t.name,t.type||'task',g.name,t.owner,t.start,t.end,t.type==='milestone'?0:workDuration(t.start,t.end),t.progress,t.status,pred,t.critical?'Ja':'Nein',t.note,
+          t.deadline||'',t.protectedDate||'',t.effortHours??'',t.actualStart||'',t.actualEnd||'',
+          info?.totalFloatAT??'',info?.freeFloatAT??'',info?(info.critical?'Ja':'Nein'):'',
+          baseline?.label||'',delta?.baselineStart||'',delta?.baselineFinish||'',delta?.finishDeltaKT??'']);
       });
     });
     const csv=lines.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');
