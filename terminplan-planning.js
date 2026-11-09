@@ -222,6 +222,9 @@
       }
       visited.add(id);
     }
+    // Keep the visible Gantt range inclusive of explicitly confirmed successors.
+    const latest=(copy.tasks||[]).reduce((m,t)=>t.end>m?t.end:m,copy.project.end||'');
+    if(!copy.project.end||latest>copy.project.end)copy.project.end=latest;
     const after=analyze(copy);
     if(!after.valid)throw Error(after.reason);
     return {state:copy,updates:changed,affectedIds:[...reachable],
