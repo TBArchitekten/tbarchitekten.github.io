@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-09 · Terminplan Netzplanfunktionen und Muster LPH 3 v1.2 publiziert · ChatGPT
+- Qué cambió y por qué: PR #66 als Squash-Commit `6d0eff8dd8bbe22ac034a50fc0c20d0a659eff0c` nach vier erfolgreichen CI-Workflows zusammengeführt. Gemeinsame Planungsfunktionen für alle LPH3/LPH5- und bestehenden Projektpläne, bebilderte Anleitung `terminplan-hilfe.html`, versionierte Muster-Vorlage LPH3 v1.2.
+- Archivos: in PR #66 erfasste Editor-, Test-, Muster- und Anleitungsdateien; dieser Nachtrag aktualisiert nur `docs/BITACORA.md` und `docs/ESTADO.md`.
+- Base de datos: Migration `20261109131000_office_lph3_template_v12.sql` auf **TBA Office** `ynzsbemisjvfgbqcqliq` mit Supabase-Apply-Migration erfolgreich angewendet. LPH3 v1.2 aktiv, 57 Vorgänge, 96 Verknüpfungen; LPH3 v1.0 inaktiv aber erhalten; LPH5 v0.1 unverändert aktiv.
+- Deploy de funciones: keiner; Browser-Code per Merge in GitHub Pages veröffentlicht. Die tatsächliche GitHub-Pages-Auslieferung und authentifizierte Bedienung im Browser wurden durch dieses SQL-/GitHub-Review nicht end-to-end verifiziert.
+- Cómo se probó: vier GitHub CI-Workflows PASS am genau gemergten PR-HEAD `ee779de2c3607663329504770e23b30e95c99dca`; Supabase nach der Migration explizit gelesen. Es existiert weiterhin genau eine bestehende Projektterminplan-Instanz; ihre Revisionsnummer blieb 11 und der vor/nach der Migration gelesene JSONB-MD5 blieb `a9a97dfbe691863262d3e2f31dad7700` (nur diagnostischer Prüffingerabdruck).
+- Quedó pendiente o sin probar: authentifizierte End-to-End-Bedienprüfung des Gantt-Editors (Baseline-Schreiben, Netzplanauswertung, CSV und Anleitung), visuelle Abnahme und GitHub-Pages-CDN-Zustellung. Keine automatische Ressourcenplanung.
+- Riesgos o decisiones que necesitan a Gari: Basispläne sind versionierte Snapshots im Projekt-JSON, kein zusätzlich unveränderlicher Server-Audittrail. CPM nur bei konsistentem Netzplan; kein automatisches Re-Leveling; EA+0 ist bewusst eine tagesgenaue Office-Konvention.
+- PR: #66 gemergt; diese Dokumentationsnachführung als eigener Nachtrag.
+
 ### 2026-11-09 · Terminplan gemeinsame Planungsfunktionen und zweiteilige Anleitung · ChatGPT
 - Qué cambió y por qué: Die PSP-Kennziffern folgen ab jetzt der stabilen Reihenfolge in `state.tasks` innerhalb jeder Gruppe, statt Anfangsterminen oder dem gerade aktiven Suchfilter. Gantt, Druck und CSV verwenden denselben strukturellen PSP-Index.
 - Qué cambió y por qué: Alle Terminpläne (neue LPH3/LPH5 sowie bereits bestehende Projektpläne) erhalten eine gemeinsame, reine Netzplan- und Auswertungsbibliothek. Mehrfach-Vorgänger EA/AA/EE/AE mit Lag, Zyklus- und Abhängigkeitsprüfung, tagesgenaue CPM-Auswertung mit Gesamt-/freiem Puffer, rechnerisch kritische Vorgänge und eine echte, nur auf ausdrückliche Freigabe anwendbare Nachfolger-Verschiebungsvorschau. Kalender-Ausnahmen gelten für Prüfung und Vorschau. Bei inkonsistentem Plan wird kein falscher kritischer Pfad ausgewiesen. Kein vollwertiges Ressourcen-Leveling oder Microsoft-Project-Autoscheduling behauptet.
