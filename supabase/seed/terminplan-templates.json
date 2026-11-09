@@ -127,18 +127,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t002",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "00.02",
-                "targetPSP": "00.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t002",
@@ -159,18 +150,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t002",
-              "lagDays": 5,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "00.02",
-                "targetPSP": "00.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 5
             }
           ],
           "pred": "t002",
@@ -191,18 +173,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t016",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.01",
-                "targetPSP": "00.05",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t016",
@@ -210,7 +183,7 @@
         },
         {
           "id": "t006",
-          "name": "Planpaket · Arbeitsstand 01  erarbeiten",
+          "name": "Planpaket · Arbeitsstand 01 erarbeiten",
           "type": "task",
           "group": "g02",
           "owner": "ARC",
@@ -223,18 +196,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t002",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "00.02",
-                "targetPSP": "01.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t002",
@@ -242,7 +206,7 @@
         },
         {
           "id": "t007",
-          "name": "Vollständigkeits- und Konsistenzprüfung · Arbeitsstand 01 ",
+          "name": "Vollständigkeits- und Konsistenzprüfung · Arbeitsstand 01",
           "type": "task",
           "group": "g02",
           "owner": "Projektleitung",
@@ -255,18 +219,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t006",
-              "lagDays": -3,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.01",
-                "targetPSP": "01.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": -3
             }
           ],
           "pred": "t006",
@@ -274,7 +229,7 @@
         },
         {
           "id": "t008",
-          "name": "Planpaket · Arbeitsstand 01  an Auftraggeber versandt",
+          "name": "Planpaket · Arbeitsstand 01 an Auftraggeber versandt",
           "type": "milestone",
           "group": "g02",
           "owner": "ARC",
@@ -287,18 +242,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t007",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.02",
-                "targetPSP": "01.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t007",
@@ -306,7 +252,7 @@
         },
         {
           "id": "t009",
-          "name": "Prüf- und Rückmeldephase Auftraggeber · Arbeitsstand 01 ",
+          "name": "Prüf- und Rückmeldephase Auftraggeber · Arbeitsstand 01",
           "type": "task",
           "group": "g02",
           "owner": "Auftraggeber",
@@ -319,18 +265,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t008",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.03",
-                "targetPSP": "01.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t008",
@@ -338,7 +275,7 @@
         },
         {
           "id": "t010",
-          "name": "Anmerkungen Auftraggeber zum Arbeitsstand 01  eingegangen",
+          "name": "Anmerkungen Auftraggeber zum Arbeitsstand 01 eingegangen",
           "type": "milestone",
           "group": "g02",
           "owner": "Auftraggeber",
@@ -351,18 +288,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t009",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.04",
-                "targetPSP": "01.05",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t009",
@@ -383,18 +311,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t010",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.05",
-                "targetPSP": "01.06",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t010",
@@ -415,18 +334,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t001",
-              "lagDays": 27,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "00.01",
-                "targetPSP": "01.07",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 27
             }
           ],
           "pred": "t001",
@@ -447,18 +357,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t011",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.06",
-                "targetPSP": "01.08",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t011",
@@ -479,18 +380,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t013",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.08",
-                "targetPSP": "01.09",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t013",
@@ -511,18 +403,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t014",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.09",
-                "targetPSP": "01.10",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t014",
@@ -543,18 +426,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t012",
-              "lagDays": 6,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "01.07",
-                "targetPSP": "02.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 6
             }
           ],
           "pred": "t012",
@@ -575,18 +449,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t016",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.01",
-                "targetPSP": "02.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t016",
@@ -607,18 +472,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t017",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.02",
-                "targetPSP": "02.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t017",
@@ -639,18 +495,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t017",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.02",
-                "targetPSP": "02.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t017",
@@ -671,18 +518,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t017",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.02",
-                "targetPSP": "02.05",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t017",
@@ -703,18 +541,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t017",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.02",
-                "targetPSP": "02.06",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t017",
@@ -735,18 +564,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t021",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.06",
-                "targetPSP": "02.07",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t021",
@@ -767,18 +587,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t021",
-              "lagDays": 6,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.06",
-                "targetPSP": "03.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 6
             }
           ],
           "pred": "t021",
@@ -799,18 +610,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t023",
-              "lagDays": 5,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.01",
-                "targetPSP": "03.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t023",
@@ -831,18 +633,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t023",
-              "lagDays": 5,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.01",
-                "targetPSP": "03.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t023",
@@ -863,18 +656,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t024",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.02",
-                "targetPSP": "03.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t024",
@@ -895,18 +679,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t025",
-              "lagDays": 10,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.03",
-                "targetPSP": "03.05",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 10
             }
           ],
           "pred": "t025",
@@ -927,18 +702,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t026",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.04",
-                "targetPSP": "04.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t026",
@@ -959,18 +725,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t028",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "04.01",
-                "targetPSP": "04.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t028",
@@ -991,18 +748,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t029",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "04.02",
-                "targetPSP": "04.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t029",
@@ -1023,18 +771,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t030",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "04.03",
-                "targetPSP": "04.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t030",
@@ -1055,18 +794,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t027",
-              "lagDays": 5,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.05",
-                "targetPSP": "05.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t027",
@@ -1087,18 +817,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t027",
-              "lagDays": 5,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.05",
-                "targetPSP": "05.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t027",
@@ -1119,18 +840,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t027",
-              "lagDays": 5,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.05",
-                "targetPSP": "05.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t027",
@@ -1151,18 +863,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t027",
-              "lagDays": 5,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "03.05",
-                "targetPSP": "05.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t027",
@@ -1183,18 +886,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t035",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "05.04",
-                "targetPSP": "05.05",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t035",
@@ -1215,18 +909,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t031",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "04.04",
-                "targetPSP": "06.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t031",
@@ -1247,18 +932,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t037",
-              "lagDays": 5,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "06.01",
-                "targetPSP": "06.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t037",
@@ -1279,18 +955,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t038",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "06.02",
-                "targetPSP": "06.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t038",
@@ -1311,18 +978,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t039",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "06.03",
-                "targetPSP": "06.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t039",
@@ -1343,18 +1001,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t016",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.01",
-                "targetPSP": "07.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t016",
@@ -1375,18 +1024,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t016",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "02.01",
-                "targetPSP": "07.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t016",
@@ -1407,18 +1047,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t042",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "07.02",
-                "targetPSP": "07.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t042",
@@ -1439,18 +1070,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t041",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "07.01",
-                "targetPSP": "07.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t041",
@@ -1471,18 +1093,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t031",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "04.04",
-                "targetPSP": "08.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t031",
@@ -1503,18 +1116,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "AA",
               "pred": "t045",
-              "lagDays": 10,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "08.01",
-                "targetPSP": "08.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "AA",
+              "lagDays": 10
             }
           ],
           "pred": "t045",
@@ -1535,18 +1139,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t045",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "08.01",
-                "targetPSP": "08.03",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t045",
@@ -1567,18 +1162,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t047",
-              "lagDays": 0,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "08.03",
-                "targetPSP": "08.04",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t047",
@@ -1599,18 +1185,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t048",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "08.04",
-                "targetPSP": "09.01",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t048",
@@ -1631,18 +1208,9 @@
           "note": "",
           "dependencies": [
             {
-              "rel": "EA",
               "pred": "t049",
-              "lagDays": 1,
-              "sourceEvidence": {
-                "page": 1,
-                "format": "PDF vector arrow",
-                "lagBasis": "derived from printed dates",
-                "reviewed": false,
-                "sourcePSP": "09.01",
-                "targetPSP": "09.02",
-                "relationBasis": "drawn endpoints"
-              }
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t049",
