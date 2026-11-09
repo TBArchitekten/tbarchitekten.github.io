@@ -169,3 +169,15 @@ test('LPH3 v1.2 migration is exactly the reviewed generic seed and never mutates
   assert.ok(tpl.state.tasks.every(t=>!('actualStart' in t)&&!('actualEnd' in t)));
   assert.ok(tpl.state.tasks.every(t=>!t.dependencies.some(d=>'sourceEvidence' in d)));
 });
+
+test('PSP identifiers follow structural order even when start dates change or search filters rows',()=>{
+  const html=read('terminplan.html');
+  const section=html.slice(html.indexOf('function rebuildRows(){'),html.indexOf('function render(){'));
+  assert.match(section,/gt\.forEach\(\(t,i\)=>/);
+  assert.match(section,/rows\.push\(\{kind:'task',wbs:g\.wbs\+'\.'\+String\(i\+1\)/);
+  assert.doesNotMatch(section,/\.sort\(\(a,b\)=>a\.start/);
+  const print=html.slice(html.indexOf('function buildPrintRows(){'),html.indexOf('function buildPrintSheet(){'));
+  assert.doesNotMatch(print,/\.sort\(\(a,b\)=>a\.start/);
+  const csv=html.slice(html.indexOf('function exportCsv(){'),html.indexOf('function download('));
+  assert.doesNotMatch(csv,/\.sort\(\(a,b\)=>a\.start/);
+});
