@@ -68,7 +68,7 @@
    if(!bridge?.canEdit()){root.alert('Nur mit Bearbeitungsrecht und ohne Speicherkonflikt möglich.');return;}
    const state=bridge.read();
    const date=new Date().toLocaleDateString('de-DE');
-   const label=root.prompt('Bezeichnung des neuen unveränderlichen Basisplan-Snapshots', 'Freigabestand '+date);
+   const label=root.prompt('Bezeichnung des neuen Basisplan-Snapshots', 'Freigabestand '+date);
    if(label===null)return;
    try{
      const r=planner.captureBaseline(state,label,new Date().toISOString());
