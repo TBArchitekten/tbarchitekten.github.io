@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-09 · Pantalla en blanco al abrir, botón Live y textos del chat · Claude
+- Qué cambió y por qué: Gari vio la sección Heute en blanco al abrir la app (aparecía tras ir al chat y volver) y un botón «Live» que Isabella no tiene. Causa del blanco: al fusionar `app.js` con Window entró `$('#focusLiveLink').onclick=…`; Office no tenía ese enlace, la llamada fallaba en `bind()` y `init()` se cortaba antes de pintar la primera pantalla (pasaba con los dos runtimes). Arreglo: el enlace Live va ahora donde lo tiene Window (dentro del dictado, «Live sprechen»), con la opción «Antwort anhören» y el CSS de Window; la llamada está protegida si falta el elemento; se quitó el botón Live del compositor (`office-live-entry.js`). Además: con el motor nuevo, una respuesta informativa (ejecución durable) se quedaba en «Romy arbeitet noch…» hasta cambiar de pestaña porque Office no consultaba los trabajos durables cada 7 s; ahora sí, como Window. Textos del chat que seguían en español, en alemán (respuesta interrumpida, sin respuesta de texto, continuar respuesta, aviso sin conexión, cinco avisos de guardado).
+- Archivos: `app/app.js` (v=office48), `app/shell.js` (v=office44), `app/index.html`, `app/office.css` (v=office41), `app/voice-output.css` (nuevo, copia de Window), `app/office-live-entry.js` (borrado), `tests/browser/office-app-boot.chromium.mjs` y `tests/browser/fixtures/fake-supabase.js` (nuevos), `.github/workflows/verify-romy-browser.yml` (también en PRs a main), pins de versión en tests.
+- Base de datos: ninguna.
+- Deploy de funciones: ninguno.
+- Cómo se probó: la app entera arrancada en Chromium con un Supabase sintético: en el código publicado salía `TypeError … focusLiveLink` y la prueba nueva falla; con el arreglo, sin errores y Heute visible al abrir, con motor nuevo y con el runtime anterior. `node --test` 221/221.
+- Quedó pendiente o sin probar: unas 80 cadenas en español en paneles avanzados heredados de Window (permisos, avisos, proactividad…); el historial anterior de Romy no se pasó al motor nuevo (sigue guardado).
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: este.
+
 ### 2026-11-09 · Romy en el motor nuevo · responsables de tareas · Claude
 - Qué cambió y por qué: Gari puso `ASSISTANT_PROFILE=office` en Supabase; desplegadas las 17 funciones del motor y `office-mcp`; el chat de Office vuelve a usar el motor por defecto (respaldo: `tba_office_chat_backend=legacy`). Además, asignar responsables desde la ficha de una tarea fallaba desde siempre porque `minds_work_set_task_assignees` (copiada de Window en `task-detail.js`/`task-team.js`) nunca se creó en Office: nueva función con el mismo contrato que Window (atómica, control de revisión, máx. 16, primera persona en `assignee_person_id`, sin perder días planificados), adaptada al equipo del proyecto (`office_project_members`, miembros activos) y con `security invoker` para que decida la RLS existente.
 - Además: el primer latido de Romy en Office falló (`function public.minds_continuity_terms(text) does not exist`): la fase 1 no copió esa función auxiliar. Copiada tal cual de Window en `20261109001000_office_continuity_terms_v1.sql`. Revisión completa de las funciones de Office: era la única llamada a una función inexistente.

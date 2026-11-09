@@ -3,7 +3,7 @@ on:
   push:
     branches: ['romy-isabella/**']
   pull_request:
-    branches: ['romy-isabella/**']
+    branches: [main, 'romy-isabella/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,4 +25,4 @@ jobs:
       - name: Exercise real browser transport, receipts and per-member chat using synthetic doubles
         env:
           CI: 'true'
-        run: node --test tests/browser/romy-chat.chromium.mjs tests/browser/romy-live.chromium.mjs
+        run: node --test tests/browser/romy-chat.chromium.mjs tests/browser/romy-live.chromium.mjs tests/browser/office-app-boot.chromium.mjs
