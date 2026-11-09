@@ -18,6 +18,52 @@ test('a project copy keeps the Muster and moves dates by working days',()=>{
   assert.equal(s.project.standLabel,'Projektstart');
 });
 
+
+test('LPH 3 Muster v1.1 is generic, includes 50 planned items and 48 auditable links',()=>{
+  const templates=JSON.parse(read('supabase/seed/terminplan-templates.json'));
+  const tpl=templates.find(x=>x.phase==='LPH3');
+  assert.equal(tpl.version,'1.1');
+  assert.equal(tpl.state.groups.length,10);
+  assert.equal(tpl.state.tasks.length,50);
+  assert.equal(tpl.state.tasks.reduce((sum,t)=>sum+(t.dependencies||[]).length,0),48);
+  assert.ok(tpl.state.tasks.every(t=>t.status==='Nicht begonnen'&&t.progress===0));
+  assert.ok(tpl.state.tasks.every(t=>!t.note&&!t.dependencies.some(d=>'sourceEvidence' in d)));
+  assert.deepEqual(Object.keys(tpl.state.project).sort(),['end','name','phase','standDate','standLabel','start'].sort());
+  const ids=new Set(tpl.state.tasks.map(t=>t.id));
+  for(const task of tpl.state.tasks)for(const dep of task.dependencies)assert.ok(ids.has(dep.pred));
+  const source=JSON.stringify(tpl);
+  const copy=C.cloneStateForProject(tpl.state,{
+    start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.1',today:'2026-11-09'
+  });
+  assert.equal(copy.project.start,'2026-11-02');
+  assert.equal(copy.project.end,'2027-03-26');
+  assert.equal(copy.tasks.length,50);
+  assert.equal(copy.tasks.reduce((sum,x)=>sum+x.dependencies.length,0),48);
+  assert.equal(JSON.stringify(tpl).includes('"projectNumber"'),false);
+  assert.equal(JSON.stringify(tpl),source);
+});
+
+test('LPH 5 accepts a past Projektstart without changing its independent Muster',()=>{
+  const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH5');
+  const before=JSON.stringify(tpl);
+  const plan=C.cloneStateForProject(tpl.state,{
+    start:'2026-11-02',number:'2702',name:'Beispiel',phase:'LPH5',version:tpl.version,today:'2026-11-09'
+  });
+  assert.equal(plan.project.start,'2026-11-02');
+  assert.equal(plan.project.phase,'LPH5');
+  assert.equal(plan.tasks.length,tpl.state.tasks.length);
+  assert.equal(JSON.stringify(tpl),before);
+});
+
+test('Office plan creation previews dates and keeps manual approval',()=>{
+  const ui=read('app/office-projects.js');
+  assert.match(ui,/officeCreatePlanPreview/);
+  assert.match(ui,/updatePlanPreview\(\)/);
+  assert.match(ui,/Startdatum in der Vergangenheit/);
+  assert.match(ui,/core\.cloneStateForProject/);
+  assert.match(ui,/type="submit" class="primary">Terminplan anlegen/);
+});
+
 test('own passwords: long enough, repeated correctly',()=>{
   assert.match(C.passwordProblem('kurz','kurz',10),/Mindestens 10/);
   assert.match(C.passwordProblem('langes passwort','anderes passwort',10),/stimmen nicht/);
