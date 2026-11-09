@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminplan · Handbuch und Planungslogik | TBA Office</title>
+<meta name="description" content="TBA Office Terminplan: Werkzeug-Anleitung und fachliche Planungslogik für LPH 3.">
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#202823;background:#f9faf8;line-height:1.6}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0}a{color:#355b49;text-underline-offset:3px}
+header{border-bottom:1px solid #e3e7e2;background:white;position:sticky;top:0;z-index:2}
+.head{max-width:1220px;margin:auto;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:750;color:#60746a}
+.back{font-size:13px;white-space:nowrap;text-decoration:none;border:1px solid #dfe6df;padding:8px 12px;border-radius:6px}
+.hero{max-width:1150px;margin:auto;padding:65px 28px 33px}
+.eyebrow{font-size:11px;font-weight:700;color:#60756a;letter-spacing:.15em;text-transform:uppercase}
+h1{font-weight:675;letter-spacing:-.045em;font-size:clamp(36px,5vw,62px);line-height:1.1;margin:12px 0 16px;max-width:820px}
+.lead{max-width:820px;font-size:18px;color:#57655b;line-height:1.7}
+.container{max-width:1150px;margin:auto;padding:0 28px 90px}
+.chapter-menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:28px 0 70px}
+.chapter-menu a{text-decoration:none;color:inherit;border:1px solid #dfe5dc;background:#fff;padding:26px;border-radius:10px}
+.chapter-menu a:hover{border-color:#93afa0}
+.chapter-menu strong{display:block;font-size:19px;margin:5px 0}
+.chapter-menu small{display:block;color:#69796f;line-height:1.5}
+h2{font-size:clamp(28px,3.5vw,40px);letter-spacing:-.035em;line-height:1.2;margin:10px 0 17px}
+h3{font-size:21px;letter-spacing:-.02em;margin:33px 0 12px}
+p{margin:0 0 18px;max-width:860px}section{scroll-margin-top:100px}
+.chapter{border-top:1px solid #dfe6df;padding-top:36px;margin-top:75px}
+.figure{margin:27px 0 30px;border:1px solid #e0e6df;background:white;border-radius:12px;overflow:hidden;max-width:1020px}
+.figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:12px;padding:13px 20px;color:#65736b;border-top:1px solid #edf0eb}
+.examples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:20px 0 28px}
+.example{border-left:3px solid #6b9881;padding:13px 17px;background:#eef3ef;border-radius:0 7px 7px 0;font-size:14px}
+.example strong{display:block;margin-bottom:4px}
+.matrix{width:100%;max-width:1000px;border-collapse:collapse;font-size:13px;margin:22px 0 30px}
+.matrix th{text-align:left;font-size:12px;letter-spacing:.035em;background:#edf1ed}
+.matrix td,.matrix th{border-bottom:1px solid #dce4dc;padding:13px 12px;vertical-align:top}
+.note{max-width:970px;border:1px solid #dbe4dd;background:#fff;padding:20px 24px;border-radius:9px;margin:20px 0 26px;color:#3d5447}
+.step{max-width:960px;border-bottom:1px solid #e2e7e0;padding:17px 0}
+.step strong{font-size:15px}
+.small{font-size:13px;color:#6b796f}
+.footer{border-top:1px solid #e2e7e0;padding:34px 0 5px;color:#6b796f;font-size:12px}
+@media(max-width:700px){.head{padding:14px 18px}.hero{padding:43px 18px 23px}.container{padding:0 18px 60px}.chapter-menu,.examples{grid-template-columns:1fr}.matrix{display:block;overflow-x:auto;white-space:normal}.matrix th,.matrix td{min-width:100px}.figure{margin-left:-8px;margin-right:-8px}}
+</style>
+</head>
+<body>
+<header><div class="head"><span class="brand">TBA Office · Wissen / Terminplan</span><a class="back" href="./app/#section=plans">‹ Zurück zu Terminplänen</a></div></header>
+<div class="hero"><div class="eyebrow">Handbuch · Planungsterminplan</div><h1>Termine bewusst planen. Zusammenhänge verstehen.</h1>
+<p class="lead">Dieses Handbuch erklärt zwei Dinge getrennt: wie der Terminplan in TBA Office bedient wird und nach welcher fachlichen Logik eine Entwurfsplanung (LPH 3) sinnvoll organisiert werden kann. Ein Zeitplan ist keine Sammlung einzelner Daten, sondern eine nachvollziehbare Folge von Arbeitsergebnissen, Entscheidungen und Abhängigkeiten.</p></div>
+<main class="container">
+<nav class="chapter-menu" aria-label="Handbuch-Kapitel">
+<a href="#werkzeug"><span class="eyebrow">Teil I · Werkzeug</span><strong>So arbeitet der Terminplan</strong><small>Neue Planung, Gantt, Verknüpfungen, Kalender, Basispläne, Analyse, Termine und Aufwand.</small></a>
+<a href="#planung"><span class="eyebrow">Teil II · Planungspraxis</span><strong>So organisiert man LPH 3</strong><small>Auftraggeberentscheidungen, Fachplanung, Kosten, Meilensteine, kritischer Pfad und Fortschreibung.</small></a>
+</nav>
+<section class="chapter" id="werkzeug"><div class="eyebrow">Teil I / Werkzeug</div><h2>Bedienung von TBA Office Terminplan</h2>
+<p>Der Terminplan zeigt links den Projektstrukturplan (PSP), die Vorgänge, Verantwortlichen, Anfangs- und Endtermine sowie Dauer und Fortschritt. Rechts liegt das Gantt-Diagramm mit Terminbalken, Meilensteinen und Pfeilen für die zeitlichen Beziehungen. Die Vorlage ist schreibgeschützt; jeder neu angelegte Projektterminplan ist eine unabhängige Kopie.</p>
+<figure class="figure"><svg viewBox="0 0 1000 390" role="img" aria-label="Schematische Terminplanoberfläche mit PSP-Tabelle, Gantt, Abhängigkeitspfeilen und Auswertung">
+<rect width="1000" height="390" fill="#fff"/><rect width="1000" height="48" fill="#f0f3f0"/>
+<text x="25" y="30" font-size="14" font-weight="700" fill="#243d2e">TERMINPLAN</text><text x="700" y="30" font-size="12" fill="#53715c">Auswertung · Basisplan · Anleitung</text>
+<rect x="18" y="64" width="415" height="286" rx="7" fill="#fafbfa" stroke="#d9e4dc"/>
+<rect x="445" y="64" width="538" height="286" rx="7" fill="#fff" stroke="#d9e4dc"/>
+<text x="31" y="90" font-size="12" font-weight="700" fill="#536b5b">PSP</text><text x="98" y="90" font-size="12" font-weight="700" fill="#536b5b">Vorgang</text><text x="340" y="90" font-size="12" font-weight="700" fill="#536b5b">Dauer</text>
+<g font-size="12" fill="#2c3730"><text x="31" y="134">01.01</text><text x="98" y="134">Entwurf Arbeitsstand 01</text><text x="365" y="134">15 AT</text><text x="31" y="184">01.02</text><text x="98" y="184">Interne Prüfung</text><text x="365" y="184">5 AT</text><text x="31" y="234">01.03</text><text x="98" y="234">Übergabe AG</text><text x="365" y="234">0 AT</text><text x="31" y="284">01.04</text><text x="98" y="284">Rückmeldung AG</text><text x="365" y="284">5 AT</text></g>
+<g stroke="#edf1ed"><path d="M18 104H983M18 155H983M18 205H983M18 255H983M18 305H983"/><path d="M508 64V350M576 64V350M644 64V350M712 64V350M780 64V350M848 64V350M916 64V350"/></g>
+<g font-size="11" fill="#64766b"><text x="467" y="90">KW 01</text><text x="593" y="90">KW 02</text><text x="729" y="90">KW 03</text><text x="865" y="90">KW 04</text></g>
+<rect x="482" y="117" width="277" height="20" rx="3" fill="#d99042"/><rect x="675" y="168" width="84" height="20" rx="3" fill="#d99042"/>
+<polygon points="769,218 779,228 769,238 759,228" fill="#7c65a5"/>
+<rect x="790" y="270" width="84" height="20" rx="3" fill="#7c65a5"/>
+<path d="M759 127H772V178H675M759 178H769V218M779 228H782V280H790" fill="none" stroke="#3f6b52" stroke-width="2" stroke-linecap="round"/><text x="485" y="331" fill="#708376" font-size="11">Gantt und Verknüpfungen · schematische Darstellung</text>
+</svg><figcaption>Abbildung 1. Die Oberfläche verbindet PSP (was ist zu tun?) mit Gantt (wann?) und Verknüpfungen (wovon hängt es ab?). Das ist eine schematische Darstellung, kein Screenshot eines realen Projekts.</figcaption></figure>
+<h3>1. Einen neuen Terminplan anlegen</h3>
+<p>In <strong>Terminpläne</strong> wird ein aktives Projekt gewählt. Anschließend wird ein Muster für LPH 3 oder LPH 5 und ein <strong>Projektstart</strong> angegeben. Das Startdatum kann in der Vergangenheit liegen. Für LPH 3 kann man ausdrücklich kennzeichnen, dass die Fachplaner bereits beauftragt sind; dadurch werden nur die noch nicht erforderlichen Beauftragungsschritte übersprungen. Die Vorschau zeigt den voraussichtlichen Endtermin, bevor der neue Projektterminplan durch Klick erstellt wird.</p>
+<p>Die Erstplanung berücksichtigt bayernweite gesetzliche Feiertage sowie Wochenende. Lokale Feiertage (beispielsweise das Augsburger Friedensfest) und projektbezogene Ausnahmen müssen separat im Projektkalender ergänzt werden. Ein zurückliegendes Startdatum setzt weder Fortschritt noch Ist-Daten automatisch.</p>
+<h3>2. Vorgänge, Meilensteine und mehrere Vorgänger</h3>
+<p>Die PSP-Nummern folgen der strukturellen Reihenfolge im Projektplan. Eine Terminverschiebung oder Suche nummeriert sie nicht neu; bei bewusstem Hinzufügen oder Entfernen von Vorgängen ist die Struktur zu kontrollieren. Ein <strong>Vorgang</strong> besitzt eine Dauer und ein Arbeitsergebnis. Ein <strong>Meilenstein</strong> hat 0 AT und bezeichnet einen Zustand oder eine überprüfbare Entscheidung, zum Beispiel die Freigabe eines Planpakets. Vorgänge können mehrere Vorgänger haben. Jeder Vorgänger erhält eine eigene Beziehung und einen Abstand in Arbeitstagen (AT).</p>
+<figure class="figure"><svg viewBox="0 0 1000 290" role="img" aria-label="Drei parallele Fachplanungen führen über drei Ende-Anfang-Beziehungen zu einem gemeinsamen Meilenstein">
+<rect width="1000" height="290" fill="#fff"/><g font-size="14" font-weight="600" fill="#294335"><text x="54" y="69">TWP · Fachbeitrag</text><text x="54" y="137">HLS · Fachbeitrag</text><text x="54" y="205">ELT · Fachbeitrag</text><text x="690" y="144">M07</text><text x="690" y="164" font-size="12" font-weight="400">Beiträge vollständig</text></g>
+<rect x="275" y="44" width="250" height="30" rx="4" fill="#dbe9f3" stroke="#6b9bbb"/>
+<rect x="275" y="112" width="250" height="30" rx="4" fill="#dbe9f3" stroke="#6b9bbb"/>
+<rect x="275" y="180" width="250" height="30" rx="4" fill="#dbe9f3" stroke="#6b9bbb"/>
+<g fill="none" stroke="#47735b" stroke-width="2"><path d="M525 59H598V154H664"/><path d="M525 127H598"/><path d="M525 195H598V154"/></g>
+<polygon points="664,154 651,147 651,161" fill="#47735b"/><polygon points="675,141 688,154 675,167 662,154" fill="#b17799"/>
+<text x="54" y="265" font-size="12" fill="#607569">Alle Fachplanungen parallel · ein gemeinsames, erst nach allen Pflichtbeiträgen erreichtes Abgabeereignis</text>
+</svg><figcaption>Abbildung 2. Der Meilenstein wartet auf alle erforderlichen Fachbeiträge. Ein Fachplaner ist nicht automatisch der Vorgänger des nächsten Fachplaners.</figcaption></figure>
+<table class="matrix"><thead><tr><th>Beziehung</th><th>Regel</th><th>Typischer Einsatz</th></tr></thead><tbody>
+<tr><td>EA · Ende–Anfang</td><td>Nachfolger beginnt nach dem Endzeitpunkt des Vorgängers</td><td>Rückmeldung → Überarbeitung</td></tr>
+<tr><td>AA · Anfang–Anfang</td><td>Nachfolger darf beginnen, sobald der Vorgänger begonnen hat</td><td>Parallel beginnende Koordination</td></tr>
+<tr><td>EE · Ende–Ende</td><td>Nachfolger kann nicht vor dem Vorgänger fertig sein</td><td>Integrierter Entwurf braucht vollständige Beiträge</td></tr>
+<tr><td>AE · Anfang–Ende</td><td>Nachfolger darf nicht vor dem Start des Vorgängers enden</td><td>Sonderfall, sorgfältig begründen</td></tr>
+</tbody></table>
+<div class="note">TBA Office verwendet eine tagesgenaue Konvention: <strong>EA + 0 AT</strong> erlaubt die Übergabe am selben Kalendertag. Die exakte stundengenaue FS-Logik von Microsoft Project wird damit nicht vollständig nachgebildet. Positive Abstände sind Wartezeiten; negative Abstände ermöglichen Überlappung. Ein Pfeil ohne sachlich richtige Beziehung hat keinen planerischen Wert.</div>
+<h3>3. Termine ändern und Folgen prüfen</h3>
+<p>Termine und Dauer können im Gantt oder im Vorgangsdialog verändert werden. Die Terminprüfung weist auf verletzte Beziehungen, Zyklen, fehlende Vorgänger und überschrittene Abgaben hin. Eine manuelle Änderung verschiebt <strong>nicht</strong> automatisch alle Nachfolger.</p>
+<p>Unter <strong>Auswertung · Netzplan</strong> kann nach Auswahl eines Vorgangs die Aktion <em>Folgetermine vorschlagen</em> ausgelöst werden. Das System berechnet eine <strong>Vorher/Nachher-Vorschau</strong> für alle erreichbaren Nachfolger, unter Beachtung mehrerer Vorgänger und des Arbeitskalenders. Erst nach einer ausdrücklichen Bestätigung wird die Änderung in den Plan übernommen. Die anschließende Speicherung bleibt an die Serverrevision gebunden.</p>
+<h3>4. Basisplan, aktuelle Termine und Ist-Termine</h3>
+<p>Mit <strong>Basisplan sichern</strong> lässt sich ein ausdrücklich benannter Soll-Stand als Snapshot im Projektterminplan ablegen. In der Auswertung wählt man einen Basisplan und vergleicht dessen Termine mit der aktuellen Planung. Im Gantt werden die gespeicherten Termine als dezente unterbrochene Linie dargestellt. Bis zu zehn Snapshots sind vorgesehen; es gibt keine Schaltfläche zum Überschreiben eines älteren Snapshots.</p>
+<figure class="figure"><svg viewBox="0 0 1000 225" role="img" aria-label="Vergleich zwischen Soll-Termin, aktualisiertem Termin und dokumentiertem Ist-Zeitpunkt">
+<rect width="1000" height="225" fill="#fff"/><g stroke="#e6ece6"><path d="M300 40V190M425 40V190M550 40V190M675 40V190M800 40V190"/></g>
+<g font-size="13" fill="#4b6053"><text x="35" y="70">Basisplan · Soll</text><text x="35" y="119">Aktuelle Planung</text><text x="35" y="170">Ist-Termin (bestätigt)</text></g>
+<rect x="302" y="55" width="258" height="7" fill="#d8e4db"/><path d="M302 57H560" stroke="#3a6a50" stroke-dasharray="7 5" stroke-width="3"/>
+<rect x="365" y="103" width="300" height="19" rx="4" fill="#d29a51"/>
+<circle cx="610" cy="166" r="7" fill="#385b4a"/><text x="628" y="171" font-size="12" fill="#526b5c">tatsächliches Ergebnis</text>
+<text x="301" y="202" font-size="11" fill="#6b7e70">Schematische Abweichung: späterer Plan ≠ bereits erfolgte Ausführung</text>
+</svg><figcaption>Abbildung 3. Soll, aktuelle Planung und Ist sind unterschiedliche Informationsarten. Die Software darf eine Planung nicht als Ausführungsnachweis interpretieren.</figcaption></figure>
+<p>Für real eingetretene Ereignisse stehen <strong>Ist-Anfang</strong> und <strong>Ist-Ende</strong> im Vorgangsdialog zur Verfügung. Diese Daten müssen bewusst dokumentiert werden. Der Fortschritt in Prozent allein belegt keine tatsächliche Fertigstellung. Die Abweichung zum Basisplan wird in <strong>Kalendertagen (KT)</strong> angezeigt, nicht als zusätzliche Arbeitstage.</p>
+<h3>5. Kritischer Pfad und Puffer</h3>
+<p>Die Netzplan-Auswertung zeigt den <strong>Gesamtpuffer</strong> und den <strong>freien Puffer</strong> in AT. Kritische Vorgänge sind diejenigen mit Gesamtpuffer von 0 AT oder weniger. Das Gantt hebt sie hervor. Eine Deadline kann den rechnerischen Puffer begrenzen, obwohl sie den Termin nicht verschiebt.</p>
+<p>Eine Berechnung ist nur belastbar, wenn der aktuelle Netzplan konsistente Vorgänger, gültige Daten und passende Arbeitstage besitzt. Bei Widersprüchen wird die Pufferberechnung ausdrücklich verweigert und die Ursache angezeigt. Es findet <strong>kein automatischer Ressourcenabgleich</strong> statt; Puffer sind daher Netzplanwerte, keine Zusage freier Personal- oder Bürokapazität.</p>
+<h3>6. Deadline, geschützter Abgabetermin, Dauer und Aufwand</h3>
+<p>Eine <strong>Deadline</strong> ist ein Soll-Ziel, das bei Überschreitung eine Warnung auslöst; sie verändert Anfang und Ende nicht. Ein <strong>geschützter Abgabetermin</strong> fordert beim Überschreiten eine ausdrückliche Bestätigung. Beides ist von einer fachlichen Abhängigkeit zu unterscheiden.</p>
+<p>Die <strong>Dauer (AT)</strong> beschreibt die Zeitspanne eines Vorgangs im Kalender. Der <strong>Planaufwand (h)</strong> ist der erwartete Arbeitsumfang in Stunden. 15 AT Dauer können zum Beispiel 24 Stunden Arbeit enthalten, wenn die Tätigkeit über mehrere Wochen verteilt ist. TBA Office rechnet daraus <strong>keine</strong> automatischen Personalzuweisungen oder Auslastungspläne ab.</p>
+<h3>7. Datenqualität und Zusammenarbeit</h3>
+<p>Vor grundlegenden Änderungen empfiehlt sich ein neuer Basisplan. Nach Änderungen sollte die Netzprüfung aufgerufen und zunächst geprüft werden, ob Fristen, Nachfolger oder der Projektendtermin betroffen sind. Die Anwendung speichert Projektterminpläne mit serverseitiger Revisionsprüfung; bei einem Konflikt muss der eigene Stand als JSON gesichert und anschließend der aktuelle Serverstand geladen werden.</p>
+</section>
+<section class="chapter" id="planung"><div class="eyebrow">Teil II / Fachliche Planung</div><h2>LPH 3 planen: vom Entwurf bis zur Entscheidung</h2>
+<p>Die Leistungsphase 3 – Entwurfsplanung – entwickelt die Vorplanung zu einem abgestimmten Entwurf weiter. Der Objektplaner stellt Arbeitsstände bereit, koordiniert und integriert Fachplanungsleistungen, stimmt die Genehmigungsfähigkeit ab, erstellt die Kostenberechnung nach DIN 276 mit Vergleich zur Kostenschätzung, führt den Terminplan fort und dokumentiert die Ergebnisse. Maßgeblich ist die HOAI Anlage 10, Leistungsbild Gebäude und Innenräume. <strong>Die HOAI legt keine allgemeinen Bearbeitungsdauern in AT fest.</strong> Die folgenden Zeitwerte sind ein Büro-Muster zur Diskussion, keine verbindlichen HOAI-Fristen.</p>
+<figure class="figure"><svg viewBox="0 0 1040 365" role="img" aria-label="Schematische LPH-3-Planung mit zeitlich paralleler Objektplanung, Fachplanung, Auftraggeberentscheidungen und Kosten">
+<rect width="1040" height="365" fill="#fff"/>
+<g font-size="12" font-weight="700" fill="#405849"><text x="25" y="66">Objektplanung</text><text x="25" y="134">Fachplanung</text><text x="25" y="202">Auftraggeber</text><text x="25" y="270">Kosten</text></g>
+<g stroke="#e4ebe4" stroke-width="1"><path d="M177 33V318M285 33V318M393 33V318M501 33V318M609 33V318M717 33V318M825 33V318M933 33V318"/></g>
+<rect x="180" y="48" width="255" height="27" rx="4" fill="#ebb377"/><rect x="455" y="48" width="350" height="27" rx="4" fill="#ebb377"/>
+<text x="202" y="66" fill="#432e1c" font-size="12">Entwurf · Arbeitsstände</text><text x="478" y="66" fill="#432e1c" font-size="12">Integration · Finalisierung</text>
+<rect x="275" y="116" width="220" height="27" rx="4" fill="#c9e3f3"/><rect x="514" y="116" width="215" height="27" rx="4" fill="#c9e3f3"/>
+<text x="289" y="134" fill="#2a4b5e" font-size="12">Erste Fachbeiträge</text><text x="528" y="134" fill="#2a4b5e" font-size="12">Abgestimmte Beiträge</text>
+<rect x="270" y="184" width="75" height="27" rx="4" fill="#ddcfeb"/><rect x="522" y="184" width="75" height="27" rx="4" fill="#ddcfeb"/>
+<text x="281" y="202" font-size="11" fill="#4e3f61">Prüfung</text><text x="532" y="202" font-size="11" fill="#4e3f61">Entsch.</text>
+<rect x="587" y="252" width="205" height="27" rx="4" fill="#cce9d7"/><text x="606" y="270" font-size="12" fill="#2e5741">DIN 276 · Kostenabgleich</text>
+<path d="M797 266H852V332" fill="none" stroke="#3f674e" stroke-width="2"/><path d="M729 129H852M805 61H852" fill="none" stroke="#3f674e" stroke-width="2"/><polygon points="870,319 882,332 870,345 857,332" fill="#457660"/>
+<text x="891" y="328" font-size="12" fill="#405849">Abgabe /</text><text x="891" y="345" font-size="12" fill="#405849">Freigabe</text>
+</svg><figcaption>Abbildung 4. Die Objektplanung, Fachplanung, Auftraggeberentscheidungen und Kostenberechnung laufen teilweise parallel. Der Abschluss braucht eine vollständige, miteinander konsistente Ergebnislage.</figcaption></figure>
+<h3>Die Grundfrage jedes PSP: Was muss vorliegen, damit etwas anderes beginnen oder enden darf?</h3>
+<p>Ein fachlich brauchbarer Terminplan wird von den benötigten Ergebnissen und Entscheidungen her aufgebaut. Ein Predecessor ist nicht automatisch „die Zeile unmittelbar darüber“. Ein Projektauftakt kann Zeichnungsarbeiten und organisatorische Klärungen parallel auslösen. Die nächste Entscheidung darf aber erst erfolgen, wenn die zugrunde liegenden Unterlagen vollständig und prüfbar sind.</p>
+<div class="examples"><div class="example"><strong>Schlechtes Modell</strong>TWP → HLS → ELT → Koordination, obwohl die Fachplanungen parallel arbeiten können. Ein unnötig langer kritischer Pfad entsteht.</div><div class="example"><strong>Besseres Modell</strong>TWP, HLS und ELT beginnen nach geklärten Grundlagen parallel. Ein gemeinsamer Meilenstein wartet auf alle tatsächlich erforderlichen Lieferungen.</div></div>
+<h3>PSP 00: Auftrag und Arbeitsfähigkeit herstellen</h3>
+<p>Zu Beginn muss klar sein, welche Planungsgrundlagen, Fachdisziplinen und Entscheidungen benötigt werden. Die Auswahl, die Angebotsklärung und die Beauftragung der Fachplaner müssen als echte Vorgänge sichtbar sein, sofern sie noch ausstehen. Eine Kontaktfreigabe ist <strong>keine Beauftragung</strong>. Bereits beauftragte Fachplaner dürfen keinen künstlichen Warteblock erzeugen.</p>
+<p>Der Terminplan sollte die beauftragten Leistungsumfänge, Verantwortlichen und Schnittstellen kennen. Für eine private Direktbeauftragung mit bekannten Fachplanern kann ein kurzer Orientierungsblock vorgesehen werden; öffentliche Vergabeverfahren haben gesondert zu ermittelnde gesetzliche und organisatorische Fristen. Der Planungsterminplan ist kein Ersatz für einen Vertrag oder die VgV-Fristenprüfung.</p>
+<h3>PSP 01: Architektur-Arbeitsstände und Bauherrenrückmeldungen</h3>
+<p>Der Objektplaner entwickelt den Entwurf und stellt Grundrisse, Ansichten, Schnitte und gegebenenfalls weitere aussagekräftige Unterlagen bereit. Eine interne Konsistenzprüfung sollte das Paket vor der Übermittlung überprüfen. Für gewöhnliche Bauherrenrückmeldungen sind im Muster 5 AT als <strong>vereinbarte Regelfrist</strong> vorgesehen. Diese gilt nur, wenn Unterlagen komplett, die Ansprechpartner erreichbar und die Fragestellungen entscheidbar sind. Ausbleibende Rückmeldungen müssen dokumentiert und bei Bedarf neu terminiert werden.</p>
+<p>Eine Rückmeldung des Auftraggebers ist nicht automatisch eine Entwurfsfreigabe. Deshalb gibt es getrennte Arbeits- und Entscheidungspunkte. Änderungen nach einer Rückmeldung sind hinsichtlich Auswirkung auf Fachplanung, Qualität, Kosten und Abgabe zu prüfen.</p>
+<h3>PSP 02–03: Fachplanungen erarbeiten, koordinieren und integrieren</h3>
+<p>Die benötigten Fachplaner prüfen zunächst die Grundlagen und stellen Rückfragen. Im nächsten Schritt entstehen vorläufige Beiträge von TWP, HLS, ELT und gegebenenfalls BRS. Die Disziplinen laufen parallel; das Ziel ist ein integrierbarer Zwischenstand, nicht bloß ein versandtes Einzeldokument. Die Koordination kann mit vorläufigen Beiträgen beginnen, aber nicht ohne die notwendigen Ergebnisse abgeschlossen werden.</p>
+<p>Die Festlegung der Fachbeiträge ist projektspezifisch: BRS ist nur dort als verbindlicher Vorgänger zu aktivieren, wo diese Leistung erforderlich ist. Jede zusätzliche Pflichtdisziplin muss in die Abschlussbedingungen aufgenommen werden. Eine pauschale vollständige Fachplanerliste ist weder Planungsqualität noch Ersatz für das tatsächliche Leistungsbild.</p>
+<h3>PSP 04–05: Entscheidungen und abgestimmte Fachbeiträge</h3>
+<p>Wichtige Qualitätsentscheidungen, Bemusterungen und kostenrelevante Festlegungen brauchen vorbereitete Entscheidungsvorlagen. Die Abgabe eines Entwurfs und seine Freigabe sind unterschiedliche Meilensteine. Die zweite Fachplanungsrunde setzt die vereinbarten Entscheidungen um; ein gemeinsamer Abgabemeilenstein darf erst erreicht werden, wenn alle für das Projekt verpflichtenden Fachbeiträge vorliegen.</p>
+<h3>PSP 06: Kostenberechnung als Ergebnis der Planung</h3>
+<p>Eine belastbare Kostenberechnung nach DIN 276 benötigt Mengen, Planungsstände und die einschlägigen Kostenbeiträge. Mengen- und Kostenermittlung dürfen teilweise parallel laufen. Die endgültige Kostenberechnung und ihr Vergleich mit der Kostenschätzung benötigen jedoch eine ausreichend abgestimmte Datenlage. Die Besprechung des Ergebnisses und die Entscheidung über Abweichungen sind getrennt zu dokumentieren.</p>
+<h3>PSP 07–09: Genehmigungsfähigkeit, Abschlussdokumentation, Freigabe</h3>
+<p>Genehmigungsrelevante Fragen und Schnittstellen zur Behörde sind in der Entwurfsplanung rechtzeitig vorzustimmen. Externe Antwortzeiten dürfen nicht als interne Arbeitskapazität ausgegeben werden. In den Abschlussblock gehören die Objektbeschreibung, geordnete Planliste, Kostenberechnung und relevante Fachplanungsunterlagen. Eine interne Vollständigkeitsprüfung steht vor der Abgabe; eine realistische Schlusskorrektur und die Auftraggeberprüfung folgen darauf.</p>
+<p>Der letzte Meilenstein ist eine ausdrücklich dokumentierte projektseitige Freigabe der LPH 3. Sie ist weder automatisch die öffentlich-rechtliche Genehmigung noch eine rechtsgeschäftliche Abnahme des Architektenvertrags.</p>
+<h3>Den Plan professionell fortschreiben</h3>
+<div class="step"><strong>Vor der Planungsbesprechung</strong><p>Aktuelle Unterlagen, Fortschritt, Rückmeldungen und neue Abhängigkeiten sammeln; offene Entscheidungen vorab identifizieren. Baseline und aktuelle Planung voneinander unterscheiden.</p></div>
+<div class="step"><strong>In der Abstimmung</strong><p>Nicht zuerst eine Wunschdatum eintragen, sondern die Ursache und das notwendige Arbeitsergebnis klären: Welche andere Tätigkeit wird tatsächlich blockiert? Was kann parallel laufen? Sind 5 AT Rückmeldung vereinbart und realistisch?</p></div>
+<div class="step"><strong>Nach der Besprechung</strong><p>Terminvorschläge für Nachfolger prüfen, Deadline-Konflikte kennzeichnen und Änderungen bestätigen. Erst nach gemeinsamer Freigabe einen neuen Basisplan sichern. Ist-Termine nur bei tatsächlicher Evidenz eintragen.</p></div>
+<h3>Typische Fehler und ihre Folgen</h3>
+<p>Eine unvollständige Vorgängerstruktur erzeugt zu frühe Sammelmeilensteine. Ein fest eingetragener Endtermin kann Probleme verdecken, wenn dazu passende fachliche Voraussetzungen fehlen. Zu viele EA-Beziehungen erzeugen künstlich serielle Arbeiten; zu viele AA-Beziehungen können notwendige Abschlussbedingungen aushebeln. Pufferzeiten sind keine Personalreserve. Ein überfälliger Vorgang ist nicht automatisch abgeschlossen, wenn der Kalender bereits weitergerückt ist.</p>
+<div class="note"><strong>Grundsatz für die Projektleitung:</strong> Jede Beziehung muss fachlich begründet sein, jede Frist eine vereinbarte oder ausdrücklich als Richtwert bezeichnete Grundlage haben, und jede Freigabe einen überprüfbaren Inhalt. Dann wird der Terminplan zu einem Entscheidungsinstrument – nicht nur zu einer Zeichnung.</div>
+</section>
+<section class="chapter" id="quellen"><div class="eyebrow">Normen und Referenzen</div><h2>Nachlesen und vertiefen</h2>
+<p>Primäre fachliche Grundlage: <a href="https://www.gesetze-im-internet.de/hoai_2013/anlage_10.html" target="_blank" rel="noopener">HOAI Anlage 10, Leistungsbild Gebäude und Innenräume</a>. Die HOAI beschreibt Leistungen; die Zeitangaben des Musters bleiben betriebliche Planannahmen.</p>
+<p>Für die Terminplanung: <a href="https://support.microsoft.com/en-us/project/how-project-schedules-tasks-behind-the-scenes" target="_blank" rel="noopener">Microsoft Project – How Project schedules tasks</a>, <a href="https://support.microsoft.com/en-us/project/predecessors-task-field" target="_blank" rel="noopener">Predecessors</a> und <a href="https://support.microsoft.com/en-us/project/manage-your-project-s-critical-path" target="_blank" rel="noopener">Critical path</a>. Microsoft Project ist ein Vergleichsmaßstab, keine Behauptung vollständiger Funktionsgleichheit.</p>
+<p class="small">Alle vier Grafiken auf dieser Seite sind didaktische Schemata; sie enthalten keine Kundendaten oder Screenshots privater Projekte. Handbuchstand: 09.11.2026.</p>
+</section>
+<footer class="footer">TBA Office · Internes Arbeitsmittel · Richtdauern und Projekterfordernisse vor Verwendung prüfen.</footer>
+</main>
+</body>
+</html>

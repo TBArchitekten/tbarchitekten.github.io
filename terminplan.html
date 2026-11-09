@@ -466,6 +466,7 @@ body.read-only .editor-only{display:none!important}
 </style>
 <link rel="stylesheet" href="./assistant-surface.css?v=office37">
 <link rel="stylesheet" href="./window-editor.css?v=1">
+<link rel="stylesheet" href="./terminplan-planning.css?v=office1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>
 <!-- In the Window app (account Office) this client borrows the app's session; in the browser it is the usual office client. -->
@@ -668,15 +669,19 @@ body.read-only .editor-only{display:none!important}
         <option value="AE">AE · Anfang–Ende</option>
       </select></div>
       <div class="field"><label>Abstand zum ersten Vorgänger (AT)</label><input type="number" id="taskLag" value="0" min="-260" max="260" step="1"></div>
-      <div class="field"><label>Geschützter Abgabetermin (optional)</label><input type="date" id="taskProtectedDate"></div>
+      <div class="field"><label>Deadline · Zieltermin (Warnung, keine Verschiebung)</label><input type="date" id="taskDeadline"><div class="tp-field-note">Eine Deadline meldet eine Überschreitung, ohne den Vorgang zu fixieren.</div></div>
+       <div class="field"><label>Geschützter Abgabetermin (Bestätigung erforderlich)</label><input type="date" id="taskProtectedDate"></div>
+       <div class="field"><label>Planaufwand (Stunden, optional)</label><input type="number" id="taskEffortHours" min="0" step="0.5" placeholder="z. B. 24"><div class="tp-field-note">Aufwand ≠ Dauer. Keine automatische Umrechnung in AT oder Ressourcen-Zuteilung.</div></div>
+       <div class="field"><label>Ist-Anfang (falls tatsächlich begonnen)</label><input type="date" id="taskActualStart"></div>
+       <div class="field"><label>Ist-Ende (falls tatsächlich abgeschlossen)</label><input type="date" id="taskActualEnd"></div>
       <div class="field full"><label>Weitere Vorgänger</label><div id="extraDepRows"></div>
         <button type="button" id="addDepBtn">＋ Vorgänger hinzufügen</button>
-        <p class="dep-note">EA / AA / EE / AE · Abstand in Arbeitstagen. 0 = Übergabe am selben Tag. Feiertage nur, wenn im Projektkalender ausdrücklich hinterlegt.</p>
+        <p class="dep-note">EA / AA / EE / AE · Abstand in Arbeitstagen. Office-Konvention: EA+0 = Übergabe am selben Tag. Beziehungen können mehrfach pro Vorgang angegeben werden. Arbeitsfreie Tage gemäß Projektkalender.</p>
       </div>
       <div class="field"><label>Status</label>
         <select id="taskStatus"><option>Nicht begonnen</option><option>In Bearbeitung</option><option>Wartet auf Rückmeldung</option><option>Abgeschlossen</option></select>
       </div>
-      <div class="field"><label><input type="checkbox" id="taskCritical"> Kritischer Vorgang</label></div>
+      <div class="field"><label><input type="checkbox" id="taskCritical"> Manuelle Risikomarkierung (nicht berechneter kritischer Pfad)</label></div>
       <div class="field full"><label>Notiz / Lieferergebnis</label><textarea id="taskNote"></textarea></div>
     </div>
     <div class="modal-foot">
@@ -712,7 +717,9 @@ body.read-only .editor-only{display:none!important}
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="./terminplan-engine.js"></script>
+<script src="./terminplan-engine.js?v=office2"></script>
+<script src="./terminplan-planning.js?v=office1"></script>
+<script src="./terminplan-features.js?v=office1"></script>
 <script src="./terminplan-dialogue.js?v=office37"></script>
 <script src="./terminplan-rebuild.js?v=office39"></script>
 <script>
@@ -807,6 +814,11 @@ body.read-only .editor-only{display:none!important}
   let serverRevision=null;
   let saveConflict=false;
   let permitUnload=false;
+  window.OfficePlanFeatures?.mount({
+    read:()=>data,write:next=>{data=next;render()},canEdit:()=>canEdit&&!saveConflict,
+    selected:()=>selectedId,focus:id=>selectAuditTask(id),
+    rows:()=>rows,dates:()=>visibleDates,cell:()=>cellWidth
+  });
 
   function loadData(){return clone(initialData)}
 
@@ -1106,9 +1118,10 @@ body.read-only .editor-only{display:none!important}
       if(!matches)return;
       rows.push({kind:'group',...g});
       if(!g.collapsed){
-        gt.filter(t=>!q||(t.name+' '+t.owner+' '+t.note).toLowerCase().includes(q)||g.name.toLowerCase().includes(q))
-          .sort((a,b)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name))
-          .forEach((t,i)=>rows.push({kind:'task',wbs:g.wbs+'.'+String(i+1).padStart(2,'0'),...t}));
+        gt.forEach((t,i)=>{
+          if(q&&!(t.name+' '+t.owner+' '+t.note).toLowerCase().includes(q)&&!g.name.toLowerCase().includes(q))return;
+          rows.push({kind:'task',wbs:g.wbs+'.'+String(i+1).padStart(2,'0'),...t});
+        });
       }
     });
   }
@@ -1126,6 +1139,7 @@ body.read-only .editor-only{display:none!important}
     renderStats();
     renderAssistant();
     saveData();
+    window.OfficePlanFeatures?.refresh();
   }
 
   function renderHeader(){
@@ -1462,6 +1476,8 @@ body.read-only .editor-only{display:none!important}
     }
     if(item.code==='protected_deadline')return name+': geschützter Abgabetermin '+item.minimum+' überschritten (Ende '+item.actual+').';
     if(item.code==='invalid_protected_date')return name+': geschützter Termin ist kein gültiges Datum.';
+    if(item.code==='deadline_overrun')return name+': Deadline '+item.minimum+' überschritten, Planende '+item.actual+' (Warnung, keine Terminverschiebung).';
+    if(item.code==='invalid_deadline')return name+': Deadline ist kein gültiges Datum.';
     if(item.code==='invalid_lag')return name+': Abstand zur Beziehung '+predName+' ist ungültig.';
     if(item.code==='invalid_calendar')return 'Projektkalender enthält ein ungültiges Datum.';
     if(item.code==='duplicate_dependency')return name+': doppelte Beziehung zu '+predName+'.';
@@ -2107,6 +2123,10 @@ body.read-only .editor-only{display:none!important}
     $('#taskRel').value=first?.rel||'EA';
     $('#taskLag').value=first?.lagDays??0;
     $('#taskProtectedDate').value=t?.protectedDate||'';
+    $('#taskDeadline').value=t?.deadline||'';
+    $('#taskEffortHours').value=Number.isFinite(t?.effortHours)?t.effortHours:'';
+    $('#taskActualStart').value=t?.actualStart||'';
+    $('#taskActualEnd').value=t?.actualEnd||'';
     $('#extraDepRows').replaceChildren();
     links.slice(1).forEach(dep=>appendExtraDep(dep,id));
     $('#taskStatus').value=t?.status||'Nicht begonnen';
@@ -2129,19 +2149,40 @@ body.read-only .editor-only{display:none!important}
     const type=$('#taskType').value;
     let links;
     try{links=formDependencies(id)}catch(error){toast(error.message);return;}
+    const existing=data.tasks.find(x=>x.id===id)||{};
+    const effortText=$('#taskEffortHours').value.trim();
+    const effortHours=effortText===''?null:Number(effortText);
+    if(effortHours!==null&&(!Number.isFinite(effortHours)||effortHours<0||effortHours>100000)){
+      toast('Planaufwand bitte als gültige Stundenzahl eingeben.');return;
+    }
+    const actualStart=$('#taskActualStart').value,actualEnd=$('#taskActualEnd').value;
+    if(actualStart&&actualEnd&&actualEnd<actualStart){
+      toast('Ist-Ende darf nicht vor Ist-Anfang liegen.');return;
+    }
     const obj={
+      ...existing,
       id,group:$('#taskGroup').value,name:$('#taskName').value.trim(),type,
       start:$('#taskStart').value,end:type==='milestone'?$('#taskStart').value:$('#taskEnd').value,
       owner:$('#taskOwner').value.trim(),progress:Number($('#taskProgress').value)||0,category:$('#taskCategory').value,
       pred:links[0]?.pred||'',rel:links[0]?.rel||'EA',dependencies:links,
-      protectedDate:$('#taskProtectedDate').value||'',
+      protectedDate:$('#taskProtectedDate').value||'',deadline:$('#taskDeadline').value||'',
+      actualStart,actualEnd,effortHours,
       status:$('#taskStatus').value,critical:$('#taskCritical').checked,note:$('#taskNote').value.trim()
     };
     if(!obj.name||!obj.start||!obj.end){toast('Name und Termine sind erforderlich.');return}
     if(obj.end<obj.start){toast('Der Endtermin liegt vor dem Anfangstermin.');return}
     if(obj.protectedDate&&obj.end>obj.protectedDate&&
        !confirm('Geschützter Abgabetermin '+obj.protectedDate+' wird überschritten. Trotzdem speichern?'))return;
-    const idx=data.tasks.findIndex(t=>t.id===id);if(idx>=0)data.tasks[idx]=obj;else data.tasks.push(obj);
+    const idx=data.tasks.findIndex(t=>t.id===id);
+    obj.durationAT=type==='milestone'?0:workDuration(obj.start,obj.end);
+    const draft=clone(data);
+    if(idx>=0)draft.tasks[idx]=obj;else draft.tasks.push(obj);
+    if(auditEngine){
+      const introduced=auditEngine.compare(data,draft).newIssues.filter(x=>
+        ['cycle','missing_predecessor','unsupported_relation','invalid_lag','duplicate_dependency'].includes(x.code));
+      if(introduced.length){toast('Ungültige Verknüpfung: '+auditMessage(introduced[0]));return;}
+    }
+    data=draft;
     taskDialog.close();render();toast('Vorgang gespeichert.');
   }
   function deleteTask(id=$('#taskId').value){
@@ -2194,7 +2235,6 @@ body.read-only .editor-only{display:none!important}
         printRows.push({kind:'group',...group});
         data.tasks
           .filter(task=>task.group===group.id)
-          .sort((a,b)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name))
           .forEach((task,index)=>{
             printRows.push({
               kind:'task',
@@ -2560,15 +2600,25 @@ body.read-only .editor-only{display:none!important}
     download(stem+'.json',JSON.stringify(data,null,2),'application/json');
   }
   function exportCsv(){
-    const header=['PSP','Vorgang','Typ','Sammelvorgang','Verantwortlich','Anfang','Ende','Dauer_AT','Fortschritt','Status','Vorgänger','Kritisch','Notiz'];
+    const header=['PSP','Vorgang','Typ','Sammelvorgang','Verantwortlich','Anfang','Ende','Dauer_AT','Fortschritt','Status','Vorgänger','Manuelle_Risikomarkierung','Notiz',
+      'Deadline','Geschützter_Abgabetermin','Aufwand_h','Ist_Anfang','Ist_Ende','Gesamtpuffer_AT','Freier_Puffer_AT','Rechnerisch_kritisch','Basisplan','Basisplan_Anfang','Basisplan_Ende','Abweichung_Ende_KT'];
     const lines=[header];
+    const planning=window.TBATerminplanPlanning;
+    const network=planning?.analyze(data);
+    const baseline=window.OfficePlanFeatures?.selectedBaseline?.()||planning?.selectedBaseline(data);
+    const variance=planning?.baselineVariance(data,baseline)||{};
     data.groups.forEach(g=>{
-      data.tasks.filter(t=>t.group===g.id).sort((a,b)=>a.start.localeCompare(b.start)).forEach((t,i)=>{
+      data.tasks.filter(t=>t.group===g.id).forEach((t,i)=>{
         const pred=taskDependencies(t).map(dep=>{
           const name=data.tasks.find(x=>x.id===dep.pred)?.name||dep.pred;
           return name+' ('+(dep.rel||'EA')+', '+(dep.lagDays??0)+' AT)';
         }).join(' | ');
-        lines.push([g.wbs+'.'+String(i+1).padStart(2,'0'),t.name,t.type||'task',g.name,t.owner,t.start,t.end,t.type==='milestone'?0:workDuration(t.start,t.end),t.progress,t.status,pred,t.critical?'Ja':'Nein',t.note]);
+        const info=network?.valid?network.byId[t.id]:null;
+        const delta=variance[t.id];
+        lines.push([g.wbs+'.'+String(i+1).padStart(2,'0'),t.name,t.type||'task',g.name,t.owner,t.start,t.end,t.type==='milestone'?0:workDuration(t.start,t.end),t.progress,t.status,pred,t.critical?'Ja':'Nein',t.note,
+          t.deadline||'',t.protectedDate||'',t.effortHours??'',t.actualStart||'',t.actualEnd||'',
+          info?.totalFloatAT??'',info?.freeFloatAT??'',info?(info.critical?'Ja':'Nein'):'',
+          baseline?.label||'',delta?.baselineStart||'',delta?.baselineFinish||'',delta?.finishDeltaKT??'']);
       });
     });
     const csv=lines.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');
