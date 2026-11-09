@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 09.11.2026 · ChatGPT · Branch (nicht live): Muster LPH 3 v1.1 vorbereitet.** Die neue, allgemein gehaltene Vorlage umfasst 10 Gruppen, 50 Vorgänge/Meilensteine und 48 Beziehungen. Bestehende Bernried- und andere Projektterminpläne bleiben unverändert. Die Migration `20261109121000_office_lph3_template_v11.sql` ist **noch nicht angewendet**; bis zu Merge und Anwendung ist in Produktion weiterhin das bisherige Muster aktiv. Der Dialog „Neuer Terminplan“ fragt bereits nach dem Projektstart; die neue Branch-Fassung ergänzt eine Endtermin-Vorschau und erklärt rückwirkende Starts. LPH 5 bleibt inhaltlich unverändert. Tests und authentifizierte E2E-Prüfung bleiben vor Freigabe zu bestätigen.
+
 **Stand 09.11.2026 · Claude · Romy = Isabella activo: motor desplegado con `ASSISTANT_PROFILE=office` (puesto por Gari en el panel), runners programados, chat de Office en el motor nuevo. Responsables de tareas se guardan otra vez.**
 
 El runtime anterior (`office-assistant`) sigue como respaldo explícito: `localStorage.tba_office_chat_backend = "legacy"`. El token de GitHub de Office sigue sin permisos de secretos ni de migraciones: los deploys del motor se lanzan con la casilla `profile_set_in_dashboard`, y las migraciones nuevas se aplican desde la base (archivo fijado al commit y SHA-256 comprobado) hasta que el token tenga `database_migrations_write`. pg_cron no arrancó los jobs nuevos hasta un `cron.alter_job(..., active := true)`; desde las 23:42 UTC corren cada minuto y los runners responden 200.
