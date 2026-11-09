@@ -19,8 +19,8 @@ test('four relation types allow parallelism and multi-predecessor gate',()=>{
   ]);
   const result=P.analyze(state);
   assert.equal(result.valid,true,result.reason);
-  assert.equal(result.byId.m.critical,false);
-  assert.equal(result.criticalCount,0);
+  assert.equal(result.byId.m.critical,true,'final handover is on the critical path');
+  assert.ok(result.criticalCount>=1);
   assert.equal(Object.keys(result.byId).length,5);
 });
 
