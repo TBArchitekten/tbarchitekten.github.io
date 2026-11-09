@@ -31,15 +31,120 @@
   function todayKey(now=new Date()){
     return [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
   }
-  // A project copy of a Muster: same structure, dates moved by working days to the chosen start.
-  function cloneStateForProject(templateState,{start,number,name,phase,version,today}){
+  // Landesweite Feiertage in Bayern; kommunale Sonderregeln (z. B. Augsburger
+  // Friedensfest, Mariä Himmelfahrt) müssen projektspezifisch ergänzt werden.
+  function bavarianHolidays(year){
+    if(!Number.isInteger(year)||year<1900||year>2100)throw Error('Ungültiges Kalenderjahr');
+    const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4;
+    const f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+    const h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4;
+    const l=(32+2*e+2*i-h-k+7)%7,m=Math.floor((a+11*h+22*l)/451);
+    const v=h+l-7*m+114,month=Math.floor(v/31),day=v%31+1;
+    const easter=new Date(Date.UTC(year,month-1,day));
+    const easterOffset=n=>{const x=new Date(easter);x.setUTCDate(x.getUTCDate()+n);return iso(x)};
+    return [
+      year+'-01-01',year+'-01-06',year+'-05-01',year+'-10-03',
+      year+'-11-01',year+'-12-25',year+'-12-26',
+      easterOffset(-2),easterOffset(1),easterOffset(39),
+      easterOffset(50),easterOffset(60)
+    ].sort();
+  }
+  const validDateKey=s=>{
+    if(typeof s!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;
+    const d=parseDate(s);return Number.isFinite(d.getTime())&&iso(d)===s;
+  };
+  function projectHolidayDates(startYear,endYear,extra=[]){
+    const all=new Set(extra);
+    for(let y=startYear;y<=endYear;y++)for(const date of bavarianHolidays(y))all.add(date);
+    return [...all].sort();
+  }
+  function projectWorkingDate(date,blocked){
+    const d=parseDate(date),wd=d.getUTCDay();
+    return wd>0&&wd<6&&!blocked.has(date);
+  }
+  function workdayDatesFrom(anchor,blocked){
+    if(!validDateKey(anchor))throw Error('Ungültiger Projektstart');
+    let d=parseDate(anchor);
+    while(!projectWorkingDate(iso(d),blocked))d.setUTCDate(d.getUTCDate()+1);
+    const dates=[iso(d)];
+    return index=>{
+      if(!Number.isInteger(index)||index<0||index>2500)throw Error('Ungültiger Arbeitstag-Offset');
+      while(dates.length<=index){
+        do{d.setUTCDate(d.getUTCDate()+1)}while(!projectWorkingDate(iso(d),blocked));
+        dates.push(iso(d));
+      }
+      return dates[index];
+    };
+  }
+  function cloneStateForProject(templateState,{start,number,name,phase,version,today,fachplanerAlreadyCommissioned=false}){
+    if(!validDateKey(start)||isWeekend(parseDate(start)))throw Error('Bitte gültigen Werktag eingeben.');
     const state=JSON.parse(JSON.stringify(templateState));
-    const base=state.project.start;
-    const moveDate=value=>addWorkdays(start,workdayOffset(base,value));
-    state.project={...state.project,name:`${number} ${name} · ${phase.replace('LPH','LPH ')}`,
+    const fromYear=Number(start.slice(0,4)),originalExceptions=state.project?.calendar?.nonWorkingDates||[];
+    const blocked=new Set(projectHolidayDates(fromYear,Math.min(2100,fromYear+5),originalExceptions));
+    if(blocked.has(start))throw Error('Projektstart liegt auf einem Feiertag oder arbeitsfreien Tag.');
+    const at=workdayDatesFrom(start,blocked);
+    state.project={...state.project,
+      name:number+' '+name+' · '+phase.replace('LPH','LPH '),
       projectNumber:number,projectName:name,phase,templateVersion:version,start,
-      end:moveDate(state.project.end),standDate:today,standLabel:'Projektstart'};
-    state.tasks=(state.tasks||[]).map(task=>({...task,start:moveDate(task.start),end:moveDate(task.end)}));
+      standDate:today,standLabel:'Projektstart',
+      calendar:{...(state.project.calendar||{}),region:'DE-BY',nonWorkingDates:[...blocked].sort()}};
+    if(state.project.scheduleModel==='network-v1'){
+      const skip=!!fachplanerAlreadyCommissioned;
+      state.project.planningAssumptions={
+        fachplanerAlreadyCommissioned:skip,
+        requiredDisciplines:['TWP','HLS','ELT'],
+        note:'BRS projektspezifisch ergänzen; Feiertage auf kommunale Besonderheiten prüfen.'
+      };
+      state.tasks=(state.tasks||[]).filter(t=>!skip||t.planningCondition!=='commissioning_pending');
+      const byId=new Map(state.tasks.map(t=>[t.id,t]));
+      if(skip){
+        const gate=byId.get('t053');
+        if(gate){
+          gate.name='M00A · Fachplanerbeauftragung laut Eingabe bereits erfolgt';
+          gate.dependencies=[{pred:'t002',rel:'AA',lagDays:0}];
+          gate.pred='t002';gate.rel='AA';
+        }
+      }
+      const scheduled=new Map(),visiting=new Set();
+      function visit(id){
+        if(scheduled.has(id))return scheduled.get(id);
+        if(visiting.has(id))throw Error('Zyklische Terminplan-Verknüpfung');
+        const task=byId.get(id);if(!task)throw Error('Unbekannter Vorgänger im Muster: '+id);
+        visiting.add(id);
+        const duration=task.type==='milestone'?0:task.durationAT;
+        if(!Number.isInteger(duration)||duration<0||duration>260||(duration===0&&task.type!=='milestone'))
+          throw Error('Ungültige Musterdauer: '+id);
+        const span=Math.max(0,duration-1);
+        let begin=Number.isInteger(task.earliestOffsetAT)?task.earliestOffsetAT:0;
+        for(const dep of task.dependencies||[]){
+          const prev=visit(dep.pred),lag=dep.lagDays??0,rel=dep.rel||'EA';
+          if(!Number.isInteger(lag)||Math.abs(lag)>260)throw Error('Ungültiger Verknüpfungsabstand');
+          if(rel==='EA')begin=Math.max(begin,prev.end+lag);
+          else if(rel==='AA')begin=Math.max(begin,prev.start+lag);
+          else if(rel==='EE')begin=Math.max(begin,prev.end+lag-span);
+          else if(rel==='AE')begin=Math.max(begin,prev.start+lag-span);
+          else throw Error('Unbekannter Verknüpfungstyp');
+        }
+        if(begin<0||begin+span>2500)throw Error('Muster außerhalb des Projektzeitraums');
+        const dates={start:begin,end:begin+span};
+        scheduled.set(id,dates);visiting.delete(id);
+        return dates;
+      }
+      for(const task of state.tasks){
+        const dates=visit(task.id);
+        task.start=at(dates.start);task.end=at(dates.end);
+        task.pred=task.dependencies?.[0]?.pred||'';
+        task.rel=task.dependencies?.[0]?.rel||'EA';
+      }
+    }else{
+      // Older LPH templates remain usable; generated dates now avoid Bavarian holidays.
+      const base=state.project.start;
+      state.tasks=(state.tasks||[]).map(task=>{
+        const first=workdayOffset(base,task.start),last=workdayOffset(base,task.end);
+        return {...task,start:at(first),end:at(Math.max(first,last))};
+      });
+    }
+    state.project.end=(state.tasks||[]).reduce((date,t)=>t.end>date?t.end:date,start);
     return state;
   }
   function passwordProblem(password,repeat,min=10){
@@ -159,7 +264,7 @@
   }
 
   return {iso,parseDate,isWeekend,nextWorkday,addWorkdays,workdayOffset,formatDate,esc,todayKey,
-    cloneStateForProject,passwordProblem,ROLE_LABELS,canLead,adminErrorText,authErrorText,
+    cloneStateForProject,bavarianHolidays,projectHolidayDates,validDateKey,passwordProblem,ROLE_LABELS,canLead,adminErrorText,authErrorText,
     initials,nextMilestone,viewFromHash,hashFor,
     WEEKDAYS,MONTHS,addDays,mondayOf,weekDays,monthGrid,isoWeek,weekTitle,monthTitle,shiftAnchor,
     mineForCalendar,tasksOnDay,overdueTasks,dueLabel,canEditTask,canDeleteTask,canEditBucket,nextPosition,checklistProgress,taskErrorText};
