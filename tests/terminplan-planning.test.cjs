@@ -156,3 +156,16 @@ test('browser feature scripts parse and preserve explicit write approval',()=>{
   assert.match(ui,/bridge\.write\(state\)/,'only explicit confirmation enters revisioned save flow');
   assert.match(ui,/!bridge\.canEdit\(\)/,'write permission checked');
 });
+
+test('LPH3 v1.2 migration is exactly the reviewed generic seed and never mutates project instances',()=>{
+  const sql=read('supabase/migrations/20261109131000_office_lph3_template_v12.sql');
+  const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
+  const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
+  assert.ok(match,'versioned migration contains a JSONB template');
+  assert.deepEqual(JSON.parse(match[1]),tpl.state,'deployed migration must match reviewed seed');
+  assert.equal(tpl.version,'1.2');
+  assert.doesNotMatch(sql,/office_terminplan_instances|delete\s+from|truncate|drop\s+table/i,
+    'existing project instances are not modified');
+  assert.ok(tpl.state.tasks.every(t=>!('actualStart' in t)&&!('actualEnd' in t)));
+  assert.ok(tpl.state.tasks.every(t=>!t.dependencies.some(d=>'sourceEvidence' in d)));
+});
