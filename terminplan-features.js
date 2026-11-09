@@ -193,5 +193,5 @@
      body.append(tr);
    }
  }
- root.OfficePlanFeatures={mount,refresh,getNetwork:()=>lastResult};
+ root.OfficePlanFeatures={mount,refresh,getNetwork:()=>lastResult,selectedBaseline};
 })(window);
