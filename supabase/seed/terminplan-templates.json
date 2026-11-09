@@ -2,8 +2,8 @@
   {
     "phase": "LPH3",
     "title": "Muster-Terminplan LPH 3",
-    "description": "Erweiterter Office-Musterterminplan LPH 3 mit 10 Phasengruppen, 50 Vorgängen und Meilensteinen sowie 48 Verknüpfungen. Allgemeine Referenzstruktur, keine projektspezifischen Ist-Daten.",
-    "version": "1.1",
+    "description": "LPH 3 Referenzterminplan mit 10 PSP-Gruppen, 57 Vorgängen und Meilensteinen und expliziten Mehrfachabhängigkeiten; mit Auftraggeberprüfungen, Fachplanerbeauftragung, Kosten- und Schlussfreigaben.",
+    "version": "1.2",
     "status": "Office Standard",
     "is_active": true,
     "state": {
@@ -13,88 +13,103 @@
         "start": "2027-01-04",
         "end": "2027-05-28",
         "standDate": "2027-01-04",
-        "standLabel": "Muster v1.1"
+        "standLabel": "Muster v1.2",
+        "scheduleModel": "network-v1",
+        "criticalPathState": "not_calculated",
+        "calendar": {
+          "region": "DE-BY",
+          "nonWorkingDates": [
+            "2027-01-01",
+            "2027-01-06",
+            "2027-03-26",
+            "2027-03-29",
+            "2027-05-01",
+            "2027-05-06",
+            "2027-05-17",
+            "2027-05-27",
+            "2027-10-03",
+            "2027-11-01",
+            "2027-12-25",
+            "2027-12-26",
+            "2028-01-01",
+            "2028-01-06",
+            "2028-04-14",
+            "2028-04-17",
+            "2028-05-01",
+            "2028-05-25",
+            "2028-06-05",
+            "2028-06-15",
+            "2028-10-03",
+            "2028-11-01",
+            "2028-12-25",
+            "2028-12-26"
+          ]
+        },
+        "planningNotes": "Richtwerte für einen privaten Auftrag mit bekannten Fachplanern. BRS optional, Fachplanerbeauftragung und lokale Feiertage prüfen."
       },
       "groups": [
         {
           "id": "g01",
-          "wbs": "01",
+          "wbs": "00",
           "name": "Projektorganisation, Termin- und Entscheidungsmanagement",
           "category": "qa"
         },
         {
           "id": "g02",
-          "wbs": "02",
+          "wbs": "01",
           "name": "Fortschreiben der Entwurfsplanung Architektur",
           "category": "arch"
         },
         {
           "id": "g03",
-          "wbs": "03",
+          "wbs": "02",
           "name": "Erarbeiten der Fachplanungsbeiträge · Arbeitsstand 01",
           "category": "fach"
         },
         {
           "id": "g04",
-          "wbs": "04",
+          "wbs": "03",
           "name": "Koordinieren und Integrieren der Fachplanungsbeiträge · Arbeitsstand 02",
           "category": "qa"
         },
         {
           "id": "g05",
-          "wbs": "05",
+          "wbs": "04",
           "name": "Abstimmungen und Entscheidungen des Auftraggebers · Qualitätsfestlegungen",
           "category": "ag"
         },
         {
           "id": "g06",
-          "wbs": "06",
+          "wbs": "05",
           "name": "Bereitstellen der abgestimmten Fachplanungsbeiträge LPH 3",
           "category": "fach"
         },
         {
           "id": "g07",
-          "wbs": "07",
+          "wbs": "06",
           "name": "Kostenberechnung DIN 276 und Vergleich mit der Kostenschätzung",
           "category": "cost"
         },
         {
           "id": "g08",
-          "wbs": "08",
+          "wbs": "07",
           "name": "Objektbeschreibung und Abstimmung der Genehmigungsfähigkeit",
           "category": "arch"
         },
         {
           "id": "g09",
-          "wbs": "09",
+          "wbs": "08",
           "name": "Zusammenstellen und Dokumentieren der Ergebnisse LPH 3",
           "category": "qa"
         },
         {
           "id": "g10",
-          "wbs": "10",
+          "wbs": "09",
           "name": "Übergabe und Abschluss LPH 3",
           "category": "ag"
         }
       ],
       "tasks": [
-        {
-          "id": "t001",
-          "name": "Klärung / Freigabe der Fachplanerkontakte durch Auftraggeber",
-          "type": "task",
-          "group": "g01",
-          "owner": "Auftraggeber",
-          "start": "2027-01-04",
-          "end": "2027-01-26",
-          "status": "Nicht begonnen",
-          "progress": 0,
-          "category": "ag",
-          "critical": false,
-          "note": "",
-          "dependencies": [],
-          "pred": "",
-          "rel": "EA"
-        },
         {
           "id": "t002",
           "name": "M00 · Projektauftakt mit Auftraggeber",
@@ -110,7 +125,34 @@
           "note": "",
           "dependencies": [],
           "pred": "",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t001",
+          "name": "Erforderliche Fachplaner, Leistungsbilder und Ansprechpartner klären",
+          "type": "task",
+          "group": "g01",
+          "owner": "Auftraggeber",
+          "start": "2027-01-05",
+          "end": "2027-01-12",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "category": "ag",
+          "critical": false,
+          "note": "Leistungsbedarf, Disziplinen und Zuständigkeiten festhalten. Bei bereits beauftragten Fachplanern Angebots- und Beauftragungsphase überspringbar.",
+          "dependencies": [
+            {
+              "pred": "t002",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t002",
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t003",
@@ -119,7 +161,7 @@
           "group": "g01",
           "owner": "ARC",
           "start": "2027-01-05",
-          "end": "2027-01-07",
+          "end": "2027-01-08",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
@@ -133,7 +175,9 @@
             }
           ],
           "pred": "t002",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 3,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t004",
@@ -141,8 +185,8 @@
           "type": "task",
           "group": "g01",
           "owner": "ARC",
-          "start": "2027-01-11",
-          "end": "2027-01-14",
+          "start": "2027-01-05",
+          "end": "2027-01-12",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
@@ -152,20 +196,99 @@
             {
               "pred": "t002",
               "rel": "EA",
-              "lagDays": 5
+              "lagDays": 1
             }
           ],
           "pred": "t002",
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t051",
+          "group": "g01",
+          "type": "task",
+          "name": "Angebote und Leistungsumfänge der Fachplaner anfordern und klären",
+          "owner": "Auftraggeber + ARC",
+          "category": "ag",
+          "start": "2027-01-13",
+          "end": "2027-01-19",
+          "note": "Orientierungswert für private Direktbeauftragung bei bereits bekannten Fachplanern, kein VgV- oder gesetzlicher Mindestzeitraum.",
+          "durationAT": 5,
+          "earliestOffsetAT": 0,
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t001",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t001",
+          "rel": "EA",
+          "planningCondition": "commissioning_pending"
+        },
+        {
+          "id": "t052",
+          "group": "g01",
+          "type": "task",
+          "name": "Fachplanerauswahl, Konditionen und Beauftragung entscheiden",
+          "owner": "Auftraggeber",
+          "category": "ag",
+          "start": "2027-01-20",
+          "end": "2027-01-26",
+          "note": "Auftraggeber entscheidet und beauftragt. Bei öffentlicher Vergabe eigenes Verfahren mit gesetzlichen Fristen planen.",
+          "durationAT": 5,
+          "earliestOffsetAT": 0,
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t051",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t051",
+          "rel": "EA",
+          "planningCondition": "commissioning_pending"
+        },
+        {
+          "id": "t053",
+          "group": "g01",
+          "type": "milestone",
+          "name": "M00A · Erforderliche Fachplaner beauftragt",
+          "owner": "Auftraggeber",
+          "category": "fach",
+          "start": "2027-01-26",
+          "end": "2027-01-26",
+          "note": "",
+          "durationAT": 0,
+          "earliestOffsetAT": 0,
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t052",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t052",
           "rel": "EA"
         },
         {
           "id": "t005",
-          "name": "Schnittstellenliste mit Fachplanern abstimmen und festschreiben",
+          "name": "Schnittstellenliste mit beauftragten Fachplanern abstimmen",
           "type": "task",
           "group": "g01",
           "owner": "ARC + Fachplaner",
-          "start": "2027-03-15",
-          "end": "2027-03-19",
+          "start": "2027-01-27",
+          "end": "2027-02-02",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
@@ -176,24 +299,31 @@
               "pred": "t016",
               "rel": "EA",
               "lagDays": 1
+            },
+            {
+              "pred": "t017",
+              "rel": "AA",
+              "lagDays": 0
             }
           ],
           "pred": "t016",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t006",
-          "name": "Planpaket · Arbeitsstand 01 erarbeiten",
+          "name": "Planpaket · Arbeitsstand 01 (Grundrisse, Ansichten, Schnitte) erarbeiten",
           "type": "task",
           "group": "g02",
           "owner": "ARC",
-          "start": "2027-01-04",
-          "end": "2027-01-21",
+          "start": "2027-01-05",
+          "end": "2027-01-26",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "",
+          "note": "Lieferumfang dokumentieren: Grundrisse, Ansichten, Schnitte, Erläuterungen und geeignete Arbeitsstände für Fachplaner.",
           "dependencies": [
             {
               "pred": "t002",
@@ -202,30 +332,39 @@
             }
           ],
           "pred": "t002",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t007",
-          "name": "Vollständigkeits- und Konsistenzprüfung · Arbeitsstand 01",
+          "name": "Interne Vollständigkeits- und Konsistenzprüfung · Arbeitsstand 01",
           "type": "task",
           "group": "g02",
           "owner": "Projektleitung",
-          "start": "2027-01-19",
-          "end": "2027-01-21",
+          "start": "2027-01-20",
+          "end": "2027-01-26",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "",
+          "note": "Interne Vollständigkeits-/Konsistenzprüfung überlappt die letzten Arbeitstage der Planpaketerarbeitung (AA + EE).",
           "dependencies": [
             {
               "pred": "t006",
-              "rel": "EA",
-              "lagDays": -3
+              "rel": "AA",
+              "lagDays": 10
+            },
+            {
+              "pred": "t006",
+              "rel": "EE",
+              "lagDays": 0
             }
           ],
           "pred": "t006",
-          "rel": "EA"
+          "rel": "AA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t008",
@@ -233,8 +372,8 @@
           "type": "milestone",
           "group": "g02",
           "owner": "ARC",
-          "start": "2027-01-21",
-          "end": "2027-01-21",
+          "start": "2027-01-26",
+          "end": "2027-01-26",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
@@ -245,10 +384,17 @@
               "pred": "t007",
               "rel": "EA",
               "lagDays": 0
+            },
+            {
+              "pred": "t006",
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t007",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t009",
@@ -256,13 +402,13 @@
           "type": "task",
           "group": "g02",
           "owner": "Auftraggeber",
-          "start": "2027-01-22",
-          "end": "2027-02-15",
+          "start": "2027-01-27",
+          "end": "2027-02-02",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "",
+          "note": "Regelfrist 5 AT nur bei vollständigen Unterlagen, abgestimmter Prüffrist und entscheidungsfähigem Auftraggeber.",
           "dependencies": [
             {
               "pred": "t008",
@@ -271,7 +417,9 @@
             }
           ],
           "pred": "t008",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t010",
@@ -279,8 +427,8 @@
           "type": "milestone",
           "group": "g02",
           "owner": "Auftraggeber",
-          "start": "2027-02-15",
-          "end": "2027-02-15",
+          "start": "2027-02-02",
+          "end": "2027-02-02",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
@@ -294,21 +442,23 @@
             }
           ],
           "pred": "t009",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t011",
-          "name": "Planpaket · Vorabzug 02 nach Anmerkungen überarbeiten",
+          "name": "Planpaket · Vorabzug 02 nach Rückmeldung fortschreiben",
           "type": "task",
           "group": "g02",
           "owner": "ARC",
-          "start": "2027-02-16",
-          "end": "2027-03-12",
+          "start": "2027-02-03",
+          "end": "2027-02-23",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "",
+          "note": "Planungsaufwand orientierend 15 AT; für erhebliche Entwurfsänderungen projektspezifisch verlängern.",
           "dependencies": [
             {
               "pred": "t010",
@@ -317,7 +467,9 @@
             }
           ],
           "pred": "t010",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t012",
@@ -325,22 +477,29 @@
           "type": "milestone",
           "group": "g02",
           "owner": "ARC",
-          "start": "2027-03-04",
-          "end": "2027-03-04",
+          "start": "2027-01-13",
+          "end": "2027-01-13",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "",
+          "note": "Teilstand an die beauftragten Fachplaner, keine Freigabe des vollständigen Entwurfs.",
           "dependencies": [
             {
-              "pred": "t001",
+              "pred": "t006",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t004",
               "rel": "EA",
-              "lagDays": 27
+              "lagDays": 0
             }
           ],
-          "pred": "t001",
-          "rel": "EA"
+          "pred": "t006",
+          "rel": "AA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t013",
@@ -348,8 +507,8 @@
           "type": "milestone",
           "group": "g02",
           "owner": "ARC",
-          "start": "2027-03-12",
-          "end": "2027-03-12",
+          "start": "2027-03-10",
+          "end": "2027-03-10",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
@@ -360,10 +519,17 @@
               "pred": "t011",
               "rel": "EA",
               "lagDays": 0
+            },
+            {
+              "pred": "t025",
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t011",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t014",
@@ -371,22 +537,24 @@
           "type": "task",
           "group": "g02",
           "owner": "Auftraggeber",
-          "start": "2027-03-12",
-          "end": "2027-03-19",
+          "start": "2027-03-11",
+          "end": "2027-03-17",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "",
+          "note": "Regelfrist 5 AT. Rückmeldung und formale Entwurfsfreigabe sind separate Entscheidungen.",
           "dependencies": [
             {
               "pred": "t013",
               "rel": "EA",
-              "lagDays": 0
+              "lagDays": 1
             }
           ],
           "pred": "t013",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t015",
@@ -394,8 +562,8 @@
           "type": "milestone",
           "group": "g02",
           "owner": "Auftraggeber",
-          "start": "2027-03-19",
-          "end": "2027-03-19",
+          "start": "2027-03-17",
+          "end": "2027-03-17",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
@@ -409,7 +577,9 @@
             }
           ],
           "pred": "t014",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t016",
@@ -417,8 +587,8 @@
           "type": "milestone",
           "group": "g03",
           "owner": "ARC + Fachplaner",
-          "start": "2027-03-12",
-          "end": "2027-03-12",
+          "start": "2027-01-26",
+          "end": "2027-01-26",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
@@ -426,13 +596,20 @@
           "note": "",
           "dependencies": [
             {
+              "pred": "t053",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
               "pred": "t012",
               "rel": "EA",
-              "lagDays": 6
+              "lagDays": 0
             }
           ],
-          "pred": "t012",
-          "rel": "EA"
+          "pred": "t053",
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t017",
@@ -440,8 +617,8 @@
           "type": "task",
           "group": "g03",
           "owner": "Fachplaner",
-          "start": "2027-03-15",
-          "end": "2027-03-18",
+          "start": "2027-01-27",
+          "end": "2027-02-02",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
@@ -455,7 +632,9 @@
             }
           ],
           "pred": "t016",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t018",
@@ -463,13 +642,13 @@
           "type": "task",
           "group": "g03",
           "owner": "BRS",
-          "start": "2027-03-19",
-          "end": "2027-04-02",
+          "start": "2027-02-03",
+          "end": "2027-02-23",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "",
+          "note": "Optional, nur bei erforderlicher bzw. beauftragter Brandschutzplanung. Bei Pflichtbeitrag zusätzlich als Vorgänger zu M03 verknüpfen.",
           "dependencies": [
             {
               "pred": "t017",
@@ -478,7 +657,10 @@
             }
           ],
           "pred": "t017",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0,
+          "optional": true
         },
         {
           "id": "t019",
@@ -486,13 +668,13 @@
           "type": "task",
           "group": "g03",
           "owner": "ELT",
-          "start": "2027-03-19",
-          "end": "2027-04-02",
+          "start": "2027-02-03",
+          "end": "2027-02-23",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "",
+          "note": "Elektrofachplanung als vereinbarter Regelumfang; projektspezifisch prüfen.",
           "dependencies": [
             {
               "pred": "t017",
@@ -501,7 +683,9 @@
             }
           ],
           "pred": "t017",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t020",
@@ -509,8 +693,8 @@
           "type": "task",
           "group": "g03",
           "owner": "HLS",
-          "start": "2027-03-19",
-          "end": "2027-04-02",
+          "start": "2027-02-03",
+          "end": "2027-02-23",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
@@ -524,7 +708,9 @@
             }
           ],
           "pred": "t017",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t021",
@@ -532,13 +718,13 @@
           "type": "task",
           "group": "g03",
           "owner": "TWP",
-          "start": "2027-03-19",
-          "end": "2027-04-02",
+          "start": "2027-02-03",
+          "end": "2027-02-23",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "",
+          "note": "Tragwerksplanung als vereinbarter Regelumfang; projektspezifisch prüfen.",
           "dependencies": [
             {
               "pred": "t017",
@@ -547,7 +733,9 @@
             }
           ],
           "pred": "t017",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t022",
@@ -555,22 +743,34 @@
           "type": "milestone",
           "group": "g03",
           "owner": "Fachplaner",
-          "start": "2027-04-02",
-          "end": "2027-04-02",
+          "start": "2027-02-23",
+          "end": "2027-02-23",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "",
+          "note": "Sammelt ELT, HLS und TWP. Falls BRS erforderlich ist, BRS als zusätzlichen Vorgänger aufnehmen.",
           "dependencies": [
+            {
+              "pred": "t019",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t020",
+              "rel": "EA",
+              "lagDays": 0
+            },
             {
               "pred": "t021",
               "rel": "EA",
               "lagDays": 0
             }
           ],
-          "pred": "t021",
-          "rel": "EA"
+          "pred": "t019",
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t023",
@@ -578,22 +778,34 @@
           "type": "task",
           "group": "g04",
           "owner": "ARC + Fachplaner",
-          "start": "2027-03-29",
-          "end": "2027-04-09",
+          "start": "2027-02-11",
+          "end": "2027-02-24",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "",
+          "note": "Überlappung bewusst: Koordination darf mit vorläufigen Fachplanungsständen beginnen.",
           "dependencies": [
+            {
+              "pred": "t019",
+              "rel": "AA",
+              "lagDays": 6
+            },
+            {
+              "pred": "t020",
+              "rel": "AA",
+              "lagDays": 6
+            },
             {
               "pred": "t021",
               "rel": "AA",
               "lagDays": 6
             }
           ],
-          "pred": "t021",
-          "rel": "AA"
+          "pred": "t019",
+          "rel": "AA",
+          "durationAT": 10,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t024",
@@ -601,8 +813,8 @@
           "type": "task",
           "group": "g04",
           "owner": "ARC",
-          "start": "2027-04-05",
-          "end": "2027-04-12",
+          "start": "2027-02-18",
+          "end": "2027-02-24",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
@@ -616,7 +828,9 @@
             }
           ],
           "pred": "t023",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t025",
@@ -624,22 +838,29 @@
           "type": "task",
           "group": "g04",
           "owner": "ARC",
-          "start": "2027-04-05",
-          "end": "2027-04-23",
+          "start": "2027-02-18",
+          "end": "2027-03-10",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "",
+          "note": "Integrierter Entwurf darf nicht vor dem Fachplanungs-Zwischenstand abgeschlossen sein (EE).",
           "dependencies": [
             {
               "pred": "t023",
               "rel": "AA",
               "lagDays": 5
+            },
+            {
+              "pred": "t022",
+              "rel": "EE",
+              "lagDays": 0
             }
           ],
           "pred": "t023",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t026",
@@ -647,8 +868,8 @@
           "type": "milestone",
           "group": "g04",
           "owner": "Projektleitung",
-          "start": "2027-04-12",
-          "end": "2027-04-12",
+          "start": "2027-02-24",
+          "end": "2027-02-24",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
@@ -662,7 +883,9 @@
             }
           ],
           "pred": "t024",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t027",
@@ -670,8 +893,8 @@
           "type": "task",
           "group": "g04",
           "owner": "Projektteam",
-          "start": "2027-04-19",
-          "end": "2027-04-30",
+          "start": "2027-02-25",
+          "end": "2027-03-10",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
@@ -681,11 +904,23 @@
             {
               "pred": "t025",
               "rel": "AA",
-              "lagDays": 10
+              "lagDays": 5
+            },
+            {
+              "pred": "t025",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t022",
+              "rel": "EE",
+              "lagDays": 0
             }
           ],
           "pred": "t025",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 10,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t028",
@@ -693,8 +928,8 @@
           "type": "task",
           "group": "g05",
           "owner": "Auftraggeber",
-          "start": "2027-04-13",
-          "end": "2027-04-19",
+          "start": "2027-02-25",
+          "end": "2027-03-03",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
@@ -708,7 +943,9 @@
             }
           ],
           "pred": "t026",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t029",
@@ -716,8 +953,8 @@
           "type": "milestone",
           "group": "g05",
           "owner": "Auftraggeber + ARC",
-          "start": "2027-04-19",
-          "end": "2027-04-19",
+          "start": "2027-03-03",
+          "end": "2027-03-03",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
@@ -731,7 +968,9 @@
             }
           ],
           "pred": "t028",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t030",
@@ -739,8 +978,8 @@
           "type": "task",
           "group": "g05",
           "owner": "Auftraggeber + ARC",
-          "start": "2027-04-20",
-          "end": "2027-04-30",
+          "start": "2027-03-04",
+          "end": "2027-03-17",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
@@ -754,7 +993,9 @@
             }
           ],
           "pred": "t029",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 10,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t031",
@@ -762,22 +1003,39 @@
           "type": "milestone",
           "group": "g05",
           "owner": "Auftraggeber + ARC",
-          "start": "2027-04-30",
-          "end": "2027-04-30",
+          "start": "2027-03-17",
+          "end": "2027-03-17",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "",
+          "note": "Bauherrenabstimmung, Koordination, Rückmeldung und genehmigungsrelevante Punkte müssen vorliegen.",
           "dependencies": [
             {
               "pred": "t030",
               "rel": "EA",
               "lagDays": 0
+            },
+            {
+              "pred": "t027",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t015",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t044",
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t030",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t032",
@@ -785,22 +1043,30 @@
           "type": "task",
           "group": "g06",
           "owner": "BRS",
-          "start": "2027-04-26",
-          "end": "2027-05-14",
+          "start": "2027-03-04",
+          "end": "2027-03-24",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "",
+          "note": "Optionaler Brandschutz-Finalbeitrag. Bei verpflichtendem Umfang zusätzlich mit M07 verknüpfen.",
           "dependencies": [
             {
               "pred": "t027",
               "rel": "AA",
               "lagDays": 5
+            },
+            {
+              "pred": "t018",
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t027",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0,
+          "optional": true
         },
         {
           "id": "t033",
@@ -808,8 +1074,8 @@
           "type": "task",
           "group": "g06",
           "owner": "ELT",
-          "start": "2027-04-26",
-          "end": "2027-05-14",
+          "start": "2027-03-04",
+          "end": "2027-03-24",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
@@ -820,10 +1086,17 @@
               "pred": "t027",
               "rel": "AA",
               "lagDays": 5
+            },
+            {
+              "pred": "t019",
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t027",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t034",
@@ -831,8 +1104,8 @@
           "type": "task",
           "group": "g06",
           "owner": "HLS",
-          "start": "2027-04-26",
-          "end": "2027-05-14",
+          "start": "2027-03-04",
+          "end": "2027-03-24",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
@@ -843,10 +1116,17 @@
               "pred": "t027",
               "rel": "AA",
               "lagDays": 5
+            },
+            {
+              "pred": "t020",
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t027",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t035",
@@ -854,8 +1134,8 @@
           "type": "task",
           "group": "g06",
           "owner": "TWP",
-          "start": "2027-04-26",
-          "end": "2027-05-14",
+          "start": "2027-03-04",
+          "end": "2027-03-24",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
@@ -866,10 +1146,17 @@
               "pred": "t027",
               "rel": "AA",
               "lagDays": 5
+            },
+            {
+              "pred": "t021",
+              "rel": "EA",
+              "lagDays": 1
             }
           ],
           "pred": "t027",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t036",
@@ -877,22 +1164,34 @@
           "type": "milestone",
           "group": "g06",
           "owner": "Fachplaner",
-          "start": "2027-05-14",
-          "end": "2027-05-14",
+          "start": "2027-03-24",
+          "end": "2027-03-24",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "",
+          "note": "Sammelmeilenstein nur nach allen verpflichtenden Beiträgen (ELT, HLS, TWP). BRS ergänzen, soweit erforderlich.",
           "dependencies": [
+            {
+              "pred": "t033",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t034",
+              "rel": "EA",
+              "lagDays": 0
+            },
             {
               "pred": "t035",
               "rel": "EA",
               "lagDays": 0
             }
           ],
-          "pred": "t035",
-          "rel": "EA"
+          "pred": "t033",
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t037",
@@ -900,45 +1199,74 @@
           "type": "task",
           "group": "g07",
           "owner": "ARC + Fachplaner",
-          "start": "2027-05-03",
-          "end": "2027-05-14",
+          "start": "2027-03-18",
+          "end": "2027-04-02",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "cost",
           "critical": false,
-          "note": "",
+          "note": "Kostenbeiträge und Mengen können parallel zum Schlusslauf der Fachplanung zusammengeführt werden.",
           "dependencies": [
             {
               "pred": "t031",
               "rel": "EA",
               "lagDays": 1
+            },
+            {
+              "pred": "t033",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t034",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t035",
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t031",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 10,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t038",
-          "name": "Kostenberechnung DIN 276 erstellen",
+          "name": "Kostenberechnung DIN 276 und Vergleich mit Kostenschätzung erstellen",
           "type": "task",
           "group": "g07",
           "owner": "Kostenplanung",
-          "start": "2027-05-10",
-          "end": "2027-05-19",
+          "start": "2027-03-25",
+          "end": "2027-04-16",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "cost",
           "critical": false,
-          "note": "",
+          "note": "Kostenberechnung nach DIN 276 inkl. Vergleich zur Kostenschätzung; Abschluss erst nach benötigten Fachkostenbeiträgen.",
           "dependencies": [
             {
               "pred": "t037",
               "rel": "AA",
               "lagDays": 5
+            },
+            {
+              "pred": "t037",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t036",
+              "rel": "EE",
+              "lagDays": 0
             }
           ],
           "pred": "t037",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t039",
@@ -946,36 +1274,45 @@
           "type": "milestone",
           "group": "g07",
           "owner": "Projektleitung",
-          "start": "2027-05-20",
-          "end": "2027-05-20",
+          "start": "2027-04-19",
+          "end": "2027-04-19",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "cost",
           "critical": false,
-          "note": "",
+          "note": "Vorlage der Kostenberechnung ist nicht identisch mit Auftraggeberentscheidung über Kosten-/Budgetfolgen.",
           "dependencies": [
             {
               "pred": "t038",
               "rel": "EA",
               "lagDays": 1
+            },
+            {
+              "pred": "t036",
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t038",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
-          "id": "t040",
-          "name": "Abgestimmte Korrekturen aus der Kostenbesprechung einarbeiten",
-          "type": "task",
+          "id": "t057",
           "group": "g07",
-          "owner": "Projektteam",
-          "start": "2027-05-21",
-          "end": "2027-05-24",
+          "type": "task",
+          "name": "Kostenberechnung und Abweichungen durch Auftraggeber prüfen",
+          "owner": "Auftraggeber",
+          "category": "cost",
+          "start": "2027-04-20",
+          "end": "2027-04-26",
+          "note": "Prüffrist für Kostenentscheidung, nicht als normative oder vertraglich garantierte Frist verstehen.",
+          "durationAT": 5,
+          "earliestOffsetAT": 0,
           "status": "Nicht begonnen",
           "progress": 0,
-          "category": "cost",
           "critical": false,
-          "note": "",
           "dependencies": [
             {
               "pred": "t039",
@@ -987,27 +1324,84 @@
           "rel": "EA"
         },
         {
-          "id": "t041",
-          "name": "Genehmigungsfähigkeit und Behördenanforderungen vorprüfen",
+          "id": "t040",
+          "name": "Abgestimmte Korrekturen aus der Kostenbesprechung einarbeiten",
           "type": "task",
-          "group": "g08",
-          "owner": "ARC",
-          "start": "2027-03-15",
-          "end": "2027-03-26",
+          "group": "g07",
+          "owner": "Projektteam",
+          "start": "2027-04-27",
+          "end": "2027-05-03",
           "status": "Nicht begonnen",
           "progress": 0,
-          "category": "qa",
+          "category": "cost",
           "critical": false,
           "note": "",
           "dependencies": [
             {
-              "pred": "t016",
+              "pred": "t057",
               "rel": "EA",
               "lagDays": 1
             }
           ],
-          "pred": "t016",
+          "pred": "t057",
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t056",
+          "group": "g07",
+          "type": "milestone",
+          "name": "M08A · Kostenentscheidung und Budgetabgleich dokumentiert",
+          "owner": "Auftraggeber + Projektleitung",
+          "category": "cost",
+          "start": "2027-05-03",
+          "end": "2027-05-03",
+          "note": "",
+          "durationAT": 0,
+          "earliestOffsetAT": 0,
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t040",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t057",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t040",
           "rel": "EA"
+        },
+        {
+          "id": "t041",
+          "name": "Genehmigungsfähigkeit und Behördenanforderungen vorabstimmen",
+          "type": "task",
+          "group": "g08",
+          "owner": "ARC",
+          "start": "2027-01-13",
+          "end": "2027-01-26",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "category": "qa",
+          "critical": false,
+          "note": "Genehmigungsfähigkeit mit erforderlichen Stellen vorabstimmen, soweit anwendbar; nicht Genehmigungsantrag LPH 4.",
+          "dependencies": [
+            {
+              "pred": "t006",
+              "rel": "AA",
+              "lagDays": 5
+            }
+          ],
+          "pred": "t006",
+          "rel": "AA",
+          "durationAT": 10,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t042",
@@ -1015,8 +1409,8 @@
           "type": "task",
           "group": "g08",
           "owner": "ARC",
-          "start": "2027-03-15",
-          "end": "2027-03-26",
+          "start": "2027-01-13",
+          "end": "2027-01-26",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "arch",
@@ -1024,13 +1418,15 @@
           "note": "",
           "dependencies": [
             {
-              "pred": "t016",
-              "rel": "EA",
-              "lagDays": 1
+              "pred": "t006",
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
-          "pred": "t016",
-          "rel": "EA"
+          "pred": "t006",
+          "rel": "AA",
+          "durationAT": 10,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t043",
@@ -1038,22 +1434,34 @@
           "type": "task",
           "group": "g08",
           "owner": "ARC + Fachplaner",
-          "start": "2027-03-29",
-          "end": "2027-04-30",
+          "start": "2027-02-18",
+          "end": "2027-03-10",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "",
+          "note": "Objektbeschreibung fortschreiben, während Fachplanung läuft, aber erst nach vollständiger Integration abschließen.",
           "dependencies": [
             {
               "pred": "t042",
               "rel": "EA",
               "lagDays": 1
+            },
+            {
+              "pred": "t023",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t027",
+              "rel": "EE",
+              "lagDays": 0
             }
           ],
           "pred": "t042",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t044",
@@ -1061,22 +1469,29 @@
           "type": "task",
           "group": "g08",
           "owner": "ARC + Beteiligte",
-          "start": "2027-03-29",
-          "end": "2027-04-09",
+          "start": "2027-02-18",
+          "end": "2027-03-03",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "",
+          "note": "Externe Behördenantworten nicht mit internen Bearbeitungstagen gleichsetzen; ggf. eigene Wartefrist ergänzen.",
           "dependencies": [
             {
               "pred": "t041",
               "rel": "EA",
               "lagDays": 1
+            },
+            {
+              "pred": "t023",
+              "rel": "AA",
+              "lagDays": 5
             }
           ],
           "pred": "t041",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 10,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t045",
@@ -1084,22 +1499,44 @@
           "type": "task",
           "group": "g09",
           "owner": "ARC",
-          "start": "2027-05-03",
-          "end": "2027-05-21",
+          "start": "2027-04-13",
+          "end": "2027-05-03",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "",
+          "note": "Dokumentation kann fortlaufend beginnen; endgültiger Stand hängt von Kostenkorrekturen und Fachplanung ab.",
           "dependencies": [
             {
-              "pred": "t031",
-              "rel": "EA",
-              "lagDays": 1
+              "pred": "t038",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t043",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t044",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t040",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t036",
+              "rel": "EE",
+              "lagDays": 0
             }
           ],
-          "pred": "t031",
-          "rel": "EA"
+          "pred": "t038",
+          "rel": "AA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t046",
@@ -1107,8 +1544,8 @@
           "type": "task",
           "group": "g09",
           "owner": "ARC",
-          "start": "2027-05-17",
-          "end": "2027-05-21",
+          "start": "2027-04-27",
+          "end": "2027-05-03",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
@@ -1119,10 +1556,17 @@
               "pred": "t045",
               "rel": "AA",
               "lagDays": 10
+            },
+            {
+              "pred": "t045",
+              "rel": "EE",
+              "lagDays": 0
             }
           ],
           "pred": "t045",
-          "rel": "AA"
+          "rel": "AA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t047",
@@ -1130,22 +1574,39 @@
           "type": "task",
           "group": "g09",
           "owner": "Projektleitung",
-          "start": "2027-05-24",
-          "end": "2027-05-26",
+          "start": "2027-05-04",
+          "end": "2027-05-11",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "",
+          "note": "Abschlussprüfung der vollständigen Objekt- und Fachplanungsunterlagen einschließlich Kostenentscheidung.",
           "dependencies": [
             {
               "pred": "t045",
               "rel": "EA",
               "lagDays": 1
+            },
+            {
+              "pred": "t046",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t056",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t036",
+              "rel": "EA",
+              "lagDays": 0
             }
           ],
           "pred": "t045",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t048",
@@ -1153,8 +1614,8 @@
           "type": "milestone",
           "group": "g09",
           "owner": "Projektleitung",
-          "start": "2027-05-26",
-          "end": "2027-05-26",
+          "start": "2027-05-11",
+          "end": "2027-05-11",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
@@ -1168,7 +1629,9 @@
             }
           ],
           "pred": "t047",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t049",
@@ -1176,8 +1639,8 @@
           "type": "task",
           "group": "g10",
           "owner": "Auftraggeber + Projektteam",
-          "start": "2027-05-27",
-          "end": "2027-05-27",
+          "start": "2027-05-12",
+          "end": "2027-05-19",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "qa",
@@ -1191,7 +1654,9 @@
             }
           ],
           "pred": "t048",
-          "rel": "EA"
+          "rel": "EA",
+          "durationAT": 5,
+          "earliestOffsetAT": 0
         },
         {
           "id": "t050",
@@ -1199,8 +1664,8 @@
           "type": "milestone",
           "group": "g10",
           "owner": "Projektleitung",
-          "start": "2027-05-28",
-          "end": "2027-05-28",
+          "start": "2027-05-20",
+          "end": "2027-05-20",
           "status": "Nicht begonnen",
           "progress": 0,
           "category": "cost",
@@ -1214,6 +1679,58 @@
             }
           ],
           "pred": "t049",
+          "rel": "EA",
+          "durationAT": 0,
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t054",
+          "group": "g10",
+          "type": "task",
+          "name": "Schlussunterlagen durch Auftraggeber prüfen",
+          "owner": "Auftraggeber",
+          "category": "ag",
+          "start": "2027-05-21",
+          "end": "2027-05-28",
+          "note": "",
+          "durationAT": 5,
+          "earliestOffsetAT": 0,
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t050",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t050",
+          "rel": "EA"
+        },
+        {
+          "id": "t055",
+          "group": "g10",
+          "type": "milestone",
+          "name": "M11 · Freigabe LPH 3 durch Auftraggeber (vorläufig)",
+          "owner": "Auftraggeber",
+          "category": "ag",
+          "start": "2027-05-28",
+          "end": "2027-05-28",
+          "note": "Projektseitige vorläufige Freigabe; nicht als zivilrechtliche Abnahme des Architektenvertrags auslegen.",
+          "durationAT": 0,
+          "earliestOffsetAT": 0,
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t054",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t054",
           "rel": "EA"
         }
       ]
