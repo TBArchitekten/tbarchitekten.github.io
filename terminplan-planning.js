@@ -116,8 +116,15 @@
         const cap=[r.task.deadline,r.task.protectedDate].filter(Boolean).sort()[0];
         if(cap){
           if(!validDate(cap))throw Error('Ungültiger Termin bei '+id);
-          const capIndex=cal.index.get(cap);
-          if(capIndex===undefined)throw Error('Deadline liegt nicht auf einem Arbeitstag: '+id);
+          // A deadline may be a weekend/holiday; last preceding workday is the
+          // effective comparison date, without changing the stored deadline.
+          let capIndex=cal.index.get(cap);
+          if(capIndex===undefined){
+            const day=cap+'T00:00:00Z';
+            const stamp=Date.parse(day);
+            capIndex=cal.days.findLastIndex(d=>Date.parse(d+'T00:00:00Z')<=stamp);
+          }
+          if(capIndex<0||capIndex===undefined)throw Error('Deadline liegt außerhalb des Projektkalenders: '+id);
           latest=Math.min(latest,capIndex-r.span);
           free=Math.min(free,capIndex-r.span-r.start);
         }
