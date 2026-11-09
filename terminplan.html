@@ -1119,7 +1119,6 @@ body.read-only .editor-only{display:none!important}
       rows.push({kind:'group',...g});
       if(!g.collapsed){
         gt.filter(t=>!q||(t.name+' '+t.owner+' '+t.note).toLowerCase().includes(q)||g.name.toLowerCase().includes(q))
-          .sort((a,b)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name))
           .forEach((t,i)=>rows.push({kind:'task',wbs:g.wbs+'.'+String(i+1).padStart(2,'0'),...t}));
       }
     });
@@ -2234,7 +2233,6 @@ body.read-only .editor-only{display:none!important}
         printRows.push({kind:'group',...group});
         data.tasks
           .filter(task=>task.group===group.id)
-          .sort((a,b)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name))
           .forEach((task,index)=>{
             printRows.push({
               kind:'task',
@@ -2608,7 +2606,7 @@ body.read-only .editor-only{display:none!important}
     const baseline=window.OfficePlanFeatures?.selectedBaseline?.()||planning?.selectedBaseline(data);
     const variance=planning?.baselineVariance(data,baseline)||{};
     data.groups.forEach(g=>{
-      data.tasks.filter(t=>t.group===g.id).sort((a,b)=>a.start.localeCompare(b.start)).forEach((t,i)=>{
+      data.tasks.filter(t=>t.group===g.id).forEach((t,i)=>{
         const pred=taskDependencies(t).map(dep=>{
           const name=data.tasks.find(x=>x.id===dep.pred)?.name||dep.pred;
           return name+' ('+(dep.rel||'EA')+', '+(dep.lagDays??0)+' AT)';
