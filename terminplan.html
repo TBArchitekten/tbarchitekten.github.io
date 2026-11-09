@@ -2605,7 +2605,7 @@ body.read-only .editor-only{display:none!important}
     const lines=[header];
     const planning=window.TBATerminplanPlanning;
     const network=planning?.analyze(data);
-    const baseline=planning?.selectedBaseline(data);
+    const baseline=window.OfficePlanFeatures?.selectedBaseline?.()||planning?.selectedBaseline(data);
     const variance=planning?.baselineVariance(data,baseline)||{};
     data.groups.forEach(g=>{
       data.tasks.filter(t=>t.group===g.id).sort((a,b)=>a.start.localeCompare(b.start)).forEach((t,i)=>{
