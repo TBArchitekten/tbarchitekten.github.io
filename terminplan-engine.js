@@ -81,6 +81,11 @@
         else if(t.end>t.protectedDate)
           issues.push(issue("protected_deadline",t.id,"",{minimum:t.protectedDate,actual:t.end}));
       }
+      if(t.deadline!==undefined&&t.deadline!==""){
+        if(!validDate(t.deadline))issues.push(issue("invalid_deadline",t.id,""));
+        else if(t.end>t.deadline)
+          issues.push(issue("deadline_overrun",t.id,"",{severity:"warning",minimum:t.deadline,actual:t.end}));
+      }
       const links=dependencies(t);
       const fingerprints=new Set();
       for(const dep of links){
@@ -151,7 +156,7 @@
     const ids=[...new Set([...old.keys(),...now.keys()])].filter(id=>{
       const a=old.get(id),b=now.get(id);
       if(!a||!b)return true;
-      return ["start","end","pred","rel","dependencies","protectedDate","type"]
+      return ["start","end","pred","rel","dependencies","protectedDate","deadline","type"]
         .some(key=>JSON.stringify(a[key])!==JSON.stringify(b[key]));
     }).sort();
     const past=new Set(analyze(previous).issues.map(x=>x.key));
