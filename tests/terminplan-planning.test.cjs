@@ -145,3 +145,14 @@ test('all plans load shared analytics UI and illustrated two-part help guide',()
   assert.match(guide,/id="planung"/);
   assert.ok((guide.match(/<svg /g)||[]).length>=4);
 });
+
+test('browser feature scripts parse and preserve explicit write approval',()=>{
+  const vm=require('node:vm');
+  assert.doesNotThrow(()=>new vm.Script(read('terminplan-features.js')),'browser UI syntax');
+  assert.doesNotThrow(()=>new vm.Script(read('terminplan-planning.js')),'network module syntax');
+  const ui=read('terminplan-features.js');
+  assert.match(ui,/preview\.signature!==JSON\.stringify\(bridge\.read\(\)\)/,'stale previews rejected');
+  assert.match(ui,/root\.confirm\(preview\.updates\.length/,'cascade requires user confirmation');
+  assert.match(ui,/bridge\.write\(state\)/,'only explicit confirmation enters revisioned save flow');
+  assert.match(ui,/!bridge\.canEdit\(\)/,'write permission checked');
+});
