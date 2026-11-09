@@ -163,14 +163,22 @@ function newPlan(project){
     '<p class="small">Projekt: '+esc(project.number)+' · '+esc(project.name)+'</p>'+
     '<label>Muster<select name="template" required>'+options+'</select></label>'+
     '<label>Projektstart<input type="date" name="start" required value="'+core.todayKey()+'"></label>'+
+    '<label id="officePlanCommissioningOption"><input type="checkbox" name="fachplanerAlreadyCommissioned"> Erforderliche Fachplaner sind bereits beauftragt (Beauftragungsphase überspringen)</label>'+
     '<p id="officeCreatePlanPreview" class="small" aria-live="polite"></p>'+
-    '<p class="small">Auch ein Startdatum in der Vergangenheit ist möglich. Die Mustertermine werden entsprechend verschoben; Fortschritte werden nicht automatisch als erledigt markiert. Das Muster bleibt unverändert.</p>'+
+    '<p class="small">Auch ein Startdatum in der Vergangenheit ist möglich. Die Mustertermine werden entsprechend verschoben; Fortschritte werden nicht automatisch als erledigt markiert. Bayernweite Feiertage werden berücksichtigt (lokale Feiertage später im Projektkalender ergänzen). Das Muster bleibt unverändert.</p>'+
     '<p id="officeCreatePlanError" class="small" role="alert"></p>'+
     '<button type="submit" class="primary">Terminplan anlegen</button></form>');
   const form=document.getElementById('officeCreatePlanForm');
   if(!form)return;
   const preview=document.getElementById('officeCreatePlanPreview');
+  function updateCommissioningVisibility(){
+    const chosen=available.find(x=>x.id===form.elements.template.value);
+    const enabled=chosen?.phase==='LPH3'&&chosen?.state?.project?.scheduleModel==='network-v1';
+    document.getElementById('officePlanCommissioningOption').hidden=!enabled;
+    if(!enabled)form.elements.fachplanerAlreadyCommissioned.checked=false;
+  }
   function updatePlanPreview(){
+    updateCommissioningVisibility();
     const chosen=available.find(x=>x.id===form.elements.template.value);
     const start=form.elements.start.value;
     if(!chosen||!/^\d{4}-\d{2}-\d{2}$/.test(start)){
@@ -183,14 +191,16 @@ function newPlan(project){
     try{
       const draft=core.cloneStateForProject(chosen.state,{
         start,number:project.number,name:project.name,phase:chosen.phase,
-        version:chosen.version,today:core.todayKey()
+        version:chosen.version,today:core.todayKey(),
+        fachplanerAlreadyCommissioned:form.elements.fachplanerAlreadyCommissioned.checked
       });
       preview.textContent=(draft.tasks||[]).length+' Vorgänge und Meilensteine · Voraussichtliches Ende: '+
         core.formatDate(draft.project.end)+'. Alle Termine bleiben nach dem Anlegen bearbeitbar.';
-    }catch(_){preview.textContent='Die Vorlage kann mit diesem Datum nicht verschoben werden.';}
+    }catch(e){preview.textContent=e?.message||'Die Vorlage kann mit diesem Datum nicht verschoben werden.';}
   }
   form.elements.template.addEventListener('change',updatePlanPreview);
   form.elements.start.addEventListener('input',updatePlanPreview);
+  form.elements.fachplanerAlreadyCommissioned.addEventListener('change',updatePlanPreview);
   updatePlanPreview();
   form.addEventListener('submit',async event=>{
     event.preventDefault();
@@ -204,7 +214,8 @@ function newPlan(project){
     try{
       const state=core.cloneStateForProject(template.state,{
         start,number:project.number,name:project.name,phase:template.phase,
-        version:template.version,today:core.todayKey()
+        version:template.version,today:core.todayKey(),
+        fachplanerAlreadyCommissioned:form.elements.fachplanerAlreadyCommissioned.checked
       });
       const {data, error:saveError}=await sb().from('office_terminplan_instances').insert({
         project_id:project.id,template_id:template.id,template_version:template.version,
