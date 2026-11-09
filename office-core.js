@@ -79,6 +79,7 @@
   function cloneStateForProject(templateState,{start,number,name,phase,version,today,fachplanerAlreadyCommissioned=false}){
     if(!validDateKey(start)||isWeekend(parseDate(start)))throw Error('Bitte gültigen Werktag eingeben.');
     const state=JSON.parse(JSON.stringify(templateState));
+    const templateBase=state.project.start;
     const fromYear=Number(start.slice(0,4)),originalExceptions=state.project?.calendar?.nonWorkingDates||[];
     const blocked=new Set(projectHolidayDates(fromYear,Math.min(2100,fromYear+5),originalExceptions));
     if(blocked.has(start))throw Error('Projektstart liegt auf einem Feiertag oder arbeitsfreien Tag.');
@@ -138,7 +139,7 @@
       }
     }else{
       // Older LPH templates remain usable; generated dates now avoid Bavarian holidays.
-      const base=state.project.start;
+      const base=templateBase;
       state.tasks=(state.tasks||[]).map(task=>{
         const first=workdayOffset(base,task.start),last=workdayOffset(base,task.end);
         return {...task,start:at(first),end:at(Math.max(first,last))};
