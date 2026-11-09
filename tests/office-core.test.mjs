@@ -19,28 +19,91 @@ test('a project copy keeps the Muster and moves dates by working days',()=>{
 });
 
 
-test('LPH 3 Muster v1.1 is generic, includes 50 planned items and 48 auditable links',()=>{
+test('LPH3 v1.2 keeps 00–09 PSP, parallel multi-dependency gates and required review stages',()=>{
+  const E=require('../terminplan-engine.js');
   const templates=JSON.parse(read('supabase/seed/terminplan-templates.json'));
   const tpl=templates.find(x=>x.phase==='LPH3');
-  assert.equal(tpl.version,'1.1');
-  assert.equal(tpl.state.groups.length,10);
-  assert.equal(tpl.state.tasks.length,50);
-  assert.equal(tpl.state.tasks.reduce((sum,t)=>sum+(t.dependencies||[]).length,0),48);
-  assert.ok(tpl.state.tasks.every(t=>t.status==='Nicht begonnen'&&t.progress===0));
-  assert.ok(tpl.state.tasks.every(t=>!t.note&&!t.dependencies.some(d=>'sourceEvidence' in d)));
-  assert.deepEqual(Object.keys(tpl.state.project).sort(),['end','name','phase','standDate','standLabel','start'].sort());
-  const ids=new Set(tpl.state.tasks.map(t=>t.id));
-  for(const task of tpl.state.tasks)for(const dep of task.dependencies)assert.ok(ids.has(dep.pred));
+  assert.equal(tpl.version,'1.2');
+  assert.equal(tpl.state.project.scheduleModel,'network-v1');
+  assert.equal(tpl.state.project.criticalPathState,'not_calculated');
+  assert.deepEqual(tpl.state.groups.map(g=>g.wbs),Array.from({length:10},(_,i)=>String(i).padStart(2,'0')));
+  assert.equal(tpl.state.tasks.length,57);
+  assert.equal(tpl.state.tasks.reduce((sum,t)=>sum+(t.dependencies||[]).length,0),96);
+  const byId=new Map(tpl.state.tasks.map(t=>[t.id,t]));
+  for(const task of tpl.state.tasks){
+    assert.equal(task.status,'Nicht begonnen');
+    assert.equal(task.progress,0);
+    assert.equal(task.critical,false,'do not falsely infer a critical path');
+    assert.ok(Number.isInteger(task.durationAT));
+    for(const dep of task.dependencies){
+      assert.ok(byId.has(dep.pred),task.id+' has a known predecessor');
+      assert.ok(['EA','AA','EE','AE'].includes(dep.rel));
+      assert.ok(!('sourceEvidence' in dep),'no PDF-specific provenance');
+    }
+  }
+  for(const [id,days] of [['t009',5],['t014',5],['t028',5],['t054',5],
+    ['t007',5],['t047',5],['t038',15],['t040',5],['t049',5],
+    ['t019',15],['t020',15],['t021',15],['t033',15],['t034',15],['t035',15]])
+    assert.equal(byId.get(id).durationAT,days,id+' correct initial duration');
+  assert.equal(byId.get('t051').planningCondition,'commissioning_pending');
+  assert.equal(byId.get('t052').planningCondition,'commissioning_pending');
+  assert.equal(byId.get('t018').optional,true);
+  assert.equal(byId.get('t032').optional,true);
+  const incoming=id=>byId.get(id).dependencies.map(d=>d.pred);
+  assert.deepEqual(incoming('t022').sort(),['t019','t020','t021'].sort());
+  assert.deepEqual(incoming('t036').sort(),['t033','t034','t035'].sort());
+  for(const id of ['t030','t027','t015','t044'])assert.ok(incoming('t031').includes(id));
+  for(const id of ['t045','t046','t056','t036'])assert.ok(incoming('t047').includes(id));
+  assert.ok(incoming('t055').includes('t054'),'final approval follows client review');
+  assert.equal(E.analyze(tpl.state).errors,0,'template has no broken dependency, cycle or date');
   const source=JSON.stringify(tpl);
   const copy=C.cloneStateForProject(tpl.state,{
-    start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.1',today:'2026-11-09'
+    start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.2',today:'2026-11-09'
   });
   assert.equal(copy.project.start,'2026-11-02');
-  assert.equal(copy.project.end,'2027-03-26');
-  assert.equal(copy.tasks.length,50);
-  assert.equal(copy.tasks.reduce((sum,x)=>sum+x.dependencies.length,0),48);
+  assert.equal(copy.project.end>=copy.project.start,true);
+  assert.equal(copy.tasks.length,57);
+  assert.equal(E.analyze(copy).errors,0,'network is still valid after a different calendar start');
+  assert.equal(copy.tasks.reduce((sum,x)=>sum+x.dependencies.length,0),96);
+  assert.equal(copy.project.planningAssumptions.fachplanerAlreadyCommissioned,false);
   assert.equal(JSON.stringify(tpl).includes('"projectNumber"'),false);
-  assert.equal(JSON.stringify(tpl),source);
+  assert.equal(JSON.stringify(tpl),source,'copy never mutates the Muster');
+});
+
+test('Already commissioned Fachplaner skip the procurement wait but not coordination or fictitious progress',()=>{
+  const E=require('../terminplan-engine.js');
+  const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
+  const base={start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.2',today:'2026-11-09'};
+  const ordinary=C.cloneStateForProject(tpl.state,base);
+  const already=C.cloneStateForProject(tpl.state,{...base,fachplanerAlreadyCommissioned:true});
+  assert.equal(already.tasks.length,55);
+  assert.ok(!already.tasks.some(t=>['t051','t052'].includes(t.id)));
+  assert.ok(already.project.end<ordinary.project.end,'no artificial procurement wait');
+  assert.equal(already.project.planningAssumptions.fachplanerAlreadyCommissioned,true);
+  assert.ok(already.tasks.every(t=>t.status==='Nicht begonnen'&&t.progress===0));
+  assert.equal(E.analyze(already).errors,0);
+  const gate=already.tasks.find(t=>t.id==='t053');
+  assert.match(gate.name,/laut Eingabe/);
+});
+
+test('Bavarian holiday calendar is explicit and holiday starts are rejected',()=>{
+  const E=require('../terminplan-engine.js');
+  const holidays=C.bavarianHolidays(2027);
+  for(const date of ['2027-01-06','2027-03-26','2027-03-29','2027-05-06','2027-05-17','2027-05-27','2027-11-01'])
+    assert.ok(holidays.includes(date),date+' is a Bavarian statewide holiday');
+  assert.ok(!holidays.includes('2027-08-08'),'city-specific Augsburg holiday is not assumed statewide');
+  const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
+  const args={number:'2701',name:'Beispiel',phase:'LPH3',version:'1.2',today:'2026-11-09'};
+  assert.throws(()=>C.cloneStateForProject(tpl.state,{...args,start:'2027-05-27'}),/Feiertag/);
+  assert.throws(()=>C.cloneStateForProject(tpl.state,{...args,start:'2027-05-29'}),/Werktag/);
+  const plan=C.cloneStateForProject(tpl.state,{...args,start:'2027-03-30'});
+  assert.equal(plan.project.calendar.region,'DE-BY');
+  assert.ok(plan.project.calendar.nonWorkingDates.includes('2027-05-27'));
+  for(const t of plan.tasks){
+    assert.equal(E.workday(t.start,E.calendarOf(plan)),true,t.id+' starts on workday');
+    assert.equal(E.workday(t.end,E.calendarOf(plan)),true,t.id+' ends on workday');
+  }
+  assert.equal(E.analyze(plan).errors,0);
 });
 
 test('LPH 5 accepts a past Projektstart without changing its independent Muster',()=>{
@@ -60,6 +123,7 @@ test('Office plan creation previews dates and keeps manual approval',()=>{
   assert.match(ui,/officeCreatePlanPreview/);
   assert.match(ui,/updatePlanPreview\(\)/);
   assert.match(ui,/Startdatum in der Vergangenheit/);
+  assert.match(ui,/fachplanerAlreadyCommissioned/);
   assert.match(ui,/core\.cloneStateForProject/);
   assert.match(ui,/type="submit" class="primary">Terminplan anlegen/);
 });
