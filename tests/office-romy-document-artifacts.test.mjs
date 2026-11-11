@@ -65,7 +65,7 @@ test('Generated files reuse existing Window artifact cards and survive chat relo
  assert.ok(ui.includes(".select('id,role,content,attachments,metadata,created_at')"));
  assert.ok(app.includes('data-artifact-file'));
  assert.ok(app.includes('hydrateArtifactFiles('));
- assert.ok(html.includes('app.js?v=office49'));
+ assert.ok(html.includes('app.js?v=office50'));
  assert.ok(html.includes('office-assistant.js?v=office37'));
  new Function(app);new Function(ui);
 });

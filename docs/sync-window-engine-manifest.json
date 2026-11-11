@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "68d88565e60c1dfb8e9c0a3f9b11d497a4415d6a",
+  "source_sha": "72c1128c85233097a29666b4b87e0b21163b2f7d",
   "mode": "engine",
   "files": [
     {
@@ -42,8 +42,8 @@
     {
       "source": "supabase/functions/_shared/calendar-semantic-boundary.mjs",
       "target": "supabase/functions/_shared/calendar-semantic-boundary.mjs",
-      "sha": "26bcdfdaa3aeb509e72ce7b12fde1803aefdf26d",
-      "bytes": 4424
+      "sha": "6ff0110ce6f89aa63c335086379c177ce8a9dd10",
+      "bytes": 5184
     },
     {
       "source": "supabase/functions/_shared/calendar-temporal-fastpath.mjs",
@@ -498,8 +498,8 @@
     {
       "source": "supabase/functions/isabella-chat/index.ts",
       "target": "supabase/functions/isabella-chat/index.ts",
-      "sha": "f09730a780aa6c45c7eff7611c33082e6f7084e0",
-      "bytes": 344766
+      "sha": "94c218a67bce0eb0efc4d7941dd97c92a14a4044",
+      "bytes": 345557
     },
     {
       "source": "supabase/functions/isabella-delivery-runner/index.ts",

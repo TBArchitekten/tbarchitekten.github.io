@@ -1256,8 +1256,25 @@ const OFFICE_NOTICE_DE=[
   [/^No pude guardar esa expectativa todavía: /,'Die Erwartung konnte noch nicht gespeichert werden: '],
   [/^No pude mantener este objetivo vivo todavía: /,'Das Ziel konnte noch nicht gespeichert werden: '],
   [/^No pude activar la habilidad: /,'Die Fähigkeit konnte nicht aktiviert werden: '],
-  [/^No pude identificar ese proyecto de Work\.$/,'Das Projekt wurde nicht erkannt.']
+  [/^No pude identificar ese proyecto de Work\.$/,'Das Projekt wurde nicht erkannt.'],
+  // Fixed lines the shared engine still writes in Spanish (system voice, not Romy's own words).
+  [/^No pude registrar una propuesta nueva y verificable para esta operación\. No hay ningún cambio confirmado a partir de esta solicitud\. Revisa los datos o aclara la operación para volver a intentarlo\.$/,
+    'Für diese Anfrage konnte kein prüfbarer Vorschlag angelegt werden. Es wurde nichts geändert. Bitte die Angaben prüfen oder die Anfrage genauer formulieren.'],
+  [/^He preparado el cambio para que lo revises antes de aplicarlo\.$/,'Die Änderung ist vorbereitet. Bitte vor dem Anwenden prüfen.'],
+  [/^Creación autorizada, pendiente de comprobante\.$/,'Anlage freigegeben, Bestätigung steht noch aus.'],
+  [/^Propuesta: (actualizar )?(evento|tarea) «(.+)»(?: para el ([^()]+?))?(?: \(proyecto (.+)\))? · pendiente de tu confirmación\.$/,
+    (_m,upd,noun,title,day,proj)=>'Vorschlag: '+(noun==='evento'?'Termin':'Aufgabe')+' «'+title+'»'+(upd?' aktualisieren':'')+
+      (day?' · '+officeDayDe(day):'')+(proj?' (Projekt '+proj+')':'')+' · wartet auf deine Bestätigung.']
 ];
+const OFFICE_ES_DAYS={lunes:'Montag',martes:'Dienstag','miércoles':'Mittwoch',jueves:'Donnerstag',viernes:'Freitag','sábado':'Samstag',domingo:'Sonntag'};
+const OFFICE_ES_MONTHS={enero:'Januar',febrero:'Februar',marzo:'März',abril:'April',mayo:'Mai',junio:'Juni',julio:'Juli',agosto:'August',septiembre:'September',setiembre:'September',octubre:'Oktober',noviembre:'November',diciembre:'Dezember'};
+// «miércoles, 11 de noviembre de 2026» → «Mittwoch, 11. November 2026»; anything else stays as written.
+function officeDayDe(text){
+  const m=String(text||'').trim().match(/^([a-záéíóúñ]+),? (\d{1,2}) de ([a-záéíóúñ]+) de (\d{4})$/i);
+  if(!m)return String(text||'').trim();
+  const wd=OFFICE_ES_DAYS[m[1].toLowerCase()],mo=OFFICE_ES_MONTHS[m[3].toLowerCase()];
+  return wd&&mo?`${wd}, ${Number(m[2])}. ${mo} ${m[4]}`:String(text||'').trim();
+}
 function officeNotice(text){let t=String(text??'');for(const [re,de] of OFFICE_NOTICE_DE)t=t.replace(re,de);return t}
 async function persistOfficeNotice(message){
   try{
@@ -1344,8 +1361,8 @@ function resolvedReviewText(m){
   const state=m?.metadata?.review_state,items=m?.metadata?.review_proposals;
   if(!Array.isArray(items)||!items.length)return null;
   if(state==='applied_verified')return confirmationText(items);
-  if(state==='rejected')return typeof window!=='undefined'&&window.APP_PROFILE==='office' ? window.ASSISTANT_I18N?.t('review_cancelled')||'Propuesta cancelada. No se aplicó el cambio.' : 'Propuesta cancelada. No se aplicó el cambio.';
-  if(state==='reviewed_locally')return typeof window!=='undefined'&&window.APP_PROFILE==='office' ? window.ASSISTANT_I18N?.t('review_locally')||'Hecho. Échale un vistazo para comprobar que quedó como querías.' : 'Hecho. Échale un vistazo para comprobar que quedó como querías.';
+  if(state==='rejected')return typeof window!=='undefined'&&window.APP_PROFILE==='office' ? window.ASSISTANT_I18N?.t('review_cancelled')||'Vorschlag verworfen. Es wurde nichts geändert.' : 'Vorschlag verworfen. Es wurde nichts geändert.';
+  if(state==='reviewed_locally')return typeof window!=='undefined'&&window.APP_PROFILE==='office' ? window.ASSISTANT_I18N?.t('review_locally')||'Erledigt. Wirf kurz einen Blick darauf, ob es so passt.' : 'Erledigt. Wirf kurz einen Blick darauf, ob es so passt.';
   return null;
 }
 // Isabella confirms like a person: one short sentence with what changed and when, in natural dates.
@@ -1574,7 +1591,7 @@ function openEmojiReactionSheet(id){
   const m=state.messages.find(x=>x.id===id);if(!m)return;
   closeReactionPicker();closeEmojiReactionSheet();
   const backdrop=document.createElement('div');backdrop.className='emoji-reaction-sheet-backdrop';
-  const sheet=document.createElement('section');sheet.className='emoji-reaction-sheet';sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-label','Reaccionar con un emoji');
+  const sheet=document.createElement('section');sheet.className='emoji-reaction-sheet';sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-label','Mit einem Emoji reagieren');
   sheet.innerHTML=`<div class="emoji-sheet-grabber"></div>
     <div class="emoji-sheet-head"><strong>Reaccionar</strong><button type="button" data-emoji-close aria-label="Cerrar">×</button></div>
     <div class="emoji-sheet-tabs" role="tablist">${REACTION_CATEGORIES.map((c,i)=>`<button type="button" role="tab" data-emoji-category="${c.id}" class="${i===0?'active':''}" aria-label="${esc(c.label)}" title="${esc(c.label)}">${reactionTabIcon(c.id)}</button>`).join('')}</div>
@@ -1622,11 +1639,11 @@ function localFallback(text){const n=text.toLowerCase();if(/was habe ich heute|w
 function rememberCandidates(items){for(const m of items||[]){if(!m?.content)continue;const exists=(state.memory||[]).some(x=>(typeof x==='object'?x.content:String(x))===m.content);if(!exists)state.memory.push({id:uid(),kind:normalizeMemoryKind(m.kind),content:m.content,confidence:Number(m.confidence??.7),status:'active',source:m.source||'ai_derived',metadata:{...(m.metadata||{}),derived:true,accepted_fact:false}})}save()}
 function proposalLabel(p){
   if(p.kind==='routine'){
-    const verb={create:'Programar',update:'Actualizar',pause:'Pausar',resume:'Reactivar',delete:'Eliminar'}[p.action||'create']||'Revisar';
-    if(['pause','resume','delete'].includes(p.action))return verb+' rutina · '+p.title;
-    const days=p.schedule_kind==='weekly'&&Array.isArray(p.weekdays)&&p.weekdays.length?(' · '+p.weekdays.map(d=>['dom','lun','mar','mié','jue','vie','sáb'][Number(d)]||d).join(', ')):'';
-    if(p.schedule_kind==='once')return [verb+' recordatorio',p.title,p.date,p.time||'09:00'].filter(Boolean).join(' · ');
-    return [verb+' rutina',p.title,p.schedule_kind==='weekly'?'Semanal':'Todos los días',(p.time||'08:00')+days].filter(Boolean).join(' · ');
+    const verb={create:'Einrichten',update:'Aktualisieren',pause:'Pausieren',resume:'Fortsetzen',delete:'Löschen'}[p.action||'create']||'Prüfen';
+    if(['pause','resume','delete'].includes(p.action))return 'Routine '+verb.toLowerCase()+' · '+p.title;
+    const days=p.schedule_kind==='weekly'&&Array.isArray(p.weekdays)&&p.weekdays.length?(' · '+p.weekdays.map(d=>['So','Mo','Di','Mi','Do','Fr','Sa'][Number(d)]||d).join(', ')):'';
+    if(p.schedule_kind==='once')return ['Erinnerung '+verb.toLowerCase(),p.title,p.date,p.time||'09:00'].filter(Boolean).join(' · ');
+    return ['Routine '+verb.toLowerCase(),p.title,p.schedule_kind==='weekly'?'Wöchentlich':'Täglich',(p.time||'08:00')+days].filter(Boolean).join(' · ');
   }
   if(p.kind==='feed_preferences'){
     const add=(p.add_entities||[]).length,remove=(p.remove_entities||[]).length,topics=(p.add_topics||[]).length+(p.add_custom_topics||[]).length;
@@ -1641,9 +1658,9 @@ function proposalLabel(p){
     const add=(p.add_rules||[]).length,remove=(p.remove_rules||[]).length;
     return ['Mejorar Isabella',add?('adoptar '+add+(add===1?' regla':' reglas')):'',remove?('retirar '+remove):''].filter(Boolean).join(' · ');
   }
-  if(p.kind==='standing_intent')return ['Recordar cuando',p.trigger_text,p.project||''].filter(Boolean).join(' · ');
-  if(p.kind==='expectation')return ['Esperar',p.title,p.due_date,p.due_time||''].filter(Boolean).join(' · ');
-  if(p.kind==='commitment')return ['Mantener vivo',p.title,p.project||p.scope||''].filter(Boolean).join(' · ');
+  if(p.kind==='standing_intent')return ['Erinnern, wenn',p.trigger_text,p.project||''].filter(Boolean).join(' · ');
+  if(p.kind==='expectation')return ['Erwartet',p.title,p.due_date,p.due_time||''].filter(Boolean).join(' · ');
+  if(p.kind==='commitment')return ['Im Blick behalten',p.title,p.project||p.scope||''].filter(Boolean).join(' · ');
   if(p.kind==='work_claim')return ['Guardar conocimiento',p.project,p.claim_type,p.statement].filter(Boolean).join(' · ');
   if(p.kind==='skill_proposal')return ['Crear Skill',p.agent==='sofia'?'Sofía':'Isabella',p.name].filter(Boolean).join(' · ');
   const action=p.action||'create';
@@ -1666,7 +1683,7 @@ function proposalEditor(p,onDone){
       <label>Proyecto (opcional)<input id="standingProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label>
       <label>Palabras de activación<input id="standingTerms" value="${esc((p.trigger_terms||[]).join(', '))}" placeholder="dachentwässerung, entwässerung"></label>
       <div class="form-grid-3"><label>Cooldown (h)<input id="standingCooldown" type="number" min="0" value="${Number(p.cooldown_hours??24)}"></label><label>Máx. avisos<input id="standingMax" type="number" min="1" max="12" value="${Number(p.max_triggers||3)}"></label><label>Caduca (días)<input id="standingExpiry" type="number" min="1" max="365" value="${Number(p.expires_days||90)}"></label></div>
-      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Volver</button><button id="proposalEditSave" class="primary">Usar estos datos</button></div>
+      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Übernehmen</button></div>
     </div>`);
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
     $('#proposalEditSave').onclick=()=>onDone?.({...p,trigger_text:$('#standingTrigger').value.trim(),reminder_text:$('#standingReminder').value.trim(),project:$('#standingProject').value.trim()||null,trigger_terms:$('#standingTerms').value.split(/[,\n]+/).map(x=>x.trim()).filter(Boolean),cooldown_hours:Number($('#standingCooldown').value === '' ? 24 : $('#standingCooldown').value),max_triggers:Number($('#standingMax').value||3),expires_days:Number($('#standingExpiry').value||90)});
@@ -1681,7 +1698,7 @@ function proposalEditor(p,onDone){
       <label>Qué esperas que ocurra<textarea id="expectationEvent" rows="4">${esc(p.expected_event||'')}</textarea></label>
       <div class="form-grid-2"><label>Tipo<select id="expectationType">${types.map(([v,l])=>`<option value="${v}" ${v===(p.expectation_type||'other')?'selected':''}>${l}</option>`).join('')}</select></label><label>Proyecto (opcional)<input id="expectationProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label></div>
       <div class="form-grid-2"><label>Fecha esperada<input id="expectationDate" type="date" value="${esc(p.due_date||'')}"></label><label>Hora exacta (opcional)<input id="expectationTime" type="time" value="${esc(p.due_time||'')}"></label></div>
-      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Volver</button><button id="proposalEditSave" class="primary">Usar estos datos</button></div>
+      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Übernehmen</button></div>
     </div>`);
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
     $('#proposalEditSave').onclick=()=>{
@@ -1785,23 +1802,23 @@ function proposalEditor(p,onDone){
   if(p.kind==='routine'){
     if(['pause','resume','delete'].includes(p.action)){onDone?.(p);return}
     const weekdays=new Set((p.weekdays||[]).map(Number));
-    const dayLabels=[['0','Dom'],['1','Lun'],['2','Mar'],['3','Mié'],['4','Jue'],['5','Vie'],['6','Sáb']];
+    const dayLabels=[['0','So'],['1','Mo'],['2','Di'],['3','Mi'],['4','Do'],['5','Fr'],['6','Sa']];
     const isOnce=p.schedule_kind==='once';
-    modal(isOnce?'Revisar recordatorio':'Revisar rutina',`<div class="form proposal-editor routine-editor">
-      <label>Nombre<input id="routineTitle" value="${esc(p.title||(isOnce?'Recordatorio':'Rutina'))}"></label>
-      <label>Qué hará Isabella<textarea id="routineInstruction" rows="4">${esc(p.instruction||'')}</textarea></label>
-      <label>Frecuencia<select id="routineKind"><option value="once" ${isOnce?'selected':''}>Una vez</option><option value="daily" ${!isOnce&&p.schedule_kind!=='weekly'?'selected':''}>Todos los días</option><option value="weekly" ${p.schedule_kind==='weekly'?'selected':''}>Semanal</option></select></label>
-      <label id="routineDateLabel">Fecha<input id="routineDate" type="date" value="${esc(p.date||today())}"></label>
-      <label>Hora<input id="routineTime" type="time" value="${esc(p.time||(isOnce?'09:00':'08:00'))}"></label>
+    modal(isOnce?'Erinnerung prüfen':'Routine prüfen',`<div class="form proposal-editor routine-editor">
+      <label>Name<input id="routineTitle" value="${esc(p.title||(isOnce?'Erinnerung':'Routine'))}"></label>
+      <label>Was Romy tun wird<textarea id="routineInstruction" rows="4">${esc(p.instruction||'')}</textarea></label>
+      <label>Häufigkeit<select id="routineKind"><option value="once" ${isOnce?'selected':''}>Einmal</option><option value="daily" ${!isOnce&&p.schedule_kind!=='weekly'?'selected':''}>Täglich</option><option value="weekly" ${p.schedule_kind==='weekly'?'selected':''}>Wöchentlich</option></select></label>
+      <label id="routineDateLabel">Datum<input id="routineDate" type="date" value="${esc(p.date||today())}"></label>
+      <label>Uhrzeit<input id="routineTime" type="time" value="${esc(p.time||(isOnce?'09:00':'08:00'))}"></label>
       <div id="routineWeekdays" class="routine-weekdays">${dayLabels.map(([v,l])=>`<label><input type="checkbox" value="${v}" ${weekdays.has(Number(v))?'checked':''}><span>${l}</span></label>`).join('')}</div>
-      <label>Zona horaria<input id="routineTimezone" value="${esc(p.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin')}"></label>
-      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Volver</button><button id="proposalEditSave" class="primary">Usar estos datos</button></div>
+      <label>Zeitzone<input id="routineTimezone" value="${esc(p.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin')}"></label>
+      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Übernehmen</button></div>
     </div>`);
     const syncSchedule=()=>{const kind=$('#routineKind').value;$('#routineWeekdays').classList.toggle('hidden',kind!=='weekly');$('#routineDateLabel').classList.toggle('hidden',kind!=='once')};
     $('#routineKind').onchange=syncSchedule;syncSchedule();
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
     $('#proposalEditSave').onclick=()=>onDone?.({...p,
-      title:$('#routineTitle').value.trim()||p.title||(isOnce?'Recordatorio':'Rutina'),
+      title:$('#routineTitle').value.trim()||p.title||(isOnce?'Erinnerung':'Routine'),
       instruction:$('#routineInstruction').value.trim()||p.instruction||'',
       schedule_kind:$('#routineKind').value,
       date:$('#routineDate').value||p.date||today(),
@@ -1822,16 +1839,16 @@ function proposalEditor(p,onDone){
   const cats=state.categories.map(x=>`<option value="${esc(x.name)}" ${x.name===categoryName?'selected':''}>${esc(x.name)}</option>`).join('');
   const projects='<option value="">Ohne Projekt</option>'+state.projects.map(x=>`<option value="${esc(x.name)}" ${x.name===projectName?'selected':''}>${esc(x.name)}</option>`).join('');
   const specific=p.kind==='event'
-    ?`<label>Hora<input id="proposalTime" type="time" value="${esc(time||'09:00')}"></label><label>Dauer (min)<input id="proposalDuration" type="number" min="5" step="5" value="${Number(duration||60)}"></label>${p.duration_defaulted?'<div class="small">1 h · editable (duración predeterminada)</div>':''}`
-    :`<label>Recordatorio<input id="proposalReminder" type="time" value="${esc(reminder||'')}"></label>`;
-  modal('Revisar antes de confirmar',`<div class="form proposal-editor">
-    <label>Nombre<input id="proposalTitle" value="${esc(title)}"></label>
+    ?`<label>Uhrzeit<input id="proposalTime" type="time" value="${esc(time||'09:00')}"></label><label>Dauer (min)<input id="proposalDuration" type="number" min="5" step="5" value="${Number(duration||60)}"></label>${p.duration_defaulted?'<div class="small">1 Std. · anpassbar (Standarddauer)</div>':''}`
+    :`<label>Erinnerung<input id="proposalReminder" type="time" value="${esc(reminder||'')}"></label>`;
+  modal('Vor dem Bestätigen prüfen',`<div class="form proposal-editor">
+    <label>Titel<input id="proposalTitle" value="${esc(title)}"></label>
     <label>${p.kind==='task'?'Datum (optional)':'Datum'}<input id="proposalDate" type="date" value="${esc(date||'')}"></label>
     ${specific}
     <label>Categoría<select id="proposalCategory">${cats}</select></label>
     <label>Proyecto<select id="proposalProject">${projects}</select></label>
     <label>Notas<textarea id="proposalNotes" rows="2">${esc(p.notes??target?.notes??'')}</textarea></label>
-    <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Volver</button><button id="proposalEditSave" class="primary">Usar estos datos</button></div>
+    <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Übernehmen</button></div>
   </div>`);
   $('#proposalEditCancel').onclick=()=>onDone?.(null);
   $('#proposalEditSave').onclick=()=>{
@@ -1856,10 +1873,10 @@ function reviewedProposal(original,corrected){
   return {...corrected,...(keys.length?{_review:{changed_fields:keys,original:Object.fromEntries(keys.map(k=>[k,original[k]??null]))}}:{})};
 }
 function proposalDetails(p){
-  if(p.kind==='routine')return `<p>${esc(p.instruction||'')}</p><div class="small">${esc(p.timezone||'')}${p.before?' · Configuración actual: '+esc(p.before.schedule?.time||'')+' · '+(p.before.enabled?'Activa':'Pausada'):''}</div>`;
-  if(p.kind==='expectation')return `<p>${esc(p.expected_event||'')}</p><div class="small">${esc(p.due_date||'')}${p.due_time?' · '+esc(p.due_time):' · sin hora exacta'} · Si vence sin evidencia, quedará pendiente de comprobar.</div>`;
-  if(p.kind==='standing_intent')return `<p>${esc(p.reminder_text||'')}</p><div class="small">Recordatorio por conversación; no vigila fuentes externas · Máximo ${Number(p.max_triggers||3)} avisos · Separación: ${Number(p.cooldown_hours??24)} h · Caduca en ${Number(p.expires_days||90)} días</div>`;
-  if(p.kind==='commitment')return `<p>${esc(p.objective||'')}</p><div class="small">Ámbito: ${esc(p.project||p.scope||'global')}${p.completion_criteria?' · Cierre: '+esc(p.completion_criteria):''}</div>${p.persistent_work?'<div class="small" style="margin-top:7px">Al confirmar, Isabella empezará a trabajar en esto y podrá continuar aunque cierres MINDS. Te pedirá algo solo si realmente queda bloqueada.</div>':''}${p.source_open_loop?'<div class="small" style="margin-top:7px">Procedencia: open loop derivado, pendiente de esta revisión.</div>':''}`;
+  if(p.kind==='routine')return `<p>${esc(p.instruction||'')}</p><div class="small">${esc(p.timezone||'')}${p.before?' · Aktuell: '+esc(p.before.schedule?.time||'')+' · '+(p.before.enabled?'Aktiv':'Pausiert'):''}</div>`;
+  if(p.kind==='expectation')return `<p>${esc(p.expected_event||'')}</p><div class="small">${esc(p.due_date||'')}${p.due_time?' · '+esc(p.due_time):' · ohne genaue Uhrzeit'} · Läuft es ohne Beleg ab, bleibt es zur Prüfung offen.</div>`;
+  if(p.kind==='standing_intent')return `<p>${esc(p.reminder_text||'')}</p><div class="small">Erinnerung im Gespräch; keine externe Überwachung · höchstens ${Number(p.max_triggers||3)} Hinweise · Abstand: ${Number(p.cooldown_hours??24)} Std. · läuft nach ${Number(p.expires_days||90)} Tagen ab</div>`;
+  if(p.kind==='commitment')return `<p>${esc(p.objective||'')}</p><div class="small">Bereich: ${esc(p.project||p.scope||'global')}${p.completion_criteria?' · Abschluss: '+esc(p.completion_criteria):''}</div>${p.persistent_work?'<div class="small" style="margin-top:7px">Al confirmar, Isabella empezará a trabajar en esto y podrá continuar aunque cierres MINDS. Te pedirá algo solo si realmente queda bloqueada.</div>':''}${p.source_open_loop?'<div class="small" style="margin-top:7px">Procedencia: open loop derivado, pendiente de esta revisión.</div>':''}`;
   if(p.kind==='work_claim')return `<p class="small">Estado: ${esc(p.status||'proposed')} · Procedencia: ${esc(p.provenance_class||'inferred')}</p>${p.evidence_excerpt?`<blockquote>${esc(p.evidence_excerpt)}</blockquote>`:''}${p.supersedes_id?'<p class="small">Sustituirá una formulación anterior y conservará su historia.</p>':''}`;
   if(p.kind==='skill_proposal')return `<p>${esc(p.description||'')}</p><details open><summary>Instrucciones de la habilidad</summary><p style="white-space:pre-wrap;max-height:35vh;overflow:auto">${esc(p.instructions||'')}</p></details>`;
   return '';
@@ -1932,8 +1949,8 @@ function finalizeInlineReview(proposals,status){
 }
 function confirmProposal(p){
   p={...p,request_id:p.request_id||crypto.randomUUID()};
-  const reviewHint=p.kind==='routine'?'Puedes confirmar tal cual o corregir el contenido y el horario antes de guardarlo.':p.kind==='standing_intent'?'Se activará cuando el contexto reaparezca en la conversación. No es vigilancia externa.':p.kind==='expectation'?'Esto seguirá un hecho futuro del mundo; una fecha vencida sin evidencia no se tratará como fallo.':p.kind==='commitment'?'Esto mantendrá el objetivo vivo, pero no ejecutará acciones por sí solo.':p.kind==='work_claim'?'Revisa especialmente estado y procedencia: una fuente no equivale automáticamente a un hecho confirmado.':p.kind==='skill_proposal'?'Esta habilidad será personal y solo se activa al confirmar.':p.kind==='feed_preferences'?'Puedes revisar la constelación y los temas antes de modificar tu Feed.':p.kind==='assistant_preferences'?'Puedes revisar esta mejora antes de incorporarla al comportamiento de Isabella.':'Puedes confirmar tal cual o corregir nombre, fecha, hora, categoría o proyecto antes de guardarlo.';
-  modal('Confirmar',`<div class="row"><div class="row-main"><b>${esc(proposalLabel(p))}</b><div class="small" style="margin-top:7px">${esc(reviewHint)}</div>${proposalDetails(p)}</div></div><div class="proposal-actions"><button id="proposalCancel" class="secondary">Cancelar</button><button id="proposalEdit" class="secondary">Corregir</button><button id="proposalConfirm" class="primary">Confirmar</button></div>`);
+  const reviewHint=p.kind==='routine'?'Du kannst so bestätigen oder Inhalt und Zeitplan vorher anpassen.':p.kind==='standing_intent'?'Wird aktiv, wenn das Thema im Gespräch wieder auftaucht. Es wird nichts extern überwacht.':p.kind==='expectation'?'Das verfolgt ein künftiges Ereignis; ein verstrichenes Datum ohne Beleg gilt nicht als Fehler.':p.kind==='commitment'?'Das Ziel bleibt präsent, führt aber von sich aus keine Aktionen aus.':p.kind==='work_claim'?'Bitte besonders Status und Herkunft prüfen: Eine Quelle ist nicht automatisch eine bestätigte Tatsache.':p.kind==='skill_proposal'?'Diese Fähigkeit ist persönlich und wird erst mit der Bestätigung aktiv.':p.kind==='feed_preferences'?'Puedes revisar la constelación y los temas antes de modificar tu Feed.':p.kind==='assistant_preferences'?'Du kannst diese Verbesserung prüfen, bevor Romy sie übernimmt.':'Du kannst so bestätigen oder Name, Datum, Uhrzeit, Kategorie oder Projekt vorher anpassen.';
+  modal('Bestätigen',`<div class="row"><div class="row-main"><b>${esc(proposalLabel(p))}</b><div class="small" style="margin-top:7px">${esc(reviewHint)}</div>${proposalDetails(p)}</div></div><div class="proposal-actions"><button id="proposalCancel" class="secondary">Abbrechen</button><button id="proposalEdit" class="secondary">Anpassen</button><button id="proposalConfirm" class="primary">Bestätigen</button></div>`);
   $('#proposalCancel').onclick=()=>{state.pendingIntent=null;save();proposalFeedback('rejected',p);finalizeInlineReview(p,'rejected');closeModal();sayEvent('Sin cambios.')};
   $('#proposalEdit').onclick=()=>proposalEditor(p,q=>{if(q)confirmProposal(reviewedProposal(p,q));else confirmProposal(p)});
   $('#proposalConfirm').onclick=()=>{
@@ -1958,7 +1975,7 @@ function confirmProposals(list){
   const items=(list||[]).filter(Boolean).map(p=>({...p,request_id:p.request_id||crypto.randomUUID()}));
   if(!items.length)return;
   if(items.length===1){confirmProposal(items[0]);return}
-  modal('Confirmar cambios',`<div class="proposal-list">${items.map((p,i)=>`<div class="proposal-row"><span>${esc(proposalLabel(p))}${proposalDetails(p)}</span><button data-proposal-edit="${i}" class="proposal-inline-edit">Bearbeiten</button></div>`).join('')}</div><div class="small" style="margin-top:10px">Puedes revisar cada cambio antes de confirmar todos.</div><div class="confirm-actions" style="margin-top:18px"><button id="proposalBatchCancel" class="secondary">Cancelar</button><button id="proposalBatchConfirm" class="primary">Confirmar todo</button></div>`);
+  modal('Änderungen bestätigen',`<div class="proposal-list">${items.map((p,i)=>`<div class="proposal-row"><span>${esc(proposalLabel(p))}${proposalDetails(p)}</span><button data-proposal-edit="${i}" class="proposal-inline-edit">Bearbeiten</button></div>`).join('')}</div><div class="small" style="margin-top:10px">Du kannst jede Änderung prüfen, bevor du alle bestätigst.</div><div class="confirm-actions" style="margin-top:18px"><button id="proposalBatchCancel" class="secondary">Abbrechen</button><button id="proposalBatchConfirm" class="primary">Alle bestätigen</button></div>`);
   $$('[data-proposal-edit]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.proposalEdit);proposalEditor(items[i],q=>{if(q)items[i]=reviewedProposal(items[i],q);confirmProposals(items)})});
   $('#proposalBatchCancel').onclick=()=>{state.pendingIntent=null;save();for(const p of items)proposalFeedback('rejected',p);finalizeInlineReview(items,'rejected');closeModal();sayEvent('Keine Änderung.')};
   $('#proposalBatchConfirm').onclick=async()=>{const b=$('#proposalBatchConfirm');if(b.disabled)return;b.disabled=true;b.textContent='Speichere …';state.pendingIntent=null;save();const appliedTasks=[];let marked=false;try{for(const p of items){
@@ -1985,18 +2002,18 @@ function findTarget(p){
 window.MINDS_ROUTINE_REVIEW_VERSION=1;
 async function createRoutineProposal(p){
   const sb=window.MINDS_SUPABASE;
-  if(!sb||!p.request_id)throw new Error('Necesito una propuesta registrada y la sesión conectada.');
+  if(!sb||!p.request_id)throw new Error('Dafür braucht es einen registrierten Vorschlag und eine Anmeldung.');
   const {data:receipt,error}=await sb.rpc('minds_commit_reviewed_routine_v1',{p_request_id:p.request_id,p_reviewed:p});
   if(error)throw new Error(error.message.includes('routine_changed')
-    ?'La rutina cambió desde la propuesta. Pídeme consultarla de nuevo para conservar esos cambios.'
-    :error.message.includes('duplicate_routine')?'Ya existe una rutina equivalente. Pídeme editar la existente.':error.message);
+    ?'Die Routine wurde seit dem Vorschlag geändert. Bitte Romy, sie erneut abzurufen.'
+    :error.message.includes('duplicate_routine')?'Es gibt bereits eine gleichwertige Routine. Bitte Romy, die bestehende zu ändern.':error.message);
   if(!receipt?.receipt_id||!['applied','already_applied'].includes(receipt.status))
-    throw new Error('El servidor no confirmó el cambio.');
+    throw new Error('Der Server hat die Änderung nicht bestätigt.');
   closeModal();
-  const verb={create:'Programé',update:'Actualicé',pause:'Pausé',resume:'Reactivé',delete:'Eliminé'}[p.action||'create'];
+  const verb={create:'eingerichtet',update:'aktualisiert',pause:'pausiert',resume:'fortgesetzt',delete:'gelöscht'}[p.action||'create'];
   const row=receipt.after;
-  sayEvent(`Listo. ${verb} la rutina “${row?.title||p.title}”.`+
-    (row?.enabled&&row?.next_run_at?` Próxima ejecución: ${new Date(row.next_run_at).toLocaleString('de-DE',{timeZone:row.timezone})} (${row.timezone}).`:''));
+  sayEvent(`Routine „${row?.title||p.title}“ ${verb}.`+
+    (row?.enabled&&row?.next_run_at?` Nächste Ausführung: ${new Date(row.next_run_at).toLocaleString('de-DE',{timeZone:row.timezone})} (${row.timezone}).`:''));
   return receipt;
 }
 async function dbWorkProjectByName(name){
@@ -2006,7 +2023,7 @@ async function dbWorkProjectByName(name){
   return (data||[]).find(x=>String(x.client_key||'').toLowerCase()===key)||(data||[]).find(x=>String(x.name||'').toLowerCase()===key)||null;
 }
 async function createStandingIntentProposal(p){
-  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Necesito la memoria conectada para guardar este recordatorio.');return}
+  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Bitte anmelden, um diese Erinnerung zu speichern.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
   const proj=p.project?await dbWorkProjectByName(p.project):null;
   if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
@@ -2126,7 +2143,7 @@ async function createWorkClaimProposal(p){
   if(!String(p.statement||'').trim()){sayEvent('Escribe el contenido del conocimiento antes de guardarlo.');return}
   const evidence=Array.isArray(p.evidence)?p.evidence:(p.source_file_id||p.evidence_excerpt)?[{source_file_id:p.source_file_id||null,source_message_id:p.source_message_id||null,excerpt:p.evidence_excerpt||null,source_kind:p.source_file_id?'work_file':'conversation',stance:p.evidence_stance||'supports',locator:p.locator||{}}]:[];
   const {data,error}=await sb.rpc('minds_save_work_claim',{p_claim:{...p,project_id:proj.id},p_evidence:evidence,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No se guardó el conocimiento ni su evidencia: '+error.message);return}
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Wissen und Beleg wurden nicht gespeichert: '+error.message);return}
   closeModal();sayEvent(`Guardé el conocimiento en ${proj.name} como ${data?.status==='confirmed'?'confirmado':'propuesto'}, junto con su evidencia.`);
   window.MINDS_WORK?.refresh?.();
 }
@@ -2189,27 +2206,27 @@ function applyAssistantPreferencesProposal(p){
 async function applyVerifiedTaskUpdate(p,opts={}){
   const sb=window.MINDS_SUPABASE;
   if(!sb||!p?.request_id||!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(p.request_id))
-    throw new Error('Falta una propuesta registrada para confirmar.');
+    throw new Error('Es fehlt ein registrierter Vorschlag zum Bestätigen.');
   const {data:sessionData,error:authError}=await sb.auth.getSession();
   const owner=sessionData?.session?.user?.id;
-  if(authError||!owner)throw new Error('La sesión debe estar conectada.');
+  if(authError||!owner)throw new Error('Bitte zuerst anmelden.');
   const {data:receipt,error:writeError}=await sb.rpc('minds_commit_reviewed_task_update_v01',{
     p_request_id:p.request_id,p_reviewed:p
   });
   if(writeError)throw new Error(writeError.message||'Escritura rechazada.');
   if(!['applied','already_applied'].includes(receipt?.status)||
      !receipt?.receipt_id||!receipt?.entity_client_key||!receipt?.after)
-    throw new Error('No se recibió un comprobante de ejecución válido.');
+    throw new Error('Es kam keine gültige Ausführungsbestätigung.');
   const {data:canonical,error:readError}=await sb.from('isabella_tasks')
     .select('id,client_key,title,due_date,notes,reminder_time,project_id,category_id,updated_at')
     .eq('user_id',owner).eq('client_key',receipt.entity_client_key).single();
-  if(readError||!canonical)throw new Error('El servidor no confirmó el estado de la tarea.');
+  if(readError||!canonical)throw new Error('Der Server hat den Stand der Aufgabe nicht bestätigt.');
   const expected=receipt.after;
   if(canonical.id!==receipt.entity_id||
      canonical.title!==expected.title||
      canonical.due_date!==(expected.date||null)||
      Date.parse(canonical.updated_at)!==Date.parse(expected.updated_at))
-    throw new Error('El estado guardado no coincide con el comprobante.');
+    throw new Error('Der gespeicherte Stand passt nicht zur Bestätigung.');
   // Update the UI only after the server result is verified. The regular
   // Sync Pull can reconcile other devices, but is not the success criterion.
   const item=state.tasks.find(t=>t.id===canonical.client_key);
@@ -2229,28 +2246,28 @@ async function applyVerifiedTaskUpdate(p,opts={}){
 async function applyVerifiedTaskCreate(p,opts={}){
   const sb=window.MINDS_SUPABASE;
   if(!sb||!p?.request_id||!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(p.request_id))
-    throw new Error('Falta una propuesta registrada para confirmar.');
+    throw new Error('Es fehlt ein registrierter Vorschlag zum Bestätigen.');
   const {data:sessionData,error:authError}=await sb.auth.getSession();
   const owner=sessionData?.session?.user?.id;
-  if(authError||!owner)throw new Error('La sesión debe estar conectada.');
+  if(authError||!owner)throw new Error('Bitte zuerst anmelden.');
   const {data:receipt,error:writeError}=await sb.rpc('minds_commit_reviewed_task_create_v01',{
     p_request_id:p.request_id,p_reviewed:p
   });
   if(writeError)throw new Error(writeError.message||'Escritura rechazada.');
   if(!['applied','already_applied'].includes(receipt?.status)||
       !receipt?.receipt_id||!receipt?.entity_client_key||!receipt?.after)
-    throw new Error('No se recibió un comprobante de creación válido.');
+    throw new Error('Es kam keine gültige Anlagebestätigung.');
   const {data:canonical,error:readError}=await sb.from('isabella_tasks')
     .select('id,client_key,title,due_date,notes,reminder_time,project_id,category_id,updated_at')
     .eq('user_id',owner).eq('client_key',receipt.entity_client_key).single();
-  if(readError||!canonical)throw new Error('El servidor no confirmó la tarea creada.');
+  if(readError||!canonical)throw new Error('Der Server hat die angelegte Aufgabe nicht bestätigt.');
   const expected=receipt.after;
   if(canonical.id!==receipt.entity_id||
     canonical.title!==expected.title||
     canonical.due_date!==(expected.date||null)||
     canonical.project_id!==(expected.project_id||null)||
     Date.parse(canonical.updated_at)!==Date.parse(expected.updated_at))
-    throw new Error('La tarea guardada no coincide con su comprobante.');
+    throw new Error('Die gespeicherte Aufgabe passt nicht zur Bestätigung.');
   const maps={
     categoryId:state.categories.find(c=>c.name?.toLowerCase()===String(p.category||'').toLowerCase())?.id||'personal',
     projectId:state.projects.find(c=>c.name?.toLowerCase()===String(p.project||'').toLowerCase())?.id||null
@@ -2278,25 +2295,25 @@ async function applyDirectCalendarCreate(p){
   const sb=window.MINDS_SUPABASE;
   if(!sb||!p||!['task','event'].includes(p.kind)||p.action!=='create'||
      !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(String(p.request_id||'')))
-    throw new Error('No existe una creación autorizada y verificable.');
+    throw new Error('Es gibt keine freigegebene, prüfbare Anlage.');
   const {data:sessionData,error:authError}=await sb.auth.getSession();
   const owner=sessionData?.session?.user?.id;
-  if(authError||!owner)throw new Error('La sesión ya no está autenticada.');
+  if(authError||!owner)throw new Error('Die Anmeldung ist abgelaufen.');
   const {data:receipt,error:writeError}=await sb.rpc('minds_commit_direct_calendar_create_v01',{
     p_request_id:p.request_id,p_candidate:p
   });
-  if(writeError)throw new Error(writeError.message||'El servidor no autorizó la creación.');
+  if(writeError)throw new Error(writeError.message||'Der Server hat die Anlage nicht freigegeben.');
   if(!['applied','already_applied'].includes(receipt?.status)||
      !receipt?.receipt_id||!receipt?.entity_id||!receipt?.entity_client_key||
      !receipt?.after||(receipt.entity_kind!=null&&receipt.entity_kind!==p.kind))
-    throw new Error('El recibo de creación no es verificable.');
+    throw new Error('Die Anlagebestätigung ist nicht prüfbar.');
   const table=p.kind==='task'?'isabella_tasks':'isabella_events';
   const columns=p.kind==='task'
     ?'id,client_key,title,due_date,notes,reminder_time,project_id,category_id,updated_at'
     :'id,client_key,title,starts_at,ends_at,all_day,project_id,category_id,updated_at';
   const {data:row,error:readError}=await sb.from(table).select(columns)
     .eq('user_id',owner).eq('client_key',receipt.entity_client_key).single();
-  if(readError||!row)throw new Error('La escritura no pudo comprobarse en el calendario.');
+  if(readError||!row)throw new Error('Der Eintrag konnte im Kalender nicht geprüft werden.');
   const after=receipt.after;
   const common=row.id===receipt.entity_id&&row.client_key===receipt.entity_client_key&&
     row.title===after.title&&Date.parse(row.updated_at)===Date.parse(after.updated_at)&&
@@ -2305,7 +2322,7 @@ async function applyDirectCalendarCreate(p){
     ?common&&row.due_date===(after.date||null)
     :common&&Date.parse(row.starts_at)===Date.parse(after.starts_at)&&
       Date.parse(row.ends_at)===Date.parse(after.ends_at)&&row.all_day===after.all_day;
-  if(!matches)throw new Error('La lectura canónica no coincide con el recibo de ejecución.');
+  if(!matches)throw new Error('Der gelesene Stand passt nicht zur Ausführungsbestätigung.');
   if(typeof window.ISABELLA_SYNC_PULL_NOW==='function'){
     // Pull is presentation only. Verification above is the success criterion.
     try{await window.ISABELLA_SYNC_PULL_NOW()}catch(e){console.warn('direct create sync pending',e)}
@@ -2388,7 +2405,7 @@ function directCreationBatch(result,integrity){
      new Set(ids).size!==ids.length||
      !proposals.every(p=>(p.kind==='task'||p.kind==='event')&&p.action==='create'&&
        ids.includes(p.request_id)))
-    throw new Error('La autorización directa no coincide con la propuesta registrada.');
+    throw new Error('Die direkte Freigabe passt nicht zum registrierten Vorschlag.');
   return proposals;
 }
 function applyProposal(p,opts={}){
@@ -2410,7 +2427,7 @@ function applyProposal(p,opts={}){
   const date=p.kind==='event'?(p.date||today()):(p.date||null);
   if(action==='update'||action==='delete'||action==='complete'||action==='archive'){
     const target=findTarget(p);
-    if(!target){closeModal();sayEvent('No quedó claro qué elemento cambiar.');return}
+    if(!target){closeModal();sayEvent('Es ist nicht klar, welcher Eintrag geändert werden soll.');return}
     const before=clone(target);
     if(action==='complete'&&p.kind==='task'){
       target.done=true;target.completedAt=new Date().toISOString();
@@ -2451,7 +2468,7 @@ function applyProposal(p,opts={}){
   }
   const createCategoryId=categoryId||'personal';
   if(p.kind==='event'){
-    if(!p.time){closeModal();sayEvent('Falta la hora del evento.');return}
+    if(!p.time){closeModal();sayEvent('Die Uhrzeit des Termins fehlt.');return}
     const item={id:uid(),title:p.title||'Evento',date,start:p.time,duration:Number(p.duration_minutes||60),allDay:!!p.all_day,categoryId:createCategoryId,projectId:projectId||null,recurrence:p.recurrence?{text:p.recurrence}:{},notes:p.notes||'',metadata:{source:'isabella'}};
     state.events.push(item);mutation('event','create',null,item,'assistant');
   }else{
@@ -4628,7 +4645,7 @@ async function routinesPanel(){
     if(error)throw error;
     const rows=data||[];
     const body=rows.length?rows.map(r=>{
-      const sch=r.schedule||{},days=sch.kind==='weekly'&&Array.isArray(sch.weekdays)?' · '+sch.weekdays.map(d=>['dom','lun','mar','mié','jue','vie','sáb'][Number(d)]||d).join(', '):'';
+      const sch=r.schedule||{},days=sch.kind==='weekly'&&Array.isArray(sch.weekdays)?' · '+sch.weekdays.map(d=>['So','Mo','Di','Mi','Do','Fr','Sa'][Number(d)]||d).join(', '):'';
       const next=r.next_run_at?new Date(r.next_run_at).toLocaleString('de-DE'):'Sin próxima ejecución';
       const scheduleLabel=sch.kind==='once'?('Una vez · '+String(sch.date||'')+' · '+String(sch.time||'09:00')):(sch.kind==='weekly'?'Semanal':'Todos los días')+' · '+String(sch.time||'08:00')+days;
       return `<div class="routine-row"><div class="row-main"><b>${esc(r.title)}</b><div class="small routine-schedule">${esc(scheduleLabel)} · ${esc(r.timezone||'')}</div><div class="small">${esc(r.instruction||'')}</div><div class="small routine-next">Próxima: ${esc(next)}</div>${r.last_error?`<div class="small danger-text">${esc(r.last_error)}</div>`:''}</div><label class="routine-toggle"><input type="checkbox" data-routine-enabled="${r.id}" ${r.enabled?'checked':''}><span></span></label><button data-routine-delete="${r.id}" aria-label="Löschen">×</button></div>`;
@@ -5072,7 +5089,7 @@ window.ISABELLA_APP={
     if(!OFFICE)return;
     state.messages=(Array.isArray(rows)?rows:[]).map(m=>({
       id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
-      text:String(m.content||m.text||''),
+      text:m.role==='assistant'?officeNotice(m.content||m.text||''):String(m.content||m.text||''),
       at:String(m.created_at||m.at||new Date().toISOString()),
       metadata:m.metadata&&typeof m.metadata==='object'?m.metadata:{},sources:Array.isArray(m.metadata?.sources)?m.metadata.sources:[],attachments:Array.isArray(m.attachments)&&m.attachments.length?m.attachments:(Array.isArray(m.metadata?.attachments)?m.metadata.attachments:[]),artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[],quickReplies:[]
     }));
