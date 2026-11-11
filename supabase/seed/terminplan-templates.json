@@ -1739,379 +1739,1523 @@
   {
     "phase": "LPH5",
     "title": "Muster-Terminplan LPH 5",
-    "description": "Erster Office-Entwurf für Ausführungsplanung mit Planläufen, Fachplanung, Koordination, Leitdetails, optionaler Werk-/Montageplanung und Ausgabe.",
-    "version": "0.1",
-    "status": "Entwurf",
+    "description": "Erweiterter Muster-Terminplan LPH 5 mit 8 PSP-Gruppen, 45 Vorgängen/Meilensteinen, paralleler Fachplanung, Planläufen, Schlitz-/Durchbruchskoordination und optionaler baubegleitender Fortschreibung. Richtdauern sind an den Projektumfang anzupassen.",
+    "version": "0.2",
+    "status": "Office Standard",
     "is_active": true,
     "state": {
-      "tasks": [
-        {
-          "id": "m00",
-          "end": "2027-01-04",
-          "rel": "EA",
-          "name": "M00 · Start LPH 5 / Übergabe Grundlagen",
-          "note": "",
-          "pred": "",
-          "type": "milestone",
-          "group": "g00",
-          "owner": "Projektleitung",
-          "start": "2027-01-04",
-          "status": "Nicht begonnen",
-          "category": "ag",
-          "critical": true,
-          "progress": 0
+      "project": {
+        "name": "Muster LPH 5",
+        "phase": "LPH5",
+        "start": "2027-01-04",
+        "end": "2027-06-14",
+        "standDate": "2027-01-04",
+        "standLabel": "Muster v0.2",
+        "scheduleModel": "network-v1",
+        "criticalPathState": "not_calculated",
+        "releaseMilestoneId": "m60",
+        "calendar": {
+          "region": "DE-BY",
+          "nonWorkingDates": [
+            "2027-01-01",
+            "2027-01-06",
+            "2027-03-26",
+            "2027-03-29",
+            "2027-05-01",
+            "2027-05-06",
+            "2027-05-17",
+            "2027-05-27",
+            "2027-10-03",
+            "2027-11-01",
+            "2027-12-25",
+            "2027-12-26",
+            "2028-01-01",
+            "2028-01-06",
+            "2028-04-14",
+            "2028-04-17",
+            "2028-05-01",
+            "2028-05-25",
+            "2028-06-05",
+            "2028-06-15",
+            "2028-10-03",
+            "2028-11-01",
+            "2028-12-25",
+            "2028-12-26"
+          ]
         },
-        {
-          "id": "t001",
-          "end": "2027-01-08",
-          "rel": "EA",
-          "name": "Planliste, Detailmatrix und Planläufe festlegen",
-          "note": "",
-          "pred": "m00",
-          "type": "task",
-          "group": "g00",
-          "owner": "ARC",
-          "start": "2027-01-05",
-          "status": "Nicht begonnen",
-          "category": "qa",
-          "critical": false,
-          "progress": 0
-        },
-        {
-          "id": "m01",
-          "end": "2027-01-13",
-          "rel": "EA",
-          "name": "M01 · Kick-off Ausführungsplanung",
-          "note": "",
-          "pred": "t001",
-          "type": "milestone",
-          "group": "g00",
-          "owner": "ARC + Fachplaner",
-          "start": "2027-01-13",
-          "status": "Nicht begonnen",
-          "category": "fach",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t010",
-          "end": "2027-02-03",
-          "rel": "EA",
-          "name": "Planpaket Ausführungsplanung · Arbeitsstand 01 erarbeiten",
-          "note": "",
-          "pred": "m00",
-          "type": "task",
-          "group": "g01",
-          "owner": "ARC",
-          "start": "2027-01-05",
-          "status": "Nicht begonnen",
-          "category": "arch",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t011",
-          "end": "2027-02-05",
-          "rel": "AA",
-          "name": "Leitdetails und konstruktive Prinzipien erarbeiten",
-          "note": "",
-          "pred": "m01",
-          "type": "task",
-          "group": "g01",
-          "owner": "ARC",
-          "start": "2027-01-14",
-          "status": "Nicht begonnen",
-          "category": "arch",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "m10",
-          "end": "2027-02-03",
-          "rel": "EA",
-          "name": "M02 · Arbeitsstand 01 an Fachplaner bereitstellen",
-          "note": "",
-          "pred": "t010",
-          "type": "milestone",
-          "group": "g01",
-          "owner": "ARC",
-          "start": "2027-02-03",
-          "status": "Nicht begonnen",
-          "category": "arch",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t020",
-          "end": "2027-03-01",
-          "rel": "EA",
-          "name": "Fachplanung / Durchbruchsplanung · Arbeitsstand 01",
-          "note": "",
-          "pred": "m10",
-          "type": "task",
-          "group": "g02",
-          "owner": "Fachplaner",
-          "start": "2027-02-04",
-          "status": "Nicht begonnen",
-          "category": "fach",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t021",
-          "end": "2027-04-02",
-          "rel": "EA",
-          "name": "Abgestimmte Fachplanungsbeiträge Ausführungsplanung fortschreiben",
-          "note": "",
-          "pred": "t020",
-          "type": "task",
-          "group": "g02",
-          "owner": "Fachplaner",
-          "start": "2027-03-02",
-          "status": "Nicht begonnen",
-          "category": "fach",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t030",
-          "end": "2027-03-09",
-          "rel": "AA",
-          "name": "Planungskoordination 01 · Kollisionen / Schnittstellen / Durchbrüche",
-          "note": "",
-          "pred": "t020",
-          "type": "task",
-          "group": "g03",
-          "owner": "ARC + Fachplaner",
-          "start": "2027-02-15",
-          "status": "Nicht begonnen",
-          "category": "qa",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "m30",
-          "end": "2027-03-09",
-          "rel": "EA",
-          "name": "M03 · Planlauf 01 abgeschlossen",
-          "note": "",
-          "pred": "t030",
-          "type": "milestone",
-          "group": "g03",
-          "owner": "Projektteam",
-          "start": "2027-03-09",
-          "status": "Nicht begonnen",
-          "category": "qa",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t031",
-          "end": "2027-04-28",
-          "rel": "AA",
-          "name": "Planungskoordination 02 / Schlusskoordination",
-          "note": "",
-          "pred": "t021",
-          "type": "task",
-          "group": "g03",
-          "owner": "ARC + Fachplaner",
-          "start": "2027-04-05",
-          "status": "Nicht begonnen",
-          "category": "qa",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "m31",
-          "end": "2027-04-28",
-          "rel": "EA",
-          "name": "M04 · Planlauf 02 abgeschlossen",
-          "note": "",
-          "pred": "t031",
-          "type": "milestone",
-          "group": "g03",
-          "owner": "Projektteam",
-          "start": "2027-04-28",
-          "status": "Nicht begonnen",
-          "category": "qa",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t040",
-          "end": "2027-04-08",
-          "rel": "AA",
-          "name": "Planpaket Ausführungsplanung · Arbeitsstand 02 fortschreiben",
-          "note": "",
-          "pred": "t030",
-          "type": "task",
-          "group": "g04",
-          "owner": "ARC",
-          "start": "2027-03-02",
-          "status": "Nicht begonnen",
-          "category": "arch",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t041",
-          "end": "2027-04-16",
-          "rel": "AA",
-          "name": "Leitdetails / Detailplanung fortschreiben",
-          "note": "",
-          "pred": "t011",
-          "type": "task",
-          "group": "g04",
-          "owner": "ARC",
-          "start": "2027-03-08",
-          "status": "Nicht begonnen",
-          "category": "arch",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t042",
-          "end": "2027-05-12",
-          "rel": "EA",
-          "name": "Werk- und Montageplanung prüfen / integrieren · optional",
-          "note": "Optionaler Musterbaustein; projektspezifisch aktivieren oder löschen.",
-          "pred": "t040",
-          "type": "task",
-          "group": "g04",
-          "owner": "ARC + Fachplaner",
-          "start": "2027-04-14",
-          "status": "Nicht begonnen",
-          "category": "qa",
-          "critical": false,
-          "progress": 0
-        },
-        {
-          "id": "t050",
-          "end": "2027-05-20",
-          "rel": "EA",
-          "name": "Ausführungsplanung finalisieren",
-          "note": "",
-          "pred": "m31",
-          "type": "task",
-          "group": "g05",
-          "owner": "ARC",
-          "start": "2027-04-29",
-          "status": "Nicht begonnen",
-          "category": "arch",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t051",
-          "end": "2027-05-21",
-          "rel": "AA",
-          "name": "Planliste, Indizes und Planstatus finalisieren",
-          "note": "",
-          "pred": "t050",
-          "type": "task",
-          "group": "g05",
-          "owner": "ARC",
-          "start": "2027-05-12",
-          "status": "Nicht begonnen",
-          "category": "qa",
-          "critical": false,
-          "progress": 0
-        },
-        {
-          "id": "t052",
-          "end": "2027-05-27",
-          "rel": "EA",
-          "name": "Vollständigkeits- und Konsistenzprüfung Ausführungsplanung",
-          "note": "",
-          "pred": "t050",
-          "type": "task",
-          "group": "g05",
-          "owner": "Projektleitung",
-          "start": "2027-05-21",
-          "status": "Nicht begonnen",
-          "category": "qa",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "m50",
-          "end": "2027-05-28",
-          "rel": "EA",
-          "name": "M05 · Ausführungsplanung für Bauausführung ausgeben",
-          "note": "",
-          "pred": "t052",
-          "type": "milestone",
-          "group": "g05",
-          "owner": "Projektleitung",
-          "start": "2027-05-28",
-          "status": "Nicht begonnen",
-          "category": "arch",
-          "critical": true,
-          "progress": 0
-        },
-        {
-          "id": "t053",
-          "end": "2027-06-14",
-          "rel": "EA",
-          "name": "Fortschreibung Ausführungsplanung aufgrund koordinierter Rückläufe",
-          "note": "Musterzeitraum; projektspezifisch an Bauablauf und Rückläufe anpassen.",
-          "pred": "m50",
-          "type": "task",
-          "group": "g05",
-          "owner": "ARC + Fachplaner",
-          "start": "2027-05-31",
-          "status": "Nicht begonnen",
-          "category": "arch",
-          "critical": false,
-          "progress": 0
-        }
-      ],
+        "planningNotes": "Orientierungsdauern für ein Beispielprojekt, keine HOAI-Fristen. M07 bezeichnet erste koordinierte Ausgabe; optionales baubegleitendes Fortschreiben (PSP 07) ist nur als Platzhalter enthalten und muss an reale Termine angepasst oder entfernt werden. Pflicht-Fachplanungen projektspezifisch bestätigen."
+      },
       "groups": [
         {
           "id": "g00",
           "wbs": "00",
-          "name": "Projektorganisation und Grundlagen Ausführungsplanung",
+          "name": "Projektorganisation und verbindliche Planungsgrundlagen",
           "category": "qa"
         },
         {
           "id": "g01",
           "wbs": "01",
-          "name": "Ausführungsplanung Architektur · Arbeitsstand 01",
+          "name": "Architektur · Arbeitsstand 01 und Leitdetails",
           "category": "arch"
         },
         {
           "id": "g02",
           "wbs": "02",
-          "name": "Fachplanung und Durchbruchsplanung",
+          "name": "Fachplanungsbeiträge und Schlitz-/Durchbruchsplanung",
           "category": "fach"
         },
         {
           "id": "g03",
           "wbs": "03",
-          "name": "Koordination und Planläufe",
+          "name": "Planlauf 01 · Schnittstellen und Kollisionen",
           "category": "qa"
         },
         {
           "id": "g04",
           "wbs": "04",
-          "name": "Detailplanung / Leitdetails und Arbeitsstand 02",
+          "name": "Architektur · Detailplanung und Arbeitsstand 02",
           "category": "arch"
         },
         {
           "id": "g05",
           "wbs": "05",
-          "name": "Finalisierung, Prüfung und Ausgabe Ausführungsplanung",
+          "name": "Abgestimmte Fachplanung und Planlauf 02",
+          "category": "fach"
+        },
+        {
+          "id": "g06",
+          "wbs": "06",
+          "name": "Qualitätssicherung und Ausgabe Ausführungsplanung",
+          "category": "qa"
+        },
+        {
+          "id": "g07",
+          "wbs": "07",
+          "name": "Fortschreibung während Vergabe und Ausführung · optional",
           "category": "qa"
         }
       ],
-      "project": {
-        "end": "2027-06-14",
-        "name": "Muster LPH 5",
-        "phase": "LPH5",
-        "start": "2027-01-04",
-        "standDate": "2027-01-04",
-        "standLabel": "Muster v0.1"
-      }
+      "tasks": [
+        {
+          "id": "m00",
+          "group": "g00",
+          "type": "milestone",
+          "name": "M00 · LPH 5 Projektstart / abgestimmter Bearbeitungsrahmen",
+          "owner": "Projektleitung",
+          "category": "ag",
+          "optional": false,
+          "note": "Startpunkt, keine automatische Behauptung, dass LPH 3/4 und alle Fachbeauftragungen abgeschlossen sind.",
+          "durationAT": 0,
+          "start": "2027-01-04",
+          "end": "2027-01-04",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [],
+          "pred": "",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t001",
+          "group": "g00",
+          "type": "task",
+          "name": "Ergebnisse LPH 3/4, Auflagen und Planungsgrundlagen prüfen",
+          "owner": "ARC + Projektleitung",
+          "category": "arch",
+          "optional": false,
+          "note": "Zugrunde liegende freigegebene Entwurfs- und Genehmigungsstände prüfen; Genehmigungsauflagen nur bei tatsächlichem Vorliegen.",
+          "durationAT": 5,
+          "start": "2027-01-05",
+          "end": "2027-01-12",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m00",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "m00",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t002",
+          "group": "g00",
+          "type": "task",
+          "name": "Fachplanerleistungen, Liefertermine und Schnittstellen bestätigen",
+          "owner": "Projektleitung + Fachplaner",
+          "category": "fach",
+          "optional": false,
+          "note": "Voraussetzung: benötigte Fachplaner sind beauftragt; andernfalls separates Beauftragungspaket planen.",
+          "durationAT": 5,
+          "start": "2027-01-05",
+          "end": "2027-01-12",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m00",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "m00",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t003",
+          "group": "g00",
+          "type": "task",
+          "name": "Planliste, Planläufe, Prüfregeln und Abgaben definieren",
+          "owner": "ARC",
+          "category": "qa",
+          "optional": false,
+          "note": "Plansystem mit Ausgabestatus und Verantwortlichen, nicht automatisch eine vertragliche Freigabe.",
+          "durationAT": 5,
+          "start": "2027-01-08",
+          "end": "2027-01-14",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t001",
+              "rel": "AA",
+              "lagDays": 2
+            },
+            {
+              "pred": "t002",
+              "rel": "AA",
+              "lagDays": 2
+            }
+          ],
+          "pred": "t001",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m01",
+          "group": "g00",
+          "type": "milestone",
+          "name": "M01 · Planungsgrundlagen und Planläufe für LPH 5 geklärt",
+          "owner": "Projektleitung",
+          "category": "ag",
+          "optional": false,
+          "note": "",
+          "durationAT": 0,
+          "start": "2027-01-14",
+          "end": "2027-01-14",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t001",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t002",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t003",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t001",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t010",
+          "group": "g01",
+          "type": "task",
+          "name": "Ausführungspläne Architektur 1:50 · Arbeitsstand 01",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "Richtwert für ein Beispielprojekt; Maßstab und Arbeitstiefe nach Art und Größe des Objekts.",
+          "durationAT": 20,
+          "start": "2027-01-15",
+          "end": "2027-02-11",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m01",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "m01",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t011",
+          "group": "g01",
+          "type": "task",
+          "name": "Leitdetails und Bauteilaufbauten entwickeln",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "Konstruktionsprinzipien inklusive Anschlüssen und Materialschichten; keine pauschalen Baudetails vorschreiben.",
+          "durationAT": 15,
+          "start": "2027-01-22",
+          "end": "2027-02-11",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t010",
+              "rel": "AA",
+              "lagDays": 5
+            }
+          ],
+          "pred": "t010",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t012",
+          "group": "g01",
+          "type": "task",
+          "name": "Konstruktions- und Anschlusspunkte priorisieren",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "",
+          "durationAT": 10,
+          "start": "2027-01-27",
+          "end": "2027-02-09",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t010",
+              "rel": "AA",
+              "lagDays": 8
+            }
+          ],
+          "pred": "t010",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t013",
+          "group": "g01",
+          "type": "task",
+          "name": "Interne Planprüfung · Arbeitsstand 01",
+          "owner": "Projektleitung",
+          "category": "qa",
+          "optional": false,
+          "note": "Überlappende QS ist möglich; Abschluss erst, wenn erforderliche Arbeitsstände vollständig sind.",
+          "durationAT": 5,
+          "start": "2027-02-05",
+          "end": "2027-02-11",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t010",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t011",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t012",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t010",
+          "rel": "EE",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m10",
+          "group": "g01",
+          "type": "milestone",
+          "name": "M02 · Arbeitsstand 01 an Fachplaner übergeben",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "",
+          "durationAT": 0,
+          "start": "2027-02-11",
+          "end": "2027-02-11",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t010",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t011",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t013",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t010",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t020",
+          "group": "g02",
+          "type": "task",
+          "name": "Fachplaner prüfen Architekturgrundlagen und klären Rückfragen",
+          "owner": "TWP + HLS + ELT",
+          "category": "fach",
+          "optional": false,
+          "note": "",
+          "durationAT": 5,
+          "start": "2027-02-12",
+          "end": "2027-02-18",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m10",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "m10",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t021",
+          "group": "g02",
+          "type": "task",
+          "name": "TWP · Tragwerks-/Ausführungsgrundlagen und Schalplanung",
+          "owner": "TWP",
+          "category": "fach",
+          "optional": false,
+          "note": "Konkreter Umfang je Auftrag: Schalpläne, Bewehrungs-, Stahl- oder Holzbaupläne etc. sind nicht pauschal gleichzusetzen.",
+          "durationAT": 15,
+          "start": "2027-02-19",
+          "end": "2027-03-11",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t020",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t020",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t022",
+          "group": "g02",
+          "type": "task",
+          "name": "HLS · Ausführungsplanung Systeme und Dimensionierung",
+          "owner": "HLS",
+          "category": "fach",
+          "optional": false,
+          "note": "",
+          "durationAT": 15,
+          "start": "2027-02-19",
+          "end": "2027-03-11",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t020",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t020",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t023",
+          "group": "g02",
+          "type": "task",
+          "name": "ELT · Ausführungsplanung Anlagen und Leitungstrassen",
+          "owner": "ELT",
+          "category": "fach",
+          "optional": false,
+          "note": "",
+          "durationAT": 15,
+          "start": "2027-02-19",
+          "end": "2027-03-11",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t020",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t020",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t024",
+          "group": "g02",
+          "type": "task",
+          "name": "Brandschutzplanung · Ausführungsrelevante Detailangaben (sofern erforderlich)",
+          "owner": "BRS",
+          "category": "fach",
+          "optional": true,
+          "note": "Optional und projektspezifisch. Bei verpflichtender Leistung als zusätzlicher Vorgänger von M03/M05 definieren.",
+          "durationAT": 10,
+          "start": "2027-02-19",
+          "end": "2027-03-04",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t020",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t020",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t025",
+          "group": "g02",
+          "type": "task",
+          "name": "Schlitz-, Durchbruchs- und Öffnungsplanung koordinieren",
+          "owner": "HLS + ELT + TWP + ARC",
+          "category": "fach",
+          "optional": false,
+          "note": "In HOAI Anlage 15 LPH 5 für Technische Ausrüstung ausdrücklich genannt; Abstimmung mit Tragwerk erforderlich.",
+          "durationAT": 10,
+          "start": "2027-03-01",
+          "end": "2027-03-12",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t022",
+              "rel": "AA",
+              "lagDays": 6
+            },
+            {
+              "pred": "t023",
+              "rel": "AA",
+              "lagDays": 6
+            },
+            {
+              "pred": "t021",
+              "rel": "AA",
+              "lagDays": 6
+            },
+            {
+              "pred": "t022",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t023",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t022",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m20",
+          "group": "g02",
+          "type": "milestone",
+          "name": "M03 · Erforderliche Fachbeiträge Arbeitsstand 01 vorliegend",
+          "owner": "Projektteam",
+          "category": "fach",
+          "optional": false,
+          "note": "Falls BRS erforderlich, seine Lieferung ausdrücklich ergänzen; die Disziplinen laufen parallel.",
+          "durationAT": 0,
+          "start": "2027-03-12",
+          "end": "2027-03-12",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t021",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t022",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t023",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t025",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t021",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t030",
+          "group": "g03",
+          "type": "task",
+          "name": "Planlauf 01 · Koordination und Kollisionsklärung",
+          "owner": "ARC + Fachplaner",
+          "category": "qa",
+          "optional": false,
+          "note": "Koordination darf mit ersten belastbaren Planständen starten.",
+          "durationAT": 10,
+          "start": "2027-02-26",
+          "end": "2027-03-11",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t021",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t022",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t023",
+              "rel": "AA",
+              "lagDays": 5
+            }
+          ],
+          "pred": "t021",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t031",
+          "group": "g03",
+          "type": "task",
+          "name": "Schnittstellenliste und offene Entscheidungen aktualisieren",
+          "owner": "Projektleitung",
+          "category": "qa",
+          "optional": false,
+          "note": "",
+          "durationAT": 5,
+          "start": "2027-03-04",
+          "end": "2027-03-10",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t030",
+              "rel": "AA",
+              "lagDays": 4
+            }
+          ],
+          "pred": "t030",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t032",
+          "group": "g03",
+          "type": "task",
+          "name": "Konflikte und Durchbrüche für integrierten Stand 02 auflösen",
+          "owner": "ARC + Fachplaner",
+          "category": "qa",
+          "optional": false,
+          "note": "",
+          "durationAT": 10,
+          "start": "2027-03-11",
+          "end": "2027-03-24",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t030",
+              "rel": "AA",
+              "lagDays": 6
+            },
+            {
+              "pred": "t031",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "m20",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t030",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m30",
+          "group": "g03",
+          "type": "milestone",
+          "name": "M04 · Planlauf 01 abgeschlossen und Schnittstellen geklärt",
+          "owner": "Projektleitung",
+          "category": "qa",
+          "optional": false,
+          "note": "",
+          "durationAT": 0,
+          "start": "2027-03-24",
+          "end": "2027-03-24",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t032",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "m20",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t032",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t040",
+          "group": "g04",
+          "type": "task",
+          "name": "Ausführungsplanung Architektur · Arbeitsstand 02 fortschreiben",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "",
+          "durationAT": 15,
+          "start": "2027-03-05",
+          "end": "2027-03-25",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t030",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "m20",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t030",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t041",
+          "group": "g04",
+          "type": "task",
+          "name": "Detailpaket Hülle, Fugen und Abdichtungen ausarbeiten",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "Nur für tatsächlich vorhandene Konstruktionen; Detailbedarf projektspezifisch prüfen.",
+          "durationAT": 15,
+          "start": "2027-03-05",
+          "end": "2027-03-25",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t011",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "t030",
+              "rel": "AA",
+              "lagDays": 5
+            }
+          ],
+          "pred": "t011",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t042",
+          "group": "g04",
+          "type": "task",
+          "name": "Detailpaket Innenausbau und technische Schnittstellen ausarbeiten",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "Anwendungsabhängig; Umfang mit Projektanforderungen abgleichen.",
+          "durationAT": 10,
+          "start": "2027-03-05",
+          "end": "2027-03-18",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t012",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "t030",
+              "rel": "AA",
+              "lagDays": 5
+            }
+          ],
+          "pred": "t012",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t043",
+          "group": "g04",
+          "type": "task",
+          "name": "Leitdetails und Fachplanung miteinander abgleichen",
+          "owner": "ARC + Fachplaner",
+          "category": "qa",
+          "optional": false,
+          "note": "",
+          "durationAT": 10,
+          "start": "2027-03-15",
+          "end": "2027-03-30",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t041",
+              "rel": "AA",
+              "lagDays": 6
+            },
+            {
+              "pred": "t042",
+              "rel": "AA",
+              "lagDays": 6
+            },
+            {
+              "pred": "m30",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t041",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t044",
+          "group": "g04",
+          "type": "task",
+          "name": "Interne Prüfung Architektur Arbeitsstand 02",
+          "owner": "Projektleitung",
+          "category": "qa",
+          "optional": false,
+          "note": "",
+          "durationAT": 5,
+          "start": "2027-03-22",
+          "end": "2027-03-30",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t040",
+              "rel": "AA",
+              "lagDays": 10
+            },
+            {
+              "pred": "t040",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t043",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t040",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m40",
+          "group": "g04",
+          "type": "milestone",
+          "name": "M05 · Integrierter Architekturarbeitsstand 02 prüffähig",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "",
+          "durationAT": 0,
+          "start": "2027-03-30",
+          "end": "2027-03-30",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t044",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t040",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t043",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t044",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t050",
+          "group": "g05",
+          "type": "task",
+          "name": "TWP · Abgestimmten Ausführungsbeitrag fertigstellen",
+          "owner": "TWP",
+          "category": "fach",
+          "optional": false,
+          "note": "",
+          "durationAT": 15,
+          "start": "2027-03-25",
+          "end": "2027-04-16",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m30",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "t040",
+              "rel": "AA",
+              "lagDays": 5
+            }
+          ],
+          "pred": "m30",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t051",
+          "group": "g05",
+          "type": "task",
+          "name": "HLS · Abgestimmten Ausführungsbeitrag fertigstellen",
+          "owner": "HLS",
+          "category": "fach",
+          "optional": false,
+          "note": "",
+          "durationAT": 15,
+          "start": "2027-03-25",
+          "end": "2027-04-16",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m30",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "t040",
+              "rel": "AA",
+              "lagDays": 5
+            }
+          ],
+          "pred": "m30",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t052",
+          "group": "g05",
+          "type": "task",
+          "name": "ELT · Abgestimmten Ausführungsbeitrag fertigstellen",
+          "owner": "ELT",
+          "category": "fach",
+          "optional": false,
+          "note": "",
+          "durationAT": 15,
+          "start": "2027-03-25",
+          "end": "2027-04-16",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m30",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "t040",
+              "rel": "AA",
+              "lagDays": 5
+            }
+          ],
+          "pred": "m30",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t053",
+          "group": "g05",
+          "type": "task",
+          "name": "BRS · Abgestimmten Fachbeitrag fertigstellen (sofern erforderlich)",
+          "owner": "BRS",
+          "category": "fach",
+          "optional": true,
+          "note": "Optional; bei Erfordernis als zusätzlicher Abschlussvorgänger aufnehmen.",
+          "durationAT": 10,
+          "start": "2027-03-25",
+          "end": "2027-04-09",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m30",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "m30",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t054",
+          "group": "g05",
+          "type": "task",
+          "name": "Planlauf 02 · Schlusskoordination aller Fachplanungsbeiträge",
+          "owner": "ARC + Fachplaner",
+          "category": "qa",
+          "optional": false,
+          "note": "Parallel mit den letzten Fachbeiträgen, Abschluss erst nach den benötigten Planständen.",
+          "durationAT": 10,
+          "start": "2027-04-08",
+          "end": "2027-04-21",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t050",
+              "rel": "AA",
+              "lagDays": 8
+            },
+            {
+              "pred": "t051",
+              "rel": "AA",
+              "lagDays": 8
+            },
+            {
+              "pred": "t052",
+              "rel": "AA",
+              "lagDays": 8
+            },
+            {
+              "pred": "t040",
+              "rel": "AA",
+              "lagDays": 10
+            }
+          ],
+          "pred": "t050",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t055",
+          "group": "g05",
+          "type": "task",
+          "name": "Schnittstellen/Öffnungen/Leitdetails abschließend abgleichen",
+          "owner": "ARC + Fachplaner",
+          "category": "qa",
+          "optional": false,
+          "note": "",
+          "durationAT": 5,
+          "start": "2027-04-15",
+          "end": "2027-04-21",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t054",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t025",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "t050",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t051",
+              "rel": "EE",
+              "lagDays": 0
+            },
+            {
+              "pred": "t052",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t054",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m50",
+          "group": "g05",
+          "type": "milestone",
+          "name": "M06 · Abgestimmte Pflicht-Fachbeiträge vollständig",
+          "owner": "Projektteam",
+          "category": "fach",
+          "optional": false,
+          "note": "TWP/HLS/ELT als Beispielumfang; weitere Pflichtdisziplinen bei Bedarf ergänzen.",
+          "durationAT": 0,
+          "start": "2027-04-21",
+          "end": "2027-04-21",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t050",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t051",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t052",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t054",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t055",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t050",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t060",
+          "group": "g06",
+          "type": "task",
+          "name": "Bauherrenprüfung · koordinierter Ausführungsstand",
+          "owner": "Auftraggeber",
+          "category": "ag",
+          "optional": false,
+          "note": "5 AT sind eine interne Regelfrist, keine HOAI- oder Vertragsvorgabe; nur bei prüffähigen Unterlagen und Abstimmung.",
+          "durationAT": 5,
+          "start": "2027-04-22",
+          "end": "2027-04-28",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m40",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "m50",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "m40",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t061",
+          "group": "g06",
+          "type": "task",
+          "name": "Offene Planungs-/Qualitätsentscheidungen protokollieren",
+          "owner": "Auftraggeber + ARC",
+          "category": "ag",
+          "optional": false,
+          "note": "",
+          "durationAT": 5,
+          "start": "2027-04-29",
+          "end": "2027-05-05",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t060",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t060",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t062",
+          "group": "g06",
+          "type": "task",
+          "name": "Ausführungsplanung finalisieren und Prüfhinweise einarbeiten",
+          "owner": "ARC",
+          "category": "arch",
+          "optional": false,
+          "note": "",
+          "durationAT": 10,
+          "start": "2027-05-07",
+          "end": "2027-05-21",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t061",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "m50",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "m40",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t061",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t063",
+          "group": "g06",
+          "type": "task",
+          "name": "Interne Vollständigkeits- und Schnittstellenprüfung",
+          "owner": "Projektleitung",
+          "category": "qa",
+          "optional": false,
+          "note": "",
+          "durationAT": 5,
+          "start": "2027-05-14",
+          "end": "2027-05-21",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t062",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t062",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t062",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t064",
+          "group": "g06",
+          "type": "task",
+          "name": "Planliste, Planindizes und Ausgabestatus final prüfen",
+          "owner": "ARC",
+          "category": "qa",
+          "optional": false,
+          "note": "",
+          "durationAT": 5,
+          "start": "2027-05-14",
+          "end": "2027-05-21",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t062",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t063",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t062",
+          "rel": "AA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m60",
+          "group": "g06",
+          "type": "milestone",
+          "name": "M07 · Koordinierte Ausführungsplanung zur Ausgabe bereit",
+          "owner": "Projektleitung",
+          "category": "arch",
+          "optional": false,
+          "note": "Erste koordinierte Ausgabe, nicht zwingend das Ende aller LPH-5-Fortschreibungen oder eine rechtliche Abnahme.",
+          "durationAT": 0,
+          "start": "2027-05-21",
+          "end": "2027-05-21",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t062",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t063",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t064",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t062",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t070",
+          "group": "g07",
+          "type": "task",
+          "name": "Ausführungsplanung an Ausschreibungsergebnisse anpassen (falls erforderlich)",
+          "owner": "ARC + Fachplaner",
+          "category": "arch",
+          "optional": true,
+          "note": "Optionaler Orientierungsblock; nur nach tatsächlich vorliegenden Ausschreibungsergebnissen und geklärtem Leistungsumfang.",
+          "durationAT": 10,
+          "start": "2027-05-24",
+          "end": "2027-06-07",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m60",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "m60",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m71",
+          "group": "g07",
+          "type": "milestone",
+          "name": "M08 · Fortschriebenen Ausführungsstand an Unternehmen übergeben",
+          "owner": "Projektleitung",
+          "category": "arch",
+          "optional": true,
+          "note": "Nur sofern diese Übergabe als gesondertes Ereignis erforderlich ist.",
+          "durationAT": 0,
+          "start": "2027-06-07",
+          "end": "2027-06-07",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t070",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t070",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t072",
+          "group": "g07",
+          "type": "task",
+          "name": "Erforderliche Montage-/Werkstattpläne fachlich prüfen",
+          "owner": "ARC + Fachplaner",
+          "category": "fach",
+          "optional": true,
+          "note": "Optional; Umfang nach jeweiligem HOAI-Leistungsbild und Vertrag. Werkstattzeichnungen erstellen ist nicht gleich prüfen.",
+          "durationAT": 10,
+          "start": "2027-05-24",
+          "end": "2027-06-07",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m60",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "m60",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "t073",
+          "group": "g07",
+          "type": "task",
+          "name": "Relevante Rückläufe aus Ausführung koordinieren und einarbeiten",
+          "owner": "ARC + Fachplaner",
+          "category": "arch",
+          "optional": true,
+          "note": "Optionaler einmaliger Platzhalter. Reale, wiederkehrende Planläufe aus Ausführung müssen separat erfasst werden.",
+          "durationAT": 5,
+          "start": "2027-06-08",
+          "end": "2027-06-14",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "t070",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "t072",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t070",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        },
+        {
+          "id": "m70",
+          "group": "g07",
+          "type": "milestone",
+          "name": "M09 · Optionaler Folgeplanlauf dokumentiert",
+          "owner": "Projektleitung",
+          "category": "qa",
+          "optional": true,
+          "note": "Dieser Musterevent ist keine pauschale LPH-5-Schlussfreigabe.",
+          "durationAT": 0,
+          "start": "2027-06-14",
+          "end": "2027-06-14",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "critical": false,
+          "dependencies": [
+            {
+              "pred": "m71",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t073",
+              "rel": "EA",
+              "lagDays": 0
+            }
+          ],
+          "pred": "m71",
+          "rel": "EA",
+          "earliestOffsetAT": 0
+        }
+      ]
     }
   }
 ]
