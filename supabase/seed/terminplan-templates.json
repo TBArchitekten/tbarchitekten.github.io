@@ -3139,7 +3139,8 @@
           ],
           "pred": "m60",
           "rel": "EA",
-          "earliestOffsetAT": 0
+          "earliestOffsetAT": 0,
+          "planningCondition": "post_issue_optional"
         },
         {
           "id": "m71",
@@ -3165,7 +3166,8 @@
           ],
           "pred": "t070",
           "rel": "EA",
-          "earliestOffsetAT": 0
+          "earliestOffsetAT": 0,
+          "planningCondition": "post_issue_optional"
         },
         {
           "id": "t072",
@@ -3191,7 +3193,8 @@
           ],
           "pred": "m60",
           "rel": "EA",
-          "earliestOffsetAT": 0
+          "earliestOffsetAT": 0,
+          "planningCondition": "post_issue_optional"
         },
         {
           "id": "t073",
@@ -3222,7 +3225,8 @@
           ],
           "pred": "t070",
           "rel": "EA",
-          "earliestOffsetAT": 0
+          "earliestOffsetAT": 0,
+          "planningCondition": "post_issue_optional"
         },
         {
           "id": "m70",
@@ -3253,7 +3257,8 @@
           ],
           "pred": "m71",
           "rel": "EA",
-          "earliestOffsetAT": 0
+          "earliestOffsetAT": 0,
+          "planningCondition": "post_issue_optional"
         }
       ]
     }
