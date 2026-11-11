@@ -156,7 +156,7 @@ async function renderSelfReview(){
   $$('[data-review-decision]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;
     try{const note=$(`[data-review-note="${b.dataset.id}"]`)?.value||'';const result=await sb.rpc('minds_review_improvement_v1',{p_id:b.dataset.id,p_status:b.dataset.reviewDecision,p_note:note});if(result.error)throw result.error;await renderSelfReview();setStatus('Revisión guardada. No se ha aplicado ningún cambio al sistema.');}
-    catch(e){b.disabled=false;setStatus('No pude guardar tu revisión: '+(e.message||String(e)))}
+    catch(e){b.disabled=false;setStatus('Deine Prüfung konnte nicht gespeichert werden: '+(e.message||String(e)))}
   });
 }
 let knowledgeRows=[],knowledgeFilter='review',knowledgeQuery='',projectModelSnapshot=null;
@@ -166,23 +166,23 @@ let knowledgeRows=[],knowledgeFilter='review',knowledgeQuery='',projectModelSnap
 // Proposed register entries wait for Gari: one tap confirms or discards them.
 // Shared with the Bandeja (every project at once), so the entry's own project counts, not the open one.
 async function saveAkteDecision(id,decision){
-  if(!id||!['confirmed','rejected','resolved'].includes(decision))return {ok:false,message:'Decisión no válida.'};
+  if(!id||!['confirmed','rejected','resolved'].includes(decision))return {ok:false,message:'Ungültige Entscheidung.'};
   const patch={status:decision,updated_at:new Date().toISOString(),...(decision==='confirmed'?{confirmed_at:new Date().toISOString()}:{})};
   const {data,error}=await sb.from('minds_work_memory').update(patch).eq('id',id).eq('status','proposed').select('id,status');
-  if(error)return {ok:false,message:'No pude guardar la decisión. Inténtalo de nuevo.'};
-  if(!Array.isArray(data)||data.length!==1||data[0].status!==decision)return {ok:false,message:'Esta propuesta ya no está pendiente.'};
+  if(error)return {ok:false,message:'Die Entscheidung konnte nicht gespeichert werden. Bitte erneut versuchen.'};
+  if(!Array.isArray(data)||data.length!==1||data[0].status!==decision)return {ok:false,message:'Dieser Vorschlag ist nicht mehr offen.'};
   window.MINDS_BANDEJA?.changed?.();
   return {ok:true};
 }
 // A task proposed by the nightly Akte-Pflege becomes a real task in the planner of its project.
 async function saveAkteTask(id){
   const {data:entry,error}=await sb.from('minds_work_memory').select('id,project_id,title,occurred_at,metadata,status').eq('id',id).maybeSingle();
-  if(error||!entry||entry.status!=='proposed')return {ok:false,message:'Esta propuesta ya no está pendiente.'};
-  if(!entry.project_id)return {ok:false,message:'Esta propuesta no tiene proyecto.'};
+  if(error||!entry||entry.status!=='proposed')return {ok:false,message:'Dieser Vorschlag ist nicht mehr offen.'};
+  if(!entry.project_id)return {ok:false,message:'Dieser Vorschlag hat kein Projekt.'};
   const due=entry.metadata?.faellig||String(entry.occurred_at||'').slice(0,10)||null;
   const res=await sb.from('isabella_tasks').insert({title:entry.title,project_id:entry.project_id,due_date:due,work_status:'not_started',
     notes:entry.metadata?.quelle?'Quelle: '+entry.metadata.quelle:'',metadata:{source:'akte_pflege',memory_id:entry.id}}).select('id').single();
-  if(res.error)return {ok:false,message:'No pude crear la Aufgabe.'};
+  if(res.error)return {ok:false,message:'Die Aufgabe konnte nicht angelegt werden.'};
   await sb.from('minds_work_memory').update({status:'confirmed',confirmed_at:new Date().toISOString(),updated_at:new Date().toISOString(),metadata:{...(entry.metadata||{}),task_id:res.data.id}}).eq('id',entry.id);
   window.MINDS_BANDEJA?.changed?.();
   void window.ISABELLA_SYNC_PULL_NOW?.();
@@ -202,10 +202,10 @@ async function akteEntryToTask(id){
 async function undoSteckbrief(id){
   const {data:row,error}=await sb.from('minds_work_memory').select('id,body,metadata').eq('id',id).maybeSingle();
   const prev=row?.metadata?.versionen?.[0];
-  if(error||!prev){setStatus('No hay una versión anterior del Steckbrief.');return}
+  if(error||!prev){setStatus('Es gibt keine frühere Fassung des Steckbriefs.');return}
   const {error:saveError}=await sb.from('minds_work_memory').update({body:prev.body,updated_at:new Date().toISOString(),
     metadata:{...row.metadata,felder:prev.felder||{},versionen:row.metadata.versionen.slice(1),aktualisiert_von:'Gari (rückgängig)'}}).eq('id',row.id);
-  if(saveError){setStatus('No pude deshacer el cambio.');return}
+  if(saveError){setStatus('Die Änderung konnte nicht rückgängig gemacht werden.');return}
   setStatus('Projektsteckbrief: vorherige Version wiederhergestellt.');
   await renderOverview();
 }
@@ -232,8 +232,8 @@ function cockpitIn(n){return n===0?'heute':n===1?'morgen':n===-1?'gestern':n>1?'
 function cockpitPflegeLine(state){
   const run=state?.projects?.[project?.id]?.letzter_lauf;if(!run)return '';
   const when=run.am?akteDate(run.am):'';
-  if(run.status==='fehler')return '<p class="cockpit-pflege"><b>Isabella:</b> no pudo revisar la Akte la última noche ('+esc(when)+'). Lo vuelve a intentar esta noche.</p>';
-  if(run.status==='nichts_neu')return '<p class="cockpit-pflege"><b>Isabella, '+esc(when)+':</b> nada nuevo desde la última revisión.</p>';
+  if(run.status==='fehler')return '<p class="cockpit-pflege"><b>Romy:</b> konnte die Akte letzte Nacht nicht prüfen ('+esc(when)+'). Heute Nacht versucht sie es erneut.</p>';
+  if(run.status==='nichts_neu')return '<p class="cockpit-pflege"><b>Romy, '+esc(when)+':</b> nichts Neues seit der letzten Prüfung.</p>';
   const parts=[run.steckbrief?'Steckbrief actualizado':'',run.fristen?run.fristen+' Frist(en)':'',run.entscheidungen?run.entscheidungen+' Entscheidung(en)':'',run.aufgaben?run.aufgaben+' Aufgabe(n)':'',run.widersprueche?run.widersprueche+' Widerspruch/-sprüche':''].filter(Boolean);
   return '<p class="cockpit-pflege"><b>Isabella, '+esc(when)+':</b> '+esc(run.zusammenfassung||(parts.length?'propuso '+parts.join(', ')+'.':'nada relevante en lo nuevo.'))+'</p>';
 }
@@ -245,7 +245,7 @@ function cockpitSource(r){
 function cockpitWhy(r){
   const why=String(r.body||'').trim(),quote=String(r.metadata?.zitat||'').trim();
   if(!why&&!quote)return '';
-  return '<details class="cockpit-why"><summary>Por qué</summary>'+(why?'<p>'+esc(why)+'</p>':'')+(quote?'<blockquote>'+esc(quote)+'</blockquote>':'')+'</details>';
+  return '<details class="cockpit-why"><summary>Warum</summary>'+(why?'<p>'+esc(why)+'</p>':'')+(quote?'<blockquote>'+esc(quote)+'</blockquote>':'')+'</details>';
 }
 // One proposed Akte entry as a card: the same markup in Panorama «Para ti» and in the Bandeja.
 function akteCard(r){
@@ -265,14 +265,14 @@ function akteToConfirm(rows){
 }
 function cockpitParaTi(m){
   const cards=[...m.conflicts,...m.pending,...m.proposedTasks].map(akteCard);
-  for(const t of m.overdue)cards.push('<article class="cockpit-card is-overdue"><span class="cockpit-kind">Vencida · '+esc(cockpitIn(cockpitDayDiff(m.today,t.due_date)))+'</span><p>'+esc(t.title||'Sin título')+'</p>'+(t.assignee?'<small>'+esc(t.assignee)+'</small>':'')+
-    '<div class="cockpit-actions"><button type="button" class="secondary" data-work-edit-task="'+esc(t.id)+'">Abrir tarea</button><button type="button" class="secondary" data-cockpit-done="'+esc(t.id)+'">Hecho</button></div></article>');
+  for(const t of m.overdue)cards.push('<article class="cockpit-card is-overdue"><span class="cockpit-kind">Vencida · '+esc(cockpitIn(cockpitDayDiff(m.today,t.due_date)))+'</span><p>'+esc(t.title||'Ohne Titel')+'</p>'+(t.assignee?'<small>'+esc(t.assignee)+'</small>':'')+
+    '<div class="cockpit-actions"><button type="button" class="secondary" data-work-edit-task="'+esc(t.id)+'">Aufgabe öffnen</button><button type="button" class="secondary" data-cockpit-done="'+esc(t.id)+'">Erledigt</button></div></article>');
   const toConfirm=m.conflicts.length+m.pending.length+m.proposedTasks.length;
   const head=[toConfirm?toConfirm+' por confirmar':'',m.overdue.length?m.overdue.length+(m.overdue.length===1?' vencida':' vencidas'):''].filter(Boolean).join(' · ');
   const limit=8,shown=paraTiExpanded?cards:cards.slice(0,limit);
-  return '<section class="cockpit-section" aria-labelledby="cockpitParaTi"><div class="cockpit-head"><h2 id="cockpitParaTi">Para ti</h2><span>'+esc(head||'Nada pendiente')+'</span></div>'+
-    (cards.length?'<div class="cockpit-cards">'+shown.join('')+'</div>'+(cards.length>limit?'<button type="button" class="cockpit-more" data-cockpit-more>'+(paraTiExpanded?'Mostrar menos':'Mostrar '+(cards.length-limit)+' más')+'</button>':'')
-      :'<p class="cockpit-empty">Todo confirmado y nada vencido. Lo nuevo que encuentren Claude o Isabella aparecerá aquí.</p>')+'</section>';
+  return '<section class="cockpit-section" aria-labelledby="cockpitParaTi"><div class="cockpit-head"><h2 id="cockpitParaTi">Für dich</h2><span>'+esc(head||'Nichts offen')+'</span></div>'+
+    (cards.length?'<div class="cockpit-cards">'+shown.join('')+'</div>'+(cards.length>limit?'<button type="button" class="cockpit-more" data-cockpit-more>'+(paraTiExpanded?'Weniger anzeigen':(cards.length-limit)+' weitere anzeigen')+'</button>':'')
+      :'<p class="cockpit-empty">Alles bestätigt und nichts überfällig. Neues von Claude oder Romy erscheint hier.</p>')+'</section>';
 }
 function cockpitTimeline(m){
   const end=cockpitAddDays(m.today,14),byDay=new Map(),add=(day,item)=>{if(!day||day<m.today||day>end)return;if(!byDay.has(day))byDay.set(day,[]);byDay.get(day).push(item)};
@@ -288,7 +288,7 @@ function cockpitTimeline(m){
 }
 function cockpitSteckbrief(m){
   const b=m.brief;
-  if(!b)return '<section class="cockpit-panel cockpit-side" aria-labelledby="cockpitBrief"><div class="cockpit-head"><h2 id="cockpitBrief">Projektsteckbrief</h2></div><p class="cockpit-empty">Todavía no hay Steckbrief. Pídele a Claude que lo cree al abrir el proyecto: fase, hitos y Beteiligte.</p></section>';
+  if(!b)return '<section class="cockpit-panel cockpit-side" aria-labelledby="cockpitBrief"><div class="cockpit-head"><h2 id="cockpitBrief">Projektsteckbrief</h2></div><p class="cockpit-empty">Noch kein Steckbrief. Bitte Claude oder Romy, ihn anzulegen: Phase, Meilensteine und Beteiligte.</p></section>';
   const f=b.metadata?.felder||{},list=v=>Array.isArray(v)?v:[];
   const block=(label,lines)=>lines.length?'<div class="cockpit-brief-block"><span>'+esc(label)+'</span><p>'+lines.join('<br>')+'</p></div>':'';
   const structured=f&&(f.phase||list(f.beteiligte).length||list(f.meilensteine).length||list(f.prioritaeten).length);
@@ -308,23 +308,23 @@ function cockpitTopics(m){
     const q=Array.isArray(tb?.offene_fragen)?tb.offene_fragen.length:0,f=fristen.get(t.id)||0;
     const meta=[q?q+(q===1?' offene Frage':' offene Fragen'):'',f?f+(f===1?' Frist':' Fristen'):''].filter(Boolean).join(' · ');
     return '<article class="cockpit-topic'+(stand?'':' is-empty')+'"><div class="cockpit-topic-head"><button type="button" data-cockpit-thread="'+esc(t.id)+'">'+esc(t.title)+'</button><span>'+esc(cockpitAgo(tb?.aktualisiert_am||t.last_activity_at||t.updated_at,m.today))+'</span></div>'+
-      '<p>'+esc(stand||'Todavía sin Themenblatt. Se crea al cerrar la primera sesión en Claude.')+'</p>'+(meta?'<small>'+esc(meta)+'</small>':'')+
-      '<a class="cockpit-claude" href="'+esc(claudeContinueUrl(t))+'" target="_blank" rel="noopener noreferrer">'+(stand?'Continuar en Claude':'Empezar en Claude')+'</a></article>';
+      '<p>'+esc(stand||'Noch kein Themenblatt. Es entsteht nach der ersten abgeschlossenen Sitzung.')+'</p>'+(meta?'<small>'+esc(meta)+'</small>':'')+
+      '<a class="cockpit-claude" href="'+esc(claudeContinueUrl(t))+'" target="_blank" rel="noopener noreferrer">'+(stand?'In Claude fortsetzen':'Empezar en Claude')+'</a></article>';
   });
-  return '<section class="cockpit-section" aria-labelledby="cockpitTopics"><div class="cockpit-head"><h2 id="cockpitTopics">Temas</h2><button type="button" class="cockpit-link" data-work-go="threads">Todos los Threads</button></div>'+
-    (cards.length?'<div class="cockpit-topics">'+cards.join('')+'</div>':'<p class="cockpit-empty">Todavía no hay temas. Crea uno en Threads o cierra una sesión en Claude.</p>')+'</section>';
+  return '<section class="cockpit-section" aria-labelledby="cockpitTopics"><div class="cockpit-head"><h2 id="cockpitTopics">Themen</h2><button type="button" class="cockpit-link" data-work-go="threads">Alle Threads</button></div>'+
+    (cards.length?'<div class="cockpit-topics">'+cards.join('')+'</div>':'<p class="cockpit-empty">Noch keine Themen. Lege eines unter Threads an.</p>')+'</section>';
 }
 function cockpitRegister(m){
   const rows=m.confirmed.slice(0,8).map(r=>'<div class="cockpit-register-row"><span class="cockpit-chip'+(r.memory_type==='deadline'?' is-frist':'')+'">'+(r.memory_type==='deadline'?'Frist':'Entscheidung')+'</span><div><p>'+esc(r.title)+'</p>'+cockpitSource(r)+'</div><span class="cockpit-date">'+esc(cockpitShort(r.occurred_at||r.confirmed_at||r.created_at))+'</span></div>').join('');
   return '<section class="cockpit-panel cockpit-wide" aria-labelledby="cockpitRegister"><div class="cockpit-head"><h2 id="cockpitRegister">Entscheidungen &amp; Fristen</h2><span>'+(m.confirmed.length?m.confirmed.length+' bestätigt':'')+'</span></div>'+
-    (rows||'<p class="cockpit-empty">Todavía no hay entradas confirmadas. Lo que confirmes en «Para ti» queda aquí, con fecha y fuente.</p>')+'</section>';
+    (rows||'<p class="cockpit-empty">Noch keine bestätigten Einträge. Was du unter «Für dich» bestätigst, steht hier mit Datum und Quelle.</p>')+'</section>';
 }
 function cockpitDocs(m){
   const files=m.files.map(f=>'<button type="button" class="cockpit-file" data-cockpit-file="'+esc(f.id)+'"><span>'+esc(f.name)+'</span><small>'+esc([f.metadata?.art==='email'?'E-Mail':String(f.name||'').split('.').pop().toUpperCase().slice(0,5),f.metadata?.von,cockpitShort(f.created_at)].filter(Boolean).join(' · '))+'</small></button>').join('');
-  return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitNew"><div class="cockpit-head"><h2 id="cockpitNew">Nuevo en el Desktop</h2><button type="button" class="cockpit-link" data-work-go="desktop">Abrir Desktop</button></div>'+
-    (files||'<p class="cockpit-empty">El Desktop está vacío.</p>')+(m.fileCount!=null?'<p class="cockpit-foot">'+esc(m.fileCount+' documentos en total')+'</p>':'')+'</section>'+
-    '<section class="cockpit-panel" aria-labelledby="cockpitDocs"><h2 id="cockpitDocs">De los documentos</h2><p class="cockpit-text">'+(m.claimsError?'No pude comprobar el conocimiento del proyecto.':m.claimsToReview?esc(m.claimsToReview+(m.claimsToReview===1?' afirmación espera':' afirmaciones esperan')+' revisión'+(m.claimDeadlines?'; '+m.claimDeadlines+(m.claimDeadlines===1?' parece un plazo.':' parecen plazos.'):'.')):'Nada pendiente de revisar en los documentos.')+'</p>'+
-    '<button type="button" class="cockpit-wide-button" data-work-go="knowledge">Revisar en Conocimiento</button></section></div>';
+  return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitNew"><div class="cockpit-head"><h2 id="cockpitNew">Neu im Desktop</h2><button type="button" class="cockpit-link" data-work-go="desktop">Desktop öffnen</button></div>'+
+    (files||'<p class="cockpit-empty">Der Desktop ist leer.</p>')+(m.fileCount!=null?'<p class="cockpit-foot">'+esc(m.fileCount+' documentos en total')+'</p>':'')+'</section>'+
+    '<section class="cockpit-panel" aria-labelledby="cockpitDocs"><h2 id="cockpitDocs">Aus den Dokumenten</h2><p class="cockpit-text">'+(m.claimsError?'Das Projektwissen konnte nicht geprüft werden.':m.claimsToReview?esc(m.claimsToReview+(m.claimsToReview===1?' Aussage wartet':' Aussagen warten')+' auf Prüfung'+(m.claimDeadlines?'; '+m.claimDeadlines+(m.claimDeadlines===1?' sieht nach einer Frist aus.':' sehen nach Fristen aus.'):'.')):'Nichts offen de revisar en los documentos.')+'</p>'+
+    '<button type="button" class="cockpit-wide-button" data-work-go="knowledge">Im Wissen prüfen</button></section></div>';
 }
 function cockpitHeader(m){
   const f=m.brief?.metadata?.felder||{};
@@ -358,7 +358,7 @@ function cockpitMarkup(m){
   return '<div class="work-overview work-cockpit" aria-label="Panorama de '+esc(project.name)+'">'+cockpitHeader(m)+cockpitPflegeLine(m.pflege)+cockpitParaTi(m)+
     '<div class="cockpit-row">'+cockpitTimeline(m)+cockpitSteckbrief(m)+'</div>'+cockpitTopics(m)+
     '<div class="cockpit-row is-top">'+cockpitRegister(m)+cockpitDocs(m)+'</div>'+
-    (m.partial?'<p class="cockpit-foot">Lectura parcial: alguna fuente no respondió. Vuelve a abrir el Panorama en un momento.</p>':'')+'</div>';
+    (m.partial?'<p class="cockpit-foot">Unvollständig: Eine Quelle hat nicht geantwortet. Bitte die Übersicht gleich noch einmal öffnen.</p>':'')+'</div>';
 }
 async function renderOverview(){
   const body=$('#workBody'),projectId=project.id;
@@ -404,7 +404,7 @@ async function renderOverview(){
   $$('[data-cockpit-file]').forEach(button=>button.onclick=async()=>{const file=m.files.find(x=>x.id===button.dataset.cockpitFile);if(!file)return;const r=await sb.storage.from('minds-work').createSignedUrl(file.storage_path,900);if(r.error||!r.data?.signedUrl){setStatus('Die Datei konnte nicht geöffnet werden.');return}window.open(r.data.signedUrl,'_blank','noopener')});
 }
 const knowledgeStates={proposed:'Propuesto',confirmed:'Confirmado',disputed:'En disputa',superseded:'Sustituido',resolved:'Resuelto',rejected:'Descartado'};
-const provenanceNames={user:'Afirmación del usuario',project_source:'Fuente del proyecto',external:'Fuente externa',inferred:'Inferencia',system:'Sistema'};
+const provenanceNames={user:'Angabe der Person',project_source:'Projektquelle',external:'Fuente externa',inferred:'Inferencia',system:'Sistema'};
 function knowledgeFlags(c){
   const evidence=c.minds_work_evidence||[];
   return {contradiction:c.status==='disputed'||evidence.some(e=>e.stance==='contradicts'),expired:!!c.valid_to&&new Date(c.valid_to)<new Date(),unreviewed:c.status==='proposed',noEvidence:!evidence.length};
@@ -421,7 +421,7 @@ async function renderKnowledge(){
   paintKnowledge();
 }
 function projectModelPanel(){
-  const m=projectModelSnapshot;if(!m)return '<section class="project-model-panel"><div><b>Lectura de Isabella</b><p class="small">El Project Model no está disponible ahora mismo. El conocimiento canónico sigue debajo.</p></div></section>';
+  const m=projectModelSnapshot;if(!m)return '<section class="project-model-panel"><div><b>Romys Lesart</b><p class="small">Das Projektmodell ist gerade nicht verfügbar. Das bestätigte Wissen steht darunter.</p></div></section>';
   const revision=m.current_revision||null,claims=Array.isArray(m.claims)?m.claims:[],variants=Array.isArray(m.variants)?m.variants:[],elements=Array.isArray(m.revision_elements)?m.revision_elements:[],perimeter=Array.isArray(m.perimeter)?m.perimeter:[];
   const claimById=new Map(claims.map(x=>[String(x.id),x]));
   const inferred=claims.filter(x=>x.status==='proposed'||x.status==='disputed'||x.author_kind==='isabella'||x.model_kind).slice(0,6);
@@ -429,7 +429,7 @@ function projectModelPanel(){
   const weakPerimeter=perimeter.filter(x=>x.observation_mode==='unobserved'||['missing','unknown'].includes(x.coverage)||['unreadable','unknown'].includes(x.readability)).slice(0,6);
   const revWhen=revision?.published_at||revision?.created_at;
   return `<section class="project-model-panel">
-    <div class="project-model-head"><div><b>Lectura de Isabella</b><p class="small">Interpretación versionada del proyecto; no sustituye decisiones ni hechos confirmados.</p></div><div class="project-model-revision">${revision?`Rev. ${esc(String(revision.id||'').slice(0,8))}${revWhen?' · '+esc(new Date(revWhen).toLocaleString('de-DE')):''}`:'Sin revisión publicada'}</div></div>
+    <div class="project-model-head"><div><b>Romys Lesart</b><p class="small">Interpretación versionada del proyecto; no sustituye decisiones ni hechos confirmados.</p></div><div class="project-model-revision">${revision?`Rev. ${esc(String(revision.id||'').slice(0,8))}${revWhen?' · '+esc(new Date(revWhen).toLocaleString('de-DE')):''}`:'Keine veröffentlichte Fassung'}</div></div>
     <div class="project-model-grid">
       <article><strong>Qué interpreta ahora</strong>${inferred.map(x=>`<p><span class="model-badge">${esc(x.status==='disputed'?'En disputa':'Inferencia')}</span> ${esc(x.statement)}</p>`).join('')||'<p class="small">Todavía no hay inferencias estructuradas.</p>'}</article>
       <article><strong>Tensiones / Variantes</strong>${variants.filter(x=>x.status==='open').slice(0,6).map(v=>{const a=claimById.get(String(v.source_claim_id)),b=claimById.get(String(v.target_claim_id));return `<p><span class="model-badge attention">${esc(v.variant_kind)}</span> ${esc(a?.statement||'Nueva formulación')}${b?.statement?' ↔ '+esc(b.statement):''}</p>`}).join('')||'<p class="small">No hay variantes abiertas en la revisión actual.</p>'}</article>
@@ -445,7 +445,7 @@ function projectModelPanel(){
 const KN_TYPES={decision:['Entscheidung','Entscheidungen'],deadline:['Frist','Fristen'],requirement:['Anforderung','Anforderungen'],dependency:['Abhängigkeit','Abhängigkeiten'],open_question:['Offene Frage','Offene Fragen'],constraint:['Randbedingung','Randbedingungen'],assumption:['Annahme','Annahmen'],fact:['Fakt','Fakten'],other:['Sonstiges','Sonstiges']};
 const KN_STATES={review:['proposed','disputed'],confirmed:['confirmed'],history:['superseded','rejected','resolved']};
 let knowledgeType='all',knowledgeGroup='document',knowledgeGroupsShown=10,knowledgeOpenGroups=new Set(),knowledgeBusy=new Set();
-function knowledgeOrigin(x){return provenanceNames[x.provenance_class]||x.provenance_class||'Origen sin clasificar'}
+function knowledgeOrigin(x){return provenanceNames[x.provenance_class]||x.provenance_class||'Herkunft nicht eingeordnet'}
 function knowledgeFileOf(c){const e=(c.minds_work_evidence||[]).find(x=>x.source_file_id);return e?e.source_file_id:null}
 function knowledgeDateIn(text){
   const t=String(text||'');let m=t.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);if(m)return m[1]+'-'+m[2]+'-'+m[3];
@@ -463,19 +463,19 @@ function knowledgeSummary(){
   const understood=claims.filter(x=>x.status==='confirmed'||x.author_kind==='isabella'||x.model_kind).slice(0,3).map(x=>x.statement).filter(Boolean);
   const gaps=[...elements.filter(x=>x.element_kind==='gap').map(g=>g.metadata?.source_class||g.metadata?.verdict||''),...perimeter.filter(x=>['missing','unknown'].includes(x.coverage)).map(p=>p.source_class)].filter(Boolean).slice(0,3);
   if(!understood.length&&!gaps.length)return '';
-  return '<section class="kn-summary"><div><h2>Lo que Isabella entiende del proyecto</h2>'+(understood.length?'<ul>'+understood.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p>Todavía no hay una lectura del proyecto.</p>')+'</div>'+
-    '<div><h2>Lo que no sabe</h2><p>'+esc(gaps.length?gaps.join(' · '):'No hay lagunas registradas.')+'</p><details class="kn-tech"><summary>Detalle técnico</summary>'+projectModelPanel()+'</details></div></section>';
+  return '<section class="kn-summary"><div><h2>Was Romy vom Projekt versteht</h2>'+(understood.length?'<ul>'+understood.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p>Noch keine Lesart des Projekts.</p>')+'</div>'+
+    '<div><h2>Was sie nicht weiß</h2><p>'+esc(gaps.length?gaps.join(' · '):'No hay lagunas registradas.')+'</p><details class="kn-tech"><summary>Technisches Detail</summary>'+projectModelPanel()+'</details></div></section>';
 }
 function knowledgeRow(c,canAct){
   const f=knowledgeFlags(c),type=KN_TYPES[c.claim_type]||KN_TYPES.other,busy=knowledgeBusy.has(c.id);
   const evidence=c.minds_work_evidence||[];
   const toAkte=c.claim_type==='deadline'?'Als Frist eintragen':c.claim_type==='decision'?'Als Entscheidung eintragen':'';
-  const actions=canAct?'<div class="kn-actions">'+(c.status==='proposed'?'<button type="button" class="kn-icon" aria-label="Confirmar" data-kn-review="confirmed" data-kn-id="'+esc(c.id)+'"'+(busy?' disabled':'')+'><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>':'')+
-    '<button type="button" class="kn-icon is-reject" aria-label="Descartar" data-kn-review="rejected" data-kn-id="'+esc(c.id)+'"'+(busy?' disabled':'')+'><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>'+
+  const actions=canAct?'<div class="kn-actions">'+(c.status==='proposed'?'<button type="button" class="kn-icon" aria-label="Bestätigen" data-kn-review="confirmed" data-kn-id="'+esc(c.id)+'"'+(busy?' disabled':'')+'><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>':'')+
+    '<button type="button" class="kn-icon is-reject" aria-label="Verwerfen" data-kn-review="rejected" data-kn-id="'+esc(c.id)+'"'+(busy?' disabled':'')+'><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>'+
     (toAkte?'<button type="button" class="kn-akte" data-kn-akte="'+esc(c.id)+'"'+(busy?' disabled':'')+'>'+toAkte+'</button>':'')+'</div>':'';
   return '<div class="kn-row'+(c.claim_type==='deadline'&&canAct?' is-frist':'')+'"><span class="kn-type'+(c.claim_type==='deadline'?' is-frist':'')+'">'+esc(type[0])+'</span>'+
-    '<details class="kn-claim"><summary>'+esc(c.statement)+(f.contradiction?'<em class="kn-flag">Contradicción por revisar</em>':'')+(f.expired?'<em class="kn-flag">Vigencia vencida</em>':'')+'</summary>'+
-    (evidence.length?evidence.slice(0,4).map(e=>'<blockquote><span>'+esc(e.stance==='contradicts'?'Contradice':e.stance==='context'?'Contexto':'Apoya')+'</span> '+esc(e.excerpt||'Sin extracto')+(e.locator?.page?' <small>· S. '+esc(e.locator.page)+'</small>':'')+'</blockquote>').join(''):'<p class="small">Sin evidencia guardada.</p>')+
+    '<details class="kn-claim"><summary>'+esc(c.statement)+(f.contradiction?'<em class="kn-flag">Widerspruch zu prüfen</em>':'')+(f.expired?'<em class="kn-flag">Vigencia vencida</em>':'')+'</summary>'+
+    (evidence.length?evidence.slice(0,4).map(e=>'<blockquote><span>'+esc(e.stance==='contradicts'?'Contradice':e.stance==='context'?'Contexto':'Apoya')+'</span> '+esc(e.excerpt||'Ohne Auszug')+(e.locator?.page?' <small>· S. '+esc(e.locator.page)+'</small>':'')+'</blockquote>').join(''):'<p class="small">Kein Beleg gespeichert.</p>')+
     '<p class="kn-origin">'+esc('Origen: '+knowledgeOrigin(c)+(c.confirmed_at?' · revisada '+akteDate(c.confirmed_at):''))+'</p><div class="kn-more"><button type="button" data-knowledge-edit="'+esc(c.id)+'">Editar</button><button type="button" data-knowledge-replace="'+esc(c.id)+'">Proponer sustitución</button></div></details>'+actions+'</div>';
 }
 function paintKnowledge(){
@@ -493,21 +493,21 @@ function paintKnowledge(){
     const confirmable=list.filter(c=>c.status==='proposed');
     const open=knowledgeOpenGroups.has(key)||ordered.indexOf(ordered.find(x=>x[0]===key))<3;
     return '<section class="kn-group"><div class="kn-group-head"><div><strong>'+esc(title)+'</strong><span>'+esc(list.length+(canAct?' por revisar':knowledgeFilter==='confirmed'?' confirmadas':' en el historial'))+'</span></div><div class="kn-group-actions">'+
-      (file?'<button type="button" class="kn-link" data-evidence-file="'+esc(file.id)+'">Abrir documento</button>':'')+
-      (canAct&&confirmable.length>1?'<button type="button" class="kn-primary" data-kn-bulk="'+esc(key)+'">Confirmar '+(confirmable.length===list.length?'las ':'')+confirmable.length+'</button>':'')+
+      (file?'<button type="button" class="kn-link" data-evidence-file="'+esc(file.id)+'">Dokument öffnen</button>':'')+
+      (canAct&&confirmable.length>1?'<button type="button" class="kn-primary" data-kn-bulk="'+esc(key)+'">'+(confirmable.length===list.length?'Alle ':'')+confirmable.length+' bestätigen</button>':'')+
       (open?'':'<button type="button" class="kn-link" data-kn-open="'+esc(key)+'">Mostrar</button>')+'</div></div>'+
       (open?list.slice(0,40).map(c=>knowledgeRow(c,canAct)).join('')+(list.length>40?'<p class="kn-note">'+esc((list.length-40)+' más en este grupo. Usa la búsqueda o el filtro por tipo.')+'</p>':''):'')+'</section>';
   }).join('');
-  const empty=knowledgeRows.length?(canAct?'Nada por revisar. Todo lo que dicen los documentos está confirmado o descartado.':'No hay afirmaciones que coincidan.'):'Todavía no hay Claims registrados para este proyecto. Desktop contiene '+files.length+' archivo(s) registrado(s); '+files.filter(f=>f.index_status==='indexed').length+' constan como indexados. Registrar un archivo no lo convierte automáticamente en conocimiento validado.';
+  const empty=knowledgeRows.length?(canAct?'Nichts zu prüfen. Alle Aussagen aus den Dokumenten sind bestätigt oder verworfen.':'Keine passenden Aussagen.'):'Für dieses Projekt gibt es noch keine Aussagen. Der Desktop enthält '+files.length+' Datei(en); '+files.filter(f=>f.index_status==='indexed').length+' davon sind indexiert. Eine abgelegte Datei ist nicht automatisch geprüftes Wissen.';
   const typeButtons=Object.keys(KN_TYPES).filter(k=>typeCounts.get(k)).map(k=>'<button type="button" class="kn-filter'+(knowledgeType===k?' is-active':'')+'" data-kn-type="'+k+'">'+esc(KN_TYPES[k][1])+'<span>'+typeCounts.get(k)+'</span></button>').join('');
-  $('#workBody').innerHTML='<div class="kn-view"><div class="kn-header"><div><h1>Conocimiento de '+esc(project.name)+'</h1><p>Lo que dicen los documentos. Revísalo por documento y lleva lo importante a la Akte.</p></div><button type="button" data-knowledge-new>＋ Añadir</button></div>'+
+  $('#workBody').innerHTML='<div class="kn-view"><div class="kn-header"><div><h1>Conocimiento de '+esc(project.name)+'</h1><p>Was die Dokumente sagen. Prüfe es je Dokument und übernimm das Wichtige in die Akte.</p></div><button type="button" data-knowledge-new>＋ Hinzufügen</button></div>'+
     '<label class="kn-search"><span class="kn-sr">Buscar en los documentos</span><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input id="knowledgeSearch" type="search" placeholder="Busca en las afirmaciones y en los nombres de documento…" value="'+esc(knowledgeQuery)+'"></label>'+
     knowledgeSummary()+
     '<div class="kn-layout"><aside class="kn-aside" aria-label="Filtros"><span class="kn-label">Estado</span>'+
-      [['review','Por revisar'],['confirmed','Confirmadas'],['history','Historial']].map(([k,l])=>'<button type="button" class="kn-filter'+(knowledgeFilter===k?' is-active':'')+'" data-kn-state="'+k+'">'+l+'<span>'+stateCount(k)+'</span></button>').join('')+
+      [['review','Zu prüfen'],['confirmed','Bestätigt'],['history','Verlauf']].map(([k,l])=>'<button type="button" class="kn-filter'+(knowledgeFilter===k?' is-active':'')+'" data-kn-state="'+k+'">'+l+'<span>'+stateCount(k)+'</span></button>').join('')+
       (typeButtons?'<span class="kn-label">Tipo</span><button type="button" class="kn-filter'+(knowledgeType==='all'?' is-active':'')+'" data-kn-type="all">Todos<span>'+visible.length+'</span></button>'+typeButtons:'')+
       '<span class="kn-label">Agrupar por</span><div class="kn-segment"><button type="button" class="'+(knowledgeGroup==='document'?'is-active':'')+'" data-kn-group="document">Documento</button><button type="button" class="'+(knowledgeGroup==='topic'?'is-active':'')+'" data-kn-group="topic">Tema</button></div></aside>'+
-    '<div class="kn-main">'+(groupHtml||'<div class="work-empty">'+esc(empty)+'</div>')+(ordered.length>knowledgeGroupsShown?'<button type="button" class="kn-more-groups" data-kn-more>Mostrar '+Math.min(10,ordered.length-knowledgeGroupsShown)+' grupos más (quedan '+(ordered.length-knowledgeGroupsShown)+')</button>':'')+'</div></div></div>';
+    '<div class="kn-main">'+(groupHtml||'<div class="work-empty">'+esc(empty)+'</div>')+(ordered.length>knowledgeGroupsShown?'<button type="button" class="kn-more-groups" data-kn-more>'+Math.min(10,ordered.length-knowledgeGroupsShown)+' weitere Gruppen (noch '+(ordered.length-knowledgeGroupsShown)+')</button>':'')+'</div></div></div>';
   const search=$('#knowledgeSearch');if(search)search.oninput=e=>{knowledgeQuery=e.target.value;clearTimeout(paintKnowledge.t);paintKnowledge.t=setTimeout(()=>{paintKnowledge();const el=$('#knowledgeSearch');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}},250)};
   $$('[data-kn-state]').forEach(b=>b.onclick=()=>{knowledgeFilter=b.dataset.knState;knowledgeType='all';knowledgeGroupsShown=10;paintKnowledge()});
   $$('[data-kn-type]').forEach(b=>b.onclick=()=>{knowledgeType=b.dataset.knType;paintKnowledge()});
@@ -538,7 +538,7 @@ async function reviewKnowledge(ids,status){
   let failed=0;
   for(const c of list){const error=await saveClaimReview(c,status);if(error)failed++;else c.status=status;knowledgeBusy.delete(c.id)}
   paintKnowledge();
-  setStatus(failed?'No pude guardar '+failed+' de '+list.length+'. Inténtalo de nuevo.':(list.length===1?(status==='confirmed'?'Confirmada.':'Descartada.'):list.length+' confirmadas.'));
+  setStatus(failed?failed+' von '+list.length+' konnten nicht gespeichert werden. Bitte erneut versuchen.':(list.length===1?(status==='confirmed'?'Bestätigt.':'Verworfen.'):list.length+' bestätigt.'));
 }
 // A decision or deadline from a document goes straight into the project register (confirmed: Gari chose it).
 async function knowledgeToAkte(id){
@@ -558,7 +558,7 @@ async function knowledgeToAkte(id){
   }
   if(!error&&c.status!=='confirmed'){error=await saveClaimReview(c,'confirmed');if(!error)c.status='confirmed'}
   knowledgeBusy.delete(c.id);paintKnowledge();
-  setStatus(error?'No pude llevarlo a la Akte.':(type==='deadline'?'Frist':'Entscheidung')+' eingetragen: '+title.slice(0,80));
+  setStatus(error?'Es konnte nicht in die Akte übernommen werden.':(type==='deadline'?'Frist':'Entscheidung')+' eingetragen: '+title.slice(0,80));
 }
 function documentScope(q){return project?q.eq('project_id',project.id):q.is('project_id',null)}
 async function loadFolders(){const {data,error}=await documentScope(sb.from('minds_work_folders').select('id,user_id,parent_id,name,sort_order,created_at')).order('sort_order').order('name');if(error)throw error;folders=data||[]}
@@ -568,24 +568,24 @@ function workKnowledgeStatus(file){
   const intake=file?.metadata?.knowledge_intake||{};
   const coverage=String(intake.coverage||'');
   const readable=intake.structured_text||{};
-  if(k==='queued')return 'Lectura pendiente';
+  if(k==='queued')return 'Noch nicht gelesen';
   if(k==='waiting_parser'){
     const reason=String(file?.metadata?.knowledge_intake?.reason||'');
-    if(reason==='needs_larger_worker')return 'Pendiente · archivo grande';
-    if(reason==='needs_format_reader')return 'Pendiente · lector de formato';
-    return 'Pendiente · lector especializado';
+    if(reason==='needs_larger_worker')return 'Offen · große Datei';
+    if(reason==='needs_format_reader')return 'Offen · Formatleser';
+    return 'Offen · Spezialleser';
   }
   if(k==='indexed'){
-    if(readable.status==='needs_review')return 'Claims conservados · texto pendiente de revisión';
+    if(readable.status==='needs_review')return 'Aussagen erhalten · Text noch zu prüfen';
     if(readable.status==='materialized'){
       const type=String(readable.coverage||coverage);
-      return type==='complete_text'?'Texto recuperable · sin confirmar':'Texto parcial recuperable · sin confirmar';
+      return type==='complete_text'?'Text lesbar · unbestätigt':'Text teilweise lesbar · unbestätigt';
     }
-    if(coverage==='claims_only')return 'Claims propuestos · texto aún no extraído';
-    return 'Evidencia extraída · cobertura parcial';
+    if(coverage==='claims_only')return 'Aussagen vorgeschlagen · Text noch nicht ausgelesen';
+    return 'Beleg ausgelesen · teilweise abgedeckt';
   }
-  if(k==='failed')return 'No se pudo leer · revisar';
-  return 'Solo almacenado · aún sin leer';
+  if(k==='failed')return 'Nicht lesbar · prüfen';
+  return 'Nur gespeichert · noch nicht gelesen';
 }
 // Desktop tiles: Finder-like vector icons and a readable file type instead of a raw MIME string.
 const WORK_TILE_COLORS={pdf:'#e5484d',doc:'#2f6fdb',docx:'#2f6fdb',rtf:'#2f6fdb',txt:'#6b7280',md:'#6b7280',xls:'#1f9d55',xlsx:'#1f9d55',csv:'#1f9d55',numbers:'#1f9d55',ppt:'#e8762c',pptx:'#e8762c',key:'#e8762c',dwg:'#8a5cf6',dxf:'#8a5cf6',ifc:'#8a5cf6',rvt:'#8a5cf6',pln:'#8a5cf6',skp:'#8a5cf6',zip:'#6b7280',rar:'#6b7280'};
@@ -1296,12 +1296,12 @@ function threadMessageMarkup(m){
   const artifacts=Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[];
   const groups=threadArtifactGroups(artifacts),copy=cleanThreadDeliverableText(m.content,artifacts);
   const previews=groups.previews.length?`<div class="work-thread-previews">${groups.previews.slice(0,2).map(a=>`<button type="button" data-thread-artifact-preview="${esc(a.storage_path)}" aria-label="Vorschau öffnen"><img data-thread-artifact-image="${esc(a.storage_path)}" alt="Vorschau des Dokuments"></button>`).join('')}</div>`:'';
-  const deliverables=groups.deliverables.length?`<div class="work-thread-artifacts">${groups.deliverables.slice(0,8).map(a=>a?.storage_path?`<a href="#" data-thread-artifact="${esc(a.storage_path)}"><span>${esc(threadArtifactLabel(a.kind))}</span>${esc(a.title||'Archivo')}</a>`:'').join('')}</div>`:'';
+  const deliverables=groups.deliverables.length?`<div class="work-thread-artifacts">${groups.deliverables.slice(0,8).map(a=>a?.storage_path?`<a href="#" data-thread-artifact="${esc(a.storage_path)}"><span>${esc(threadArtifactLabel(a.kind))}</span>${esc(a.title||'Datei')}</a>`:'').join('')}</div>`:'';
   // Messages Claude saved through the Window connector carry their author.
   const author=m.metadata?.source==='claude_connector'&&role==='assistant'?'<div class="work-thread-author">Claude</div>':'';
   // App notices (Bestätigt, Verworfen, Keine Antwort möglich) are system lines, not Romy (08.11.2026).
   if(role==='assistant'&&m.metadata?.author==='system')return `<article class="work-thread-message assistant is-event"><div class="work-thread-message-copy">${esc(m.content||'')}</div></article>`;
-  return `<article class="work-thread-message ${role}${author?' from-claude':''}">${author}${copy?`<div class="work-thread-message-copy">${window.ISABELLA_APP?.formatMessageText?.(copy)||esc(copy).replace(/\n/g,'<br>')}</div>`:''}${previews}${deliverables}${sources.length?`<details><summary>Quellen</summary>${sources.slice(0,6).map(s=>`<div class="small">${esc(s.title||s.url||'Fuente')}</div>`).join('')}</details>`:''}${!OFFICE&&role==='assistant'&&!sources.length&&!author?'<div class="work-thread-source-boundary">Esta respuesta no incluye fuentes citadas verificables.</div>':''}${role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete">Antwort unterbrochen. Der Text ist unvollständig.<button type="button" data-thread-continue="${esc(m.client_key||m.id||'')}">Continuar respuesta</button></div>`:''}</article>`;
+  return `<article class="work-thread-message ${role}${author?' from-claude':''}">${author}${copy?`<div class="work-thread-message-copy">${window.ISABELLA_APP?.formatMessageText?.(copy)||esc(copy).replace(/\n/g,'<br>')}</div>`:''}${previews}${deliverables}${sources.length?`<details><summary>Quellen</summary>${sources.slice(0,6).map(s=>`<div class="small">${esc(s.title||s.url||'Fuente')}</div>`).join('')}</details>`:''}${!OFFICE&&role==='assistant'&&!sources.length&&!author?'<div class="work-thread-source-boundary">Esta respuesta no incluye fuentes citadas verificables.</div>':''}${role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete">Antwort unterbrochen. Der Text ist unvollständig.<button type="button" data-thread-continue="${esc(m.client_key||m.id||'')}">Antwort fortsetzen</button></div>`:''}</article>`;
 }
 async function hydrateThreadArtifacts(root=document){
   const files=[...root.querySelectorAll?.('[data-thread-artifact]')||[]],images=[...root.querySelectorAll?.('[data-thread-artifact-image]')||[]];
@@ -1348,7 +1348,7 @@ function themenblattMarkup(thread){
 // Remember whether Gari keeps the Themenblatt open or folded (toggle does not bubble, so capture it).
 document.addEventListener?.('toggle',event=>{const el=event.target;if(el?.classList?.contains('work-themenblatt'))try{localStorage.setItem('minds-themenblatt-open',el.open?'1':'0')}catch{}},true);
 function claudeContinueUrl(thread){
-  return 'https://claude.ai/new?q='+encodeURIComponent('Retoma en Window el proyecto '+project.name+', tema «'+thread.title+'»: abre el tema y dime dónde estamos.');
+  return 'https://claude.ai/new?q='+encodeURIComponent('Setze im TBA Office das Projekt '+project.name+', Thema «'+thread.title+'» fort: Öffne das Thema und sag mir, wo wir stehen.');
 }
 async function renderThreadConversation(id){
   const thread=threads.find(x=>x.id===id);if(!thread){activeThreadId=null;await renderThreads();return}
@@ -1356,7 +1356,7 @@ async function renderThreadConversation(id){
   try{
     const messages=await loadThreadMessages(thread);
     body.innerHTML=`<section class="work-thread-conversation">
-      <header class="work-thread-head"><button data-thread-back class="text-btn">‹ Threads</button><div><strong>${esc(thread.title)}</strong><span>${esc(project.name)}</span></div>${OFFICE?'':`<a class="work-thread-claude" href="${esc(claudeContinueUrl(thread))}" target="_blank" rel="noopener" title="Abrir este tema en Claude con el conector Window">Continuar en Claude</a>`}<button data-thread-actions class="work-thread-head-more" aria-label="Thread-Optionen">•••</button></header>
+      <header class="work-thread-head"><button data-thread-back class="text-btn">‹ Threads</button><div><strong>${esc(thread.title)}</strong><span>${esc(project.name)}</span></div>${OFFICE?'':`<a class="work-thread-claude" href="${esc(claudeContinueUrl(thread))}" target="_blank" rel="noopener" title="Abrir este tema en Claude con el conector Window">In Claude fortsetzen</a>`}<button data-thread-actions class="work-thread-head-more" aria-label="Thread-Optionen">•••</button></header>
       ${themenblattMarkup(thread)}<div class="work-thread-log" id="workThreadLog">${messages.map(threadMessageMarkup).join('')||'<div class="work-thread-empty">Dieser Thread ist noch leer. Fang mit der ersten Frage an.</div>'}</div>
       <div class="work-thread-compose-region"><div id="workThreadProgress" class="chat-activity work-thread-progress" role="status" aria-live="polite" data-phase="${esc(threadProgress.phase)}" ${threadProgress.id===thread.id&&threadProgress.label?'':'hidden'}>${threadProgress.id===thread.id?esc(threadProgress.label):''}</div><form class="work-thread-composer ${threadInFlight.has(thread.id)?'is-busy':''}" id="workThreadForm"><textarea id="workThreadInput" rows="1" placeholder="Romy fragen: ${esc(thread.title)} …"></textarea><button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form></div>
     </section>`;
@@ -1368,7 +1368,7 @@ async function renderThreadConversation(id){
       if(i<0)return;
       const preceding=messages.slice(0,i).reverse().find(m=>m.role==='user');
       const original=String(preceding?.content||'').slice(0,900);
-      void sendThreadMessage(thread,OFFICE?'Setze deine letzte Antwort dort fort, wo sie unterbrochen wurde, ohne den schon geschriebenen Teil zu wiederholen. Ursprüngliche Frage: '+original:'Continúa desde el punto donde se interrumpió tu respuesta anterior, sin repetir la parte ya escrita. Pregunta original: '+original);
+      void sendThreadMessage(thread,OFFICE?'Setze deine letzte Antwort dort fort, wo sie unterbrochen wurde, ohne den schon geschriebenen Teil zu wiederholen. Ursprüngliche Frage: '+original:'Setze deine vorherige Antwort dort fort, wo sie unterbrochen wurde, ohne Bereits-Geschriebenes zu wiederholen. Ursprüngliche Frage: '+original);
     });
     $('#workThreadInput')?.addEventListener('keydown',e=>{
       if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('#workThreadForm')?.requestSubmit()}
@@ -1379,7 +1379,7 @@ async function renderThreadConversation(id){
   }catch(e){console.error(e);body.innerHTML='<div class="work-empty">Dieser Thread konnte nicht geöffnet werden.</div>'}
 }
 async function persistThreadMessage(conversationId,role,content,metadata={}){
-  const session=await getSession();if(!session)throw new Error('Sin sesión');
+  const session=await getSession();if(!session)throw new Error('Nicht angemeldet');
   const key=(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
   const {error}=await sb.from('conversation_messages').insert({
     user_id:session.user.id,conversation_id:conversationId,client_key:key,role,content:String(content||''),provisional:false,citations:[],
@@ -1453,25 +1453,25 @@ async function sendThreadMessage(thread,overrideMessage=null){
     await persistThreadMessage(cid,'user',message);
     setThreadProgress(thread.id,'saved','Mensaje guardado en MINDS.');
     if(activeThreadId===thread.id&&view==='threads')await renderThreadConversation(thread.id);
-    setThreadProgress(thread.id,'thinking','Isabella está revisando el contexto del proyecto…');
+    setThreadProgress(thread.id,'thinking','Romy sieht sich den Projektkontext an…');
     const state=window.ISABELLA_APP?.getState?.()||{};
     const result=await window.ISABELLA_AI.ask(message,state,{
       workThread:{id:thread.id,project:project.name},
       onProgress:event=>{if(event?.label)setThreadProgress(thread.id,'thinking',String(event.label))},
-      onTextDelta:()=>setThreadProgress(thread.id,'thinking','Isabella está escribiendo…')
+      onTextDelta:()=>setThreadProgress(thread.id,'thinking','Romy schreibt…')
     });
     const reply=String(result?.reply||result?.streamed_text||'').trim();
-    setThreadProgress(thread.id,'saving','Guardando la respuesta…');
+    setThreadProgress(thread.id,'saving','Antwort wird gespeichert…');
     if(reply)await persistThreadMessage(cid,'assistant',reply,{sources:Array.isArray(result?.sources)?result.sources.slice(0,8):[],artifacts:Array.isArray(result?.artifacts)?result.artifacts.slice(0,8):[],incomplete_response:!!result?.incomplete,incomplete_reason:result?.incomplete_reason||null});
     const proposal=result?.proposal||(Array.isArray(result?.proposals)?result.proposals[0]:null);
     await sb.from('minds_work_threads').update({last_activity_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',thread.id);
-    setThreadProgress(thread.id,'received',result?.incomplete?'Respuesta parcial recibida. Puedes continuarla.':reply?'Respuesta recibida.':'Solicitud procesada; no hubo respuesta textual.');
+    setThreadProgress(thread.id,'received',result?.incomplete?'Teilantwort erhalten. Du kannst sie fortsetzen.':reply?'Respuesta recibida.':'Solicitud procesada; no hubo respuesta textual.');
     setStatus('');
     if(activeThreadId===thread.id&&view==='threads')await renderThreads();
     if(proposal&&!result?.incomplete)window.MINDS_PROPOSALS?.edit?.(proposal);
   }catch(e){
     console.error(e);
-    setThreadProgress(thread.id,'error','No se completó la respuesta. Comprueba el historial antes de reenviar: el mensaje podría estar guardado.');
+    setThreadProgress(thread.id,'error','Die Antwort wurde nicht abgeschlossen. Bitte vor dem erneuten Senden den Verlauf prüfen: Die Nachricht könnte gespeichert sein.');
     if(activeThreadId===thread.id&&view==='threads')await renderThreads();
   }finally{
     threadInFlight.delete(thread.id);

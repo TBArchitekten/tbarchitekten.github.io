@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-11 · Cita desde una foto · tarjetas y avisos en alemán · Claude
+- Qué cambió y por qué: tras el arreglo del bucket, Romy ya leía la foto (y la foto se queda en el chat), pero la propuesta de cita se rechazaba con «No pude registrar una propuesta…». Causa: el motor exigía que la cita literal de la fecha estuviera en las palabras del propietario (`date_evidence_not_in_owner_turn`); con «agrega este Termin» + foto, la fecha solo está en la imagen. Cambio en el motor (minds #325, sincronizado aquí): con adjuntos en el turno la cita puede venir del adjunto; el servidor no puede verificarla, la base lo marca (`*_from_attachment`), siguen las comprobaciones de día de la semana y aritmética, y la creación directa sigue excluida con adjuntos (siempre tarjeta de revisión). Textos: tarjeta de propuesta y editores (tarea, cita, rutina, recordatorio), errores de confirmación, vista Work/Akte y Wissen, y las frases fijas que el motor escribe en español («Propuesta: evento…», «No pude registrar…») se muestran ahora en alemán.
+- Archivos: `app/app.js` (v=office50), `app/work.js` (v=office43), `app/index.html`, motor sincronizado desde minds `72c1128` (`isabella-chat/index.ts`, `_shared/calendar-semantic-boundary.mjs`) y manifiestos, pins de versión en tests.
+- Base de datos: ninguna.
+- Deploy de funciones: `isabella-chat` (deploy-functions, con `profile_set_in_dashboard`).
+- Cómo se probó: `node --test` 238/238 aquí; en minds 1232/1232 con prueba nueva del validador y `deno check`. No probado con una foto real.
+- Quedó pendiente o sin probar: unas 250 cadenas en español en `app.js`, casi todas de paneles heredados de Window (Feed, Ideas, permisos, avisos, proactividad, habilidades, expectativas, Commitments); las frases libres que el motor genera en español fuera de las fijas.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: este.
+
 ### 2026-11-11 · Romy no recibía las fotos del chat · Claude
 - Qué cambió y por qué: Gari le mandó a Romy una captura de un correo y Romy respondió que no veía ninguna imagen; además la foto desaparecía del chat. Causa: la app de Office subía los adjuntos al bucket del runtime anterior (`office-romy-uploads`) y el motor compartido los lee de `isabella-uploads` (comprobado en producción: 4 subidas recientes en el primero, 0 en el segundo). Ahora la app usa `isabella-uploads` con el motor nuevo (el runtime anterior conserva el suyo). La foto desaparecía porque el servidor guarda el turno del usuario sin la referencia al adjunto y el chat se reconstruye desde el servidor: la app añade ahora la referencia a los metadatos de su propio turno (permitido por la política `owner_turn_metadata`) y el chat la muestra al reconstruirse. Mensajes de error de adjuntos en alemán.
 - Archivos: `app/app.js` (v=office49), `app/index.html`, `tests/office-romy-attachments.test.mjs`, pins de versión.
