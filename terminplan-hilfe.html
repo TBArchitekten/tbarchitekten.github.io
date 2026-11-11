@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Terminplan · Handbuch und Planungslogik | TBA Office</title>
-<meta name="description" content="TBA Office Terminplan: Werkzeug-Anleitung und fachliche Planungslogik für LPH 3.">
+<meta name="description" content="TBA Office Terminplan: Werkzeug-Anleitung und fachliche Planungslogik für LPH 3 und LPH 5.">
 <style>
 :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#202823;background:#f9faf8;line-height:1.6}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0}a{color:#355b49;text-underline-offset:3px}
@@ -49,7 +49,7 @@ figcaption{font-size:12px;padding:13px 20px;color:#65736b;border-top:1px solid #
 <main class="container">
 <nav class="chapter-menu" aria-label="Handbuch-Kapitel">
 <a href="#werkzeug"><span class="eyebrow">Teil I · Werkzeug</span><strong>So arbeitet der Terminplan</strong><small>Neue Planung, Gantt, Verknüpfungen, Kalender, Basispläne, Analyse, Termine und Aufwand.</small></a>
-<a href="#planung"><span class="eyebrow">Teil II · Planungspraxis</span><strong>So organisiert man LPH 3</strong><small>Auftraggeberentscheidungen, Fachplanung, Kosten, Meilensteine, kritischer Pfad und Fortschreibung.</small></a>
+<a href="#planung"><span class="eyebrow">Teil II · Planungspraxis</span><strong>So organisiert man LPH 3 und LPH 5</strong><small>Entwurfs- und Ausführungsplanung: Abgaben, Fachplanung, Planläufe, Freigaben und Fortschreibung.</small></a>
 </nav>
 <section class="chapter" id="werkzeug"><div class="eyebrow">Teil I / Werkzeug</div><h2>Bedienung von TBA Office Terminplan</h2>
 <p>Der Terminplan zeigt links den Projektstrukturplan (PSP), die Vorgänge, Verantwortlichen, Anfangs- und Endtermine sowie Dauer und Fortschritt. Rechts liegt das Gantt-Diagramm mit Terminbalken, Meilensteinen und Pfeilen für die zeitlichen Beziehungen. Die Vorlage ist schreibgeschützt; jeder neu angelegte Projektterminplan ist eine unabhängige Kopie.</p>
@@ -154,10 +154,69 @@ figcaption{font-size:12px;padding:13px 20px;color:#65736b;border-top:1px solid #
 <p>Eine unvollständige Vorgängerstruktur erzeugt zu frühe Sammelmeilensteine. Ein fest eingetragener Endtermin kann Probleme verdecken, wenn dazu passende fachliche Voraussetzungen fehlen. Zu viele EA-Beziehungen erzeugen künstlich serielle Arbeiten; zu viele AA-Beziehungen können notwendige Abschlussbedingungen aushebeln. Pufferzeiten sind keine Personalreserve. Ein überfälliger Vorgang ist nicht automatisch abgeschlossen, wenn der Kalender bereits weitergerückt ist.</p>
 <div class="note"><strong>Grundsatz für die Projektleitung:</strong> Jede Beziehung muss fachlich begründet sein, jede Frist eine vereinbarte oder ausdrücklich als Richtwert bezeichnete Grundlage haben, und jede Freigabe einen überprüfbaren Inhalt. Dann wird der Terminplan zu einem Entscheidungsinstrument – nicht nur zu einer Zeichnung.</div>
 </section>
+
+<section class="chapter" id="planung-lph5">
+  <div class="eyebrow">Teil II / Fachliche Planung · LPH 5</div>
+  <h2>Ausführungsplanung organisieren: von der Grundlage zum ausführungsreifen Planstand</h2>
+  <p>Die Leistungsphase 5 setzt die Entwurfs- und Genehmigungsplanung in ausführungsreife Unterlagen um. Für Gebäude und Innenräume beschreibt HOAI Anlage 10 die Ausführungs-, Detail- und Konstruktionszeichnungen (beispielsweise Maßstab 1:50 bis 1:1), die Koordination und Integration der Fachplanungen, die Fortschreibung des Terminplans und die Fortschreibung der Unterlagen während der Ausführung. Die HOAI nennt dafür keine allgemeingültigen Arbeitstage. Die hier verwendeten Dauern sind <strong>Richtwerte zur Erstplanung</strong>, die Projektleitung und Fachplaner prüfen und vereinbaren müssen.</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 1040 375" role="img" aria-label="Parallele Ausführungsplanung Architektur und Fachplanung mit gemeinsamem Schnittstellen- und Planlauf-Gate, Ausgabe und optionaler fortlaufender Anpassung">
+      <rect width="1040" height="375" fill="#fff"/>
+      <g fill="#41584a" font-size="13" font-weight="700"><text x="28" y="66">Architektur</text><text x="28" y="137">TWP · HLS · ELT</text><text x="28" y="206">Koordination</text><text x="28" y="274">Projektleitung</text></g>
+      <g stroke="#e7eee8"><path d="M184 28V322M328 28V322M472 28V322M616 28V322M760 28V322M904 28V322"/></g>
+      <rect x="191" y="47" width="278" height="28" rx="4" fill="#e7b27e"/><text x="205" y="65" font-size="12" fill="#4c351f">Arbeitsstand 01 · Details</text>
+      <rect x="525" y="47" width="244" height="28" rx="4" fill="#e7b27e"/><text x="539" y="65" font-size="12" fill="#4c351f">Arbeitsstand 02 · Prüfung</text>
+      <rect x="329" y="117" width="280" height="28" rx="4" fill="#bbdbea"/><text x="341" y="135" font-size="12" fill="#294e61">Fachbeiträge und Durchbrüche</text>
+      <rect x="639" y="117" width="170" height="28" rx="4" fill="#bbdbea"/><text x="650" y="135" font-size="12" fill="#294e61">Finale Beiträge</text>
+      <rect x="420" y="187" width="160" height="28" rx="4" fill="#d6e5d8"/><text x="434" y="205" font-size="12" fill="#36583d">Planlauf 01</text>
+      <rect x="697" y="187" width="135" height="28" rx="4" fill="#d6e5d8"/><text x="710" y="205" font-size="12" fill="#36583d">Planlauf 02</text>
+      <polygon points="879,259 893,274 879,289 865,274" fill="#4d7b60"/><text x="907" y="269" font-size="12" fill="#40584b">M07: Ausgabe</text><text x="907" y="286" font-size="10" fill="#667668">erster Stand</text>
+      <g fill="none" stroke="#537662" stroke-width="2"><path d="M469 61H496V201H420"/><path d="M609 131H622V201H580"/><path d="M580 201H640V61H525"/><path d="M769 61H851V274H865"/><path d="M809 131H843V274H865"/><path d="M832 201H851V274"/></g>
+      <text x="192" y="341" font-size="11" fill="#627469">Schematisch: Zeitfenster und Beziehungen, keine tatsächlichen Projekttermine.</text>
+    </svg>
+    <figcaption>Abbildung 5. Arbeitsstände und Fachbeiträge überlappen; der koordinierte Ausgabe-Meilenstein wartet auf mehrere abgeschlossene Prüfschritte. Spätere Änderungen aus Ausschreibung und Bauausführung sind eigene Ereignisse und dürfen nicht als bereits terminiert gelten.</figcaption>
+  </figure>
+
+  <h3>Vor dem ersten Planlauf: Was ist überhaupt freigegeben?</h3>
+  <p>Für LPH 5 müssen die gültigen Ergebnisse aus LPH 3 und 4 bekannt sein: Freigaben, genehmigte Unterlagen und gegebenenfalls Auflagen. Ist ein erforderlicher Fachplaner nicht beauftragt, darf ein Muster-Kick-off nicht stillschweigend als gesicherter Start gelten. Im PSP 00 werden deshalb Grundlagen, Disziplinen, Schnittstellen, Planliste und die geplanten Planläufe getrennt geklärt. Die Planliste sollte enthalten, wer welchen Planstand bis wann liefert, wer prüft und was eine „koordinierte Ausgabe“ bedeutet.</p>
+
+  <h3>PSP 01: Ausführungsplanung Architektur und Leitdetails</h3>
+  <p>Der erste Architektur-Arbeitsstand stellt für das Projekt notwendige Ausführungszeichnungen bereit. Details, Anschlussbedingungen, Bauteilaufbauten und die konstruktive Durcharbeitung beginnen zum Teil parallel. Die interne Prüfung darf während der Bearbeitung anlaufen, aber erst mit den erforderlichen Ergebnissen abgeschlossen werden. <strong>M02</strong> ist eine belastbare Übergabe an Fachplaner, keine pauschale Genehmigung sämtlicher Details.</p>
+
+  <h3>PSP 02: TWP, HLS, ELT und erforderliche Fachbeiträge</h3>
+  <p>Tragwerksplanung und Technische Ausrüstung sind aufeinander bezogen, aber nicht hintereinander abzuarbeiten. TWP erstellt je nach Auftrag beispielsweise Schal- und Bewehrungs- bzw. konstruktive Ausführungspläne; HLS und ELT detaillieren Systeme, Leitungsführung und Dimensionierung. <strong>Schlitz- und Durchbruchspläne</strong> sind in HOAI Anlage 15 für die Technische Ausrüstung LPH 5 ausdrücklich vorgesehen und müssen mit dem Tragwerk abgestimmt werden. Brandschutzplanung ist ein möglicher, nicht automatisch verpflichtender Beitrag. Wenn ein Brandschutzbeitrag erforderlich ist, muss die Projektleitung ihn als zusätzliche Abschlussbedingung der Sammelmeilensteine aufnehmen.</p>
+  <div class="examples">
+    <div class="example"><strong>Ungeeignete Kette</strong>Erst TWP vollständig abschließen, dann HLS beginnen, dann ELT beginnen und erst danach die Architektur überarbeiten, obwohl wesentliche Teilergebnisse vorher verfügbar sind.</div>
+    <div class="example"><strong>Bessere Logik</strong>Auf gemeinsamem Architekturstand parallel planen; Schnittstellen laufend prüfen. Der Meilenstein „Fachbeiträge vollständig“ wartet auf alle tatsächlich beauftragten Pflichtbeiträge und die erforderliche Durchbruchskoordination.</div>
+  </div>
+
+  <h3>PSP 03: Planlauf 01 als überprüfbarer Koordinationsstand</h3>
+  <p>Ein Planlauf ist nicht nur eine Besprechung. Er benötigt einen definierten Satz von Plänen, eine dokumentierte Liste offener Schnittstellen, Entscheidungen zur Kollisionslösung und eine klare Rückmeldung der beteiligten Fachplaner. Die Koordination darf beginnen, bevor alle Fachbeiträge endgültig vorliegen; der Abschluss des Planlaufs muss jedoch durch die erforderlichen Beiträge gedeckt sein. Erst dann ist der folgende Architekturstand fachlich belastbar.</p>
+
+  <h3>PSP 04–05: Arbeitsstand 02, Details und Schlusskoordination</h3>
+  <p>Ausführungs- und Detailplanung werden präzisiert, während die Fachplaner ihre abgestimmten Beiträge abschließen. Hier liegt ein häufiger Terminplanfehler: Ein einzelner Fachbeitrag ist fertig, und ein gemeinsamer Meilenstein wird irrtümlich als erledigt markiert. Der Plan enthält deshalb mehrere explizite Vorgänger an <strong>M06</strong>. Die abschließende Planungskoordination muss gewährleisten, dass Architektur, HLS, ELT, TWP und weitere erforderliche Disziplinen widerspruchsfrei zueinander passen.</p>
+
+  <h3>PSP 06: Auftraggeberprüfung, finale Qualitätssicherung und Ausgabe</h3>
+  <p>Die Auftraggeberprüfung des koordinierten Ausführungsstandes wird im Büro-Muster zunächst mit <strong>5 AT als zu vereinbarender Prüfzeitraum</strong> angesetzt, nicht als HOAI-Vorgabe. Offene Entscheidungen werden dokumentiert, danach folgt die Planfinalisierung. Eine interne Prüfung kontrolliert Vollständigkeit, Planindizes, Fachplanungsstand und Ausgabestatus. <strong>M07</strong> bezeichnet die erste koordinierte Ausgabe. Sie ist nicht automatisch eine rechtliche Abnahme des Vertrags oder das Ende sämtlicher Leistungen aus LPH 5.</p>
+
+  <h3>PSP 07: Was nach der ersten Ausgabe passiert</h3>
+  <p>Die HOAI nennt ausdrücklich die <strong>Fortschreibung der Ausführungsplanung während der Ausführung</strong>. Je nach Leistungsbild können auch erforderliche Montage- und Werkstattpläne der ausführenden Unternehmen zu prüfen sein. In der Vorlage ist PSP 07 daher als <strong>optionaler Orientierungsblock</strong> enthalten. Beim Anlegen eines neuen Projektterminplans ist dieser Block <strong>standardmäßig nicht aktiviert</strong>. Die Projektleitung kann ihn im Startdialog ausdrücklich hinzunehmen, falls die Folgeplanläufe konkret geplant werden können. Im Muster selbst bleiben alle Vorgänge sichtbar. Seine AT-Werte sind Platzhalter; das tatsächliche Zeitfenster hängt von Ausschreibung, Vergabe, Bauablauf und vertraglichem Prüfungsumfang ab. Eine Bauunternehmerzeichnung zu prüfen ist etwas anderes, als sie selbst zu erstellen. Nicht anwendbare Vorgänge sind vor Projektfreigabe zu entfernen; weitere reale Planläufe werden separat ergänzt.</p>
+
+  <h3>Besonders wichtig: LPH 5 ist nicht LPH 6</h3>
+  <p>Das vollständige Erstellen von Leistungsverzeichnissen und Vergabeunterlagen gehört in den Grundleistungen der Gebäudeplanung zur LPH 6 und darf nicht unbemerkt als obligatorischer Teil des LPH-5-Musters verkauft werden. Die Auswirkungen von Ausschreibungsergebnissen auf die spätere Ausführungsplanung können dagegen zu einer Fortschreibung der LPH 5 führen. Die Grenze muss im jeweiligen Projektvertrag geklärt werden.</p>
+
+  <h3>Wie die Projektleitung die Vorlage verwenden sollte</h3>
+  <p>Erstens muss sie die tatsächlich vereinbarten Fachplanungen bestätigen. Zweitens werden die Abgaben und die Anzahl der Planläufe auf das Bauvorhaben abgestimmt. Drittens müssen die Bearbeitungs- und Prüffristen mit den Verantwortlichen verifiziert werden. Schließlich sollten Meilensteine nicht allein wegen ihres Datums als erreicht gelten: entscheidend ist der nachweislich vollständige und koordinierte Planstand. Die zweiteilige Denkweise aus LPH 3 gilt weiterhin: <strong>Fertigstellung einer Teilaufgabe</strong> ist nicht automatisch <strong>Freigabe einer gemeinsamen Lieferung</strong>.</p>
+
+  <div class="note"><strong>Verbindlichkeit:</strong> Die Vorlage ist eine erste Struktur für ein privates, in mehreren Disziplinen geplantes Bauvorhaben. Es gibt keine allgemeine HOAI-Planungsdauer in AT und keine automatische Aussage, dass TWP/HLS/ELT/BRS in jedem Projekt vollständig erforderlich sind. Die beispielhaften 45 Elemente und ihre Verknüpfungen sind vor Nutzung auf den Auftrag anzupassen.</div>
+</section>
+
 <section class="chapter" id="quellen"><div class="eyebrow">Normen und Referenzen</div><h2>Nachlesen und vertiefen</h2>
 <p>Primäre fachliche Grundlage: <a href="https://www.gesetze-im-internet.de/hoai_2013/anlage_10.html" target="_blank" rel="noopener">HOAI Anlage 10, Leistungsbild Gebäude und Innenräume</a>. Die HOAI beschreibt Leistungen; die Zeitangaben des Musters bleiben betriebliche Planannahmen.</p>
+<p>Für LPH 5 besonders relevant: <a href="https://www.gesetze-im-internet.de/hoai_2013/anlage_14.html" target="_blank" rel="noopener">HOAI Anlage 14 (Tragwerksplanung)</a> und <a href="https://www.gesetze-im-internet.de/hoai_2013/anlage_15.html" target="_blank" rel="noopener">HOAI Anlage 15 (Technische Ausrüstung)</a>, insbesondere Schlitz- und Durchbruchsplanung sowie Prüfung der jeweils erforderlichen Montage-/Werkstattplanung.</p>
 <p>Für die Terminplanung: <a href="https://support.microsoft.com/en-us/project/how-project-schedules-tasks-behind-the-scenes" target="_blank" rel="noopener">Microsoft Project – How Project schedules tasks</a>, <a href="https://support.microsoft.com/en-us/project/predecessors-task-field" target="_blank" rel="noopener">Predecessors</a> und <a href="https://support.microsoft.com/en-us/project/manage-your-project-s-critical-path" target="_blank" rel="noopener">Critical path</a>. Microsoft Project ist ein Vergleichsmaßstab, keine Behauptung vollständiger Funktionsgleichheit.</p>
-<p class="small">Alle vier Grafiken auf dieser Seite sind didaktische Schemata; sie enthalten keine Kundendaten oder Screenshots privater Projekte. Handbuchstand: 09.11.2026.</p>
+<p class="small">Alle fünf Grafiken auf dieser Seite sind didaktische Schemata; sie enthalten keine Kundendaten oder Screenshots privater Projekte. Handbuchstand: 09.11.2026.</p>
 </section>
 <footer class="footer">TBA Office · Internes Arbeitsmittel · Richtdauern und Projekterfordernisse vor Verwendung prüfen.</footer>
 </main>

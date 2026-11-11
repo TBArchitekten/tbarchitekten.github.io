@@ -114,7 +114,8 @@ test('LPH 5 accepts a past Projektstart without changing its independent Muster'
   });
   assert.equal(plan.project.start,'2026-11-02');
   assert.equal(plan.project.phase,'LPH5');
-  assert.equal(plan.tasks.length,tpl.state.tasks.length);
+  assert.equal(plan.tasks.length,tpl.state.tasks.length-5,'Post-Ausgabe-Optionen werden nicht stillschweigend geplant');
+  assert.equal(plan.project.planningAssumptions.includePostIssueLPH5,false);
   assert.equal(JSON.stringify(tpl),before);
 });
 
