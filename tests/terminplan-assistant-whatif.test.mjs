@@ -111,3 +111,22 @@ test('browser wires real read-only engine to the same assistant flow; no new win
  for(const m of html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g))new Function(m[1]);
  assert.doesNotThrow(()=>new Function(dialogue));
 });
+
+test('a milestone delay moves the event date, not a fictitious duration',()=>{
+ const old=JSON.stringify(base);
+ const r=P.simulateFinishDelay(base,'m',2);
+ assert.equal(r.valid,true,r.reason);
+ assert.equal(r.assumption,'milestone_date_shift');
+ assert.equal(r.before.start,r.before.end);
+ assert.equal(r.after.start,r.after.end);
+ assert.equal(r.after.end,'2026-11-10');
+ assert.equal(JSON.stringify(base),old);
+ const answer=D.fromDiscussion({serverResponse:modelResponse({
+  kind:'simulate',task_id:'m',offset_workdays:2,text:'Compruebo el hito.',
+  evidence_task_ids:['m']
+ }),state:base,engine:E,planning:P,revision:7,requestId:'milestone',
+ userMessage:'¿Qué pasa si el hito se retrasa dos días laborables?'});
+ assert.equal(answer.kind,'answer');
+ assert.match(answer.text,/el hito se desplaza/);
+ assert.equal(answer.proposal,undefined);
+});
