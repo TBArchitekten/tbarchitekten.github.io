@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "27823274bc1559060f52e6f8569647a8648ca1da",
+  "source_sha": "c5d233856a7e722fd64858bf4e100894d392c9f5",
   "mode": "engine",
   "files": [
     {
@@ -144,8 +144,8 @@
     {
       "source": "supabase/functions/_shared/isabella-core.mjs",
       "target": "supabase/functions/_shared/isabella-core.mjs",
-      "sha": "907575eee50ccd97d29f85cf9f96109ac487a106",
-      "bytes": 21290
+      "sha": "0e124f8060c691bc0a1128690e5ebf81a4d97199",
+      "bytes": 22467
     },
     {
       "source": "supabase/functions/_shared/isabella-dream.mjs",
@@ -498,8 +498,8 @@
     {
       "source": "supabase/functions/isabella-chat/index.ts",
       "target": "supabase/functions/isabella-chat/index.ts",
-      "sha": "e833a959a71561a889162ff6ee912b7820c6f1ba",
-      "bytes": 346085
+      "sha": "189384d6871dc4aad6da48da1a3f164c1715cfa9",
+      "bytes": 346223
     },
     {
       "source": "supabase/functions/isabella-delivery-runner/index.ts",

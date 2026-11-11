@@ -81,7 +81,7 @@ test('2 · App notices render as system lines, not as Romy',()=>{
   assert.match(app,/<div class="message \$\{m\.role\}\$\{event\?' is-event':''\}"/);
   assert.match(app,/isEventMessage\(reply\)\?'Hinweis'/);
   assert.match(read('app/app.css'),/\.message\.assistant\.is-event\{/);
-  assert.match(read('app/index.html'),/app\.js\?v=office50/);
+  assert.match(read('app/index.html'),/app\.js\?v=office51/);
 });
 
 test('Tasks say who carries them (responsable)',async()=>{
