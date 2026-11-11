@@ -279,7 +279,7 @@
       const startIndex=cal.index.get(before.projectFinish),endIndex=cal.index.get(after.projectFinish);
       return {
         valid:true,kind:'read_only_finish_delay',taskId:originId,taskName:target.name,
-        extraAT,assumption:'start_unchanged_finish_extended',
+        extraAT,assumption:target.type==='milestone'?'milestone_date_shift':'start_unchanged_finish_extended',
         before:{start:priorStart,end:priorEnd,projectFinish:before.projectFinish,
           totalFloatAT:before.byId[originId]?.totalFloatAT??null,criticalCount:before.criticalCount},
         after:{start:target.start,end:target.end,projectFinish:after.projectFinish,
