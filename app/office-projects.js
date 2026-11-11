@@ -126,7 +126,7 @@ function showPlans(){
   guide.href='../terminplan-hilfe.html';
   guide.target='_blank';
   guide.rel='noopener noreferrer';
-  guide.textContent='Terminplan-Anleitung · Werkzeug und LPH 3';
+  guide.textContent='Terminplan-Handbuch · Werkzeug, LPH 3 und LPH 5';
   guide.className='office-plan-library-link';
   guide.style.display='inline-block';
   guide.style.margin='14px 0';
