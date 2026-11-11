@@ -84,7 +84,7 @@ export const DISCUSSION_SCHEMA={
  type:"object",additionalProperties:false,
  required:["kind","reply","task_id","offset_workdays","evidence_task_ids","draft_tasks","draft_edits"],
  properties:{
-  kind:{type:"string",enum:["discuss","clarify","shift","add_tasks","edit_tasks"]},
+  kind:{type:"string",enum:["discuss","clarify","simulate","shift","add_tasks","edit_tasks"]},
   reply:{type:"string"},
   task_id:{type:["string","null"]},
   offset_workdays:{type:["integer","null"]},
@@ -136,6 +136,8 @@ export function discussionInstructions(){
   "For Fachplanung disciplines TGA, TWP, ELT, Brandschutz and Bauphysik: they are possible disciplines, NOT proof that this project's scope includes them. Ask about disciplines, parallel work, source task dates, handovers and responsibilities when unknown.",
   "Never presume dates, durations, legally protected milestones or contractual commitments that are not explicit. You may suggest alternatives and ask for confirmation.",
   "Use kind=discuss or clarify for ordinary conversation. Output reply is natural prose in the user's language, not robotic command text.",
+  "For a hypothetical about a single named task finishing N WORKDAYS later (e.g. 'Was passiert wenn TWP 5 AT später liefert?' or '¿Qué pasa si TWP entrega 5 días laborables más tarde?'), use kind=simulate. This is ALWAYS read-only, even for a viewer; never use shift for a question. The model only identifies one exact, unambiguous existing task_id and integer offset_workdays from 1 to 130, it NEVER computes impact or invents relationships. If several tasks match TWP, ask which one; do not guess. For simulate set draft_tasks and draft_edits to empty arrays. The client calculates impacts deterministically from the registered graph, calendar, floats and deadlines.",
+  "A simulation extending a delivery date keeps the original start unchanged and extends its end. It is not a claim of extra employee effort, automatic reallocation or project approval.",
   "After users explicitly agree to creating or dividing tasks and all names, work group, start/end dates and owners are resolved, you MAY output kind=add_tasks with a draft of at most 8 new tasks.",
   "For agreed re-coordination, you MAY propose kind=edit_tasks with draft_edits (max 8 EXISTING tasks) to change start/end/owner/predecessors. Each record represents the COMPLETE target values, including unchanged fields carried from the current task. List all predecessors intended to remain. Never infer that unspecified links should be removed.",
   "When the user requests several linked changes or iterations, discuss desired results first; offer an explicit reviewed multi-task edit only after the user agrees dates, relationships and owners.",
@@ -145,20 +147,29 @@ export function discussionInstructions(){
   "For a single explicit unambiguous workday shift you may output kind=shift. For broad instructions about multiple shifts or project restructuring, discuss first.",
   "All changes are just previews requiring human review and a separate confirmation. Never claim a change was already saved.",
   "Discuss dependency impacts as possibly affected unless deterministic checks confirm a violation. There are no implicit dependencies between professions.",
-  "For discuss or clarify set task_id/offset_workdays null and both arrays empty. For shift set both arrays empty. For add_tasks use draft_tasks and empty draft_edits. For edit_tasks use draft_edits and empty draft_tasks; all non-shift kinds have task_id and offset_workdays null.",
+  "For discuss or clarify set task_id/offset_workdays null and both arrays empty. For simulate and shift use task_id/offset_workdays and both arrays empty. For add_tasks use draft_tasks and empty draft_edits. For edit_tasks use draft_edits and empty draft_tasks; all other kinds have task_id and offset_workdays null.",
   "evidence_task_ids may only contain current task IDs. No MINDS, Isabella, personal profiles, account info or project secrets.",
   "Aim for concise useful replies with context, not a rigid generic disclaimer."
  ].join("\n");
 }
 export function validateDiscussion(raw,ctx,canEdit){
  const safe=(text)=>typeof text==="string"&&text.length>0&&text.length<=2500;
- if(!raw||typeof raw!=="object"||!safe(raw.reply)||!["discuss","clarify","shift","add_tasks","edit_tasks"].includes(raw.kind))
+ if(!raw||typeof raw!=="object"||!safe(raw.reply)||!["discuss","clarify","simulate","shift","add_tasks","edit_tasks"].includes(raw.kind))
   return {kind:"clarify",text:"Die KI-Antwort ist nicht ausreichend strukturiert. Keine Änderung vorgenommen."};
  const evidence=Array.isArray(raw.evidence_task_ids)?raw.evidence_task_ids:[];
  const taskIds=new Set(ctx.tasks.map(t=>t.id)),groupIds=new Set(ctx.groups.map(g=>g.id));
  if(evidence.length>16||evidence.some(id=>!taskIds.has(id)))
   return {kind:"clarify",text:"KI-Antwort enthält unbekannte Referenzen. Bitte erneut formulieren."};
  const text=raw.reply.trim();
+ if(raw.kind==="simulate"){
+   if(typeof raw.task_id!=="string"||!taskIds.has(raw.task_id)||
+      !Number.isInteger(raw.offset_workdays)||raw.offset_workdays<1||raw.offset_workdays>130||
+      (Array.isArray(raw.draft_tasks)&&raw.draft_tasks.length>0)||
+      (Array.isArray(raw.draft_edits)&&raw.draft_edits.length>0))
+     return {kind:"clarify",text:"Für die Was-wäre-wenn-Prüfung bitte einen eindeutigen Vorgang und 1–130 zusätzliche Arbeitstage nennen."};
+   return {kind:"simulate",text:text.slice(0,2400),task_id:raw.task_id,
+     offset_workdays:raw.offset_workdays,evidence_task_ids:evidence};
+ }
  if(raw.kind==="shift")return validateIntent({
   kind:"shift",reply:text.slice(0,1200),task_id:raw.task_id,
   offset_workdays:raw.offset_workdays,evidence_task_ids:evidence
