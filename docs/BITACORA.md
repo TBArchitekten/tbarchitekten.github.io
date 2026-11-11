@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-11 · Menos reglas: el modelo interpreta las fechas · Claude
+- Qué cambió y por qué: decisión de Gari: Romy e Isabella deben interpretar como un asistente normal; las comprobaciones duras se quedan solo donde algo se ejecuta sin que la persona lo vea. Motor sincronizado desde minds `2782327` (minds #326): una propuesta con tarjeta de revisión ya no necesita una cita literal de la fecha en el mensaje (foto, turno anterior o inferencia valen); siguen día válido, día de la semana y aritmética relativa; la creación directa sigue exigiendo la cita en el turno propio. Si una propuesta no se puede registrar, Romy lo explica con sus palabras (salvo que afirmen que el cambio está hecho).
+- Archivos: `supabase/functions/isabella-chat/index.ts`, `supabase/functions/_shared/calendar-semantic-boundary.mjs`, manifiestos de sync.
+- Base de datos: ninguna.
+- Deploy de funciones: `isabella-chat`.
+- Cómo se probó: `node --test` 238/238 aquí; minds 1232/1232 y `deno check`. No probado con un turno real.
+- Quedó pendiente o sin probar: revisión del resto de reglas (memoria personal, instrucciones del prompt, rutas del cliente).
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: este.
+
 ### 2026-11-11 · Cita desde una foto · tarjetas y avisos en alemán · Claude
 - Qué cambió y por qué: tras el arreglo del bucket, Romy ya leía la foto (y la foto se queda en el chat), pero la propuesta de cita se rechazaba con «No pude registrar una propuesta…». Causa: el motor exigía que la cita literal de la fecha estuviera en las palabras del propietario (`date_evidence_not_in_owner_turn`); con «agrega este Termin» + foto, la fecha solo está en la imagen. Cambio en el motor (minds #325, sincronizado aquí): con adjuntos en el turno la cita puede venir del adjunto; el servidor no puede verificarla, la base lo marca (`*_from_attachment`), siguen las comprobaciones de día de la semana y aritmética, y la creación directa sigue excluida con adjuntos (siempre tarjeta de revisión). Textos: tarjeta de propuesta y editores (tarea, cita, rutina, recordatorio), errores de confirmación, vista Work/Akte y Wissen, y las frases fijas que el motor escribe en español («Propuesta: evento…», «No pude registrar…») se muestran ahora en alemán.
 - Archivos: `app/app.js` (v=office50), `app/work.js` (v=office43), `app/index.html`, motor sincronizado desde minds `72c1128` (`isabella-chat/index.ts`, `_shared/calendar-semantic-boundary.mjs`) y manifiestos, pins de versión en tests.
