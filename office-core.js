@@ -90,7 +90,7 @@
       standDate:today,standLabel:'Projektstart',
       calendar:{...(state.project.calendar||{}),region:'DE-BY',nonWorkingDates:[...blocked].sort()}};
     if(state.project.scheduleModel==='network-v1'){
-      const skip=!!fachplanerAlreadyCommissioned;
+      const skip=phase==='LPH3'&&!!fachplanerAlreadyCommissioned;
       state.project.planningAssumptions={
         fachplanerAlreadyCommissioned:phase==='LPH3'&&skip,
         includePostIssueLPH5:phase==='LPH5'&&!!includePostIssueLPH5,
