@@ -59,8 +59,14 @@ test('Old LPH3 remains intact and creating a historic LPH5 start shifts all date
  assert.deepEqual(state,again);
  assert.equal(state.project.start,args.start);
  assert.equal(state.project.phase,'LPH5');
- assert.equal(state.tasks.length,45);
- assert.equal(links(state),95);
+ assert.equal(state.tasks.length,40,'default plan ends at first coordinated issue');
+ assert.ok(!state.tasks.some(t=>t.group==='g07'));
+ assert.equal(state.project.planningAssumptions.includePostIssueLPH5,false);
+ const chosen=C.cloneStateForProject(tpl.state,{...args,includePostIssueLPH5:true});
+ assert.equal(chosen.tasks.length,45,'explicit option includes conditional follow-up');
+ assert.equal(links(chosen),95);
+ assert.equal(chosen.project.planningAssumptions.includePostIssueLPH5,true);
+ assert.equal(P.analyze(chosen).valid,true,P.analyze(chosen).reason);
  assert.ok(state.project.end>=state.tasks.find(x=>x.id==='m60').end);
  assert.equal(P.analyze(state).valid,true,P.analyze(state).reason);
  assert.equal(E.analyze(state).errors,0);
