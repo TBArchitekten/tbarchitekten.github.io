@@ -20,7 +20,7 @@
    return tasks.find(t=>t.id===selected)||null;
  }
  function quantity(text){
-   const m=String(text).match(/\b(\d{1,3}|eins|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s*(arbeitstag(?:e|en)?|werktag(?:e|en)?|d[ií]as?\s+laborables?|working\s+days?|arbeitswoche(?:n)?|semanas?(?:\s+laborales)?|work\s*weeks?|woche(?:n)?)\b/i);
+   const m=String(text).match(/\b(\d{1,3}|eins|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s*(arbeitstag(?:e|en)?|werktag(?:e|en)?|d[ií]as?\s+laborables?|working\s+days?|arbeitswoche(?:n)?|semanas?(?:\s+laborales)?|work\s*weeks?|woche(?:n)?|AT|d[ií]as?\s+h[aá]biles)\b/i);
    if(!m)return null;
    const n=/^\d+$/.test(m[1])?Number(m[1]):WORDS[norm(m[1])];
    const week=/woche|semana|week/i.test(m[2]);
@@ -28,11 +28,67 @@
    if(!Number.isInteger(days)||days<1||days>260)return null;
    return {days,week};
  }
- function answer({message,state,engine,selectedTaskId,revision,requestId}){
+ // The model may identify an unambiguous task, but never supplies computed
+ // scheduling consequences. A detached deterministic engine owns all values.
+ function simulateReadOnly(state,planning,taskId,extraAT,userMessage){
+   if(!planning?.simulateFinishDelay)
+     return {kind:"answer",text:"Die Netzplansimulation ist nicht verfügbar. Es wurde nichts geändert."};
+   const result=planning.simulateFinishDelay(state,taskId,extraAT);
+   if(!result.valid)return {kind:"answer",text:"Die Was-wäre-wenn-Prüfung ist derzeit nicht belastbar: "+
+     result.reason+"\nKeine Änderung vorgenommen."};
+   const spanish=/[¿¡]|\b(qué|que pasa|entrega|retraso|tarde|d[ií]as|si llega|si termina|cu[aá]nto)\b/i.test(String(userMessage||""));
+   const delta=n=>n>0?"+"+n:String(n);
+   const warnings=result.newWarnings.slice(0,5).map(x=>
+     x.name+" ("+x.kind+": "+x.limit+", neues Ende "+x.end+")").join("; ");
+   const prefix=spanish?
+     "Simulación, sin guardar cambios · "+result.taskName:
+     "Was-wäre-wenn-Simulation · "+result.taskName;
+   const lines=spanish?[
+     prefix,
+     "Supuesto: el inicio no cambia ("+result.before.start+"); la entrega pasa de "+result.before.end+
+       " a "+result.after.end+" ("+result.extraAT+" días laborables más tarde).",
+     "Se desplazarían "+result.changedSuccessors.length+" actividades sucesoras de "+
+       result.affectedCount+" sucesores registrados.",
+     "Fin de las actividades del plan: "+result.before.projectFinish+" → "+
+       result.after.projectFinish+" ("+delta(result.projectFinishDeltaAT)+" días laborables).",
+     "Holgura total de esta actividad, según el cálculo actual que incluye límites de Deadline: "+
+       result.before.totalFloatAT+" → "+result.after.totalFloatAT+" días laborables.",
+     "Nuevos incumplimientos de Deadline o fecha protegida: "+
+       result.newWarnings.length+(warnings?" · "+warnings:"")+".",
+     "El indicador actual de criticidad incluye límites por Deadline; NO equivale todavía al camino puro que determina el fin del proyecto.",
+     "Solo se consideran dependencias documentadas; no se calculan recursos ni capacidad. Esto es una simulación, no una modificación."
+   ]:[
+     prefix,
+     "Annahme: Der Anfang bleibt "+result.before.start+"; die Lieferung endet statt am "+
+       result.before.end+" am "+result.after.end+" ("+result.extraAT+" zusätzliche AT).",
+     result.changedSuccessors.length+" von "+result.affectedCount+
+       " dokumentierten Nachfolgern müssten verschoben werden.",
+     "Letztes Vorgangsende im Plan: "+result.before.projectFinish+" → "+
+       result.after.projectFinish+" ("+delta(result.projectFinishDeltaAT)+" AT).",
+     "Gesamtpuffer dieses Vorgangs nach derzeitiger deadline-begrenzter Berechnung: "+
+       result.before.totalFloatAT+" → "+result.after.totalFloatAT+" AT.",
+     "Neu überschrittene Deadlines/geschützte Termine: "+result.newWarnings.length+
+       (warnings?" · "+warnings:"")+".",
+     "Der aktuelle Kritisch-Indikator berücksichtigt Deadline-Grenzen und ist daher nicht mit einem rein projektendbestimmenden kritischen Pfad gleichzusetzen.",
+     "Es gelten nur eingetragene Abhängigkeiten; keine Ressourcen-/Kapazitätsberechnung. Dies ist keine Terminänderung."
+   ];
+   return {kind:"answer",text:lines.join("\n"),simulation:result};
+ }
+ function answer({message,state,engine,planning,selectedTaskId,revision,requestId}){
    const raw=String(message||"").trim(),lower=norm(raw);
    if(!raw||raw.length>1500)return {kind:"answer",text:"Bitte eine kurze Nachricht (max. 1500 Zeichen) eingeben."};
    if(!engine)return {kind:"answer",text:"Prüfmotor nicht verfügbar. Keine Änderungen möglich."};
    const tasks=Array.isArray(state?.tasks)?state.tasks:[],selected=target(raw,tasks,selectedTaskId);
+   const hypothetical=/was\s+(?:passiert|w[aä]re)|was\s+wenn|what\s+if|qu[eé]\s+pasa|qu[eé]\s+ocurre|y\s+si\b|falls\b|angenommen\b|simul/i.test(lower);
+   if(hypothetical){
+     const q=quantity(raw);
+     if(!q)return {kind:"answer",text:"Für eine überprüfbare Simulation bitte eine Anzahl Arbeitstage nennen (z. B. 5 AT)."};
+     const explicit=target(raw,Array.isArray(state?.tasks)?state.tasks:[],null);
+     const refersSelected=/ausgew[aä]hlt|seleccionad|este\s+vorgang|dieser\s+vorgang|esta\s+tarea|this\s+task/i.test(raw);
+     const chosen=explicit||(refersSelected?(state.tasks||[]).find(t=>t.id===selectedTaskId):null);
+     if(!chosen)return {kind:"answer",text:"Bitte die genaue Aufgabe mit Namen oder #ID nennen oder den ausgewählten Vorgang ausdrücklich ansprechen. Keine Zuordnung auf Verdacht."};
+     return simulateReadOnly(state,planning,chosen.id,q.days,raw);
+   }
    const move=/verschieb|verleg|retras|mueve|pospon|move|shift|vorzieh|adelant/i.test(lower);
    const earlier=/vorzieh|adelant|früher|earlier/i.test(lower)&&!/verschieb|retras|move|shift/i.test(lower);
    const relations=/abhängig|vorgänger|nachfolger|betroffen|auswirkung|dependenc|sucesor|afectad|relaci[oó]n|consecuenc/i.test(lower);
@@ -202,15 +258,19 @@
      downstreamIds:engine.downstream(copy,changed.map(x=>x.id))};
  }
 
- function fromDiscussion({serverResponse,state,engine,revision,requestId}){
+ function fromDiscussion({serverResponse,state,engine,planning,revision,requestId,userMessage}){
    if(!serverResponse||serverResponse.version!=="office-ai-v0.5"||
      serverResponse.source!=="office_ai_discussion_only"||
      serverResponse.base_revision!==revision)
      return {kind:"answer",text:"Der Planstand hat sich geändert. Bitte Anfrage wiederholen."};
    const intent=serverResponse.result;
-   if(!intent||!["discuss","clarify","shift","add_tasks","edit_tasks"].includes(intent.kind)||
+   if(!intent||!["discuss","clarify","simulate","shift","add_tasks","edit_tasks"].includes(intent.kind)||
       typeof intent.text!=="string")
      return {kind:"answer",text:"Unklare KI-Antwort. Keine Änderung."};
+   if(intent.kind==="simulate"){
+     return simulateReadOnly(state,planning,intent.task_id,intent.offset_workdays,
+       userMessage||intent.text);
+   }
    if(intent.kind==="shift"){
      return fromModelIntent({
        serverResponse:{version:"office-ai-v0.4",source:"office_ai_interpretation_only",
