@@ -234,6 +234,68 @@
         return !!(t.deadline&&t.end>t.deadline||t.protectedDate&&t.end>t.protectedDate);
       }).map(x=>x.id)};
   }
+  /*
+   * Read-only "Was wäre wenn?" calculation. A later Fachplaner DELIVERY
+   * extends the finish while retaining the recorded start, unlike moving
+   * the entire bar. Then only documented dependency successors are moved
+   * forward in a detached clone; no write, model output, or approval.
+   * Current CPM includes soft deadline caps; do NOT present criticalCount
+   * as a pure project-finish-critical-path metric.
+   */
+  function simulateFinishDelay(state,originId,extraAT){
+    if(!Number.isInteger(extraAT)||extraAT<1||extraAT>130)
+      return {valid:false,reason:'Bitte 1 bis 130 zusätzliche Arbeitstage angeben.'};
+    try{
+      const source=clone(state),byId=new Map((source.tasks||[]).map(t=>[t.id,t]));
+      const target=byId.get(originId);
+      if(!target)throw Error('Bitte einen eindeutig identifizierten Vorgang auswählen.');
+      const before=analyze(source);
+      if(!before.valid)throw Error('Der bestehende Netzplan ist nicht konsistent: '+before.reason);
+      const cal=calendarIndex(source);
+      const oldEnd=cal.index.get(target.end);
+      if(oldEnd===undefined||oldEnd+extraAT>=cal.days.length)
+        throw Error('Liefertermin außerhalb des verfügbaren Arbeitskalenders.');
+      const priorEnd=target.end,priorStart=target.start;
+      target.end=cal.days[oldEnd+extraAT];
+      if(target.type==='milestone')target.start=target.end;
+      // The simulation expands the horizon in the clone, never the source.
+      if(target.end>source.project.end)source.project.end=target.end;
+      const cascade=previewSuccessors(source,originId);
+      const after=analyze(cascade.state);
+      if(!after.valid)throw Error('Der hypothetische Nachfolgerplan ist nicht auswertbar: '+after.reason);
+      const newTasks=new Map(cascade.state.tasks.map(t=>[t.id,t]));
+      const warnings=[],previousWarnings=[];
+      for(const t of state.tasks||[]){
+        const hypothetic=newTasks.get(t.id);
+        if(!hypothetic)continue;
+        for(const [field,kind] of [['deadline','Deadline'],['protectedDate','geschützter Abgabetermin']]){
+          if(!t[field])continue;
+          if(t.end>t[field])previousWarnings.push({id:t.id,name:t.name,kind,limit:t[field]});
+          if(hypothetic.end>t[field])
+            warnings.push({id:t.id,name:t.name,kind,limit:t[field],end:hypothetic.end,
+              newOverrun:t.end<=t[field]});
+        }
+      }
+      const startIndex=cal.index.get(before.projectFinish),endIndex=cal.index.get(after.projectFinish);
+      return {
+        valid:true,kind:'read_only_finish_delay',taskId:originId,taskName:target.name,
+        extraAT,assumption:'start_unchanged_finish_extended',
+        before:{start:priorStart,end:priorEnd,projectFinish:before.projectFinish,
+          totalFloatAT:before.byId[originId]?.totalFloatAT??null,criticalCount:before.criticalCount},
+        after:{start:target.start,end:target.end,projectFinish:after.projectFinish,
+          totalFloatAT:after.byId[originId]?.totalFloatAT??null,criticalCount:after.criticalCount},
+        projectFinishDeltaAT:endIndex-startIndex,
+        changedSuccessors:cascade.updates,
+        affectedCount:cascade.affectedIds.length,
+        newWarnings:warnings.filter(x=>x.newOverrun),
+        allWarnings:warnings,existingWarnings:previousWarnings,
+        changedIndicatorIds:Object.keys(after.byId).filter(id=>
+          after.byId[id].critical&&!before.byId[id]?.critical).sort(),
+        disclaimer:'Nur eingetragene Beziehungen; keine Kapazitäts-/Ressourcensimulation. Kritischindikator berücksichtigt bestehende Deadline-Grenzen.',
+        sourceUnmodified:true
+      };
+    }catch(e){return {valid:false,reason:e?.message||'Keine belastbare Netzplansimulation möglich.'};}
+  }
   return Object.freeze({validDate,dependencies,calendarOf,topology,analyze,captureBaseline,
-    selectedBaseline,baselineVariance,previewSuccessors});
+    selectedBaseline,baselineVariance,previewSuccessors,simulateFinishDelay});
 });
