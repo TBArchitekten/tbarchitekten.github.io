@@ -32,7 +32,9 @@ jobs:
         with:
           persist-credentials: false
       - name: Install isolated PostgreSQL client
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+        # The runner image already ships psql; only reach for the package mirror when it is missing
+        # (11.11.2026: the mirror could not be resolved for hours and every PR went red).
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)
       - name: Build synthetic Office base schema
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-phase1-fixture.sql
       - name: Apply Phase 1 migrations in strict order (ephemeral PostgreSQL only)

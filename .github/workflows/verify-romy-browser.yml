@@ -21,7 +21,9 @@ jobs:
       - name: Install pinned browser test runner without scripts
         run: npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
       - name: Install isolated Chromium browser
-        run: npx playwright install --with-deps chromium
+        # The runner image has Chromium's system libraries; --with-deps is only the fallback, because
+        # it needs the Ubuntu package mirror (unreachable for hours on 11.11.2026).
+        run: npx playwright install chromium || npx playwright install --with-deps chromium
       - name: Exercise real browser transport, receipts and per-member chat using synthetic doubles
         env:
           CI: 'true'
