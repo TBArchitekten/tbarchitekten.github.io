@@ -2699,8 +2699,10 @@ async function handle(text,attachments=[],replyTo=null,options={}){
   }
   finally{
     clearAssistantStream();setChatActivity('');orb();setWorking($('#sendButton'),false);
-    if(OFFICE&&window.APP_CHAT_RUNTIME!=='legacy')
+    if(OFFICE&&window.APP_CHAT_RUNTIME!=='legacy'){
+      if(copy.length)await persistOfficeAttachments(durableRequestId,copy);
       void window.TBA_OFFICE_ENGINE_CHAT?.reconcile?.();
+    }
   }
 }
 let pendingChatFiles=[];
@@ -2764,24 +2766,42 @@ async function normalizeUploadImage(file){
   });
 }
 async function normalizeChatUpload(file){
-  if(!chatUploadSupported(file))throw new Error('Formato no compatible: '+String(file?.name||'archivo'));
-  if(Number(file?.size||0)>CHAT_UPLOAD_MAX_BYTES)throw new Error('El archivo '+String(file?.name||'')+' supera 12 MB.');
+  if(!chatUploadSupported(file))throw new Error('Format nicht unterstützt: '+String(file?.name||'Datei'));
+  if(Number(file?.size||0)>CHAT_UPLOAD_MAX_BYTES)throw new Error('Die Datei '+String(file?.name||'')+' ist größer als 12 MB.');
   if(chatUploadIsImage(file))return normalizeUploadImage(file);
   const ext=chatUploadExt(file);
   return {blob:file,mime:String(file.type||CHAT_UPLOAD_MIME[ext]||'application/octet-stream'),ext};
 }
+// The shared engine reads chat attachments from 'isabella-uploads' (as in Window). Until 11.11.2026
+// Office uploaded to the former runtime's bucket, so Romy never received the photo.
+function chatUploadBucket(){return OFFICE&&window.APP_CHAT_RUNTIME==='legacy'?'office-romy-uploads':'isabella-uploads'}
+// Office: the server writes the owner's turn without the attachment references; the owner adds them
+// to the metadata of their own turn so the photo stays in the chat after it is rebuilt from the server.
+async function persistOfficeAttachments(requestId,attachments){
+  try{
+    const sb=window.MINDS_SUPABASE;
+    if(!sb||!requestId||!attachments?.length)return;
+    const {data:{session}}=await sb.auth.getSession();if(!session)return;
+    const {data:row}=await sb.from('conversation_messages').select('id,metadata')
+      .eq('user_id',session.user.id).eq('client_key',String(requestId)).eq('role','user').maybeSingle();
+    if(!row?.id)return;
+    await sb.from('conversation_messages')
+      .update({metadata:{...(row.metadata&&typeof row.metadata==='object'?row.metadata:{}),attachments:attachments.slice(0,3)}})
+      .eq('id',row.id).eq('user_id',session.user.id);
+  }catch{/* the turn itself is safe; only the thumbnail would be missing */}
+}
 async function uploadChatFiles(files){
   const list=(files||[]).slice(0,3);
-  if(list.reduce((n,f)=>n+Number(f?.size||0),0)>CHAT_UPLOAD_MAX_TOTAL_BYTES)throw new Error('Los adjuntos superan 24 MB en total.');
-  const sb=window.MINDS_SUPABASE;if(!sb)throw new Error('Necesito la memoria conectada para adjuntar archivos.');
-  const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Conecta la memoria antes de adjuntar archivos.');
+  if(list.reduce((n,f)=>n+Number(f?.size||0),0)>CHAT_UPLOAD_MAX_TOTAL_BYTES)throw new Error('Die Anhänge sind zusammen größer als 24 MB.');
+  const sb=window.MINDS_SUPABASE;if(!sb)throw new Error('Bitte anmelden, um Dateien anzuhängen.');
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Bitte anmelden, um Dateien anzuhängen.');
   const out=[];
   for(const file of list){
     const prepared=await normalizeChatUpload(file);
     const id=globalThis.crypto?.randomUUID?.()||uid();
     const safeExt=String(prepared.ext||'bin').replace(/[^a-z0-9]/gi,'').toLowerCase()||'bin';
     const path=session.user.id+'/chat/'+today()+'/'+id+'.'+safeExt;
-    const {error}=await sb.storage.from(OFFICE?'office-romy-uploads':'isabella-uploads').upload(path,prepared.blob,{contentType:prepared.mime,upsert:false});
+    const {error}=await sb.storage.from(chatUploadBucket()).upload(path,prepared.blob,{contentType:prepared.mime,upsert:false});
     if(error)throw new Error('Hochladen fehlgeschlagen: '+String(file.name||'Datei')+': '+error.message);
     out.push({path,mime:prepared.mime,name:file.name||('Archivo.'+safeExt),size:Number(file.size||0)});
   }
@@ -2789,10 +2809,10 @@ async function uploadChatFiles(files){
 }
 async function hydrateChatImages(){
   const imgs=[...document.querySelectorAll('img[data-chat-image-path]')].filter(x=>!x.dataset.loaded);
-  for(const img of imgs)observeStorageImage(img,OFFICE?'office-romy-uploads':'isabella-uploads',img.dataset.chatImagePath||'');
+  for(const img of imgs)observeStorageImage(img,chatUploadBucket(),img.dataset.chatImagePath||'');
   const files=[...document.querySelectorAll('a[data-chat-file-path]')].filter(x=>!x.dataset.loaded);
   for(const link of files){
-    const path=link.dataset.chatFilePath||'',url=await signedAssetUrl(OFFICE?'office-romy-uploads':'isabella-uploads',path,900);
+    const path=link.dataset.chatFilePath||'',url=await signedAssetUrl(chatUploadBucket(),path,900);
     if(url&&link.isConnected){link.href=url;link.dataset.loaded='1'}
   }
 }
@@ -5054,7 +5074,7 @@ window.ISABELLA_APP={
       id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
       text:String(m.content||m.text||''),
       at:String(m.created_at||m.at||new Date().toISOString()),
-      metadata:m.metadata&&typeof m.metadata==='object'?m.metadata:{},sources:Array.isArray(m.metadata?.sources)?m.metadata.sources:[],attachments:Array.isArray(m.attachments)?m.attachments:[],artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[],quickReplies:[]
+      metadata:m.metadata&&typeof m.metadata==='object'?m.metadata:{},sources:Array.isArray(m.metadata?.sources)?m.metadata.sources:[],attachments:Array.isArray(m.attachments)&&m.attachments.length?m.attachments:(Array.isArray(m.metadata?.attachments)?m.metadata.attachments:[]),artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[],quickReplies:[]
     }));
     renderMessages(true);
   },

@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-11 · Romy no recibía las fotos del chat · Claude
+- Qué cambió y por qué: Gari le mandó a Romy una captura de un correo y Romy respondió que no veía ninguna imagen; además la foto desaparecía del chat. Causa: la app de Office subía los adjuntos al bucket del runtime anterior (`office-romy-uploads`) y el motor compartido los lee de `isabella-uploads` (comprobado en producción: 4 subidas recientes en el primero, 0 en el segundo). Ahora la app usa `isabella-uploads` con el motor nuevo (el runtime anterior conserva el suyo). La foto desaparecía porque el servidor guarda el turno del usuario sin la referencia al adjunto y el chat se reconstruye desde el servidor: la app añade ahora la referencia a los metadatos de su propio turno (permitido por la política `owner_turn_metadata`) y el chat la muestra al reconstruirse. Mensajes de error de adjuntos en alemán.
+- Archivos: `app/app.js` (v=office49), `app/index.html`, `tests/office-romy-attachments.test.mjs`, pins de versión.
+- Base de datos: ninguna.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` 238/238; consulta de solo lectura en producción para confirmar la causa. No probado con una foto real desde el iPhone.
+- Quedó pendiente o sin probar: las fotos ya enviadas quedaron en el bucket anterior y no se muestran en esos mensajes.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: este.
+
 ### 2026-11-09 · Terminplan Netzplanfunktionen und Muster LPH 3 v1.2 publiziert · ChatGPT
 - Qué cambió y por qué: PR #66 als Squash-Commit `6d0eff8dd8bbe22ac034a50fc0c20d0a659eff0c` nach vier erfolgreichen CI-Workflows zusammengeführt. Gemeinsame Planungsfunktionen für alle LPH3/LPH5- und bestehenden Projektpläne, bebilderte Anleitung `terminplan-hilfe.html`, versionierte Muster-Vorlage LPH3 v1.2.
 - Archivos: in PR #66 erfasste Editor-, Test-, Muster- und Anleitungsdateien; dieser Nachtrag aktualisiert nur `docs/BITACORA.md` und `docs/ESTADO.md`.
