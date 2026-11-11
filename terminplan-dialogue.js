@@ -43,10 +43,21 @@
    const prefix=spanish?
      "Simulación, sin guardar cambios · "+result.taskName:
      "Was-wäre-wenn-Simulation · "+result.taskName;
+   const milestone=result.assumption==='milestone_date_shift';
+   const assumptionEs=milestone?
+     "Supuesto: el hito se desplaza de "+result.before.end+" a "+result.after.end+
+       " ("+result.extraAT+" días laborables más tarde).":
+     "Supuesto: el inicio no cambia ("+result.before.start+"); la entrega pasa de "+
+       result.before.end+" a "+result.after.end+
+       " ("+result.extraAT+" días laborables más tarde).";
+   const assumptionDe=milestone?
+     "Annahme: Der Meilenstein verschiebt sich vom "+result.before.end+" auf "+
+       result.after.end+" ("+result.extraAT+" AT später).":
+     "Annahme: Der Anfang bleibt "+result.before.start+"; die Lieferung endet statt am "+
+       result.before.end+" am "+result.after.end+" ("+result.extraAT+" zusätzliche AT).";
    const lines=spanish?[
      prefix,
-     "Supuesto: el inicio no cambia ("+result.before.start+"); la entrega pasa de "+result.before.end+
-       " a "+result.after.end+" ("+result.extraAT+" días laborables más tarde).",
+     assumptionEs,
      "Se desplazarían "+result.changedSuccessors.length+" actividades sucesoras de "+
        result.affectedCount+" sucesores registrados.",
      "Fin de las actividades del plan: "+result.before.projectFinish+" → "+
@@ -62,8 +73,7 @@
      "Solo se consideran dependencias documentadas; no se calculan recursos ni capacidad. Esto es una simulación, no una modificación."
    ]:[
      prefix,
-     "Annahme: Der Anfang bleibt "+result.before.start+"; die Lieferung endet statt am "+
-       result.before.end+" am "+result.after.end+" ("+result.extraAT+" zusätzliche AT).",
+     assumptionDe,
      result.changedSuccessors.length+" von "+result.affectedCount+
        " dokumentierten Nachfolgern müssten verschoben werden.",
      "Letztes Vorgangsende im Plan: "+result.before.projectFinish+" → "+
