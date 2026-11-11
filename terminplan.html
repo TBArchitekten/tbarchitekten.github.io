@@ -718,9 +718,9 @@ body.read-only .editor-only{display:none!important}
 <div class="toast" id="toast"></div>
 
 <script src="./terminplan-engine.js?v=office2"></script>
-<script src="./terminplan-planning.js?v=office1"></script>
+<script src="./terminplan-planning.js?v=office2"></script>
 <script src="./terminplan-features.js?v=office1"></script>
-<script src="./terminplan-dialogue.js?v=office37"></script>
+<script src="./terminplan-dialogue.js?v=office38"></script>
 <script src="./terminplan-rebuild.js?v=office39"></script>
 <script>
 (function(){
@@ -1511,7 +1511,7 @@ body.read-only .editor-only{display:none!important}
     if(!dialogueEvents.length){
       const intro=document.createElement('div');
       intro.className='dialogue-message';
-      intro.textContent='Wir können den Terminplan gemeinsam entwickeln: Fachplanung aufteilen, Abgaben und Abhängigkeiten besprechen oder Termine prüfen. Die KI ist bei Verfügbarkeit automatisch aktiv. Du kannst PDF-Dokumente oder Fotos als Quelle hochladen. Ich ändere nichts ohne eine von dir geprüfte Freigabe.';
+      intro.textContent='Wir können den Terminplan gemeinsam entwickeln: Fachplanung aufteilen, Abgaben und Abhängigkeiten besprechen oder Termine prüfen. Frage beispielsweise: „Was passiert, wenn ein Fachplaner 5 AT später liefert?“ Die Auswertung bleibt eine Simulation ohne Änderung. Die KI ist bei Verfügbarkeit automatisch aktiv. Du kannst PDF-Dokumente oder Fotos als Quelle hochladen. Änderungen nur nach deiner geprüften Freigabe.';
       host.append(intro);
     }
     for(const entry of dialogueEvents.slice(-60)){
@@ -1820,6 +1820,7 @@ body.read-only .editor-only{display:none!important}
           }
         }else result=dialogueEngine.fromDiscussion({
           serverResponse:remote,state:clone(data),engine:auditEngine,
+          planning:window.TBATerminplanPlanning,userMessage:prompt,
           revision:serverRevision,requestId
         });
         remoteSources=Array.isArray(remote.sources)?remote.sources:[];
@@ -1830,6 +1831,7 @@ body.read-only .editor-only{display:none!important}
         }
         result=dialogueEngine.answer({
           message:prompt,state:clone(data),engine:auditEngine,
+          planning:window.TBATerminplanPlanning,
           selectedTaskId:selectedId,revision:serverRevision,requestId
         });
       }
