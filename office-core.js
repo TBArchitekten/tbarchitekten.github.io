@@ -76,7 +76,7 @@
       return dates[index];
     };
   }
-  function cloneStateForProject(templateState,{start,number,name,phase,version,today,fachplanerAlreadyCommissioned=false}){
+  function cloneStateForProject(templateState,{start,number,name,phase,version,today,fachplanerAlreadyCommissioned=false,includePostIssueLPH5=false}){
     if(!validDateKey(start)||isWeekend(parseDate(start)))throw Error('Bitte gültigen Werktag eingeben.');
     const state=JSON.parse(JSON.stringify(templateState));
     const templateBase=state.project.start;
@@ -92,11 +92,15 @@
     if(state.project.scheduleModel==='network-v1'){
       const skip=!!fachplanerAlreadyCommissioned;
       state.project.planningAssumptions={
-        fachplanerAlreadyCommissioned:skip,
+        fachplanerAlreadyCommissioned:phase==='LPH3'&&skip,
+        includePostIssueLPH5:phase==='LPH5'&&!!includePostIssueLPH5,
         requiredDisciplines:['TWP','HLS','ELT'],
-        note:'BRS projektspezifisch ergänzen; Feiertage auf kommunale Besonderheiten prüfen.'
+        note:'BRS projektspezifisch ergänzen; Feiertage auf kommunale Besonderheiten prüfen. Bei LPH5 spätere Planläufe nur mit realen Voraussetzungen terminieren.'
       };
-      state.tasks=(state.tasks||[]).filter(t=>!skip||t.planningCondition!=='commissioning_pending');
+      state.tasks=(state.tasks||[]).filter(t=>
+        (!skip||t.planningCondition!=='commissioning_pending')&&
+        (phase!=='LPH5'||includePostIssueLPH5||t.planningCondition!=='post_issue_optional')
+      );
       const byId=new Map(state.tasks.map(t=>[t.id,t]));
       if(skip){
         const gate=byId.get('t053');
