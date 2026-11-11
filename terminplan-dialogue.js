@@ -55,7 +55,10 @@
        result.before.totalFloatAT+" → "+result.after.totalFloatAT+" días laborables.",
      "Nuevos incumplimientos de Deadline o fecha protegida: "+
        result.newWarnings.length+(warnings?" · "+warnings:"")+".",
-     "El indicador actual de criticidad incluye límites por Deadline; NO equivale todavía al camino puro que determina el fin del proyecto.",
+     "Actividades señaladas como críticas por el indicador actual (incluye límites de Deadline): "+
+       result.before.criticalCount+" → "+result.after.criticalCount+
+       ". Nuevas señales: "+result.changedIndicatorIds.length+".",
+     "Ese indicador NO equivale todavía al camino puro que determina el fin del proyecto.",
      "Solo se consideran dependencias documentadas; no se calculan recursos ni capacidad. Esto es una simulación, no una modificación."
    ]:[
      prefix,
@@ -69,7 +72,10 @@
        result.before.totalFloatAT+" → "+result.after.totalFloatAT+" AT.",
      "Neu überschrittene Deadlines/geschützte Termine: "+result.newWarnings.length+
        (warnings?" · "+warnings:"")+".",
-     "Der aktuelle Kritisch-Indikator berücksichtigt Deadline-Grenzen und ist daher nicht mit einem rein projektendbestimmenden kritischen Pfad gleichzusetzen.",
+     "Als kritisch markierte Vorgänge nach bisheriger deadline-begrenzter Berechnung: "+
+       result.before.criticalCount+" → "+result.after.criticalCount+
+       " (neu markiert: "+result.changedIndicatorIds.length+").",
+     "Dieser Indikator ist nicht mit dem rein projektendbestimmenden kritischen Pfad gleichzusetzen.",
      "Es gelten nur eingetragene Abhängigkeiten; keine Ressourcen-/Kapazitätsberechnung. Dies ist keine Terminänderung."
    ];
    return {kind:"answer",text:lines.join("\n"),simulation:result};
