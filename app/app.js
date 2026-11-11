@@ -5089,7 +5089,8 @@ window.ISABELLA_APP={
     if(!OFFICE)return;
     state.messages=(Array.isArray(rows)?rows:[]).map(m=>({
       id:String(m.id||uid()),role:m.role==='assistant'?'assistant':'user',
-      text:m.role==='assistant'?officeNotice(m.content||m.text||''):String(m.content||m.text||''),
+      // Romy's own words travel with a proposal card (metadata.assistant_prose); the fixed line follows.
+      text:m.role==='assistant'?[String(m.metadata?.assistant_prose||'').trim(),officeNotice(m.content||m.text||'')].filter(Boolean).join('\n\n'):String(m.content||m.text||''),
       at:String(m.created_at||m.at||new Date().toISOString()),
       metadata:m.metadata&&typeof m.metadata==='object'?m.metadata:{},sources:Array.isArray(m.metadata?.sources)?m.metadata.sources:[],attachments:Array.isArray(m.attachments)&&m.attachments.length?m.attachments:(Array.isArray(m.metadata?.attachments)?m.metadata.attachments:[]),artifacts:Array.isArray(m.metadata?.artifacts)?m.metadata.artifacts:[],quickReplies:[]
     }));

@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-11 · Núcleo v5: Romy lee adjuntos como una persona · Claude
+- Qué cambió y por qué: segundo paso de «menos reglas, más interpretación». Motor sincronizado desde minds `c5d2338` (minds #327): sección nueva en las instrucciones sobre fotos, capturas y documentos (sacar asunto, día, hora, personas y proyecto; resolver lo que una persona atenta resolvería; preguntar solo ante ambigüedad real; mirar un paso más allá) y nota de agenda alineada con la regla de fechas relajada. En Office las palabras propias de Romy se guardan con la tarjeta de propuesta (`metadata.assistant_prose`) y el chat las muestra antes de la línea fija; antes se perdían al reconstruirse el chat.
+- Archivos: `app/app.js` (v=office51), `app/index.html`, `supabase/functions/_shared/isabella-core.mjs`, `supabase/functions/isabella-chat/index.ts`, manifiestos, pins de versión.
+- Base de datos: ninguna.
+- Deploy de funciones: `isabella-chat isabella-routine-runner isabella-live-session`.
+- Cómo se probó: `node --test` 238/238 aquí; minds 1233/1233. Sin prueba con turno real.
+- Quedó pendiente o sin probar: los bloques de detalle heredados del prompt (memoria, ajustes, continuidad, especialistas) siguen sin reescribir.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: este.
+
 ### 2026-11-11 · Menos reglas: el modelo interpreta las fechas · Claude
 - Qué cambió y por qué: decisión de Gari: Romy e Isabella deben interpretar como un asistente normal; las comprobaciones duras se quedan solo donde algo se ejecuta sin que la persona lo vea. Motor sincronizado desde minds `2782327` (minds #326): una propuesta con tarjeta de revisión ya no necesita una cita literal de la fecha en el mensaje (foto, turno anterior o inferencia valen); siguen día válido, día de la semana y aritmética relativa; la creación directa sigue exigiendo la cita en el turno propio. Si una propuesta no se puede registrar, Romy lo explica con sus palabras (salvo que afirmen que el cambio está hecho).
 - Archivos: `supabase/functions/isabella-chat/index.ts`, `supabase/functions/_shared/calendar-semantic-boundary.mjs`, manifiestos de sync.
