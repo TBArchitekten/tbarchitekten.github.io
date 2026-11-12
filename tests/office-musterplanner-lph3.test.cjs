@@ -40,7 +40,7 @@ test('The review interface is read-only, user choices cannot change project data
  const app=read('app/office-projects.js');
  assert.match(html,/Muster · nur Ansicht/);
  assert.match(html,/Review exportieren/);
- assert.match(html,/Kostenberechnung/);
+ assert.match(html,/Bemusterung/);
  assert.match(js,/localStorage\.setItem/);
  assert.match(js,/new Blob/);
  assert.match(js,/\.\/app\/data\/muster-planner-lph3-v0\.2\.json/);
