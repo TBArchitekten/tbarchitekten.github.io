@@ -88,7 +88,16 @@ function showPlans(){
     const actions=document.createElement('div');actions.className='office-project-actions';
     const open=document.createElement('a');open.href='../terminplan.html?template='+encodeURIComponent(template.id);
     open.textContent='Muster ansehen';open.className='office-plan-library-link';
-    actions.append(open);card.append(number,title,metadata,actions);templateHost.append(card);
+    actions.append(open);
+    if(template.phase==='LPH3'){
+      const planner=document.createElement('a');
+      planner.href='../muster-planner.html';
+      planner.textContent='Muster-Planner ansehen';
+      planner.className='office-plan-library-link';
+      planner.title='Entwurf LPH 3 · nur Ansicht und lokale Review-Notizen';
+      actions.append(planner);
+    }
+    card.append(number,title,metadata,actions);templateHost.append(card);
   }
   // Versioned LPH3 Muster-Planner: a review-only master, never an extra project board.
   const plannerCard=document.createElement('article');plannerCard.className='office-project-card office-plan-library-card';
