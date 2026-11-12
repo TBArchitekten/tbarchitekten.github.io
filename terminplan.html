@@ -505,10 +505,11 @@ body.read-only .editor-only{display:none!important}
     <button class="btn" id="todayBtn">Heute</button>
     <label><input class="toggle" type="checkbox" id="weekendToggle" checked> Wochenenden ausblenden</label>
     <span class="sep"></span>
-    <label class="connection-mode" for="linkMode">Verbindungen
+    <label class="connection-mode" for="linkMode" title="Übersicht: je Vorgang eine repräsentative zeitliche Vorgängerbeziehung; Anklicken zeigt alle direkten Beziehungen. Alle: vollständiges Netz.">Verbindungen
       <select id="linkMode" aria-label="Verbindungen im Gantt anzeigen">
         <option value="hidden">Aus</option>
-        <option value="selected" selected>Auswahl</option>
+        <option value="overview" selected>Übersicht</option>
+        <option value="selected">Auswahl</option>
         <option value="all">Alle</option>
       </select>
     </label>
@@ -739,7 +740,7 @@ body.read-only .editor-only{display:none!important}
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="./terminplan-link-view.js?v=office1"></script>
+<script src="./terminplan-link-view.js?v=office2"></script>
 <script src="./terminplan-engine.js?v=office2"></script>
 <script src="./terminplan-planning.js?v=office2"></script>
 <script src="./terminplan-features.js?v=office1"></script>
@@ -1048,10 +1049,16 @@ body.read-only .editor-only{display:none!important}
       return {
         leftWidth:Number(saved.leftWidth)||0,
         colors:{...DEFAULT_COLORS,...(saved.colors||{})},
-        linkMode:window.TBATerminplanLinkView.normalizeMode(saved.linkMode)
+        // The prior unversioned default "Auswahl" migrates to "Übersicht".
+        // Explicit Aus/Alle choices are kept; subsequent choices stay sticky.
+        linkMode:window.TBATerminplanLinkView.normalizeMode(
+          saved.linkModeVersion===2||saved.linkMode==='hidden'||saved.linkMode==='all'
+            ?saved.linkMode:'overview'
+        ),
+        linkModeVersion:2
       };
     }catch(e){
-      return {leftWidth:0,colors:{...DEFAULT_COLORS},linkMode:'selected'};
+      return {leftWidth:0,colors:{...DEFAULT_COLORS},linkMode:'overview',linkModeVersion:2};
     }
   }
 
@@ -1367,7 +1374,9 @@ body.read-only .editor-only{display:none!important}
     const taskRows=new Map();rows.forEach((r,i)=>{if(r.kind==='task')taskRows.set(r.id,i)});
     const tasksById=new Map(data.tasks.map(t=>[t.id,t]));
     // Presentation only: canonical dependency relations remain unchanged.
-    const links=linkView.visibleConnections(data.tasks,taskRows.keys(),linkMode,selectedId,taskDependencies);
+    const links=linkView.visibleConnections(
+      data.tasks,taskRows.keys(),linkMode,selectedId,taskDependencies,data.project?.calendar
+    );
     links.forEach(dep=>{
       const p=tasksById.get(dep.pred),t=tasksById.get(dep.target);
       if(!p||!t)return;
@@ -2698,6 +2707,7 @@ body.read-only .editor-only{display:none!important}
   $('#linkMode').onchange=e=>{
     linkMode=linkView.normalizeMode(e.target.value);
     uiState.linkMode=linkMode;
+    uiState.linkModeVersion=2;
     saveUIState(); // Per-browser display preference, not part of the saved plan.
     updateDependencyOverlay();
   };
