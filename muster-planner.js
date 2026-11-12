@@ -109,7 +109,7 @@ function exportReview(){
    notice:'Nur lokale Review-Notizen. Keine Projekt-Aufgaben geändert.',entries:selections};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');
- a.href=url;a.download='TBA-LPH3-Musterplanner-Review-v0.2.json';document.body.append(a);a.click();a.remove();
+ a.href=url;a.download='TBA-LPH3-Musterplanner-Review-v0.2.1.json';document.body.append(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function start(){
