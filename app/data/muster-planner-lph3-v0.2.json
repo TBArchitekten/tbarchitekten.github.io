@@ -79,6 +79,28 @@
           "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
         },
         {
+          "id": "L3-ORG-04",
+          "title": "Terminplan und Entscheidungsregister fortschreiben",
+          "result": "Versionierter Terminplan und datierte Liste offener Entscheidungen",
+          "checks": [
+            "Ist- und Solltermine der Meilensteine abgleichen",
+            "Fachplanerlieferungen und AG-Prüffristen nachhalten",
+            "Terminfolgen und Puffer nachvollziehbar prüfen",
+            "Änderungsvorschläge dokumentieren und abstimmen"
+          ],
+          "psp": [
+            "00.01",
+            "04.04",
+            "09.04"
+          ],
+          "scope": "Wiederkehrend",
+          "owner": "Projektleitung",
+          "basis": "HOAI Anlage 10 LPH3 f",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
           "id": "L3-FPL-01",
           "title": "Schnittstellen- und Liefermatrix vorbereiten",
           "result": "Matrix v0 mit Zuständigkeiten, Formaten und Terminen",
@@ -1213,28 +1235,6 @@
           "scope": "Regelfall",
           "owner": "Projektleitung",
           "basis": "TBA-Vorschlag",
-          "effortHours": null,
-          "review": "Projektleitung",
-          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
-        },
-        {
-          "id": "L3-ORG-04",
-          "title": "Terminplan und Entscheidungsregister fortschreiben",
-          "result": "Versionierter Terminplan und datierte Liste offener Entscheidungen",
-          "checks": [
-            "Ist- und Solltermine der Meilensteine abgleichen",
-            "Fachplanerlieferungen und AG-Prüffristen nachhalten",
-            "Terminfolgen und Puffer nachvollziehbar prüfen",
-            "Änderungsvorschläge dokumentieren und abstimmen"
-          ],
-          "psp": [
-            "00.01",
-            "04.04",
-            "09.04"
-          ],
-          "scope": "Wiederkehrend",
-          "owner": "Projektleitung",
-          "basis": "HOAI Anlage 10 LPH3 f",
           "effortHours": null,
           "review": "Projektleitung",
           "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
