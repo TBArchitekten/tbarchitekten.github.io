@@ -71,9 +71,9 @@ test('Bemusterung includes distinct decisions, samples, bathroom plans, staircas
 test('Former Projektorganisation tasks are mapped to actual linked Abgabe buckets',()=>{
   const a1=planner.buckets.find(b=>b.id==='A1'),a7=planner.buckets.find(b=>b.id==='A7');
   const ids1=new Set(a1.tasks.map(t=>t.id)),ids7=new Set(a7.tasks.map(t=>t.id));
-  for(const id of ['L3-ORG-01','L3-ORG-02','L3-ORG-03'])assert.ok(ids1.has(id),id);
-  for(const id of ['L3-ORG-04','L3-ORG-05'])assert.ok(ids7.has(id),id);
-  assert.ok(a7.tasks.find(t=>t.id==='L3-ORG-04').scope.includes('Wiederkehrend'));
+  for(const id of ['L3-ORG-01','L3-ORG-02','L3-ORG-03','L3-ORG-04'])assert.ok(ids1.has(id),id);
+  assert.ok(ids7.has('L3-ORG-05'));
+  assert.ok(a1.tasks.find(t=>t.id==='L3-ORG-04').scope.includes('Wiederkehrend'));
 });
 
 test('Visual template is linked from Office Muster-Terminplan and has local-only notes',()=>{
