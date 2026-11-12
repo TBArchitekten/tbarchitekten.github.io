@@ -1,19 +1,19 @@
 {
   "id": "tba-lph3-musterplanner",
-  "version": "0.2",
+  "version": "0.2.1-draft",
   "draft": true,
   "phase": "LPH3",
   "updated": "2026-11-12",
   "status": "Entwurf zur gemeinsamen Prüfung · nicht freigegeben",
   "reference": "Muster-Terminplan LPH 3 v1.2 / Claude v0.1 / TBA v0.1 / Quellenrecherche",
-  "warning": "Reine TBA-Arbeiten; keine Fachplaner- oder Bauherrn-Arbeit in Planner-Aufgaben. Stunden und Projekttermine nicht erfunden.",
+  "warning": "Jeder der sieben Buckets ist mit einem Vorgang oder Meilenstein einer konkreten Abgabe des Muster-Terminplans LPH3 verbunden. Keine freien/transversalen Buckets in der Musteransicht. Nur TBA-eigene Arbeit; keine Fachplaner- oder Auftraggeberarbeit als TBA-Aufgabe. Zeitangaben des Muster-Terminplans sind Muster, keine Vertragsfristen.",
   "buckets": [
     {
-      "id": "ORG",
-      "title": "Projektorganisation LPH 3",
-      "gate": "M00 – M11",
-      "summary": "Phasenübergreifende Steuerung; kein fremdes Arbeitspaket.",
-      "kind": "Transversal",
+      "id": "A1",
+      "title": "Planungsgrundlagen für Fachplaner",
+      "gate": "01.07 (M01) / 02.01 (M02)",
+      "summary": "Vorläufige Planungsgrundlagen, bürointerne Startorganisation und koordinierte Übergabe an beauftragte Fachplaner; keine Fachplanerarbeit.",
+      "kind": "Abgabe",
       "tasks": [
         {
           "id": "L3-ORG-01",
@@ -78,57 +78,6 @@
           "review": "Projektleitung",
           "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
         },
-        {
-          "id": "L3-ORG-04",
-          "title": "Terminplan und Entscheidungsregister fortschreiben",
-          "result": "Versionierter Terminplan und datierte Liste offener Entscheidungen",
-          "checks": [
-            "Ist- und Solltermine der Meilensteine abgleichen",
-            "Fachplanerlieferungen und AG-Prüffristen nachhalten",
-            "Terminfolgen und Puffer nachvollziehbar prüfen",
-            "Änderungsvorschläge dokumentieren und abstimmen"
-          ],
-          "psp": [
-            "00.01",
-            "04.04",
-            "09.04"
-          ],
-          "scope": "Wiederkehrend",
-          "owner": "Projektleitung",
-          "basis": "HOAI Anlage 10 LPH3 f",
-          "effortHours": null,
-          "review": "Projektleitung",
-          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
-        },
-        {
-          "id": "L3-ORG-05",
-          "title": "Nachkalkulation und Verbesserungen dokumentieren",
-          "result": "Phasenabschluss mit Soll/Ist-Aufwand und Musterfeedback",
-          "checks": [
-            "Aufgabenänderungen gegenüber Muster dokumentieren",
-            "Ist-Aufwand und Wartezeit getrennt auswerten",
-            "Checklisten-Lücken und Überflüssiges begründen",
-            "Änderungsvorschläge zur separaten Freigabe sammeln"
-          ],
-          "psp": [
-            "09.04"
-          ],
-          "scope": "Regelfall nach Phasenabschluss",
-          "owner": "Projektleitung",
-          "basis": "Interner Qualitätsstandard",
-          "effortHours": null,
-          "review": "Projektleitung",
-          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
-        }
-      ]
-    },
-    {
-      "id": "A1",
-      "title": "Planungsgrundlagen für Fachplaner",
-      "gate": "01.07 (M01) / 02.01 (M02)",
-      "summary": "TBA liefert Grundlagen und koordiniert; Fachplaner erstellen ihre Beiträge selbst.",
-      "kind": "Abgabe",
-      "tasks": [
         {
           "id": "L3-FPL-01",
           "title": "Schnittstellen- und Liefermatrix vorbereiten",
@@ -677,8 +626,8 @@
     {
       "id": "A5",
       "title": "Bemusterung & Qualitätsentscheidungen",
-      "gate": "04.04 · M06",
-      "summary": "Bewusst eigener Entwurfs- und Kosten-Vorbereitungsblock. Vertiefung nach Vertrag.",
+      "gate": "PSP 04.03 · Qualitätsfestlegungen und kostenrelevante Bemusterung / PSP 04.04 · M06",
+      "summary": "Eigene TBA-Aufgaben für Bemusterungsvorbereitung, Materialien, Übersichts-, Bäder-, Treppen- und Fassadenprinzippläne, Mustermappe und Besprechungsprotokoll. Auftraggeber trifft Materialentscheidungen; M06 schließt die Entwurfsabstimmung. Kostenberechnung M08 nutzt diese Qualitäten.",
       "kind": "Abgabe",
       "tasks": [
         {
@@ -924,7 +873,7 @@
         {
           "id": "L3-BEM-13",
           "title": "Bemusterung durchführen und Entscheidungen protokollieren",
-          "result": "Entscheidungsprotokoll des Bauherrn mit offenen Punkten",
+          "result": "TBA-Bemusterungsprotokoll mit Bauherrnentscheidungen und offenen Qualitäten, kein fiktiver TBA-Freigabeakt",
           "checks": [
             "Materialien, Varianten und Planunterlagen vorlegen",
             "Freigaben mit Referenzcode festhalten",
@@ -963,6 +912,23 @@
           "effortHours": null,
           "review": "Projektleitung",
           "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        }
+      ],
+      "scheduleReferences": [
+        {
+          "psp": "04.03",
+          "taskId": "t030",
+          "kind": "activity",
+          "dateStart": "2027-03-04",
+          "dateEnd": "2027-03-17",
+          "name": "Qualitätsfestlegungen und kostenrelevante Bemusterung abstimmen"
+        },
+        {
+          "psp": "04.04",
+          "taskId": "t031",
+          "kind": "milestone",
+          "date": "2027-03-17",
+          "name": "M06 · Abstimmung Entwurfsstand LPH 3 mit Auftraggeber abgeschlossen"
         }
       ]
     },
@@ -1105,7 +1071,7 @@
       "id": "A7",
       "title": "Interne Abgabe & Schlussübergabe LPH 3",
       "gate": "08.04 (M09) / 09.02 (M10) / 09.04 (M11)",
-      "summary": "Abschluss der Entwurfsplanung mit QS, Übergabe und Freigabedokumentation.",
+      "summary": "Abschluss LPH3 mit Endprüfung, fortgeschriebenem Terminplan, Nachkalkulation, Übergabe und dokumentierter Bauherrnfreigabe.",
       "kind": "Abgabe",
       "tasks": [
         {
@@ -1250,8 +1216,51 @@
           "effortHours": null,
           "review": "Projektleitung",
           "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ORG-04",
+          "title": "Terminplan und Entscheidungsregister fortschreiben",
+          "result": "Versionierter Terminplan und datierte Liste offener Entscheidungen",
+          "checks": [
+            "Ist- und Solltermine der Meilensteine abgleichen",
+            "Fachplanerlieferungen und AG-Prüffristen nachhalten",
+            "Terminfolgen und Puffer nachvollziehbar prüfen",
+            "Änderungsvorschläge dokumentieren und abstimmen"
+          ],
+          "psp": [
+            "00.01",
+            "04.04",
+            "09.04"
+          ],
+          "scope": "Wiederkehrend",
+          "owner": "Projektleitung",
+          "basis": "HOAI Anlage 10 LPH3 f",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ORG-05",
+          "title": "Nachkalkulation und Verbesserungen dokumentieren",
+          "result": "Phasenabschluss mit Soll/Ist-Aufwand und Musterfeedback",
+          "checks": [
+            "Aufgabenänderungen gegenüber Muster dokumentieren",
+            "Ist-Aufwand und Wartezeit getrennt auswerten",
+            "Checklisten-Lücken und Überflüssiges begründen",
+            "Änderungsvorschläge zur separaten Freigabe sammeln"
+          ],
+          "psp": [
+            "09.04"
+          ],
+          "scope": "Regelfall nach Phasenabschluss",
+          "owner": "Projektleitung",
+          "basis": "Interner Qualitätsstandard",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
         }
       ]
     }
-  ]
+  ],
+  "explanation": "Bemusterung ist im Terminplan als PSP 04.03 vorgesehen und mündet in M06 (PSP 04.04), vor Kostenberechnung M08. Ein separater Bemusterungs-Bucket ist deshalb keine erfundene Abgabe. Die Tätigkeit und der Bauherrnbeschluss sind getrennt von TBA-internen Vorbereitungsaufgaben. Projektorganisation wird auf die sachlich zugehörigen Abgabe-Buckets verteilt."
 }
