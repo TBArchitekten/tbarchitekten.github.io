@@ -13,9 +13,10 @@ const synthetic=[
 ];
 const ids=['a','b','c','d'];
 
-test('Default is selection: without a selected task, the Gantt has no arrows',()=>{
-  assert.equal(view.normalizeMode(undefined),'selected');
-  assert.equal(view.normalizeMode('not-a-mode'),'selected');
+test('Übersicht is the default; selection only mode remains available',()=>{
+  assert.equal(view.normalizeMode(undefined),'overview');
+  assert.equal(view.normalizeMode('not-a-mode'),'overview');
+  assert.equal(view.visibleConnections(synthetic,ids,'overview',null,dependencyOf).length,3);
   assert.deepEqual(view.visibleConnections(synthetic,ids,'selected',null,dependencyOf),[]);
   assert.deepEqual(view.visibleConnections(synthetic,ids,'hidden','b',dependencyOf),[]);
   assert.equal(view.visibleConnections(synthetic,ids,'all',null,dependencyOf).length,4);
@@ -39,6 +40,8 @@ test('Collapsed, searched, or otherwise hidden endpoints never get an off-row ar
 
 test('Display filtering preserves canonical dependency data and original task objects',()=>{
   const original=JSON.stringify(synthetic);
+  view.visibleConnections(synthetic,ids,'overview',null,dependencyOf);
+  view.visibleConnections(synthetic,ids,'overview','b',dependencyOf);
   view.visibleConnections(synthetic,ids,'selected','b',dependencyOf);
   view.visibleConnections(synthetic,ids,'hidden','a',dependencyOf);
   view.visibleConnections(synthetic,ids,'all',null,dependencyOf);
@@ -53,29 +56,32 @@ test('Real LPH3 and LPH5 Muster retain every link in technical all mode',()=>{
     const tasks=template.state.tasks;
     assert.equal(view.visibleConnections(tasks,tasks.map(t=>t.id),'all',null,dependencyOf).length,expected[template.phase]);
     assert.equal(view.visibleConnections(tasks,tasks.map(t=>t.id),'hidden',null,dependencyOf).length,0);
+    assert.equal(view.visibleConnections(tasks,tasks.map(t=>t.id),'overview',null,dependencyOf,
+      template.state.project.calendar).length,template.phase==='LPH3'?56:44);
   }
 });
 
 test('Gantt and print controls are independent and cannot write to plan data',()=>{
   const html=read('terminplan.html');
   assert.match(html,/id="linkMode"/);
-  assert.match(html,/<option value="selected" selected>Auswahl<\/option>/);
+  assert.match(html,/<option value="overview" selected>Übersicht<\/option>/);
+  assert.match(html,/<option value="selected">Auswahl<\/option>/);
   assert.match(html,/id="printConnectionMode"/);
   assert.match(html,/<option value="hidden" selected>Ohne \(Standard\)<\/option>/);
   assert.match(html,/let printConnectionMode='hidden'/);
-  assert.match(html,/visibleConnections\(data\.tasks,taskRows\.keys\(\),linkMode,selectedId,taskDependencies\)/);
+  assert.match(html,/visibleConnections\(\s*data\.tasks,taskRows\.keys\(\),linkMode,selectedId,taskDependencies,data\.project\?\.calendar\s*\)/);
   assert.match(html,/el\.onclick=\(\)=>\{selectedId=r\.id;proposedShift=null;renderLeft\(\);updateDependencyOverlay\(\);renderAssistant\(\)\}/);
   assert.match(html,/updateDependencyOverlay\(\);\s*renderAssistant\(\);\s*if\(!canEdit\)return;\s*e\.preventDefault\(\);e\.stopPropagation\(\);\s*drag=\{/);
   assert.match(html,/if\(printConnectionMode==='all'\)\{\s*data\.tasks\.forEach\(task=>taskDependencies/);
   assert.match(html,/saveUIState\(\); \/\/ Per-browser display preference, not part of the saved plan/);
-  assert.match(html,/src="\.\/terminplan-link-view\.js\?v=office1"/);
+  assert.match(html,/src="\.\/terminplan-link-view\.js\?v=office2"/);
   assert.match(html,/\.dep-path\.dep-incoming/);
   assert.match(html,/\.dep-path\.dep-outgoing/);
 });
 
 test('German handbook documents visibility, predecessor/successor colors and print modes',()=>{
   const help=read('terminplan-hilfe.html');
-  for(const phrase of ['Verbindungen','Auswahl','Vorgänger','Nachfolger','Drucken / PDF',
+  for(const phrase of ['Verbindungen','Übersicht','Auswahl','Vorgänger','Nachfolger','Drucken / PDF',
     'technische','Beziehung bleibt jedoch gespeichert']){
     assert.ok(help.includes(phrase),'Missing handbook topic '+phrase);
   }
