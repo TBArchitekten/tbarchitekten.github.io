@@ -76,7 +76,7 @@ test('Gantt and print controls are independent and cannot write to plan data',()
 test('German handbook documents visibility, predecessor/successor colors and print modes',()=>{
   const help=read('terminplan-hilfe.html');
   for(const phrase of ['Verbindungen','Auswahl','Vorgänger','Nachfolger','Drucken / PDF',
-    'technische','Abhängigkeiten bleiben']){
+    'technische','Beziehung bleibt jedoch gespeichert']){
     assert.ok(help.includes(phrase),'Missing handbook topic '+phrase);
   }
 });
