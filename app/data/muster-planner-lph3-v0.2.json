@@ -649,7 +649,7 @@
       "id": "A5",
       "title": "Bemusterung & Qualitätsentscheidungen",
       "gate": "PSP 04.03 · Qualitätsfestlegungen und kostenrelevante Bemusterung / PSP 04.04 · M06",
-      "summary": "Eigene TBA-Aufgaben für Bemusterungsvorbereitung, Materialien, Übersichts-, Bäder-, Treppen- und Fassadenprinzippläne, Mustermappe und Besprechungsprotokoll. Auftraggeber trifft Materialentscheidungen; M06 schließt die Entwurfsabstimmung. Kostenberechnung M08 nutzt diese Qualitäten.",
+      "summary": "Eigene TBA-Aufgaben für Bemusterungsvorbereitung, Materialien, Übersichts-, Bäder-, Treppen- und Fassadenprinzippläne, Mustermappe und Besprechungsprotokoll. Auftraggeber trifft Materialentscheidungen; M06 schließt die Entwurfsabstimmung. Kostenberechnung M08 nutzt diese Qualitäten. Die vorbereitenden Aufgaben (Recherche, Muster, Bäder-, Treppen-, Fassadenpläne) benötigen einen Vorlauf vor PSP 04.03; die Muster-Dauer von 10 AT ist keine Kapazitätsschätzung für alle 14 TBA-Aufgaben. Die Bauherrnentscheidung wird dokumentiert, nicht als TBA-Arbeitsleistung gebucht.",
       "kind": "Abgabe",
       "tasks": [
         {
@@ -1262,5 +1262,12 @@
       ]
     }
   ],
-  "explanation": "Bemusterung ist im Terminplan als PSP 04.03 vorgesehen und mündet in M06 (PSP 04.04), vor Kostenberechnung M08. Ein separater Bemusterungs-Bucket ist deshalb keine erfundene Abgabe. Die Tätigkeit und der Bauherrnbeschluss sind getrennt von TBA-internen Vorbereitungsaufgaben. Projektorganisation wird auf die sachlich zugehörigen Abgabe-Buckets verteilt."
+  "explanation": "Bemusterung ist im Terminplan als PSP 04.03 vorgesehen und mündet in M06 (PSP 04.04), vor Kostenberechnung M08. Ein separater Bemusterungs-Bucket ist deshalb keine erfundene Abgabe. Die Tätigkeit und der Bauherrnbeschluss sind getrennt von TBA-internen Vorbereitungsaufgaben. Projektorganisation wird auf die sachlich zugehörigen Abgabe-Buckets verteilt.",
+  "basisBemusterung": {
+    "sourceTerm": "PSP 04.03 / t030",
+    "decisionMilestone": "PSP 04.04 / M06 / t031",
+    "costMilestone": "PSP 06.03 / M08 / t039",
+    "finding": "Bemusterung ist bereits im Terminplan; vorbereitende TBA-Arbeit muss zeitlich vor der Bauherrn-Abstimmung stattfinden. Das 10-AT-Fenster des t030 deckt nicht automatisch Recherche und alle Planleistungen ab.",
+    "legal": "HOAI Anlage 10 LPH3 a/e und § 2 Abs. 11: Entwurfstiefe/Qualitäten als Kostenbasis; Muster und vertiefte Innenraum-/Detailpläne sind vertrags-/objektabhängig."
+  }
 }
