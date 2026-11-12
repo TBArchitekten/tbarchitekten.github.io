@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-12 · Terminplan „Übersicht“ als vierter Standard-Verbindungsmodus · ChatGPT
+- Qué cambió y por qué: Der Gantt-Editor bietet nun **Aus / Übersicht (Default) / Auswahl / Alle**. „Übersicht“ zeigt maximal eine tatsächlich vorhandene, zeitlich am stärksten einschränkende Vorgängerbeziehung je Vorgang nach EA/AA/EE/AE, AT-Lag und Projekt-Arbeitskalender; bei Gleichstand sind PSP-übergreifende Übergaben, Vorgänger-Meilensteine und deterministische Kennung nachrangige Kriterien. Im vollständigen Muster LPH3 v1.2 reduziert sich die Anzeige von 96 auf 56 Kanten, in LPH5 v0.2 von 95 auf 44. Die Pflichtbeziehungen **bleiben alle in den gespeicherten Mustern**.
+- Interaktion: Im Modus Übersicht ergänzt ein Klick auf einen Vorgang alle direkten Vorgänger (ocker) und Nachfolger (grün) des Vorgangs. Auswahl zeigt ausschließlich die direkten Kanten; Aus keine; Alle alle. Bei Suche/Collapse bleibt die Repräsentantenauswahl aus dem **vollständigen Plan** stabil, sie wird nicht anhand der gerade sichtbaren Teilmenge ausgetauscht. Diese Auswahl ist keine CPM- oder Kritischer-Pfad-Berechnung.
+- Druck: Unabhängige PDF-Verbindungswahl bleibt ohne Pfeile (Standard) oder alle (technisch); unverändert.
+- Preference: Unversionierte bisherige Auswahl-Standardeinstellung wird lokal auf Übersicht migriert. Gespeicherte Aus/Alle bleiben bestehen; danach werden explizite Nutzerwahlen als UI-Version 2 gespeichert. Kein Projekt-/Server-Write.
+- Archivos: `terminplan-link-view.js`, `terminplan.html`, `terminplan-hilfe.html`, `tests/terminplan-link-view.test.cjs`, `tests/terminplan-uebersicht.test.cjs`, `tests/terminplan-editor-v02.test.cjs`.
+- Base de datos: keine Migration und keine Veränderung der Office-Projektinstanzen. Kein Edge-Deploy.
+- Cómo se probó: PR #81 HEAD `b1a3acef14faf4c5279778daa609b5c542b4c3b5` **3/3 CI grün** (Terminplan-Audit mit realen 96/56- und 95/44-Gates, Chromium, isoliertes Office-Schema). Merge in main: `fc08391fe2d930199a10f1cf57186d74346dfa7d`. Handbuch enthält Bedeutung und Grenzen aller vier Ansichten.
+- Quedó pendiente o sin probar: authentifizierte visuelle GitHub-Pages-Abnahme mit scrollbaren Gruppen und direkter Auswahl im realen Browser; GitHub-Merge/CI allein bestätigt nicht den CDN-Live-Stand.
+- Riesgos: Übersicht zeigt bewusste Repräsentanten, nicht sämtliche für das Erreichen einer Abgabe notwendigen Fachplanungsbeiträge. Bei kritischen Entscheidungen immer Auswahl oder Alle nutzen. Deadline-begrenzte Kritisch-Markierungen bleiben unverändert.
+- PR: #81 gemergt; dieser Dokumentationsnachtrag separat.
+
 ### 2026-11-12 · Bugfix: Gantt-Auswahl in schreibgeschützten Mustern · ChatGPT
 - Qué cambió y por qué: Aus Live-Screenshot und aktuellem Code nachgewiesen: CSS `body.read-only .bar, body.read-only .milestone {pointer-events:none!important}` blockierte den Klick auf LPH3-/LPH5-Muster, obwohl die JS-Auswahl schon vor dem Bearbeitungs-Guard lag. Daher erschien im Standardmodus „Verbindungen → Auswahl“ beim Klick auf die Balken kein Pfeil. Read-only-Balken und Meilensteine sind jetzt selektierbar; Sammelbalken, Dauerfeld und Resize-Handles bleiben nicht interaktiv. Drag/Resize bleibt über `canEdit` ausgeschlossen. Netz-/Kalenderdaten unverändert.
 - Warum rote Rahmen: `terminplan-planning.css` setzt `.tp-computed-critical` mit roter Kontur für berechnete `totalFloatAT ≤ 0`. Die Anzeige „33 kritisch · 0 Deadline-Warnungen“ im bereitgestellten Muster bedeutet **nicht**, dass 33 Aufgaben verspätet oder fehlerhaft seien. Definitive Trennung zwischen rein projektendbestimmendem Weg und Deadline-bedingter Kritikalität fachlich noch ausstehend.
