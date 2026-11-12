@@ -9,8 +9,8 @@ const model=JSON.parse(read('app/data/muster-planner-lph3-v0.2.json'));
 const all=model.buckets.flatMap(bucket=>bucket.tasks.map(task=>({...task,bucket:bucket.id})));
 const tasks=new Map(all.map(task=>[task.id,task]));
 test('Masterplanner is a versioned, explicitly unapproved LPH3 draft',()=>{
- assert.equal(model.phase,'LPH3');assert.equal(model.draft,true);assert.equal(model.version,'0.2');
- assert.deepEqual(model.buckets.map(x=>x.id),['ORG','A1','A2','A3','A4','A5','A6','A7']);
+ assert.equal(model.phase,'LPH3');assert.equal(model.draft,true);assert.equal(model.version,'0.2.1-draft');
+ assert.deepEqual(model.buckets.map(x=>x.id),['A1','A2','A3','A4','A5','A6','A7']);
  assert.equal(all.length,57);assert.equal(all.reduce((n,x)=>n+x.checks.length,0),228);
  assert.equal(tasks.size,all.length);
 });
