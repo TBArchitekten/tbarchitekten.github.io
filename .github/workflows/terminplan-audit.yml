@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - "terminplan-engine.js"
+      - "terminplan-link-view.js"
+      - "terminplan-hilfe.html"
       - "terminplan-dialogue.js"
       - "terminplan.html"
       - "index.html"
@@ -20,6 +22,8 @@ on:
     branches: [main]
     paths:
       - "terminplan-engine.js"
+      - "terminplan-link-view.js"
+      - "terminplan-hilfe.html"
       - "terminplan-dialogue.js"
       - "terminplan.html"
       - "index.html"
@@ -45,6 +49,7 @@ jobs:
       - name: Parse Terminplan browser script
         run: |
           node --check terminplan-engine.js
+          node --check terminplan-link-view.js
           node --check app.js
           node --check office-core.js
           node --check office-config.js
