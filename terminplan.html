@@ -147,8 +147,14 @@
   .milestone.critical{box-shadow:0 1px 3px rgba(0,0,0,.24),0 0 0 2px rgba(220,38,38,.42)}
   .milestone-label{position:absolute;top:10px;z-index:8;font-size:11px;font-weight:650;white-space:nowrap;pointer-events:none}
   .deps{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:4}
-  .dep-path{fill:none;stroke:#858e99;stroke-width:1.4}
-  .dep-arrow{fill:#858e99}
+  .dep-path{fill:none;stroke:#88939e;stroke-width:1.2}
+  .dep-arrow{fill:#88939e}
+  .dep-path.dep-incoming{stroke:#b67b3a;stroke-width:2}
+  .dep-arrow.dep-incoming{fill:#b67b3a}
+  .dep-path.dep-outgoing{stroke:#43826a;stroke-width:2}
+  .dep-arrow.dep-outgoing{fill:#43826a}
+  .connection-mode{font-size:12px;white-space:nowrap;gap:6px}
+  .connection-mode select{font:inherit;background:#fff;border:1px solid var(--line-strong);padding:7px 5px;color:var(--text);max-width:155px}
   .empty{padding:40px;text-align:center;color:var(--muted)}
   .legend{display:flex;gap:14px;margin-left:auto;font-size:11px;color:#555;align-items:center;flex-wrap:wrap}
   .legend span{display:flex;gap:6px;align-items:center}
@@ -496,12 +502,25 @@ body.read-only .editor-only{display:none!important}
     <button class="btn" id="todayBtn">Heute</button>
     <label><input class="toggle" type="checkbox" id="weekendToggle" checked> Wochenenden ausblenden</label>
     <span class="sep"></span>
+    <label class="connection-mode" for="linkMode">Verbindungen
+      <select id="linkMode" aria-label="Verbindungen im Gantt anzeigen">
+        <option value="hidden">Aus</option>
+        <option value="selected" selected>Auswahl</option>
+        <option value="all">Alle</option>
+      </select>
+    </label>
     <input class="search" id="searchInput" placeholder="Vorgang suchen…" />
     <button class="btn" id="exportCsvBtn">CSV</button>
     <button class="btn" id="exportJsonBtn">JSON exportieren</button>
     <button class="btn" id="importJsonBtn">JSON importieren</button>
     <input type="file" id="jsonFile" accept=".json,application/json" hidden />
     <button class="btn" id="printBtn">Drucken / PDF</button>
+    <label class="connection-mode" for="printConnectionMode">PDF-Verbindungen
+      <select id="printConnectionMode" aria-label="Verbindungen im Druck oder PDF">
+        <option value="hidden" selected>Ohne (Standard)</option>
+        <option value="all">Alle (technisch)</option>
+      </select>
+    </label>
     <button class="btn editor-only" id="saveNowBtn" type="button">Jetzt speichern</button>
     <div class="legend">
       <span><label class="swatch-label"><input class="color-picker" type="color" id="color-arch" title="Farbe Architektur"><i class="dot" id="legend-dot-arch"></i></label>Architektur</span>
@@ -717,6 +736,7 @@ body.read-only .editor-only{display:none!important}
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="./terminplan-link-view.js?v=office1"></script>
 <script src="./terminplan-engine.js?v=office2"></script>
 <script src="./terminplan-planning.js?v=office2"></script>
 <script src="./terminplan-features.js?v=office1"></script>
@@ -751,6 +771,9 @@ body.read-only .editor-only{display:none!important}
   let drag = null;
   const UI_KEY = 'tba_office_terminplan_ui_v1';
   let uiState = loadUIState();
+  const linkView=window.TBATerminplanLinkView;
+  let linkMode=linkView.normalizeMode(uiState.linkMode);
+  let printConnectionMode='hidden'; // Clean PDF by default; independent of Gantt mode.
   let currentPlan=null;
   const auditEngine=window.TBATerminplanEngine||null;
   const dialogueEngine=window.TBATerminplanDialogue||null;
@@ -1021,10 +1044,11 @@ body.read-only .editor-only{display:none!important}
       const saved=raw?JSON.parse(raw):{};
       return {
         leftWidth:Number(saved.leftWidth)||0,
-        colors:{...DEFAULT_COLORS,...(saved.colors||{})}
+        colors:{...DEFAULT_COLORS,...(saved.colors||{})},
+        linkMode:window.TBATerminplanLinkView.normalizeMode(saved.linkMode)
       };
     }catch(e){
-      return {leftWidth:0,colors:{...DEFAULT_COLORS}};
+      return {leftWidth:0,colors:{...DEFAULT_COLORS},linkMode:'selected'};
     }
   }
 
@@ -1033,6 +1057,7 @@ body.read-only .editor-only{display:none!important}
   }
 
   function applyUIState(){
+    $('#linkMode').value=linkMode;
     const minLeft=853;
     const leftWidth=Math.max(minLeft, Number(uiState.leftWidth)||925);
     document.documentElement.style.setProperty('--left-w', Math.min(1200,leftWidth)+'px');
@@ -1202,7 +1227,7 @@ body.read-only .editor-only{display:none!important}
             ? '0 AT'
             : `<button class="duration-edit" data-duration-id="${r.id}" title="Arbeitstage direkt bearbeiten">${workDuration(r.start,r.end)} AT</button>`}</div>
           <div class="cell progress-cell"><div class="mini-progress"><span style="width:${r.progress||0}%"></span></div>${r.progress||0}%</div>`;
-        el.onclick=()=>{selectedId=r.id;proposedShift=null;renderLeft();renderAssistant()};
+        el.onclick=()=>{selectedId=r.id;proposedShift=null;renderLeft();updateDependencyOverlay();renderAssistant()};
         el.ondblclick=()=>openTask(r.id);
         el.oncontextmenu=e=>showContext(e,r.id);
       }
@@ -1335,28 +1360,36 @@ body.read-only .editor-only{display:none!important}
   }
 
   function drawDependencies(svg){
+    svg.replaceChildren();
     const taskRows=new Map();rows.forEach((r,i)=>{if(r.kind==='task')taskRows.set(r.id,i)});
-    data.tasks.forEach(t=>taskDependencies(t).forEach(dep=>{
-      if(!dep.pred||!taskRows.has(t.id)||!taskRows.has(dep.pred))return;
-      const p=data.tasks.find(x=>x.id===dep.pred);if(!p)return;
+    const tasksById=new Map(data.tasks.map(t=>[t.id,t]));
+    // Presentation only: canonical dependency relations remain unchanged.
+    const links=linkView.visibleConnections(data.tasks,taskRows.keys(),linkMode,selectedId,taskDependencies);
+    links.forEach(dep=>{
+      const p=tasksById.get(dep.pred),t=tasksById.get(dep.target);
+      if(!p||!t)return;
       const [predSide,targetSide]=dependencySides(dep.rel);
-      const x1=dependencyX(p,predSide);
-      const x2=dependencyX(t,targetSide);
+      const x1=dependencyX(p,predSide),x2=dependencyX(t,targetSide);
       const y1=taskRows.get(p.id)*38+19,y2=taskRows.get(t.id)*38+19;
       const forward=x2>=x1;
       const elbow=forward?Math.max(x1+12,(x1+x2)/2):Math.max(x1,x2)+16;
-      const tipX=x2;
-      const beforeTip=forward?x2-6:x2+6;
+      const tipX=x2,beforeTip=forward?x2-6:x2+6;
+      const emphasis=dep.direction==='all'?'':' dep-'+dep.direction;
       const path=document.createElementNS('http://www.w3.org/2000/svg','path');
-      path.setAttribute('class','dep-path');
+      path.setAttribute('class','dep-path'+emphasis);
       path.setAttribute('d',`M ${x1} ${y1} H ${elbow} V ${y2} H ${beforeTip}`);
       const arrow=document.createElementNS('http://www.w3.org/2000/svg','path');
-      arrow.setAttribute('class','dep-arrow');
+      arrow.setAttribute('class','dep-arrow'+emphasis);
       arrow.setAttribute('d',forward
         ?`M ${tipX-6} ${y2-4} L ${tipX} ${y2} L ${tipX-6} ${y2+4} Z`
         :`M ${tipX+6} ${y2-4} L ${tipX} ${y2} L ${tipX+6} ${y2+4} Z`);
       svg.append(path,arrow);
-    }));
+    });
+  }
+
+  function updateDependencyOverlay(){
+    const svg=timelineBody.querySelector('svg.deps');
+    if(svg)drawDependencies(svg);
   }
 
   function startDrag(e,t,mode){
@@ -1366,6 +1399,7 @@ body.read-only .editor-only{display:none!important}
     selectedId=task.id;
     proposedShift=null;
     renderLeft();
+    updateDependencyOverlay();
     renderAssistant();
 
     drag={
@@ -2650,6 +2684,15 @@ body.read-only .editor-only{display:none!important}
   $('#saveGroupBtn').onclick=saveGroup;
   $('#searchInput').oninput=render;
   $('#weekendToggle').onchange=e=>{hideWeekends=e.target.checked;render()};
+  $('#linkMode').onchange=e=>{
+    linkMode=linkView.normalizeMode(e.target.value);
+    uiState.linkMode=linkMode;
+    saveUIState(); // Per-browser display preference, not part of the saved plan.
+    updateDependencyOverlay();
+  };
+  $('#printConnectionMode').onchange=e=>{
+    printConnectionMode=e.target.value==='all'?'all':'hidden';
+  };
   ['arch','fach','ag','cost'].forEach(key=>{
     const input=$('#color-'+key);
     if(input) input.oninput=e=>{
