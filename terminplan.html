@@ -1393,14 +1393,17 @@ body.read-only .editor-only{display:none!important}
   }
 
   function startDrag(e,t,mode){
-    if(!canEdit)return;
-    e.preventDefault();e.stopPropagation();
+    // Selecting a bar or milestone works in read-only Mustern too.
+    // Only moving/resizing the task itself requires edit permission.
+    if(e.button!==0)return;
     const task=data.tasks.find(x=>x.id===t.id);if(!task)return;
     selectedId=task.id;
     proposedShift=null;
     renderLeft();
     updateDependencyOverlay();
     renderAssistant();
+    if(!canEdit)return;
+    e.preventDefault();e.stopPropagation();
 
     drag={
       id:t.id,
