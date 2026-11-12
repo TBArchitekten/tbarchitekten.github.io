@@ -27,7 +27,7 @@ test("failed conditional save cannot silently overwrite and has an export/reload
 test("multiple links retained in editor and in both graphical and print flows",()=>{
   assert.match(editor,/id="extraDepRows"/);
   assert.match(editor,/dependencies:links/);
-  assert.match(editor,/visibleConnections\(data\.tasks,taskRows\.keys\(\),linkMode,selectedId,taskDependencies\)/);
+  assert.match(editor,/visibleConnections\(\s*data\.tasks,taskRows\.keys\(\),linkMode,selectedId,taskDependencies,data\.project\?\.calendar\s*\)/);
   assert.match(editor,/taskDependencies\(task\)\.forEach\(dep=>/);
 });
 test("server revision is database-controlled, not client-writable",()=>{
