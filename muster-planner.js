@@ -77,7 +77,7 @@ function showTask(id){
  $('#detailBucket').textContent=b.id+' · '+b.title;
  $('#detailTitle').textContent=entry.title;
  $('#detailMeta').innerHTML=[
-  ['Aufgabe',entry.id],['Verantwortlich',entry.owner],['Prüfung','Projektleitung'],
+  ['Aufgabe',entry.id],['Verantwortlich',entry.owner],['Prüfung',/Projektleitung|Kostenplanung/.test(entry.owner)?'Büroleitung':'Projektleitung'],
   ['Anwendbarkeit',entry.scope],['Terminplan PSP',(entry.psp||[]).join(' · ')||'–'],
   ['Aufwand','Noch zu kalibrieren']
  ].map((pair,i)=>'<span'+(i===3?' class="important"':'')+'>'+esc(pair[0]+': '+pair[1])+'</span>').join('');
