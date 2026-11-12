@@ -65,7 +65,7 @@ test('Gantt and print controls are independent and cannot write to plan data',()
   assert.match(html,/let printConnectionMode='hidden'/);
   assert.match(html,/visibleConnections\(data\.tasks,taskRows\.keys\(\),linkMode,selectedId,taskDependencies\)/);
   assert.match(html,/el\.onclick=\(\)=>\{selectedId=r\.id;proposedShift=null;renderLeft\(\);updateDependencyOverlay\(\);renderAssistant\(\)\}/);
-  assert.match(html,/updateDependencyOverlay\(\);\s*renderAssistant\(\);\s*drag=\{/);
+  assert.match(html,/updateDependencyOverlay\(\);\s*renderAssistant\(\);\s*if\(!canEdit\)return;\s*e\.preventDefault\(\);e\.stopPropagation\(\);\s*drag=\{/);
   assert.match(html,/if\(printConnectionMode==='all'\)\{\s*data\.tasks\.forEach\(task=>taskDependencies/);
   assert.match(html,/saveUIState\(\); \/\/ Per-browser display preference, not part of the saved plan/);
   assert.match(html,/src="\.\/terminplan-link-view\.js\?v=office1"/);
