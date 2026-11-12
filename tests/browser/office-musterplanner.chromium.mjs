@@ -21,13 +21,13 @@ const server=http.createServer((req,res)=>{
 const browser=await chromium.launch({headless:true});
 test.after(async()=>{await browser.close();server.close()});
 const URL_BASE=()=>`http://localhost:${server.address().port}/muster-planner.html`;
-test('Eight buckets, 57 real cards and 228 checklist points render without JavaScript errors',async()=>{
+test('Seven Abgabe buckets, 57 real cards and 228 checklist points render without JavaScript errors',async()=>{
  const page=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  try{
   await page.goto(URL_BASE());
   await page.locator('[data-task="L3-BEM-09"]').waitFor({state:'attached'});
-  assert.equal(await page.locator('.bucket').count(),8);
+  assert.equal(await page.locator('.bucket').count(),7);
   assert.equal(await page.locator('[data-task]').count(),57);
   assert.match(await page.locator('#stats').innerText(),/228/);
   await page.locator('[data-task="L3-BEM-09"]').click();
