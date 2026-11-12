@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-12 · Gantt-Verbindungen gezielt anzeigen und PDF standardmäßig ohne Pfeile · ChatGPT
+- Qué cambió y por qué: Auf der gemeinsamen Terminplan-Oberfläche Gantt-Verbindungen auf **Aus / Auswahl / Alle** umgestellt; Default **Auswahl** ohne ausgewählten Vorgang = keine Pfeile. Klick auf Task/Meilenstein im Gantt (auch beim nur lesbaren Muster) oder auf PSP-Zeile zeigt nur direkte eingehende Vorgänger (ocker) und ausgehende Nachfolger (grün). Eingeklappte/weggefilterte Vorgänge erhalten keine irreführenden, ins Leere führenden Pfeile. Technischer Vollnetzmodus bleibt verfügbar.
+- Drucken/PDF: Separater `PDF-Verbindungen`-Schalter, Standard **Ohne**, technische Option **Alle**. Die Druckwahl folgt absichtlich **nicht** automatisch dem Gantt-Modus. Projekt-DAG mit sämtlichen EA/AA/EE/AE-Beziehungen, CPM, Plan-Daten, JSON/CSV und Assistent bleiben unverändert. Nur der Browser speichert die Anzeigepräferenz in `tba_office_terminplan_ui_v1`; keine Projektinstanz wird aktualisiert.
+- Archivos: `terminplan-link-view.js` (reiner Sichtbarkeitsfilter), `terminplan.html`, `terminplan-hilfe.html`, `tests/terminplan-link-view.test.cjs`, `tests/terminplan-editor-v02.test.cjs`, `.github/workflows/terminplan-audit.yml`.
+- Base de datos: keine neue Migration, keine Schema- oder State-Änderung.
+- Deploy de funciones: keine.
+- Cómo se probó: PR #77 head `add3c5d63c3773d63d3b792bf561c9ca0a2f085b`: **3/3 GitHub-Checks PASS**, darunter Terminplan-Audit mit 96/95 unveränderten Kanten der LPH3/LPH5-Muster, read-only-Auswahl, Filter-/Druckmodus und Browser-JavaScript-Prüfung; Chromium und isoliertes Office-Schema ebenfalls grün. Merge in main: `a01c6e432ff439293ea9a56982a59cfa2608314a`.
+- Quedó pendiente o sin probar: Authentifizierter visueller E2E in GitHub Pages (Modi im echten Projektplan prüfen, PDF-Vorschau beim Browser-Druck); externes Abrufen der GitHub-Pages-URLs war mit dem verfügbaren Webzugang nicht möglich. CI-Erfolg beweist nicht die CDN-Auslieferung.
+- Risiken: Anzeigepräferenz ist geräte- und browserlokal; das ist beabsichtigt und nicht Teil von Team-/Projektfreigaben. Die technische PDF-Variante bleibt trotz voller Kantenmenge möglicherweise dicht; die normale Ausgabe ist bereinigt.
+- PR: #77 gemergt; Dokumentationsnachtrag separat.
+
 ### 2026-11-11 · Terminplan-Assistent: deterministischer Was-wäre-wenn-Dialog live · ChatGPT
 - Qué cambió y por qué: Bestehenden Gantt-Terminplan-Assistenten um typisierten, rein lesenden `simulate`-Intent ergänzt. Bei eindeutiger Aufgabe und 1–130 zusätzlichen AT prüft der lokale deterministische Netzplanrechner ein späteres Lieferende (gleicher Anfang) bzw. einen späteren Meilensteintermin; Nachfolger EA/AA/EE/AE, neues Vorgangsende, float nach bisheriger deadline-begrenzter Definition, neue Fristüberschreitungen und Kritisch-Indikator werden als **Simulation** erklärt. Keine zweite Assistenzoberfläche, kein Schreibvorschlag oder automatisches Speichern. Unbekannte, doppelte oder fehlerhafte Referenzen werden nicht geraten.
 - Archivos: `terminplan-planning.js`, `terminplan-dialogue.js`, `terminplan.html`, `supabase/functions/office-terminplan-ai/core.mjs`, `tests/terminplan-assistant-whatif.test.mjs`, `docs/TERMINPLAN-ASSISTENT-v0.7.md`.
