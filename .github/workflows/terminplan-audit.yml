@@ -4,6 +4,9 @@ on:
     paths:
       - "terminplan-engine.js"
       - "terminplan-link-view.js"
+      - "muster-planner.html"
+      - "muster-planner.js"
+      - "muster-planner.css"
       - "terminplan-hilfe.html"
       - "terminplan-dialogue.js"
       - "terminplan.html"
@@ -23,6 +26,9 @@ on:
     paths:
       - "terminplan-engine.js"
       - "terminplan-link-view.js"
+      - "muster-planner.html"
+      - "muster-planner.js"
+      - "muster-planner.css"
       - "terminplan-hilfe.html"
       - "terminplan-dialogue.js"
       - "terminplan.html"
@@ -50,6 +56,7 @@ jobs:
         run: |
           node --check terminplan-engine.js
           node --check terminplan-link-view.js
+          node --check muster-planner.js
           node --check app.js
           node --check office-core.js
           node --check office-config.js

@@ -1,0 +1,1273 @@
+{
+  "id": "tba-lph3-musterplanner",
+  "version": "0.2.1-draft",
+  "draft": true,
+  "phase": "LPH3",
+  "updated": "2026-11-12",
+  "status": "Entwurf zur gemeinsamen Prüfung · nicht freigegeben",
+  "reference": "Muster-Terminplan LPH 3 v1.2 / Claude v0.1 / TBA v0.1 / Quellenrecherche",
+  "warning": "Jeder der sieben Buckets ist mit einem Vorgang oder Meilenstein einer konkreten Abgabe des Muster-Terminplans LPH3 verbunden. Keine freien/transversalen Buckets in der Musteransicht. Nur TBA-eigene Arbeit; keine Fachplaner- oder Auftraggeberarbeit als TBA-Aufgabe. Zeitangaben des Muster-Terminplans sind Muster, keine Vertragsfristen.",
+  "buckets": [
+    {
+      "id": "A1",
+      "title": "Planungsgrundlagen für Fachplaner",
+      "gate": "01.07 (M01) / 02.01 (M02)",
+      "summary": "Vorläufige Planungsgrundlagen, bürointerne Startorganisation und koordinierte Übergabe an beauftragte Fachplaner; keine Fachplanerarbeit.",
+      "kind": "Abgabe",
+      "tasks": [
+        {
+          "id": "L3-ORG-01",
+          "title": "LPH-3-Grundlagen und Auftrag klären",
+          "result": "Projektstartvermerk mit Ausgangsstand und offenen Punkten",
+          "checks": [
+            "Freigabe der LPH 2 klären",
+            "Vertrag, Leistungsumfang und Budget prüfen",
+            "Zuständigkeiten und fehlende Grundlagen erfassen",
+            "Projektstartentscheidungen dokumentieren"
+          ],
+          "psp": [
+            "00.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "HOAI Anlage 10 / BGB; interne Ablaufstruktur",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ORG-02",
+          "title": "Planliste und Dokumentenstruktur einrichten",
+          "result": "Datierte Planliste und nachvollziehbare Ablage",
+          "checks": [
+            "Plannummern, Indizes und Ausgabestände festlegen",
+            "CAD/BIM-Ablage und Austauschformate definieren",
+            "Verteiler und Prüfregeln dokumentieren",
+            "Planliste mit Raum-/Geschossumfang prüfen"
+          ],
+          "psp": [
+            "00.03"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ORG-03",
+          "title": "Fachplanerbeauftragung fachlich unterstützen",
+          "result": "Fachplanerbedarf und Beauftragungsstatus für Bauherrnentscheidung",
+          "checks": [
+            "Benötigte Disziplinen und Leistungsbilder identifizieren",
+            "Leistungsgrenzen und Liefertermine skizzieren",
+            "Angebote auf Leistungsumfang prüfen",
+            "Bauherrnentscheidung und Auftragsstatus nachhalten"
+          ],
+          "psp": [
+            "00.02",
+            "00.05",
+            "00.06",
+            "00.07"
+          ],
+          "scope": "Bedingt: noch nicht beauftragt",
+          "owner": "Projektleitung",
+          "basis": "LPH1-Leistungsbedarf; nachgeholte/vertragliche Leistung",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ORG-04",
+          "title": "Terminplan und Entscheidungsregister fortschreiben",
+          "result": "Versionierter Terminplan und datierte Liste offener Entscheidungen",
+          "checks": [
+            "Ist- und Solltermine der Meilensteine abgleichen",
+            "Fachplanerlieferungen und AG-Prüffristen nachhalten",
+            "Terminfolgen und Puffer nachvollziehbar prüfen",
+            "Änderungsvorschläge dokumentieren und abstimmen"
+          ],
+          "psp": [
+            "00.01",
+            "04.04",
+            "09.04"
+          ],
+          "scope": "Wiederkehrend",
+          "owner": "Projektleitung",
+          "basis": "HOAI Anlage 10 LPH3 f",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-FPL-01",
+          "title": "Schnittstellen- und Liefermatrix vorbereiten",
+          "result": "Matrix v0 mit Zuständigkeiten, Formaten und Terminen",
+          "checks": [
+            "Beteiligte Disziplinen erfassen",
+            "Schnittstellen Tragwerk/TGA/Bauphysik/Brandschutz nach Bedarf zuordnen",
+            "Verantwortliche und geforderte Eingänge festhalten",
+            "Offene Fragen für Kick-off kennzeichnen"
+          ],
+          "psp": [
+            "00.04"
+          ],
+          "scope": "Regelfall bei Fachplanern",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 b; ByAK-Schnittstellenkatalog",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-FPL-02",
+          "title": "Vorläufigen Architekturstand für Fachplaner abgrenzen",
+          "result": "Vorläufiger Plansatz mit konsistenten Geometrie-/Höhenbezügen",
+          "checks": [
+            "Grundrisse und Schnitte auf tragfähigen Teilstand bringen",
+            "Achsen, Höhen und Technikflächen kenntlich machen",
+            "Annahmen und nicht freigegebene Qualitäten markieren",
+            "Austauschdaten auf Planstand und Bezugssystem prüfen"
+          ],
+          "psp": [
+            "01.07"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-FPL-03",
+          "title": "Grundlagenpaket bereitstellen und Versand dokumentieren",
+          "result": "Datierter Versand mit Planindex, Grundlagen und Fragenliste",
+          "checks": [
+            "Unterlagen LPH 2 und Entwurfsteilstand zusammenstellen",
+            "Schnittstellenmatrix und konkreten Fragenkatalog beilegen",
+            "Empfänger, Format und Index kontrollieren",
+            "Versand und Rückmeldungen dokumentieren"
+          ],
+          "psp": [
+            "01.07"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-FPL-04",
+          "title": "Fachplaner-Kick-off vorbereiten und protokollieren",
+          "result": "Abgestimmte Schnittstellenliste v1 und Besprechungsprotokoll",
+          "checks": [
+            "Zulieferungen zu Planung, Beschreibung und Kosten besprechen",
+            "Zwischen- und Endliefertermine klären",
+            "Offene Rückfragen mit Zuständigkeit nachhalten",
+            "Protokoll mit Verteilern und Fristen verschicken"
+          ],
+          "psp": [
+            "02.01",
+            "02.02",
+            "00.08"
+          ],
+          "scope": "Regelfall bei Fachplanern",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 b",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        }
+      ]
+    },
+    {
+      "id": "A2",
+      "title": "Planpaket Arbeitsstand 01",
+      "gate": "01.03 · an Bauherrn",
+      "summary": "Architektur-Pläne als getrennt zuweisbare Aufgaben; eine interne Endprüfung.",
+      "kind": "Abgabe",
+      "tasks": [
+        {
+          "id": "L3-ENT-01",
+          "title": "Grundrisse Arbeitsstand 01 bearbeiten",
+          "result": "Grundrisssatz mit Flächen-, Raum- und Erschließungsstand",
+          "checks": [
+            "Grundrisse der relevanten Geschosse erstellen",
+            "Raumprogramm, Achsen und Hauptmaße prüfen",
+            "Technik-/Tragwerksannahmen markieren",
+            "Raumbezeichnungen, Höhen und Indizes kontrollieren"
+          ],
+          "psp": [
+            "01.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 a",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-02",
+          "title": "Schnitte Arbeitsstand 01 bearbeiten",
+          "result": "Schnittsatz mit Höhen, Aufbauten und Erschließung",
+          "checks": [
+            "Schnittlagen und wesentliche Höhen festlegen",
+            "Geschosse, Dach und Gelände plausibilisieren",
+            "Treppen und Aufbauhöhen konzeptionell prüfen",
+            "Grundriss-/Schnittwidersprüche beseitigen"
+          ],
+          "psp": [
+            "01.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 a",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-03",
+          "title": "Ansichten Arbeitsstand 01 bearbeiten",
+          "result": "Ansichtensatz mit Öffnungen und Fassadenannahmen",
+          "checks": [
+            "Alle erforderlichen Ansichten aufbauen",
+            "Fenster- und Türlagen aus Grundrissen abgleichen",
+            "Materialannahmen und Gelände darstellen",
+            "Schnitte, Höhen und Indizes vergleichen"
+          ],
+          "psp": [
+            "01.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 a",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-04",
+          "title": "Lageplan und Erschließung abstimmen",
+          "result": "Entwurfs-Lageplan mit Erschließung und örtlichen Randbedingungen",
+          "checks": [
+            "Grundstücks- und Höhenbasis abgleichen",
+            "Erschließung, Stellplätze und Feuerwehrfragen prüfen",
+            "Freianlagen- und Entwässerungsschnittstellen markieren",
+            "Lageplan mit Gebäudegeometrie abgleichen"
+          ],
+          "psp": [
+            "01.01",
+            "07.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-05",
+          "title": "Bauteilkonzept und Regelaufbauten festlegen",
+          "result": "Bauteilkatalog mit Schicht- und Materialannahmen",
+          "checks": [
+            "Wand-, Decken-, Dach- und Bodenaufbauten konzeptionell definieren",
+            "Bauphysik/Brandschutz/Tragwerk als Prüfpunkte benennen",
+            "Konstruktionsdicken mit Schnitten abgleichen",
+            "Kostengruppen- und Materialbezug vorsehen"
+          ],
+          "psp": [
+            "01.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 a/c; Katalog interne Darstellungsform",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-06",
+          "title": "Flächen und Rauminhalte plausibilisieren",
+          "result": "Flächenblatt mit Soll-/Ist-Abgleich",
+          "checks": [
+            "Planstand und Normfassung ausweisen",
+            "BGF, Raumflächen und BRI projektgerecht ermitteln",
+            "Raumprogramm abgleichen",
+            "CAD-/BIM-Auswertung stichprobenweise kontrollieren"
+          ],
+          "psp": [
+            "01.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-07",
+          "title": "Objektbeschreibung Arbeitsstand 01 anlegen",
+          "result": "Vorläufige Objektbeschreibung mit offenen Annahmen",
+          "checks": [
+            "Entwurfs- und Nutzungskonzept formulieren",
+            "Bauteil- und Materialkonzept referenzieren",
+            "Noch fehlende Fachplanertexte als offen kennzeichnen",
+            "Flächen, Pläne und Beschreibung abgleichen"
+          ],
+          "psp": [
+            "07.02"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 c",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-GEN-01",
+          "title": "Genehmigungsfähigkeit und Rechtsrandbedingungen vorprüfen",
+          "result": "Baurechts-Check mit dokumentierten Risiken",
+          "checks": [
+            "Planungsrecht und projektbezogene BayBO prüfen",
+            "Abstandsflächen, Rettungswege und notwendige Nachweise klären",
+            "Offene Behörden- und Fachplanungsfragen sammeln",
+            "Risiken und nächste Abstimmungen dokumentieren"
+          ],
+          "psp": [
+            "07.01"
+          ],
+          "scope": "Regelfall / projektabhängig",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 d; BayBO",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ABG-01",
+          "title": "Arbeitsstand 01 intern prüfen und an Bauherrn senden",
+          "result": "Geprüfter Plansatz mit Versandnachweis",
+          "checks": [
+            "Planlisten-/Indexvollständigkeit kontrollieren",
+            "Grundrisse, Schnitte, Ansichten und Text abgleichen",
+            "Offene Punkte und erbetene Entscheidungen beifügen",
+            "Interne Freigabe und Versand mit Prüffrist dokumentieren"
+          ],
+          "psp": [
+            "01.02",
+            "01.03"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "TBA-Abgabe; Bauherrn-Wartezeit nicht als Aufgabe",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        }
+      ]
+    },
+    {
+      "id": "A3",
+      "title": "Koordination & Entscheidungsvorlage",
+      "gate": "03.04 · M04",
+      "summary": "Entscheidungsfähiges Paket auf Basis geprüfter Fachplanungsbeiträge.",
+      "kind": "Abgabe",
+      "tasks": [
+        {
+          "id": "L3-KOO-01",
+          "title": "Eingang der Fachplanerbeiträge auf TBA-Schnittstellen prüfen",
+          "result": "Eingangs- und Abweichungsliste (nicht: Fachplanung erstellen)",
+          "checks": [
+            "Lieferumfang und Planstände kontrollieren",
+            "Tragwerk/Technik/Brandschutz nach Vertrag abgleichen",
+            "Fehlende Zuarbeiten an Fachplaner melden",
+            "Rückfragen und Fristen dokumentieren"
+          ],
+          "psp": [
+            "02.03",
+            "02.04",
+            "02.05",
+            "02.06",
+            "02.07"
+          ],
+          "scope": "Regelfall bei Fachplanern",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 b",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-KOO-02",
+          "title": "Planungskonflikte und Abstimmungsbedarf klären",
+          "result": "Koordinationsprotokoll und Konfliktliste",
+          "checks": [
+            "Geometrie-, TGA- und Tragwerkskonflikte lokalisieren",
+            "Zu jedem Punkt Zuständigkeit und Termin erfassen",
+            "Kosten-/Qualitätsfolgen von Konflikten markieren",
+            "Rückfragen koordinieren und Ergebnis protokollieren"
+          ],
+          "psp": [
+            "03.01"
+          ],
+          "scope": "Regelfall bei Fachplanern",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 b",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENV-01",
+          "title": "Bauherrn-Entscheidungsvorlage erstellen",
+          "result": "Vorlage M04 mit Optionen, Empfehlung und Folgen",
+          "checks": [
+            "Gestalterische und technische Entscheidungspunkte bündeln",
+            "Optionen angemessen skizzieren",
+            "Voraussichtliche Kosten-, Termin- und Genehmigungsfolgen erläutern",
+            "Entscheidungstermin und offenen Status ausweisen"
+          ],
+          "psp": [
+            "03.02"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 a/b; vertiefte Variantenprüfung ggf. besondere Leistung",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ABG-02",
+          "title": "Entscheidungspaket M04 prüfen und übergeben",
+          "result": "Geprüftes Entscheidungspaket mit Versandstand",
+          "checks": [
+            "Offene Annahmen gegen Fakten abgrenzen",
+            "Entscheidungspunkte intern plausibilisieren",
+            "Freigabe der Büroleitung nach TBA-Standard dokumentieren",
+            "Versand und Bauherrn-Prüffrist registrieren"
+          ],
+          "psp": [
+            "03.04",
+            "04.01",
+            "04.02"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        }
+      ]
+    },
+    {
+      "id": "A4",
+      "title": "Integrierter Planstand 02",
+      "gate": "01.08 · Vorabzug 02 an Bauherrn",
+      "summary": "Zweiter Planstand integriert Rückmeldungen und geprüfte Fachplanung.",
+      "kind": "Abgabe",
+      "tasks": [
+        {
+          "id": "L3-ENT-08",
+          "title": "Bauherrn-Rückmeldungen aus Arbeitsstand 01 auswerten",
+          "result": "Bearbeitungsmatrix mit Änderungen und Entscheidungen",
+          "checks": [
+            "Eingegangene Rückmeldungen aufnehmen",
+            "Planänderungen und neue Wünsche unterscheiden",
+            "Kosten-/Terminfolgen vorprüfen",
+            "Zuständigkeiten festlegen"
+          ],
+          "psp": [
+            "01.04",
+            "01.05"
+          ],
+          "scope": "Regelfall nach Rückmeldung",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-09",
+          "title": "Grundrisse auf Stand 02 fortschreiben",
+          "result": "Grundrisssatz mit dokumentierten Änderungen",
+          "checks": [
+            "Änderungen des Bauherrn einarbeiten",
+            "Fachplaner-Angaben und Schachtbedarf integrieren",
+            "Flächen/Raumfunktionen aktualisieren",
+            "Änderungen und offene Punkte ausweisen"
+          ],
+          "psp": [
+            "01.06",
+            "03.03"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-10",
+          "title": "Schnitte und Ansichten auf Stand 02 fortschreiben",
+          "result": "Abgestimmte Schnitte/Ansichten und Fassadenstand",
+          "checks": [
+            "Tragwerks- und Technikfolgen integrieren",
+            "Material-, Öffnungs- und Höhenbezüge aktualisieren",
+            "Planübergreifende Widersprüche prüfen",
+            "Ausgabestand indizieren"
+          ],
+          "psp": [
+            "01.06",
+            "03.03"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-11",
+          "title": "Fachplanungsinformationen in Architektur integrieren",
+          "result": "Geprüfter integrierter Architekturstand",
+          "checks": [
+            "Fremde Planung auf Index und Konsistenz kontrollieren",
+            "Stützen, Schächte und Technikflächen übertragen",
+            "Konflikte und Vorbehalte kennzeichnen",
+            "Keine Fachplanerleistungen eigenmächtig ersetzen"
+          ],
+          "psp": [
+            "03.03",
+            "03.05"
+          ],
+          "scope": "Regelfall bei Fachplanern",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ENT-12",
+          "title": "Bauteilkatalog und Flächen Stand 02 nachführen",
+          "result": "Aktualisierte Bauteil- und Flächengrundlage",
+          "checks": [
+            "Aufbau- und Materialannahmen nachführen",
+            "Geometrische Flächen-/Mengeneffekte prüfen",
+            "Qualitätsentscheidungen als offen oder bestätigt kennzeichnen",
+            "Kostenbezug aktualisieren"
+          ],
+          "psp": [
+            "03.03"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-OBJ-02",
+          "title": "Objektbeschreibung Stand 02 fortschreiben",
+          "result": "Integrierte Objektbeschreibung",
+          "checks": [
+            "Fachplanertext und Entwurf synchronisieren",
+            "Neue Qualitäten einarbeiten",
+            "Offene Zulieferungen kennzeichnen",
+            "Konsistenz mit Planstand prüfen"
+          ],
+          "psp": [
+            "07.03"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 c",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-GEN-02",
+          "title": "Genehmigungsrelevante Punkte fortschreiben",
+          "result": "Baurechts-Check Stand 02",
+          "checks": [
+            "Planänderungen mit rechtlichen Anforderungen abgleichen",
+            "Zuständige Fachstellen/Behörden nachhalten",
+            "Offene Risiken und Abweichungen dokumentieren",
+            "LPH4-Übergabepunkte vormerken"
+          ],
+          "psp": [
+            "07.04"
+          ],
+          "scope": "Regelfall / projektabhängig",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 d",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ABG-03",
+          "title": "Integrierten Planstand 02 prüfen und ausgeben",
+          "result": "Geprüftes Planpaket Stand 02",
+          "checks": [
+            "Konsistenz mit Fachplanung prüfen",
+            "AG-Anmerkungen mit Erledigungsvermerk versehen",
+            "Interne Freigabe und Vorbehalte dokumentieren",
+            "Planpaket mit Index und Prüffrist versenden"
+          ],
+          "psp": [
+            "01.08",
+            "01.09",
+            "01.10"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        }
+      ]
+    },
+    {
+      "id": "A5",
+      "title": "Bemusterung & Qualitätsentscheidungen",
+      "gate": "PSP 04.03 · Qualitätsfestlegungen und kostenrelevante Bemusterung / PSP 04.04 · M06",
+      "summary": "Eigene TBA-Aufgaben für Bemusterungsvorbereitung, Materialien, Übersichts-, Bäder-, Treppen- und Fassadenprinzippläne, Mustermappe und Besprechungsprotokoll. Auftraggeber trifft Materialentscheidungen; M06 schließt die Entwurfsabstimmung. Kostenberechnung M08 nutzt diese Qualitäten. Die vorbereitenden Aufgaben (Recherche, Muster, Bäder-, Treppen-, Fassadenpläne) benötigen einen Vorlauf vor PSP 04.03; die Muster-Dauer von 10 AT ist keine Kapazitätsschätzung für alle 14 TBA-Aufgaben. Die Bauherrnentscheidung wird dokumentiert, nicht als TBA-Arbeitsleistung gebucht.",
+      "kind": "Abgabe",
+      "tasks": [
+        {
+          "id": "L3-BEM-01",
+          "title": "Bemusterungsumfang und Entscheidungsfelder festlegen",
+          "result": "Bemusterungsfahrplan mit relevanten Bauteilen/Räumen",
+          "checks": [
+            "Kostentreiber und offene Qualitäten aus Entwurf sammeln",
+            "Vertraglichen Detaillierungsgrad prüfen",
+            "Bauherrn-Entscheidungstermine abstimmen",
+            "Muster-, Plan- und Präsentationsumfang abgrenzen"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "TBA-Standard / projektspezifisch",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-02",
+          "title": "Material- und Ausstattungskonzept erarbeiten",
+          "result": "Qualitätenkonzept nach Bauteilen und Raumgruppen",
+          "checks": [
+            "Materialfamilien, Farben und Oberflächen definieren",
+            "Funktionale und bauphysikalische Anforderungen aufnehmen",
+            "Raumgruppen und Fassadentypen unterscheiden",
+            "Kostengruppen für spätere Berechnung vormerken"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "TBA-Standard / projektspezifisch",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-03",
+          "title": "Materialien und Produkte recherchieren",
+          "result": "Begründete Vorauswahl mit Herstellerdaten",
+          "checks": [
+            "Geeignete Hersteller und Produkte recherchieren",
+            "Eignung, Formate, Pflege und Langlebigkeit prüfen",
+            "Preisstand und Verfügbarkeitsunsicherheit dokumentieren",
+            "Ungeprüfte Angaben kennzeichnen"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "TBA-Standard / projektspezifisch",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-04",
+          "title": "Material-/Produktvarianten vergleichend bewerten",
+          "result": "Vergleichsmatrix mit Gestaltung, Funktion und Kostenannahmen",
+          "checks": [
+            "Alternativen nach technischen Kriterien vergleichen",
+            "Gestaltungs- und Unterhaltsfolgen abwägen",
+            "Kostenspanne/Preisquelle mit Datum festhalten",
+            "Empfehlung und offene Prüffragen dokumentieren"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "TBA-Standard / projektspezifisch",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-05",
+          "title": "Materialmuster anfordern und nachhalten",
+          "result": "Muster- und Bestellliste",
+          "checks": [
+            "Benötigte Muster und Referenzcodes erfassen",
+            "Muster mit Lieferterminen anfragen",
+            "Eingang und Musterabweichungen protokollieren",
+            "Fehlende Muster als Vorbehalt markieren"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "Bedingt: physische Muster vorgesehen",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-06",
+          "title": "Muster begutachten und fotografisch dokumentieren",
+          "result": "Musterbewertung mit Rückfragen und Bildnachweisen",
+          "checks": [
+            "Muster gegen Produktdaten prüfen",
+            "Oberfläche, Farbe und Haptik im Kontext bewerten",
+            "Reinigung und Gebrauchseignung klären",
+            "Dokumentation für die Mustermappe aktualisieren"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "Bedingt: physische Muster vorgesehen",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-07",
+          "title": "Material- und Ausstattungsübersichtspläne erstellen",
+          "result": "Übersichtspläne mit Materialcodes nach Raum/Bauteil",
+          "checks": [
+            "Boden-, Wand- und Deckenqualitäten zuordnen",
+            "Fassaden- und Innenmaterialien als Planlegende führen",
+            "Unentschiedene Flächen kennzeichnen",
+            "Mengen- und Kostenbezug herstellen"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "TBA-Standard / projektspezifisch",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-08",
+          "title": "Bäderpläne – Grundrisse ausarbeiten",
+          "result": "Badtyp-Grundrisse für Entwurfs-/Materialentscheidung",
+          "checks": [
+            "Relevante Badtypen definieren",
+            "Sanitärgegenstände nach Fachplanerangaben koordinieren",
+            "Materialfelder und Bewegungsräume prüfen",
+            "Plan als Entwurf, nicht als Verlegeplanung kennzeichnen"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "Bedingt: Bad-/Innenraumgestaltung beauftragt",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 Innenräume ggf. 1:50–1:20; Ausführung LPH5",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-09",
+          "title": "Bäderpläne – Wandansichten ausarbeiten",
+          "result": "Badansichten mit Material- und Ausstattungskonzept",
+          "checks": [
+            "Wandansichten je relevantem Badtyp zeichnen",
+            "Oberflächenhöhen und Bereiche abgrenzen",
+            "Muster-/Materialcodes eintragen",
+            "Technische Schnittstellen als offene Planerfragen kennzeichnen"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "Bedingt: Bad-/Innenraumgestaltung beauftragt",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "Entwurfsbezogene Vertiefung; keine fertige Werkplanung",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-10",
+          "title": "Treppenpläne – Grundrisse, Schnitte, Ansichten",
+          "result": "Treppenkonzept mit material- und kostenrelevanten Festlegungen",
+          "checks": [
+            "Treppengeometrie und Erschließung prüfen",
+            "Geländer, Handlauf und Oberflächen konzeptionell darstellen",
+            "Tragwerk/Brandschutz nach Bedarf koordinieren",
+            "Ausführungsdetails für LPH5 abgrenzen"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "Bedingt: besondere Treppen/Innenräume",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-11",
+          "title": "Fassadenprinzip und Fassadenschnitt bearbeiten",
+          "result": "Kostenrelevanter Fassaden-Prinzipschnitt",
+          "checks": [
+            "Materialschichten, Dicken und Öffnungen im Prinzip darstellen",
+            "Sockel-/Fenster-/Dachanschlüsse exemplarisch erläutern",
+            "Bauphysik- und Tragwerksfragen markieren",
+            "Ausführungsreife Detailzeichnung der LPH5 vorbehalten"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "Bedingt: konstruktive/materialbezogene Klärung",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 erforderliche Tiefe; keine automatische 1:5-LPH5-Pflicht",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-12",
+          "title": "Mustermappe zusammenstellen und versionieren",
+          "result": "Physische/digitale Mustermappe mit eindeutigen Referenzen",
+          "checks": [
+            "Muster, Fotos und Produktdaten einheitlich nummerieren",
+            "Bäder-, Treppen-, Fassaden- und Übersichtspläne referenzieren",
+            "Varianten und Freigabestatus klar unterscheiden",
+            "Ausgabestand und Verzeichnis archivieren"
+          ],
+          "psp": [
+            "04.03"
+          ],
+          "scope": "Bedingt: Mustermappe vereinbart",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-13",
+          "title": "Bemusterung durchführen und Entscheidungen protokollieren",
+          "result": "TBA-Bemusterungsprotokoll mit Bauherrnentscheidungen und offenen Qualitäten, kein fiktiver TBA-Freigabeakt",
+          "checks": [
+            "Materialien, Varianten und Planunterlagen vorlegen",
+            "Freigaben mit Referenzcode festhalten",
+            "Kosten- und Terminfolgen von Änderungen dokumentieren",
+            "Offene Entscheidungen samt Termin nachhalten"
+          ],
+          "psp": [
+            "04.02",
+            "04.03",
+            "04.04"
+          ],
+          "scope": "TBA-Standard / projektspezifisch",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-BEM-14",
+          "title": "Qualitätsliste für Kostenberechnung konsolidieren",
+          "result": "Kostenfähige Material-/Qualitätenliste mit Status und Annahmen",
+          "checks": [
+            "Freigegebene Qualitäten aus Bemusterung übertragen",
+            "Mengen, Materialcodes und Kostengruppen verknüpfen",
+            "Noch offene Qualitäten mit belastbarer Kostenannahme kennzeichnen",
+            "Grundlage mit Kostenplanung und Fachplanern koordinieren"
+          ],
+          "psp": [
+            "04.04",
+            "06.01"
+          ],
+          "scope": "Regelfall entsprechend Projektumfang",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 a/e; Materialtiefe vertraglich",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        }
+      ],
+      "scheduleReferences": [
+        {
+          "psp": "04.03",
+          "taskId": "t030",
+          "kind": "activity",
+          "dateStart": "2027-03-04",
+          "dateEnd": "2027-03-17",
+          "name": "Qualitätsfestlegungen und kostenrelevante Bemusterung abstimmen"
+        },
+        {
+          "psp": "04.04",
+          "taskId": "t031",
+          "kind": "milestone",
+          "date": "2027-03-17",
+          "name": "M06 · Abstimmung Entwurfsstand LPH 3 mit Auftraggeber abgeschlossen"
+        }
+      ]
+    },
+    {
+      "id": "A6",
+      "title": "Kostenberechnung & Kostenentscheidung",
+      "gate": "06.03 (M08) / 06.06 (M08A)",
+      "summary": "TBA berechnet Architekturkosten und integriert/geprüft externe Zulieferungen.",
+      "kind": "Abgabe",
+      "tasks": [
+        {
+          "id": "L3-KOS-01",
+          "title": "Kostenrelevante Mengen- und Flächengrundlage erstellen",
+          "result": "Nachvollziehbare Mengengrundlage mit Plan-/Materialbezug",
+          "checks": [
+            "Maßgeblichen Entwurfsstand und Kostengliederung dokumentieren",
+            "Bauteil- und Materialmengen projektgerecht ableiten",
+            "Bad-, Treppen- und Fassadenqualitäten berücksichtigen",
+            "Abgrenzung zu Fachplanermengen prüfen"
+          ],
+          "psp": [
+            "06.01"
+          ],
+          "scope": "Regelfall / Vertragsumfang",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 e",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-KOS-02",
+          "title": "Kostenbeiträge der Fachplaner prüfen und integrieren",
+          "result": "Kontrollierte Fremdbeitragsliste mit Kostenabgrenzung",
+          "checks": [
+            "Fachplaner-Kostenbeiträge einfordern",
+            "Planstand, Kostengruppe und Preisstand prüfen",
+            "Lücken und Doppelungen an Schnittstellen klären",
+            "Keine fremden Berechnungen als TBA-Aufgabe duplizieren"
+          ],
+          "psp": [
+            "05.05",
+            "06.02"
+          ],
+          "scope": "Regelfall bei Fachplanern",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 b/e",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-KOS-03",
+          "title": "Bemusterungsqualitäten mit Kostenansätzen abgleichen",
+          "result": "Kostenannahmen zu Materialien und Ausstattung",
+          "checks": [
+            "Produkt-/Materialcodes mit Kostengruppen verknüpfen",
+            "Preisquellen und Annahmestand dokumentieren",
+            "Alternative Qualitäten und offene Bemusterung nachhalten",
+            "Kostenrelevante Bäder/Treppen/Fassaden abgleichen"
+          ],
+          "psp": [
+            "06.01",
+            "06.02"
+          ],
+          "scope": "TBA-Standard / projektabhängig",
+          "owner": "Kostenplanung / Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-KOS-04",
+          "title": "Kostenberechnung nach DIN 276 zusammenstellen und prüfen",
+          "result": "Kostenberechnung nach vertraglich vereinbarter Fassung/Tiefe",
+          "checks": [
+            "KG 300 und weitere TBA-Anteile ermitteln",
+            "Fremdbeiträge korrekt zuordnen",
+            "Annahmen und Preisstand offen ausweisen",
+            "Kostengruppen, Summen und Schnittstellen prüfen"
+          ],
+          "psp": [
+            "06.02"
+          ],
+          "scope": "Regelfall",
+          "owner": "Kostenplanung / Projektleitung",
+          "basis": "HOAI LPH3 e; DIN-276-Fassung im Vertrag prüfen",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-KOS-05",
+          "title": "Kostenberechnung mit Kostenschätzung und Budget vergleichen",
+          "result": "Kostenabweichungsbericht mit Gründen und Risiken",
+          "checks": [
+            "Vergleichsbasis LPH2 dokumentieren",
+            "Mengeneffekte, Qualitäten, Preise und Scope trennen",
+            "Budgetrisiken und offene Entscheidungen darstellen",
+            "Nachvollziehbare Entscheidungsunterlage vorbereiten"
+          ],
+          "psp": [
+            "06.02",
+            "06.03"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 e",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ABG-04",
+          "title": "Kostenberechnung intern freigeben und Bauherrn erläutern",
+          "result": "Geprüfte Kostenunterlagen und Besprechungsprotokoll",
+          "checks": [
+            "Interne Freigabe des Kostenstands prüfen",
+            "Ausgabe und Kostenbericht indexieren",
+            "Kostenbesprechung mit Entscheidungsfragen durchführen",
+            "Bauherrn-Korrekturen und Freigabe nachhalten"
+          ],
+          "psp": [
+            "06.03",
+            "06.04",
+            "06.05",
+            "06.06"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        }
+      ]
+    },
+    {
+      "id": "A7",
+      "title": "Interne Abgabe & Schlussübergabe LPH 3",
+      "gate": "08.04 (M09) / 09.02 (M10) / 09.04 (M11)",
+      "summary": "Abschluss LPH3 mit Endprüfung, fortgeschriebenem Terminplan, Nachkalkulation, Übergabe und dokumentierter Bauherrnfreigabe.",
+      "kind": "Abgabe",
+      "tasks": [
+        {
+          "id": "L3-DOK-01",
+          "title": "Entwurfspläne auf Endstand bringen",
+          "result": "Einheitlicher, abgestimmter Abschlussplansatz",
+          "checks": [
+            "Beschlossene Planänderungen einarbeiten",
+            "Fachplanungsstände korrekt referenzieren",
+            "Bemusterungsqualitäten mit Entwurf abgleichen",
+            "Planindizes und verbleibende Vorbehalte dokumentieren"
+          ],
+          "psp": [
+            "08.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-DOK-02",
+          "title": "Objektbeschreibung und Qualitäten Endstand erstellen",
+          "result": "Finale, widerspruchsfreie Objektbeschreibung",
+          "checks": [
+            "Fachplaner-Zuarbeiten gegen Planstand prüfen",
+            "Materialentscheidungen aktualisieren",
+            "Offene Annahmen kennzeichnen",
+            "Plan-/Kosten-/Textkonsistenz kontrollieren"
+          ],
+          "psp": [
+            "08.01",
+            "07.03"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "HOAI LPH3 c/g",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-DOK-03",
+          "title": "Unterlagenverzeichnis und Planindizes finalisieren",
+          "result": "Abgabeverzeichnis mit vollständiger Versionszuordnung",
+          "checks": [
+            "Pläne, Texte, Flächen und Kostenbericht erfassen",
+            "Fachplanerunterlagen als Fremdleistungen kennzeichnen",
+            "Terminplan- und Entscheidungsliste beilegen",
+            "Vollständigkeit und Dateibenennung kontrollieren"
+          ],
+          "psp": [
+            "08.02"
+          ],
+          "scope": "Regelfall",
+          "owner": "Mitarbeiter/in Architektur",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-DOK-04",
+          "title": "Interne Gesamtprüfung und Schlusskorrekturen durchführen",
+          "result": "Dokumentierte QS und abgearbeitete Korrekturliste",
+          "checks": [
+            "Beauftragte HOAI-/Vertragsleistungen gegenprüfen",
+            "Pläne, Bemusterung, Text, Flächen und Kosten abgleichen",
+            "Offene Fach-/Genehmigungsrisiken aufführen",
+            "Vier-Augen-Prüfung und Endkorrekturen dokumentieren"
+          ],
+          "psp": [
+            "08.03",
+            "09.01"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ABG-05",
+          "title": "Interne Abschlussabgabe M09 freigeben",
+          "result": "Interne Freigabe mit eindeutigem Plan-/Kostenstand",
+          "checks": [
+            "QS-Protokoll und Abschlussverzeichnis prüfen",
+            "Freigabe der Büroleitung festhalten",
+            "Restpunkte und Vorbehalte kennzeichnen",
+            "Übergabepaket für Bauherrn vorbereiten"
+          ],
+          "psp": [
+            "08.04"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-DOK-05",
+          "title": "LPH-3-Schlussunterlagen an Bauherrn übergeben",
+          "result": "Übergabe- und Besprechungsprotokoll mit Dokumentenliste",
+          "checks": [
+            "Entwurf, Bemusterung, Kosten und Risiken erläutern",
+            "Dokumentenstand und Versand nachweisen",
+            "Offene Fragen und Fristen protokollieren",
+            "Folgephasen-Bezüge festhalten"
+          ],
+          "psp": [
+            "09.02"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "HOAI LPH3 g",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-DOK-06",
+          "title": "Bauherrn-Freigabe und Übergang dokumentieren",
+          "result": "Dokumentierte Freigabe samt Vorbehalten und Phasenübergabe",
+          "checks": [
+            "Prüfung und Entscheidung des Bauherrn nachhalten",
+            "Freigabe/Auflagen in Textform sichern",
+            "Offene Punkte mit Zuständigkeiten übergeben",
+            "Keine automatische Gleichsetzung mit rechtsgeschäftlicher Abnahme"
+          ],
+          "psp": [
+            "09.03",
+            "09.04"
+          ],
+          "scope": "Regelfall",
+          "owner": "Projektleitung",
+          "basis": "TBA-Vorschlag",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        },
+        {
+          "id": "L3-ORG-05",
+          "title": "Nachkalkulation und Verbesserungen dokumentieren",
+          "result": "Phasenabschluss mit Soll/Ist-Aufwand und Musterfeedback",
+          "checks": [
+            "Aufgabenänderungen gegenüber Muster dokumentieren",
+            "Ist-Aufwand und Wartezeit getrennt auswerten",
+            "Checklisten-Lücken und Überflüssiges begründen",
+            "Änderungsvorschläge zur separaten Freigabe sammeln"
+          ],
+          "psp": [
+            "09.04"
+          ],
+          "scope": "Regelfall nach Phasenabschluss",
+          "owner": "Projektleitung",
+          "basis": "Interner Qualitätsstandard",
+          "effortHours": null,
+          "review": "Projektleitung",
+          "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
+        }
+      ]
+    }
+  ],
+  "explanation": "Bemusterung ist im Terminplan als PSP 04.03 vorgesehen und mündet in M06 (PSP 04.04), vor Kostenberechnung M08. Ein separater Bemusterungs-Bucket ist deshalb keine erfundene Abgabe. Die Tätigkeit und der Bauherrnbeschluss sind getrennt von TBA-internen Vorbereitungsaufgaben. Projektorganisation wird auf die sachlich zugehörigen Abgabe-Buckets verteilt.",
+  "basisBemusterung": {
+    "sourceTerm": "PSP 04.03 / t030",
+    "decisionMilestone": "PSP 04.04 / M06 / t031",
+    "costMilestone": "PSP 06.03 / M08 / t039",
+    "finding": "Bemusterung ist bereits im Terminplan; vorbereitende TBA-Arbeit muss zeitlich vor der Bauherrn-Abstimmung stattfinden. Das 10-AT-Fenster des t030 deckt nicht automatisch Recherche und alle Planleistungen ab.",
+    "legal": "HOAI Anlage 10 LPH3 a/e und § 2 Abs. 11: Entwurfstiefe/Qualitäten als Kostenbasis; Muster und vertiefte Innenraum-/Detailpläne sind vertrags-/objektabhängig."
+  }
+}
