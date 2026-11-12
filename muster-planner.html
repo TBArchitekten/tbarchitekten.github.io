@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fafafb">
+<title>TBA Office · Muster-Planner LPH 3</title>
+<link rel="icon" href="./app/icon.svg?v=2" type="image/svg+xml">
+<link rel="stylesheet" href="./muster-planner.css?v=1">
+<script src="./muster-planner.js?v=1" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="back" href="./app/#section=plans" aria-label="Zur Terminplan-Übersicht">‹ Office · Terminpläne</a>
+  <span class="top-center">TBA OFFICE <span aria-hidden="true">/</span> MUSTER-PLANNER</span>
+  <span class="mode">Muster · nur Ansicht</span>
+</header>
+<main>
+  <div class="intro">
+    <p class="eyebrow">OFFICE · PLANUNG · LPH 3</p>
+    <div class="intro-row">
+      <div><h1>Muster-Planner LPH 3</h1>
+        <p class="lede">Abgaben, Aufgaben und Checklisten · Entwurf zur gemeinsamen fachlichen Prüfung.</p></div>
+      <a class="plain-link" href="./app/#section=plans">Zum Muster-Terminplan</a>
+    </div>
+    <div class="draft-note"><strong>Arbeitsfassung v0.2</strong> – nicht freigegeben. Die Aufgaben erzeugen keine echten Projektkarten. Jeder Vorschlag kann vor der Übernahme in den Bürostandard geändert oder gestrichen werden.</div>
+    <div class="stats" id="stats" aria-live="polite"></div>
+  </div>
+  <div class="toolbar" role="region" aria-label="Masterplanner filtern">
+    <label>Suche <input id="search" type="search" placeholder="Aufgabe, Abgabe, PSP, Material …" autocomplete="off"></label>
+    <label>Anwendbarkeit <select id="scope"><option value="all">Alle Aufgaben</option><option value="standard">Regelfall / Standard</option><option value="conditional">Bedingt</option></select></label>
+    <label>Review <select id="reviewFilter"><option value="all">Alle Bewertungen</option><option value="open">Noch nicht bewertet</option><option value="keep">Behalten</option><option value="change">Ändern</option><option value="remove">Streichen</option><option value="conditional">Bedingt</option></select></label>
+    <div class="toolbar-right"><button id="reset" type="button" class="subtle">Filter zurücksetzen</button><button id="export" type="button">Review exportieren</button></div>
+  </div>
+  <nav id="bucketNav" class="bucket-nav" aria-label="Abgaben und Buckets"></nav>
+  <section id="board" class="board" aria-label="Muster-Planner Board"><p class="loading">Muster wird geladen …</p></section>
+  <footer>
+    <p>Die Buckets sind an TBA-Abgaben oder an phasenübergreifende Büroarbeit gebunden. Fachplaner-Lieferungen und Entscheidungen des Bauherrn bleiben Vorgänge des Terminplans, <strong>keine eigenen Aufgaben von TBA</strong>. Bäder-, Treppen-, Fassaden- und Mustermappen-Tiefen sind projekt- und vertragsabhängig.</p>
+    <p>Deine Review-Markierungen werden <strong>nur in diesem Browser</strong> gespeichert; sie ändern weder das Muster noch einen Projekt-Planner. Mit „Review exportieren“ kannst du die Entscheidungen später gemeinsam mit mir durchgehen. Keine Stundenwerte oder Verantwortlichen wurden einem Mitarbeiter tatsächlich zugewiesen.</p>
+  </footer>
+</main>
+<dialog id="detail" aria-label="Aufgabe im Muster prüfen">
+  <div class="dialog-shell">
+    <header class="dialog-head">
+      <div><p class="eyebrow" id="detailBucket"></p><h2 id="detailTitle"></h2></div>
+      <button type="button" id="closeDetail" class="close" aria-label="Schließen">×</button>
+    </header>
+    <div class="dialog-scroll">
+      <div id="detailMeta" class="detail-meta"></div>
+      <h3>Prüfbares Arbeitsergebnis</h3><p id="detailResult"></p>
+      <h3>Checkliste</h3><div id="detailChecks"></div>
+      <h3>Fachliche Einordnung</h3><p id="detailBasis" class="secondary"></p>
+      <div class="review-box">
+        <h3>Gemeinsame Prüfung <small>(nur lokale Notiz)</small></h3>
+        <div class="review-grid" id="reviewChoices">
+          <button type="button" data-review="keep">Behalten</button>
+          <button type="button" data-review="change">Ändern</button>
+          <button type="button" data-review="remove">Streichen</button>
+          <button type="button" data-review="conditional">Bedingt</button>
+          <button type="button" data-review="open">Offen</button>
+        </div>
+        <label for="detailNote">Anmerkung / Änderungsvorschlag</label>
+        <textarea id="detailNote" rows="3" placeholder="Was soll geändert, ergänzt oder gestrichen werden?"></textarea>
+      </div>
+    </div>
+    <div class="dialog-bottom">
+      <button id="prevTask" type="button" class="subtle">← Vorherige</button>
+      <span id="detailPosition"></span>
+      <button id="nextTask" type="button" class="subtle">Nächste →</button>
+    </div>
+  </div>
+</dialog>
+</body>
+</html>
