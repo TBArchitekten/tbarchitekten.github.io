@@ -11,7 +11,8 @@ function loadReviews(){try{const x=JSON.parse(localStorage.getItem(storageKey)||
 function saveReviews(){try{localStorage.setItem(storageKey,JSON.stringify(reviews))}catch{}}
 function isConditional(t){return /^Bedingt/.test(t.scope||'')}
 function reviewFor(id){const x=reviews[id]||{};return STATUS[x.status]?x:{status:'open',note:x.note||''}}
-function valid(m){return m&&m.phase==='LPH3'&&Array.isArray(m.buckets)&&m.buckets.every(b=>Array.isArray(b.tasks))}
+function valid(m){return m&&m.phase==='LPH3'&&Array.isArray(m.buckets)&&m.buckets.length>0&&
+ m.buckets.every(b=>b.kind==='Abgabe'&&!!b.gate&&Array.isArray(b.tasks))}
 function stats(){
  const amount=allTasks.length,checkCount=allTasks.reduce((n,t)=>n+t.checks.length,0);
  const completed=allTasks.filter(t=>reviewFor(t.id).status!=='open').length;
@@ -19,7 +20,7 @@ function stats(){
  [''+model.buckets.length,'Buckets'],
  [''+amount,'TBA-Aufgaben'],
  [''+checkCount,'Checklistenpunkte'],
- ['14','Bemusterungs-Aufgaben'],
+ [''+(model.buckets.find(b=>b.id==='A5')?.tasks.length||0),'Bemusterungs-Aufgaben'],
  [completed+' / '+amount,'lokal bewertet']
  ].map(s=>'<div class="stat"><strong>'+esc(s[0])+'</strong><span>'+esc(s[1])+'</span></div>').join('');
 }
@@ -27,7 +28,7 @@ function filters(){
  const q=normalize($('#search').value.trim()),scope=$('#scope').value,status=$('#reviewFilter').value;
  filtered=allTasks.filter(t=>{
   const text=normalize([t.id,t.title,t.result,t.scope,t.owner,t.basis,(t.psp||[]).join(' '),...(t.checks||[])].join(' '));
-  if(q&&!text.includes(q))return false;
+  if(q&&!text.includes(q)&&!normalize(model.buckets.find(b=>b.tasks.some(x=>x.id===t.id))?.title||'').includes(q))return false;
   if(scope==='conditional'&&!isConditional(t))return false;
   if(scope==='standard'&&isConditional(t))return false;
   if(status==='open'&&reviewFor(t.id).status!=='open')return false;
@@ -46,7 +47,7 @@ function draw(){
   if(!tasks.length)return '';
   return '<article class="bucket" id="'+esc(b.id)+'">'+
   '<div class="bucket-top"><span class="bucket-count">'+tasks.length+' / '+b.tasks.length+'</span>'+
-  '<span class="kicker">'+esc(b.kind==='Transversal'?'Büroorganisation':'Abgabe / Planungspaket')+' · '+esc(b.id)+'</span>'+
+  '<span class="kicker">'+esc('Abgabe / Planungspaket')+' · '+esc(b.id)+'</span>'+
   '<h2>'+esc(b.title)+'</h2><p>'+esc(b.summary)+'</p><span class="bucket-gate">'+esc(b.gate)+'</span></div>'+
   '<div class="bucket-list">'+tasks.map(t=>{
     const r=reviewFor(t.id).status,conditional=isConditional(t);
