@@ -80,3 +80,14 @@ test('German handbook documents visibility, predecessor/successor colors and pri
     assert.ok(help.includes(phrase),'Missing handbook topic '+phrase);
   }
 });
+
+test('Read-only Muster permits Gantt selection but does not enable drag or resize',()=>{
+  const editor=read('terminplan.html');
+  const drag=editor.slice(editor.indexOf('function startDrag(e,t,mode){'),editor.indexOf('function onDrag(',editor.indexOf('function startDrag(e,t,mode){')));
+  const selected=drag.indexOf('selectedId=task.id');
+  const redraw=drag.indexOf('updateDependencyOverlay()');
+  const guard=drag.indexOf('if(!canEdit)return;');
+  assert.ok(selected>=0&&redraw>selected&&guard>redraw,
+    'selection happens before edit-permission check');
+  assert.ok(drag.indexOf('drag={')>guard,'dragging remains edit-only');
+});
