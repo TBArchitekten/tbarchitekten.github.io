@@ -379,8 +379,11 @@
   body.read-only #groupDialog,
   body.read-only #contextMenu,
   body.read-only .color-picker{display:none!important}
-  body.read-only .bar,
-  body.read-only .milestone,
+  /* Read-only Muster must allow selecting tasks to inspect their links.
+     Editing is still blocked by canEdit in the pointer handler. */
+  body.read-only .bar:not(.summary),
+  body.read-only .milestone{cursor:pointer;pointer-events:auto;touch-action:pan-x pan-y}
+  body.read-only .bar.summary,
   body.read-only .duration-edit,
   body.read-only .handle{pointer-events:none!important}
 

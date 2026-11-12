@@ -91,3 +91,18 @@ test('Read-only Muster permits Gantt selection but does not enable drag or resiz
     'selection happens before edit-permission check');
   assert.ok(drag.indexOf('drag={')>guard,'dragging remains edit-only');
 });
+
+test('Read-only LPH3/LPH5 Muster bars and milestones accept selection pointer events',()=>{
+  const html=read('terminplan.html');
+  const css=html.slice(html.indexOf('<style>'),html.indexOf('</style>'));
+  // An old broad pointer-events:none!important rule used to prevent selecting
+  // anything in a read-only Muster, even though startDrag's read-only guard was correct.
+  assert.doesNotMatch(css,/body\.read-only \.bar,\s*body\.read-only \.milestone/);
+  assert.match(css,/body\.read-only \.bar:not\(\.summary\),\s*body\.read-only \.milestone\{cursor:pointer;pointer-events:auto/);
+  assert.match(css,/body\.read-only \.bar\.summary,[\s\S]*?body\.read-only \.handle\{pointer-events:none!important\}/);
+  const drag=html.slice(html.indexOf('function startDrag(e,t,mode){'),html.indexOf('function onDrag(',html.indexOf('function startDrag(e,t,mode){')));
+  assert.ok(drag.indexOf('selectedId=task.id')<drag.indexOf('if(!canEdit)return;'),
+    'read-only selection happens before the permission check');
+  assert.ok(drag.indexOf('if(!canEdit)return;')<drag.indexOf('drag={'),
+    'read-only users still cannot move, resize or mutate the plan');
+});
