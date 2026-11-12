@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-12 · Bugfix: Gantt-Auswahl in schreibgeschützten Mustern · ChatGPT
+- Qué cambió y por qué: Aus Live-Screenshot und aktuellem Code nachgewiesen: CSS `body.read-only .bar, body.read-only .milestone {pointer-events:none!important}` blockierte den Klick auf LPH3-/LPH5-Muster, obwohl die JS-Auswahl schon vor dem Bearbeitungs-Guard lag. Daher erschien im Standardmodus „Verbindungen → Auswahl“ beim Klick auf die Balken kein Pfeil. Read-only-Balken und Meilensteine sind jetzt selektierbar; Sammelbalken, Dauerfeld und Resize-Handles bleiben nicht interaktiv. Drag/Resize bleibt über `canEdit` ausgeschlossen. Netz-/Kalenderdaten unverändert.
+- Warum rote Rahmen: `terminplan-planning.css` setzt `.tp-computed-critical` mit roter Kontur für berechnete `totalFloatAT ≤ 0`. Die Anzeige „33 kritisch · 0 Deadline-Warnungen“ im bereitgestellten Muster bedeutet **nicht**, dass 33 Aufgaben verspätet oder fehlerhaft seien. Definitive Trennung zwischen rein projektendbestimmendem Weg und Deadline-bedingter Kritikalität fachlich noch ausstehend.
+- Archivos: `terminplan.html`, `tests/terminplan-link-view.test.cjs`; reine CSS-/Interaktion-Regressionskorrektur.
+- Base de datos / Deploy de funciones: keine Migration, keine Edge-Deploys, keine Terminplan-, Planner- oder Projektinstanz geändert.
+- Cómo se probó: PR #79 Head `28ca83a619c0ce34c24664125b202dcf674c3f86`, **3/3** GitHub-Checks PASS (Terminplan-Audit, Chromium offline, Office-Schema PostgreSQL isoliert). Neuer Regressionstest schützt lesbaren Muster-Klick und Bearbeitungsverbot. PR #79 squash-merged in `main` als `c6943cf1e274097731f3026ad42d6d006a3d1f60`.
+- Quedó pendiente o sin probar: Benutzerbestätigung in echtem authentifiziertem GitHub-Pages-Browser; das veröffentlichte CDN wurde nicht zusätzlich interaktiv getestet.
+- Risiken: Kritisch-Indikator bleibt vorerst unverändert; keine implizite Interpretation der rot umrandeten Vorgänge als Störung.
+- PR: #79 merged; Dokumentationsnachtrag separat.
+
 ### 2026-11-12 · Gantt-Verbindungen gezielt anzeigen und PDF standardmäßig ohne Pfeile · ChatGPT
 - Qué cambió y por qué: Auf der gemeinsamen Terminplan-Oberfläche Gantt-Verbindungen auf **Aus / Auswahl / Alle** umgestellt; Default **Auswahl** ohne ausgewählten Vorgang = keine Pfeile. Klick auf Task/Meilenstein im Gantt (auch beim nur lesbaren Muster) oder auf PSP-Zeile zeigt nur direkte eingehende Vorgänger (ocker) und ausgehende Nachfolger (grün). Eingeklappte/weggefilterte Vorgänge erhalten keine irreführenden, ins Leere führenden Pfeile. Technischer Vollnetzmodus bleibt verfügbar.
 - Drucken/PDF: Separater `PDF-Verbindungen`-Schalter, Standard **Ohne**, technische Option **Alle**. Die Druckwahl folgt absichtlich **nicht** automatisch dem Gantt-Modus. Projekt-DAG mit sämtlichen EA/AA/EE/AE-Beziehungen, CPM, Plan-Daten, JSON/CSV und Assistent bleiben unverändert. Nur der Browser speichert die Anzeigepräferenz in `tba_office_terminplan_ui_v1`; keine Projektinstanz wird aktualisiert.
