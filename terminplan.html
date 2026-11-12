@@ -2297,7 +2297,8 @@ body.read-only .editor-only{display:none!important}
 
     $('#printFooterState').textContent=
       `${data.tasks.filter(t=>t.type!=='milestone').length} Vorgänge · `+
-      `${data.tasks.filter(t=>t.type==='milestone').length} Meilensteine`;
+      `${data.tasks.filter(t=>t.type==='milestone').length} Meilensteine · `+
+      (printConnectionMode==='all'?'Verbindungen: alle (technische Ansicht)':'Verbindungen: ausgeblendet');
 
     const leftBody=$('#printLeftBody');
     leftBody.innerHTML='';
@@ -2336,7 +2337,7 @@ body.read-only .editor-only{display:none!important}
     svg.setAttribute('viewBox',`0 0 ${svgWidth} ${totalHeight}`);
     svg.setAttribute('preserveAspectRatio','none');
     svg.setAttribute('role','img');
-    svg.setAttribute('aria-label','Gantt-Diagramm des Planungsterminplans LPH 3');
+    svg.setAttribute('aria-label','Gantt-Diagramm des Planungsterminplans');
     svg.style.height=totalHeight+'px';
 
     const append=(name,attrs,parent=svg)=>{
@@ -2420,6 +2421,8 @@ body.read-only .editor-only{display:none!important}
       return 0;
     };
 
+    // The printed PDF is clean by default; all technical links only when requested.
+    if(printConnectionMode==='all'){
     data.tasks.forEach(task=>taskDependencies(task).forEach(dep=>{
       if(!dep.pred||!rowByTask.has(task.id)||!rowByTask.has(dep.pred))return;
       const predecessor=data.tasks.find(item=>item.id===dep.pred);
@@ -2449,6 +2452,8 @@ body.read-only .editor-only{display:none!important}
         'marker-end':'url(#printArrow)'
       });
     }));
+
+    }
 
     printRows.forEach((row,rowIndex)=>{
       const y=rowIndex*rowHeight;
