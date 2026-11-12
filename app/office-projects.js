@@ -90,7 +90,19 @@ function showPlans(){
     open.textContent='Muster ansehen';open.className='office-plan-library-link';
     actions.append(open);card.append(number,title,metadata,actions);templateHost.append(card);
   }
-  if(!available.length){const empty=document.createElement('p');empty.textContent='Keine aktiven LPH-Muster verfügbar.';templateHost.append(empty)}
+  // Versioned LPH3 Muster-Planner: a review-only master, never an extra project board.
+  const plannerCard=document.createElement('article');plannerCard.className='office-project-card office-plan-library-card';
+  const plannerNumber=document.createElement('span');plannerNumber.className='office-project-number';
+  plannerNumber.textContent='LPH3 · MUSTER-PLANNER';
+  const plannerTitle=document.createElement('h2');plannerTitle.textContent='Muster-Planner LPH 3';
+  const plannerMeta=document.createElement('p');plannerMeta.className='office-project-meta';
+  plannerMeta.textContent='Entwurf v0.2 · 8 Buckets · 57 TBA-Aufgaben · schreibgeschützte Vorlage';
+  const plannerActions=document.createElement('div');plannerActions.className='office-project-actions';
+  const plannerOpen=document.createElement('a');plannerOpen.href='../muster-planner.html';
+  plannerOpen.textContent='Muster-Planner ansehen';plannerOpen.className='office-plan-library-link';
+  plannerActions.append(plannerOpen);plannerCard.append(plannerNumber,plannerTitle,plannerMeta,plannerActions);
+  templateHost.append(plannerCard);
+  if(!available.length){const empty=document.createElement('p');empty.textContent='Keine aktiven Terminplan-Muster verfügbar.';templateHost.append(empty)}
   for(const plan of plans){
     const project=projects.find(p=>p.id===plan.project_id);
     const card=document.createElement('article');card.className='office-project-card office-plan-library-card';
