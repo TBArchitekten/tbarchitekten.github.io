@@ -76,17 +76,53 @@ test('Former Projektorganisation tasks are mapped to actual linked Abgabe bucket
   assert.ok(a1.tasks.find(t=>t.id==='L3-ORG-04').scope.includes('Wiederkehrend'));
 });
 
-test('Visual template is linked from Office Muster-Terminplan and has local-only notes',()=>{
-  const html=read('muster-planner.html'),js=read('muster-planner.js');
-  const office=read('app/office-projects.js'),index=read('app/index.html');
-  assert.match(html,/Muster-Planner LPH 3/);
-  assert.match(html,/id="board"/);
-  assert.match(html,/id="detail"/);
-  assert.match(html,/kein(en)? freien Projektorganisations-Bucket/);
-  assert.match(js,/fetch\('\.\/app\/data\/muster-planner-lph3-v0\.2\.json/);
-  assert.match(js,/localStorage\.setItem/);
-  assert.doesNotMatch(js,/from\(['"]isabella_tasks|office_terminplan_instances|minds_work_buckets/);
-  assert.match(office,/planner\.href='\.\.\/muster-planner\.html'/);
-  assert.match(index,/office-projects\.js\?v=office46/);
-  assert.doesNotThrow(()=>new Function(js));
+test('Muster is rendered inside EXISTING Office Work Planner (no second custom board or task modal)',()=>{
+  const html=read('muster-planner.html'),work=read('app/work.js'),
+    detail=read('app/task-detail.js'),office=read('app/office-projects.js'),index=read('app/index.html');
+  assert.match(html,/location\.replace\('\.\/app\/#section=work&muster=LPH3'\)/);
+  assert.doesNotMatch(html,/id="board"/);
+  assert.match(office,/planner\.href='\.\/#section=work&muster=LPH3'/);
+  assert.match(work,/function isMusterPlanner\(\)/);
+  assert.match(work,/await waitForWork\(renderPlanner\(true\),'Muster-Planner'\)/);
+  assert.match(work,/async function renderPlanner\(preview=false\)/);
+  assert.match(work,/function taskCard\(t,preview=false\)/);
+  assert.match(work,/if\(preview\)return; \/\/ The Muster shares the real Planner renderer, but NEVER its write handlers/);
+  assert.match(work,/window\.MINDS_TASK_DETAIL\?\.preview\?\./);
+  assert.match(detail,/function preview\(\{task,buckets=\[\],projectName='Muster LPH 3'/);
+  assert.match(detail,/if\(ctx\.readOnly\)\{/);
+  assert.match(detail,/return; \/\/ No autoguardado, Upload, Checklistenänderung, Archiv oder Zeitplanung/);
+  assert.match(index,/work\.js\?v=office44/);
+  assert.match(index,/task-detail\.js\?v=office4/);
+});
+
+test('Original task editor gains only optional Office metadata and keeps its operational features',()=>{
+  const detail=read('app/task-detail.js');
+  for(const field of ['taskDetailTaskCode','taskDetailPSP','taskDetailWorkResult',
+      'taskDetailProfessionalContext','Prüfbares Arbeitsergebnis','Fachliche Einordnung']){
+    assert.ok(detail.includes(field),field);
+  }
+  for(const feature of ['taskDetailComplete','taskDetailStart','taskDetailDue',
+    'taskDetailWorkStatus','taskDetailPriority','taskDetailAddCheck','taskDetailAddFile',
+    'taskDetailAddLink','MINDS_TASK_TEAM.allocationsHtml','taskDetailPropose','taskDetailBook']){
+    assert.ok(detail.includes(feature),'original task function lost: '+feature);
+  }
+  assert.match(detail,/metadata:\{\.\.\.current,office_planner:/,'metadata fields are additive');
+  assert.match(detail,/ctx\.queue=ctx\.queue\.then\(async\(\)=>/,'updates are sequenced against newest row');
+});
+
+test('Existing Project Buckets persist optional description and PSP without touching tasks or Terminplan',()=>{
+  const work=read('app/work.js'),migration=read('supabase/migrations/20261113131000_office_planner_bucket_explanation_v1.sql');
+  assert.match(work,/id,name,description,terminplan_ref,sort_order,archived/);
+  assert.match(work,/work-bucket-explanation/);
+  assert.match(work,/workBucketDescription/);
+  assert.match(work,/workBucketPlanRef/);
+  assert.match(work,/update\(\{name,description,terminplan_ref,updated_at:/);
+  assert.match(migration,/alter table public\.minds_work_buckets/);
+  assert.doesNotMatch(migration,/drop table|drop column|security definer|disable row level security/i);
+});
+
+test('Obsolete second Muster board scripts and stylesheet are no longer used',()=>{
+  const fs=require('node:fs');
+  assert.equal(fs.existsSync(require('node:path').join(root,'muster-planner.js')),false);
+  assert.equal(fs.existsSync(require('node:path').join(root,'muster-planner.css')),false);
 });
