@@ -814,7 +814,7 @@ async function renderPlanner(preview=false){
     const source=await result.json();
     if(source.phase!=='LPH3'||source.draft!==true||!Array.isArray(source.buckets)||
        source.buckets.some(b=>b.kind!=='Abgabe'||!b.gate))throw new Error('Das Muster ist nicht freigegeben oder fehlerhaft.');
-    buckets=source.buckets.map((b,i)=>({id:b.id,name:b.title,description:b.summary,terminplan_ref:b.gate,
+    buckets=source.buckets.map((b,i)=>({id:b.id,name:b.title,description:b.plannerDescription||b.summary,terminplan_ref:b.gate,
       sort_order:i*10,archived:false}));
     tasks=source.buckets.flatMap(b=>b.tasks.map((t,i)=>({
       id:t.id,title:t.title,project_id:null,work_bucket_id:b.id,sort_order:i*10,work_sort_order:i*10,
