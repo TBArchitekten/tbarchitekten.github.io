@@ -15,6 +15,7 @@ const workSignedCache=new Map();
 let team=[],reviewSettings=null,reviewReportLimit=20,workRenderVersion=0;
 /* Purely visual preferences and labels; no task statuses are rewritten. */
 const WORK_MOBILE_LAYOUT_KEY='minds-work-mobile-planner-layout-v1';
+function isMusterPlanner(){return OFFICE&&new URLSearchParams(String(location.hash||'').replace(/^#/,'')).get('muster')==='LPH3'}
 
 function setStatus(t=''){const el=$('#workStatus');if(el)el.textContent=t}
 function safeName(name){return String(name||'file').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,150)||'file'}
@@ -23,7 +24,9 @@ async function getSession(){if(!sb)return null;const {data}=await sb.auth.getSes
 async function loadProject(knownSession=null){const session=knownSession||await getSession();if(!session)return null;const {data,error}=await sb.from('isabella_projects').select('id,client_key,name,number').eq('client_key',projectKey).maybeSingle();if(error)throw error;return data||null}
 function bindStatic(){
   if(bound)return;bound=true;
-  $('.work-project-switch')?.addEventListener('click',e=>{const b=e.target.closest('[data-work-project]');if(!b)return;projectKey=b.dataset.workProject;localStorage.setItem('minds-work-project',projectKey);if(projectKey===OFFICE_ROOT)view='desktop';folderId=null;activeThreadId=null;reviewReportLimit=20;void render()});
+  $('.work-project-switch')?.addEventListener('click',e=>{const b=e.target.closest('[data-work-project]');if(!b)return;
+    if(isMusterPlanner())history.replaceState(null,'','#section=work');
+    projectKey=b.dataset.workProject;localStorage.setItem('minds-work-project',projectKey);if(projectKey===OFFICE_ROOT)view='desktop';folderId=null;activeThreadId=null;reviewReportLimit=20;void render()});
   $$('[data-work-view]').forEach(b=>b.onclick=()=>{view=b.dataset.workView;localStorage.setItem('minds-work-view',view);paintChrome();void render()});
   const input=$('#workFileInput');if(input)input.onchange=()=>{const fs=[...(input.files||[])];input.value='';if(fs.length)void uploadFiles(fs)};
   const body=$('#workBody');
@@ -33,7 +36,7 @@ function bindStatic(){
   body?.addEventListener('drop',e=>{if(view!=='desktop')return;e.preventDefault();body.classList.remove('is-dragging');const fs=[...(e.dataTransfer?.files||[])];if(fs.length)void uploadFiles(fs)});
 }
 function paintChrome(){
-  $('#workProjectTitle').textContent=projectKey===OFFICE_ROOT?'Büro':project?.name||projectKey;
+  $('#workProjectTitle').textContent=isMusterPlanner()?'Muster-Planner · LPH 3':projectKey===OFFICE_ROOT?'Büro':project?.name||projectKey;
   $$('[data-work-project]').forEach(b=>b.classList.toggle('active',b.dataset.workProject===projectKey));
   $$('[data-work-view]').forEach(b=>b.classList.toggle('active',b.dataset.workView===view));
 }
@@ -54,6 +57,7 @@ function workBootFailure(message,switchLabel=''){
 }
 async function render(){
   const current=++workRenderVersion;
+  if(isMusterPlanner())view='planner';
   bindStatic();setStatus('');
   paintChrome();
   $('#workBody')?.classList.toggle('work-overview-host',view==='overview');
@@ -66,6 +70,12 @@ async function render(){
     if(!session){
       project=null;
       workBootFailure('Keine aktive Anmeldung. Bitte anmelden und erneut versuchen.','Nicht angemeldet');
+      return;
+    }
+    if(isMusterPlanner()){
+      project={id:null,client_key:'__muster_lph3__',name:'Muster-Planner · LPH 3'};
+      paintChrome();
+      await waitForWork(renderPlanner(true),'Muster-Planner');
       return;
     }
     const catalog=await waitForWork(
@@ -705,14 +715,14 @@ async function uploadFiles(list){
 }
 async function openFile(id){const f=files.find(x=>x.id===id);if(!f)return;const {data,error}=await sb.storage.from('minds-work').createSignedUrl(f.storage_path,900);if(error||!data?.signedUrl){setStatus('Die Datei konnte nicht geöffnet werden.');return}window.open(data.signedUrl,'_blank','noopener')}
 async function loadPlanner(){
-  let {data:b,error:be}=await sb.from('minds_work_buckets').select('id,name,sort_order,archived').eq('project_id',project.id).eq('archived',false).order('sort_order').order('id');if(be)throw be;
+  let {data:b,error:be}=await sb.from('minds_work_buckets').select('id,name,description,terminplan_ref,sort_order,archived').eq('project_id',project.id).eq('archived',false).order('sort_order').order('id');if(be)throw be;
   if(!b?.length){
     // Defaults are only seeded for brand-new projects. Archiving the last Bucket must not recreate them.
     const existing=await sb.from('minds_work_buckets').select('id').eq('project_id',project.id).limit(1);
     if(existing.error)throw existing.error;
     if(!existing.data?.length){
       const rows=DEFAULT_BUCKETS.map((name,i)=>({project_id:project.id,name,sort_order:i*10}));
-      const ins=await sb.from('minds_work_buckets').insert(rows).select('id,name,sort_order,archived');
+      const ins=await sb.from('minds_work_buckets').insert(rows).select('id,name,description,terminplan_ref,sort_order,archived');
       if(ins.error)throw ins.error;
       b=ins.data||[];
     }
@@ -769,7 +779,7 @@ function workAssigneeName(t){
 function workAvatarInitials(name){
  return String(name||'').split(/[\s,]+/).filter(Boolean).slice(0,2).map(s=>s[0]?.toLocaleUpperCase('de-DE')).join('')||'–'
 }
-function taskCard(t){
+function taskCard(t,preview=false){
   const checks=taskChecklist(t),done=checks.filter(x=>x?.done).length,attachments=taskAttachments(t);
   const firstImage=attachments.find(a=>a?.path&&String(a?.mime||a?.type||'').startsWith('image/')),cached=firstImage?cachedWorkUrl(firstImage.path):'';
   const due=t.due_date?new Date(t.due_date+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'short'}):'';
@@ -777,8 +787,8 @@ function taskCard(t){
   const name=workAssigneeName(t);
   const priority=t.priority&&t.priority!=='normal'
     ?t.priority==='urgent'?'Dringend':t.priority==='important'?'Wichtig':'Niedrig':'';
-  return `<article class="work-task-card ${t.completed_at?'is-done':''}" draggable="true" data-work-task="${t.id}" tabindex="0">
-    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''}" data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':'Erledigen'}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
+  return `<article class="work-task-card ${t.completed_at?'is-done':''}" draggable="${!preview}" data-work-task="${t.id}" tabindex="0">
+    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''}" ${preview?'disabled title="Muster · nur Ansicht"':''} data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':'Erledigen'}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
     ${firstImage?`<img class="work-task-cover" loading="lazy" ${cached?`src="${esc(cached)}" data-loaded="1"`:''} data-work-task-image="${esc(firstImage.path)}" alt="${esc(firstImage.name||t.title)}">`:''}
     ${checks.length?`<div class="work-card-checks">${checks.slice(0,5).map(x=>`<div class="${x.done?'done':''}"><span class="work-subcheck" aria-hidden="true">${x.done?'✓':''}</span><span>${esc(x.text||'')}</span></div>`).join('')}${checks.length>5?`<div class="work-check-more">+${checks.length-5} weitere</div>`:''}</div>`:''}
     <footer>
@@ -797,29 +807,66 @@ async function hydratePlannerImages(root=document){
   const imgs=[...root.querySelectorAll?.('[data-work-task-image],[data-work-edit-image]')||[]].filter(x=>!x.dataset.loaded);
   await Promise.all(imgs.map(async img=>{const path=img.dataset.workTaskImage||img.dataset.workEditImage;if(!path)return;const url=await workSignedUrl(path);if(url&&img.isConnected){img.src=url;img.dataset.loaded='1'}}));
 }
-async function renderPlanner(){
-  await loadPlanner();team=await window.MINDS_WORK_TEAM.members(project.id);const body=$('#workBody'),unbucketed=tasks.some(t=>!t.work_bucket_id),columns=[...(unbucketed?[{id:'__none',name:'Ohne Bucket',virtual:true}]:[]),...buckets];
+async function renderPlanner(preview=false){
+  if(preview){
+    const result=await fetch('./data/muster-planner-lph3-v0.2.json?v=office47',{cache:'no-store'});
+    if(!result.ok)throw new Error('Das Muster LPH 3 konnte nicht geladen werden.');
+    const source=await result.json();
+    if(source.phase!=='LPH3'||source.draft!==true||!Array.isArray(source.buckets)||
+       source.buckets.some(b=>b.kind!=='Abgabe'||!b.gate))throw new Error('Das Muster ist nicht freigegeben oder fehlerhaft.');
+    buckets=source.buckets.map((b,i)=>({id:b.id,name:b.title,description:b.plannerDescription||b.summary,terminplan_ref:b.gate,
+      sort_order:i*10,archived:false}));
+    tasks=source.buckets.flatMap(b=>b.tasks.map((t,i)=>({
+      id:t.id,title:t.title,project_id:null,work_bucket_id:b.id,sort_order:i*10,work_sort_order:i*10,
+      work_status:'not_started',completed_at:null,priority:'normal',notes:'',labels:[],
+      attachments:[],links:[],start_date:null,due_date:null,assignee:null,
+      checklist:(t.checks||[]).map((text,j)=>({id:t.id+'-check-'+j,text,done:false})),
+      metadata:{office_planner:{task_code:t.id,terminplan_psp:(t.psp||[]).join(', '),
+        work_result:t.result||'',professional_context:t.basis||'',applicability:t.scope||'',
+        template_version:source.version||''}}
+    })));
+    team=[];
+  }else{
+    await loadPlanner();team=await window.MINDS_WORK_TEAM.members(project.id);
+  }
+  const body=$('#workBody'),unbucketed=tasks.some(t=>!t.work_bucket_id),columns=[...(unbucketed?[{id:'__none',name:'Ohne Bucket',virtual:true}]:[]),...buckets];
   // Buckets side by side by default (scroll sideways on the phone); the list is opt-in.
   const mobileList=localStorage.getItem(WORK_MOBILE_LAYOUT_KEY)==='list';
-  body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${tasks.filter(t=>!t.completed_at).length} offen · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Liste</button><button type="button" data-work-team>Team · ${team.length}</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button></span></div>
+  body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Liste</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
     <div class="work-board ${mobileList?'mobile-stack':''}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
+      ${b.terminplan_ref?`<div class="work-bucket-pretitle">Abgabe / Planungspaket${preview?' · '+esc(b.id):''}</div>`:''}
       <header class="work-bucket-header">${b.virtual
         ?`<strong>${esc(b.name)}</strong>`
-        :`<span class="work-bucket-grab" draggable="true" data-work-bucket-handle="${b.id}" title="Bucket ziehen, um die Reihenfolge zu ändern"><span class="work-bucket-grip" aria-hidden="true">⠿</span><strong>${esc(b.name)}</strong><span class="work-bucket-count" aria-label="${open.length} offene Aufgaben">${open.length}</span></span>
-          <div class="work-bucket-actions">
+        :`<span class="work-bucket-grab" draggable="${!preview}" data-work-bucket-handle="${b.id}" title="${preview?'Muster · nur Ansicht':'Bucket ziehen, um die Reihenfolge zu ändern'}">${preview?'':'<span class="work-bucket-grip" aria-hidden="true">⠿</span>'}<strong>${esc(b.name)}</strong><span class="work-bucket-count" aria-label="${open.length} offene Aufgaben">${preview?open.length+' / '+all.length:open.length}</span></span>
+          ${preview?'':`<div class="work-bucket-actions">
             <button type="button" class="work-bucket-more" data-work-edit-bucket="${b.id}" aria-label="Aktionen für ${esc(b.name)}" aria-haspopup="menu" aria-expanded="false">•••</button>
             <div class="work-bucket-menu" data-work-bucket-menu="${b.id}" role="menu" hidden>
-              <button type="button" role="menuitem" data-work-rename-bucket="${b.id}">${workIcon('pencil')}Umbenennen</button>
+              <button type="button" role="menuitem" data-work-rename-bucket="${b.id}">${workIcon('pencil')}Bearbeiten</button>
               <button type="button" role="menuitem" data-work-shift-bucket="${b.id}" data-work-shift-direction="left" ${buckets[0]?.id===b.id?'disabled':''}>${workIcon('left')}Nach links</button>
               <button type="button" role="menuitem" data-work-shift-bucket="${b.id}" data-work-shift-direction="right" ${buckets.at(-1)?.id===b.id?'disabled':''}>${workIcon('right')}Nach rechts</button>
               <button type="button" role="menuitem" class="work-bucket-danger" data-work-archive-bucket="${b.id}">${workIcon('trash')}Entfernen</button>
             </div>
-          </div>`}
+          </div>`}`}
       </header>
-      ${b.virtual?'':`<button type="button" class="work-add-task" data-work-add-task="${b.id}">${workIcon('plus')}Aufgabe hinzufügen</button>`}
-      <div class="work-bucket-scroll"><div class="work-task-list" data-work-task-list="open" data-work-list-bucket="${b.virtual?'':b.id}">${open.map(taskCard).join('')}</div>
-      ${done.length?`<details class="work-completed"><summary>Erledigte Aufgaben <span>${done.length}</span></summary><div class="work-task-list" data-work-task-list="done" data-work-list-bucket="${b.virtual?'':b.id}">${done.map(taskCard).join('')}</div></details>`:''}</div>
+      ${(b.description||b.terminplan_ref)?`<div class="work-bucket-explanation">${b.description?`<p>${esc(b.description)}</p>`:''}${b.terminplan_ref?`<span class="work-bucket-plan-ref">${esc(b.terminplan_ref)}</span>`:''}</div>`:''}
+      ${b.virtual||preview?'':`<button type="button" class="work-add-task" data-work-add-task="${b.id}">${workIcon('plus')}Aufgabe hinzufügen</button>`}
+      <div class="work-bucket-scroll"><div class="work-task-list" data-work-task-list="open" data-work-list-bucket="${b.virtual?'':b.id}">${open.map(t=>taskCard(t,preview)).join('')}</div>
+      ${done.length?`<details class="work-completed"><summary>Erledigte Aufgaben <span>${done.length}</span></summary><div class="work-task-list" data-work-task-list="done" data-work-list-bucket="${b.virtual?'':b.id}">${done.map(t=>taskCard(t,preview)).join('')}</div></details>`:''}</div>
     </section>`}).join('')}</div>`;
+  if(preview){
+    body.classList.add('work-muster-preview');
+    body.querySelectorAll('[data-work-task]').forEach(card=>{
+      card.addEventListener('click',()=>{
+        const task=tasks.find(t=>t.id===card.dataset.workTask);
+        if(task)window.MINDS_TASK_DETAIL?.preview?.({
+          task,buckets,projectName:'Muster LPH 3'
+        });
+      });
+      card.addEventListener('keydown',e=>{
+        if(e.key==='Enter'||e.key===' '){e.preventDefault();card.click()}
+      });
+    });
+  }else body.classList.remove('work-muster-preview');
   $('[data-work-layout-toggle]')?.addEventListener('click',e=>{
     const board=body.querySelector('.work-board');if(!board)return;
     const listMode=!board.classList.contains('mobile-stack');
@@ -827,6 +874,7 @@ async function renderPlanner(){
     e.currentTarget.setAttribute('aria-pressed',String(listMode));
     localStorage.setItem(WORK_MOBILE_LAYOUT_KEY,listMode?'list':'columns');
   });
+  if(preview)return; // The Muster shares the real Planner renderer, but NEVER its write handlers.
   $('[data-work-team]')?.addEventListener('click',()=>void window.MINDS_WORK_TEAM.open(project,()=>renderPlanner()).catch(e=>setStatus('Team: '+(e?.message||e))));
   $('[data-work-add-bucket]')?.addEventListener('click',()=>void addBucket());
   $('[data-work-show-bucket-archive]')?.addEventListener('click',()=>void openArchivedBuckets());
@@ -964,8 +1012,10 @@ async function shiftBucket(id,direction){
 }
 function bucketNameDialog(bucket){
   closeBucketMenus($('#workBody'));
-  window.ISABELLA_APP?.openModal?.(bucket?'Bucket umbenennen':'Neuer Bucket',`<div class="form work-bucket-editor">
+  window.ISABELLA_APP?.openModal?.(bucket?'Bucket bearbeiten':'Neuer Bucket',`<div class="form work-bucket-editor">
     <label>Bucket-Name<input id="workBucketName" maxlength="120" value="${esc(bucket?.name||'')}" placeholder="Name"></label>
+    <label>Beschreibung<textarea id="workBucketDescription" maxlength="2000" rows="3" placeholder="Welches Ergebnis / Planungspaket gehört in diesen Bucket?">${esc(bucket?.description||'')}</textarea></label>
+    <label>Abgabe / Terminplan PSP<input id="workBucketPlanRef" maxlength="200" value="${esc(bucket?.terminplan_ref||'')}" placeholder="z. B. 01.03 · Planpaket Arbeitsstand 01"></label>
     <div class="work-bucket-dialog-actions"><button id="workBucketSave" type="button" class="primary">Speichern</button><button id="workBucketCancel" type="button" class="secondary">Abbrechen</button></div>
   </div>`);
   $('#workBucketCancel').onclick=()=>window.ISABELLA_APP?.closeModal?.();
@@ -975,16 +1025,19 @@ function bucketNameDialog(bucket){
 }
 async function saveBucketName(bucket){
   const field=$('#workBucketName'),name=field?.value.trim();
+  const description=$('#workBucketDescription')?.value.trim()||'';
+  const terminplan_ref=$('#workBucketPlanRef')?.value.trim()||'';
+  if(description.length>2000||terminplan_ref.length>200){setStatus('Die Beschreibung oder PSP-Referenz ist zu lang.');return}
   if(!name||name.length>120){setStatus('Der Bucket-Name muss zwischen 1 und 120 Zeichen enthalten.');field?.focus();return}
   if(buckets.some(b=>b.id!==bucket?.id&&b.name.toLocaleLowerCase()===name.toLocaleLowerCase())){
     setStatus('Ein Bucket mit diesem Namen ist bereits vorhanden.');field?.focus();return;
   }
-  if(bucket?.name===name){window.ISABELLA_APP?.closeModal?.();return}
+  if(bucket?.name===name&&(bucket.description||'')===description&&(bucket.terminplan_ref||'')===terminplan_ref){window.ISABELLA_APP?.closeModal?.();return}
   const button=$('#workBucketSave');if(button)button.disabled=true;
   const {data,error}=bucket
-    ?await sb.from('minds_work_buckets').update({name,updated_at:new Date().toISOString()})
+    ?await sb.from('minds_work_buckets').update({name,description,terminplan_ref,updated_at:new Date().toISOString()})
         .eq('id',bucket.id).eq('project_id',project.id).eq('archived',false).select('id')
-    :await sb.from('minds_work_buckets').insert({project_id:project.id,name,
+    :await sb.from('minds_work_buckets').insert({project_id:project.id,name,description,terminplan_ref,
         sort_order:Math.max(0,...buckets.map(b=>Number(b.sort_order)||0))+10}).select('id');
   if(error||data?.length!==1){
     if(button)button.disabled=false;
@@ -1480,6 +1533,6 @@ async function sendThreadMessage(thread,overrideMessage=null){
   }
 }
 
-window.MINDS_WORK={akte:{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask},render,open:(key,nextView='overview')=>{if(key){projectKey=key;localStorage.setItem('minds-work-project',key)}view=nextView;localStorage.setItem('minds-work-view',view);folderId=null;activeThreadId=null;if(document.body.dataset.section==='work')void render()},refresh:()=>document.body.dataset.section==='work'?render():null,context:()=>project?{name:project.name,key:project.client_key,active:document.body.dataset.section==='work',view,thread_id:activeThreadId||null}:null};
+window.MINDS_WORK={akte:{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask},render,open:(key,nextView='overview')=>{if(key){if(isMusterPlanner())history.replaceState(null,'','#section=work');projectKey=key;localStorage.setItem('minds-work-project',key)}view=nextView;localStorage.setItem('minds-work-view',view);folderId=null;activeThreadId=null;if(document.body.dataset.section==='work')void render()},refresh:()=>document.body.dataset.section==='work'?render():null,context:()=>project?{name:project.name,key:project.client_key,active:document.body.dataset.section==='work',view,thread_id:activeThreadId||null}:null};
 if(document.body.dataset.section==='work'&&typeof setTimeout==='function')setTimeout(()=>{if(!bound)void render()},0);
 })();

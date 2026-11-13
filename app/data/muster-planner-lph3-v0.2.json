@@ -182,7 +182,8 @@
           "review": "Projektleitung",
           "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
         }
-      ]
+      ],
+      "plannerDescription": "Vorläufige Planungsgrundlagen, interne Projektvorbereitung und koordinierte Übergabe an die Fachplaner."
     },
     {
       "id": "A2",
@@ -952,7 +953,8 @@
           "date": "2027-03-17",
           "name": "M06 · Abstimmung Entwurfsstand LPH 3 mit Auftraggeber abgeschlossen"
         }
-      ]
+      ],
+      "plannerDescription": "Materialien und Qualitäten mit Bauherren entscheiden; Bemusterungsunterlagen liefern die Grundlage für die Kostenberechnung."
     },
     {
       "id": "A6",
@@ -1259,7 +1261,8 @@
           "review": "Projektleitung",
           "sourceType": "TBA-eigene Arbeit / Koordination / Kontrolle"
         }
-      ]
+      ],
+      "plannerDescription": "LPH-3-Unterlagen intern prüfen, abschließend übergeben und den Phasenabschluss dokumentieren."
     }
   ],
   "explanation": "Bemusterung ist im Terminplan als PSP 04.03 vorgesehen und mündet in M06 (PSP 04.04), vor Kostenberechnung M08. Ein separater Bemusterungs-Bucket ist deshalb keine erfundene Abgabe. Die Tätigkeit und der Bauherrnbeschluss sind getrennt von TBA-internen Vorbereitungsaufgaben. Projektorganisation wird auf die sachlich zugehörigen Abgabe-Buckets verteilt.",
