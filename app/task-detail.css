@@ -43,3 +43,14 @@
 .minds-new-kind button{min-height:32px;padding:6px 16px;border:0;border-radius:999px;background:transparent;color:#5d6068;font:600 14px/1.2 inherit;box-shadow:none}
 .minds-new-kind button.is-active{background:#fff;color:#1f2024;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .item-editor>.minds-new-kind{margin-bottom:4px;justify-self:start;width:max-content}
+
+/* Additional TBA architecture fields inside the canonical task modal. */
+.minds-task-office-context{display:flex;flex-direction:column;gap:13px;border-top:1px solid #ededf0;padding-top:13px}
+.minds-task-office-refs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.minds-task-office-refs label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:11px;font-weight:500;color:#7b7d84}
+.minds-task-office-refs input{width:100%;min-width:0;border:1px solid #e4e5e8;border-radius:8px;padding:9px 10px;font-size:12px;color:#303138;background:#fff}
+.minds-task-office-applicability{padding:8px 10px;border-radius:8px;background:#fbf3e9;color:#8c6b45;font-size:11px;align-self:flex-start}
+.minds-task-detail.is-muster-readonly input:disabled,.minds-task-detail.is-muster-readonly textarea:disabled,.minds-task-detail.is-muster-readonly select:disabled{opacity:1;color:#4c5968;-webkit-text-fill-color:#4c5968;cursor:default;background:#f8f9fa}
+.minds-task-detail.is-muster-readonly button:disabled{opacity:.65;cursor:default}
+.minds-task-detail.is-muster-readonly .minds-task-more{display:none}
+@media(max-width:560px){.minds-task-office-refs{grid-template-columns:1fr}}
