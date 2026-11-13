@@ -788,7 +788,7 @@ function taskCard(t,preview=false){
   const priority=t.priority&&t.priority!=='normal'
     ?t.priority==='urgent'?'Dringend':t.priority==='important'?'Wichtig':'Niedrig':'';
   return `<article class="work-task-card ${t.completed_at?'is-done':''}" draggable="${!preview}" data-work-task="${t.id}" tabindex="0">
-    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''}" data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':'Erledigen'}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
+    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''}" ${preview?'disabled title="Muster · nur Ansicht"':''} data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':'Erledigen'}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
     ${firstImage?`<img class="work-task-cover" loading="lazy" ${cached?`src="${esc(cached)}" data-loaded="1"`:''} data-work-task-image="${esc(firstImage.path)}" alt="${esc(firstImage.name||t.title)}">`:''}
     ${checks.length?`<div class="work-card-checks">${checks.slice(0,5).map(x=>`<div class="${x.done?'done':''}"><span class="work-subcheck" aria-hidden="true">${x.done?'✓':''}</span><span>${esc(x.text||'')}</span></div>`).join('')}${checks.length>5?`<div class="work-check-more">+${checks.length-5} weitere</div>`:''}</div>`:''}
     <footer>
@@ -1532,6 +1532,6 @@ async function sendThreadMessage(thread,overrideMessage=null){
   }
 }
 
-window.MINDS_WORK={akte:{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask},render,open:(key,nextView='overview')=>{if(key){projectKey=key;localStorage.setItem('minds-work-project',key)}view=nextView;localStorage.setItem('minds-work-view',view);folderId=null;activeThreadId=null;if(document.body.dataset.section==='work')void render()},refresh:()=>document.body.dataset.section==='work'?render():null,context:()=>project?{name:project.name,key:project.client_key,active:document.body.dataset.section==='work',view,thread_id:activeThreadId||null}:null};
+window.MINDS_WORK={akte:{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask},render,open:(key,nextView='overview')=>{if(key){if(isMusterPlanner())history.replaceState(null,'','#section=work');projectKey=key;localStorage.setItem('minds-work-project',key)}view=nextView;localStorage.setItem('minds-work-view',view);folderId=null;activeThreadId=null;if(document.body.dataset.section==='work')void render()},refresh:()=>document.body.dataset.section==='work'?render():null,context:()=>project?{name:project.name,key:project.client_key,active:document.body.dataset.section==='work',view,thread_id:activeThreadId||null}:null};
 if(document.body.dataset.section==='work'&&typeof setTimeout==='function')setTimeout(()=>{if(!bound)void render()},0);
 })();
