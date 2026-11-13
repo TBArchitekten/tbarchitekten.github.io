@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` (282) und die vier Chromium-Tests lokal grün; die neue SQL-Abnahme läuft auf einer flüchtigen PostgreSQL-Instanz gegen das synthetische Schema **und** in `verify.yml` gegen die echten Migrationen: Screenshot-Fall angelegt, «ja» als Bitte akzeptiert, ein erfundener Satz und ein Zitat aus einem anderen Zug abgelehnt, Serie/Ganztag/Ändern/fremder Text/Hintergrund/Dauer/Zeitzone gesperrt, zweimal gesendet = ein Termin, Rückgängig innerhalb von 10 Minuten und danach nicht mehr, «review» weiter respektiert, kein Zugriff auf fremde Entscheidungen oder Kalender. In Window ist dieselbe Änderung seit heute live (PR #328).
 - Quedó pendiente o sin probar: ein echter Zug von Gari in Romy mit einem Screenshot (bisher nur automatisiert). Zweite Veröffentlichung (kein Router-Modell vor Isabella, kurze Notizen statt der langen Blöcke) steht noch aus.
 - Riesgos o decisiones que necesitan a Gari: keine. Wer lieber vorher bestätigt, stellt es in «Berechtigungen» um.
-- PR: #PRNUM
+- PR: #87
 
 ---
 
