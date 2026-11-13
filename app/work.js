@@ -834,18 +834,19 @@ async function renderPlanner(preview=false){
   const mobileList=localStorage.getItem(WORK_MOBILE_LAYOUT_KEY)==='list';
   body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Liste</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
     <div class="work-board ${mobileList?'mobile-stack':''}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
+      ${b.terminplan_ref?`<div class="work-bucket-pretitle">Abgabe / Planungspaket${preview?' · '+esc(b.id):''}</div>`:''}
       <header class="work-bucket-header">${b.virtual
         ?`<strong>${esc(b.name)}</strong>`
-        :`<span class="work-bucket-grab" draggable="true" data-work-bucket-handle="${b.id}" title="Bucket ziehen, um die Reihenfolge zu ändern"><span class="work-bucket-grip" aria-hidden="true">⠿</span><strong>${esc(b.name)}</strong><span class="work-bucket-count" aria-label="${open.length} offene Aufgaben">${open.length}</span></span>
-          <div class="work-bucket-actions">
+        :`<span class="work-bucket-grab" draggable="${!preview}" data-work-bucket-handle="${b.id}" title="${preview?'Muster · nur Ansicht':'Bucket ziehen, um die Reihenfolge zu ändern'}">${preview?'':'<span class="work-bucket-grip" aria-hidden="true">⠿</span>'}<strong>${esc(b.name)}</strong><span class="work-bucket-count" aria-label="${open.length} offene Aufgaben">${preview?open.length+' / '+all.length:open.length}</span></span>
+          ${preview?'':`<div class="work-bucket-actions">
             <button type="button" class="work-bucket-more" data-work-edit-bucket="${b.id}" aria-label="Aktionen für ${esc(b.name)}" aria-haspopup="menu" aria-expanded="false">•••</button>
             <div class="work-bucket-menu" data-work-bucket-menu="${b.id}" role="menu" hidden>
-              <button type="button" role="menuitem" data-work-rename-bucket="${b.id}">${workIcon('pencil')}Umbenennen</button>
+              <button type="button" role="menuitem" data-work-rename-bucket="${b.id}">${workIcon('pencil')}Bearbeiten</button>
               <button type="button" role="menuitem" data-work-shift-bucket="${b.id}" data-work-shift-direction="left" ${buckets[0]?.id===b.id?'disabled':''}>${workIcon('left')}Nach links</button>
               <button type="button" role="menuitem" data-work-shift-bucket="${b.id}" data-work-shift-direction="right" ${buckets.at(-1)?.id===b.id?'disabled':''}>${workIcon('right')}Nach rechts</button>
               <button type="button" role="menuitem" class="work-bucket-danger" data-work-archive-bucket="${b.id}">${workIcon('trash')}Entfernen</button>
             </div>
-          </div>`}
+          </div>`}`}
       </header>
       ${(b.description||b.terminplan_ref)?`<div class="work-bucket-explanation">${b.description?`<p>${esc(b.description)}</p>`:''}${b.terminplan_ref?`<span class="work-bucket-plan-ref">${esc(b.terminplan_ref)}</span>`:''}</div>`:''}
       ${b.virtual||preview?'':`<button type="button" class="work-add-task" data-work-add-task="${b.id}">${workIcon('plus')}Aufgabe hinzufügen</button>`}
