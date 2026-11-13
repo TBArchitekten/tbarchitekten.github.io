@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-const root=fileURLToPath(new URL('../../',import.meta.url));
+const root=path.resolve(fileURLToPath(new URL('../../',import.meta.url)));
 const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
 const harness=String.raw`<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
