@@ -10,7 +10,7 @@ import {fileURLToPath} from 'node:url';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
-const harness=String.raw\`<!doctype html><html lang="de"><head><meta charset="utf-8">
+const harness=String.raw`<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="./work-apple.css">
 <link rel="stylesheet" href="./work-polish.css">
@@ -39,7 +39,7 @@ window.ISABELLA_APP={getState:()=>({}),openModal:(title,html)=>{
 </script>
 <script src="./task-team.js"></script>
 <script src="./task-detail.js"></script>
-<script src="./work.js"></script></body></html>\`;
+<script src="./work.js"></script></body></html>`;
 const server=http.createServer((req,res)=>{
  const pathname=decodeURIComponent((req.url||'').split('?')[0]);
  if(pathname==='/app/__muster_preview_harness__.html'){
@@ -54,7 +54,7 @@ const server=http.createServer((req,res)=>{
 }).listen(0);
 const browser=await chromium.launch({headless:true});
 test.after(async()=>{await browser.close();server.close()});
-const url=()=>\`http://localhost:\${server.address().port}/app/__muster_preview_harness__.html#section=work&muster=LPH3\`;
+const url=()=>`http://localhost:${server.address().port}/app/__muster_preview_harness__.html#section=work&muster=LPH3`;
 
 test('Desktop Muster uses the real work-bucket + work-task-card + canonical task detail',async()=>{
  const page=await browser.newPage({viewport:{width:1440,height:900}});
