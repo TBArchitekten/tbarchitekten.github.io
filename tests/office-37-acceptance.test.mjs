@@ -138,7 +138,7 @@ test('Assistant floats, resizes and can open its own window',()=>{
 
 test('Work uses Window tables; the team is office_project_members, edited in Projekte',()=>{
  const index=read('app/index.html'),team=read('app/work-team.js'),projects=read('app/office-projects.js');
- assert.match(index,/src="\.\/work\.js\?v=office43"/);
+ assert.match(index,/src="\.\/work\.js\?v=office44"/);
  assert.match(team,/from\('office_project_members'\)\s*\.select\('user_id'\)\.eq\('project_id',projectId\)/);
  assert.doesNotMatch(team,/minds_work_project_people/);
  assert.match(team,/projects\.openTeam\(project\.id/);
