@@ -91,7 +91,7 @@ function showPlans(){
     actions.append(open);
     if(template.phase==='LPH3'){
       const planner=document.createElement('a');
-      planner.href='../muster-planner.html';
+      planner.href='./#section=work&muster=LPH3';
       planner.textContent='Muster-Planner ansehen';
       planner.className='office-plan-library-link';
       planner.title='Entwurf LPH 3 · nur Ansicht und lokale Review-Notizen';
