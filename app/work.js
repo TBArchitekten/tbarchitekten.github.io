@@ -1011,8 +1011,10 @@ async function shiftBucket(id,direction){
 }
 function bucketNameDialog(bucket){
   closeBucketMenus($('#workBody'));
-  window.ISABELLA_APP?.openModal?.(bucket?'Bucket umbenennen':'Neuer Bucket',`<div class="form work-bucket-editor">
+  window.ISABELLA_APP?.openModal?.(bucket?'Bucket bearbeiten':'Neuer Bucket',`<div class="form work-bucket-editor">
     <label>Bucket-Name<input id="workBucketName" maxlength="120" value="${esc(bucket?.name||'')}" placeholder="Name"></label>
+    <label>Beschreibung<textarea id="workBucketDescription" maxlength="2000" rows="3" placeholder="Welches Ergebnis / Planungspaket gehört in diesen Bucket?">${esc(bucket?.description||'')}</textarea></label>
+    <label>Abgabe / Terminplan PSP<input id="workBucketPlanRef" maxlength="200" value="${esc(bucket?.terminplan_ref||'')}" placeholder="z. B. 01.03 · Planpaket Arbeitsstand 01"></label>
     <div class="work-bucket-dialog-actions"><button id="workBucketSave" type="button" class="primary">Speichern</button><button id="workBucketCancel" type="button" class="secondary">Abbrechen</button></div>
   </div>`);
   $('#workBucketCancel').onclick=()=>window.ISABELLA_APP?.closeModal?.();
@@ -1022,16 +1024,19 @@ function bucketNameDialog(bucket){
 }
 async function saveBucketName(bucket){
   const field=$('#workBucketName'),name=field?.value.trim();
+  const description=$('#workBucketDescription')?.value.trim()||'';
+  const terminplan_ref=$('#workBucketPlanRef')?.value.trim()||'';
+  if(description.length>2000||terminplan_ref.length>200){setStatus('Die Beschreibung oder PSP-Referenz ist zu lang.');return}
   if(!name||name.length>120){setStatus('Der Bucket-Name muss zwischen 1 und 120 Zeichen enthalten.');field?.focus();return}
   if(buckets.some(b=>b.id!==bucket?.id&&b.name.toLocaleLowerCase()===name.toLocaleLowerCase())){
     setStatus('Ein Bucket mit diesem Namen ist bereits vorhanden.');field?.focus();return;
   }
-  if(bucket?.name===name){window.ISABELLA_APP?.closeModal?.();return}
+  if(bucket?.name===name&&(bucket.description||'')===description&&(bucket.terminplan_ref||'')===terminplan_ref){window.ISABELLA_APP?.closeModal?.();return}
   const button=$('#workBucketSave');if(button)button.disabled=true;
   const {data,error}=bucket
-    ?await sb.from('minds_work_buckets').update({name,updated_at:new Date().toISOString()})
+    ?await sb.from('minds_work_buckets').update({name,description,terminplan_ref,updated_at:new Date().toISOString()})
         .eq('id',bucket.id).eq('project_id',project.id).eq('archived',false).select('id')
-    :await sb.from('minds_work_buckets').insert({project_id:project.id,name,
+    :await sb.from('minds_work_buckets').insert({project_id:project.id,name,description,terminplan_ref,
         sort_order:Math.max(0,...buckets.map(b=>Number(b.sort_order)||0))+10}).select('id');
   if(error||data?.length!==1){
     if(button)button.disabled=false;
