@@ -217,7 +217,10 @@ function bind(ctx){
   field('#taskDetailEstimate',value=>{
     const n=value===''?0:Number(value);
     if(!Number.isInteger(n)||n<0||n>43200){status('Schätzung außerhalb des zulässigen Bereichs.',true);return null}
-    return {metadata:{...(ctx.task?.metadata||{}),planning:{...(ctx.task?.metadata?.planning||{}),estimated_minutes:n}}};
+    // Resolve against the latest revision after preceding auto-saves to retain
+    // independently edited Office metadata and allocation/calibration fields.
+    return ()=>({metadata:{...(ctx.task?.metadata||{}),
+      planning:{...(ctx.task?.metadata?.planning||{}),estimated_minutes:n}}});
   });
   field('#taskDetailWorkStatus',value=>({work_status:value,completed_at:value==='completed'?(ctx.task?.completed_at||new Date().toISOString()):null}));
   field('#taskDetailProject',value=>{void changeProject(ctx,value||null);return null});
