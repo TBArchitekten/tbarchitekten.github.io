@@ -34,17 +34,15 @@ test('Bemusterung has real research, alternatives, samples, documents, drawings 
  assert.match(tasks.get('L3-BEM-11').basis,/LPH5/);
  assert.ok(model.buckets.some(b=>b.id==='A6'&&b.tasks.some(t=>t.id==='L3-KOS-03')));
 });
-test('The review interface is read-only, user choices cannot change project database',()=>{
- const html=read('muster-planner.html');
- const js=read('muster-planner.js');
- const app=read('app/office-projects.js');
- assert.match(html,/Muster · nur Ansicht/);
- assert.match(html,/Review exportieren/);
- assert.match(html,/Muster-Planner LPH 3/);
- assert.match(js,/localStorage\.setItem/);
- assert.match(js,/new Blob/);
- assert.match(js,/\.\/app\/data\/muster-planner-lph3-v0\.2\.json/);
- assert.doesNotMatch(js,/\.from\(['"](?:isabella_tasks|minds_work_buckets|office_terminplan_instances)['"]\)/);
- assert.match(app,/plannerOpen\.href='\.\.\/muster-planner\.html'/);
- assert.match(app,/LPH3 · MUSTER-PLANNER/);
+test('The Muster uses the canonical Planner renderer and cannot trigger project writes',()=>{
+ const html=read('muster-planner.html'),work=read('app/work.js');
+ const detail=read('app/task-detail.js'),app=read('app/office-projects.js');
+ assert.match(html,/location\.replace\('\.\/app\/#section=work&muster=LPH3'\)/);
+ assert.match(work,/function taskCard\(t,preview=false\)/);
+ assert.match(work,/renderPlanner\(true\)/);
+ assert.match(work,/if\(preview\)return; \/\/ The Muster shares the real Planner renderer, but NEVER its write handlers/);
+ assert.match(detail,/function preview\(\{task,buckets=\[\]/);
+ assert.match(detail,/if\(ctx\.readOnly\)\{/);
+ assert.match(detail,/host\?\.querySelectorAll\('input,textarea,select,button'\)/);
+ assert.match(app,/planner\.href='\.\/#section=work&muster=LPH3'/);
 });
