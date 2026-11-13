@@ -62,7 +62,8 @@ jobs:
             supabase/migrations/20261108220000_office_window_engine_owner_writes_v1.sql \
             supabase/migrations/20261108221000_office_romy_append_notice_v1.sql \
             supabase/migrations/20261108222000_office_romy_runner_schedule_v1.sql \
-            supabase/migrations/20261109001000_office_continuity_terms_v1.sql
+            supabase/migrations/20261109001000_office_continuity_terms_v1.sql \
+            supabase/migrations/20261113170000_office_direct_create_owner_request_v03.sql
           do
             psql -X -v ON_ERROR_STOP=1 -f "$file"
           done
@@ -76,6 +77,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-phase5-acceptance.sql
       - name: Verify review fixes (owner engine writes, app notices)
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-romy-review-acceptance.sql
+      - name: Verify «Rückgängig statt Bestätigen» (v03) end to end
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/office-direct-create-v03-acceptance.sql
       - name: Verify schema-only dump, no rows or project content
         run: |
           docker run --rm --network=host -e PGHOST=127.0.0.1 -e PGPORT=5432 -e PGUSER=postgres -e PGDATABASE=romy_schema_fixture pgvector/pgvector:pg17 \

@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "c5d233856a7e722fd64858bf4e100894d392c9f5",
+  "source_sha": "7d767caf338858832eb8c91f4b4c665014479b47",
   "mode": "engine",
   "files": [
     {
@@ -28,6 +28,12 @@
       "bytes": 6654
     },
     {
+      "source": "supabase/functions/_shared/assistant-voice.mjs",
+      "target": "supabase/functions/_shared/assistant-voice.mjs",
+      "sha": "7215e38b3184c65d556258a0f7d394a7961db8ce",
+      "bytes": 6893
+    },
+    {
       "source": "supabase/functions/_shared/browser-continuation.mjs",
       "target": "supabase/functions/_shared/browser-continuation.mjs",
       "sha": "af2a960c34f7a295b716a81e0750dacdfa264a6e",
@@ -48,8 +54,8 @@
     {
       "source": "supabase/functions/_shared/calendar-temporal-fastpath.mjs",
       "target": "supabase/functions/_shared/calendar-temporal-fastpath.mjs",
-      "sha": "1a029b5d58608ecf1987d43d0fc5957990e8a1da",
-      "bytes": 2927
+      "sha": "7e4a3f3d97f9580176e8551ffede66fff4b9565e",
+      "bytes": 2155
     },
     {
       "source": "supabase/functions/_shared/capability-registry.ts",
@@ -66,8 +72,8 @@
     {
       "source": "supabase/functions/_shared/chat-delivery.mjs",
       "target": "supabase/functions/_shared/chat-delivery.mjs",
-      "sha": "1249a1e0e30a116f1eaff2b3c6b2e81ba5fae893",
-      "bytes": 3239
+      "sha": "d9528fc81fd94e72e2db29054bd54349ad20562d",
+      "bytes": 2851
     },
     {
       "source": "supabase/functions/_shared/chat-model-routing.mjs",
@@ -120,8 +126,8 @@
     {
       "source": "supabase/functions/_shared/direct-calendar-contract.mjs",
       "target": "supabase/functions/_shared/direct-calendar-contract.mjs",
-      "sha": "3bc71abdae27cc797d2ade4b4f3a6c620860c161",
-      "bytes": 3458
+      "sha": "01ec6dc72f97b981ade29bbbbf78250d879d58cb",
+      "bytes": 4760
     },
     {
       "source": "supabase/functions/_shared/dream-continuity.mjs",
@@ -144,8 +150,8 @@
     {
       "source": "supabase/functions/_shared/isabella-core.mjs",
       "target": "supabase/functions/_shared/isabella-core.mjs",
-      "sha": "0e124f8060c691bc0a1128690e5ebf81a4d97199",
-      "bytes": 22467
+      "sha": "7b9169028cff5e4cfb316b16cdee3b6cfdcd544f",
+      "bytes": 22892
     },
     {
       "source": "supabase/functions/_shared/isabella-dream.mjs",
@@ -170,6 +176,12 @@
       "target": "supabase/functions/_shared/isabella-radar.mjs",
       "sha": "50a6723834dcf654aa0fa5986cf61e4b74c54ec8",
       "bytes": 5508
+    },
+    {
+      "source": "supabase/functions/_shared/isabella-tools.mjs",
+      "target": "supabase/functions/_shared/isabella-tools.mjs",
+      "sha": "57fdf3274f52c544cff81892ba7f5c6d933cf643",
+      "bytes": 44805
     },
     {
       "source": "supabase/functions/_shared/light-conversation-context.mjs",
@@ -312,8 +324,8 @@
     {
       "source": "supabase/functions/_shared/system-notice.mjs",
       "target": "supabase/functions/_shared/system-notice.mjs",
-      "sha": "6bcbbaea14815240ed4f4ae2fd2e81678c4e983a",
-      "bytes": 2195
+      "sha": "6f2e5d2455855e5e1c437d0be1882a0dc5731989",
+      "bytes": 2404
     },
     {
       "source": "supabase/functions/_shared/task-responsibles.mjs",
@@ -498,8 +510,8 @@
     {
       "source": "supabase/functions/isabella-chat/index.ts",
       "target": "supabase/functions/isabella-chat/index.ts",
-      "sha": "189384d6871dc4aad6da48da1a3f164c1715cfa9",
-      "bytes": 346223
+      "sha": "a17ce39ff63e6edeb99fb708e077c8d911ca9a36",
+      "bytes": 302412
     },
     {
       "source": "supabase/functions/isabella-delivery-runner/index.ts",

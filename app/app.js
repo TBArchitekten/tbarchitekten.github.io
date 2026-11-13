@@ -4362,13 +4362,14 @@ async function contextualAutonomyPanel(){
       sb.from('minds_calendar_execution_preferences').select('create_mode').maybeSingle()
     ]);
     if(error||calendarError)throw error||calendarError;
-    const directCalendar=calendarPref?.create_mode==='direct';
-    const directCalendarHTML='<div class="human-permission-case"><div class="human-case-title">Crear tareas y eventos desde el chat</div>'+
-      '<div class="human-state tone-complete"><b>'+(directCalendar?'Ejecución directa activada':'Confirmación previa activada')+'</b>'+
-      '<p>'+(directCalendar?'Cuando tú pidas explícitamente crear algo, Isabella lo guardará y comprobará antes de informarte. Si falta información, la pedirá.':'Isabella seguirá mostrando propuestas para que las apruebes.')+
-      ' Los cambios y las eliminaciones siguen necesitando revisión.</p></div>'+
+    // 12.11.2026: Anlegen mit «Rückgängig» ist der Normalfall; nur eine ausdrückliche Wahl schaltet es ab.
+    const directCalendar=calendarPref?.create_mode!=='review';
+    const directCalendarHTML='<div class="human-permission-case"><div class="human-case-title">Aufgaben und Termine aus dem Chat anlegen</div>'+
+      '<div class="human-state tone-complete"><b>'+(directCalendar?'Legt sofort an, mit «Rückgängig»':'Bestätigung vor dem Anlegen')+'</b>'+
+      '<p>'+(directCalendar?'Wenn du Romy bittest, eine eigene Aufgabe oder einen eigenen Termin einzutragen, legt sie ihn sofort an und lässt dir 10 Minuten «Rückgängig». Was sie selbst vorschlägt, kommt weiter als Karte.':'Romy zeigt dir vor jeder Aufgabe und jedem Termin eine Karte.')+
+      ' Ändern, Verschieben und Löschen brauchen weiterhin deine Bestätigung.</p></div>'+
       '<button type="button" id="calendarCreationMode" class="secondary">'+
-      (directCalendar?'Volver a confirmar antes de crear':'Permitir creación directa')+'</button></div>';
+      (directCalendar?'Wieder vorher bestätigen':'Sofort anlegen mit «Rückgängig»')+'</button></div>';
     const units=data?.units||[],permissions=data?.permissions||[];
     const candidates=data?.post_action_candidates||[],outcomeFeedback=data?.outcome_feedback||[];
     const pendingCorrections=candidates.filter(x=>x.status==='pending');

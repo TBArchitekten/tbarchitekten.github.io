@@ -1,13 +1,13 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "c5d233856a7e722fd64858bf4e100894d392c9f5",
+  "source_sha": "7d767caf338858832eb8c91f4b4c665014479b47",
   "mode": "app",
   "files": [
     {
       "source": "apps/isabella/ai.js",
       "target": "app/ai.js",
-      "sha": "f5d7f3d6aba73c7c1fc1a65bdee9f79c1e12f0f4",
-      "bytes": 38510
+      "sha": "ee1aa26195464ce2c1e97e3516a558e5e9bf7d23",
+      "bytes": 29580
     },
     {
       "source": "apps/isabella/assistant-i18n.js",
@@ -60,8 +60,8 @@
     {
       "source": "apps/isabella/turn-integrity.js",
       "target": "app/turn-integrity.js",
-      "sha": "78e7df59586672bbaae4c9bf19df720eb1b158f3",
-      "bytes": 9356
+      "sha": "bcd1d4d0b54def4b1f2fe4678590c56204c08675",
+      "bytes": 9565
     },
     {
       "source": "apps/isabella/voice-output.js",
