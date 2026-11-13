@@ -8,11 +8,11 @@ import {officeMilestonesFromPlans} from '../supabase/functions/_shared/office-te
 
 const path=p=>new URL('../'+p,import.meta.url);
 const read=p=>readFileSync(path(p),'utf8');
-test('Pinned Window engine is byte-identical to the 98 Git blobs in its committed manifest',()=>{
+test('Pinned Window engine is byte-identical to the 100 Git blobs in its committed manifest',()=>{
   const manifest=JSON.parse(read('docs/sync-window-engine-manifest.json'));
   assert.equal(manifest.source_repository,'gari01234/minds');
   assert.match(manifest.source_sha,/^[0-9a-f]{40}$/);
-  assert.equal(manifest.files.length,98);
+  assert.equal(manifest.files.length,100);
   for(const row of manifest.files){
     assert.ok(row.target.startsWith('supabase/functions/'));
     assert.equal(gitBlobHash(readFileSync(path(row.target))),row.sha,row.target+' diverged from its reviewed origin');

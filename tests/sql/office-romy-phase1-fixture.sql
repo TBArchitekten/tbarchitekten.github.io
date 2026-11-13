@@ -68,11 +68,31 @@ create table public.isabella_tasks(
   due_date date, completed_at timestamptz, archived_at timestamptz,
   work_status text not null default 'not_started', priority text not null default 'normal',
   work_bucket_id uuid, start_date date,
+  category_id uuid,
+  notes text not null default '',
+  reminder_time time,
+  recurrence jsonb not null default '{}'::jsonb,
+  sort_order integer not null default 0,
+  updated_at timestamptz not null default now(),
   client_key text not null default 'fixture-key',
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   unique(id,user_id)
 );
+-- Tombstones the shared engine writes when it takes something back (13.11.2026: the undo path of a
+-- direct creation needs them, so the fixture was missing the table the real Office database has).
+create table public.isabella_deleted_items(
+  user_id uuid not null default auth.uid() references auth.users(id),
+  entity_type text not null,
+  client_key text not null,
+  deleted_at timestamptz not null default now(),
+  primary key(user_id,entity_type,client_key)
+);
+alter table public.isabella_deleted_items enable row level security;
+create policy fixture_deleted_owner on public.isabella_deleted_items for all to authenticated
+  using (user_id=auth.uid()) with check (user_id=auth.uid());
+grant select,insert,update,delete on public.isabella_deleted_items to authenticated;
+
 -- Existing Office personal preferences are owner-private; recall functions read them.
 create table public.isabella_preferences(
   id uuid primary key default gen_random_uuid(),
