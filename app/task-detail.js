@@ -92,6 +92,7 @@ function render(ctx){
     choices.people.map(p=>selectOption(p.id,p.name,person)).join('')+
     (legacy?selectOption('__legacy__','Frühere Zuweisung · '+t.assignee,'__legacy__'):'');
   const checklist=yes(t.checklist),attachments=yes(t.attachments),links=yes(t.links);
+  const officeInfo=HIDE_CATEGORY?(t.metadata?.office_planner||{}):{};
   const checks=checklist.map(c=>checkRow(c)).join('');
   const attachmentsHtml=attachments.map(a=>'<div class="minds-task-attachment"><button type="button" data-task-attachment="'+E(a.path||'')+'">'+E(a.name||'Anhang')+'</button></div>').join('');
   const linksHtml=links.map((l,i)=>'<div class="minds-task-link"><a target="_blank" rel="noopener noreferrer" href="'+
@@ -127,6 +128,13 @@ function render(ctx){
     '</div>'+
     '<label class="minds-task-long-field">Labels<input id="taskDetailLabels" value="'+E(yes(t.labels).join(', '))+'" placeholder="TGA, Bauherr, Freigabe"></label>'+
     '<label class="minds-task-long-field">Notizen<textarea id="taskDetailNotes" rows="3" placeholder="Notizen hinzufügen">'+E(t.notes||'')+'</textarea></label>'+
+    (HIDE_CATEGORY?'<div class="minds-task-office-context">'+
+      '<div class="minds-task-office-refs"><label>Aufgabe / Kennung<input id="taskDetailTaskCode" maxlength="100" placeholder="z. B. L3-ENT-01" value="'+E(officeInfo.task_code||'')+'"></label>'+
+      '<label>Terminplan PSP<input id="taskDetailPSP" maxlength="180" placeholder="z. B. 01.01" value="'+E(officeInfo.terminplan_psp||'')+'"></label></div>'+
+      '<label class="minds-task-long-field">Prüfbares Arbeitsergebnis<textarea id="taskDetailWorkResult" rows="2" placeholder="Welches konkrete Ergebnis muss die Aufgabe liefern?">'+E(officeInfo.work_result||'')+'</textarea></label>'+
+      '<label class="minds-task-long-field">Fachliche Einordnung<textarea id="taskDetailProfessionalContext" rows="3" placeholder="Fachliche Grundlage, Grenzen und Schnittstellen">'+E(officeInfo.professional_context||'')+'</textarea></label>'+
+      (officeInfo.applicability?'<div class="minds-task-office-applicability">Anwendbarkeit: '+E(officeInfo.applicability)+'</div>':'')+
+    '</div>':'')+
     '<div class="minds-task-section"><div class="minds-task-section-head"><strong>Checklist</strong><span>'+checklist.filter(c=>c.done).length+'/'+checklist.length+'</span></div>'+
     '<div id="taskDetailChecks">'+checks+'</div><button type="button" class="minds-task-inline-add" id="taskDetailAddCheck">＋ Schritt hinzufügen</button></div>'+
     '<div class="minds-task-section"><div class="minds-task-section-head"><strong>Anhänge</strong>'+
@@ -142,10 +150,17 @@ function render(ctx){
     '<button type="button" class="minds-task-inline-add" id="taskDetailBook">＋ Zeit reservieren</button></div></div>'+
     '<div id="taskDetailSessions"><span class="minds-task-muted">Die Reservierungen gehören zu derselben Aufgabe.</span></div></div>'+
     '<footer class="minds-task-footer"><span id="taskDetailStatus" role="status" aria-live="polite">'+
-    (ctx.task?'Änderungen werden automatisch gespeichert':'Felder ausfüllen und die Aufgabe anlegen')+'</span>'+
+    (ctx.readOnly?'Muster · nur Ansicht · keine Änderungen am Projekt':ctx.task?'Änderungen werden automatisch gespeichert':'Felder ausfüllen und die Aufgabe anlegen')+'</span>'+
     (!ctx.task?'<button type="button" class="minds-task-create" id="taskDetailCreate">Aufgabe anlegen</button>':'')+
     '<button type="button" class="minds-task-reload hidden" id="taskDetailReload">Aktuelle Version laden</button></footer></div>';
-  app()?.openModal?.(ctx.task?'Aufgabe':'Neue Aufgabe',body);
+  app()?.openModal?.(ctx.readOnly?'Muster-Aufgabe':ctx.task?'Aufgabe':'Neue Aufgabe',body);
+  if(ctx.readOnly){
+    const host=$('[data-task-detail]');
+    host?.classList.add('is-muster-readonly');
+    host?.querySelectorAll('input,textarea,select,button').forEach(el=>{el.disabled=true;});
+    host?.querySelector('#taskDetailMenu')?.classList.add('hidden');
+    return; // No autoguardado, Upload, Checklistenänderung, Archiv oder Zeitplanung.
+  }
   bind(ctx);
   if(ctx.task)void loadSessions(ctx);
 }
@@ -174,6 +189,24 @@ function bind(ctx){
   });
   blur('#taskDetailTitle',value=>({title:value.trim()}));
   blur('#taskDetailNotes',value=>({notes:value}));
+  // Keep professional results and Terminplan references in existing task metadata.
+  // A deferred patch is computed against the latest saved metadata to avoid lost
+  // edits when a user tabs quickly across the four optional fields.
+  if(HIDE_CATEGORY){
+    const officeMeta=()=>{
+      const current=ctx.task?.metadata||ctx.draft?.metadata||{};
+      return {metadata:{...current,office_planner:{
+        ...(current.office_planner||{}),
+        task_code:$('#taskDetailTaskCode')?.value.trim()||'',
+        terminplan_psp:$('#taskDetailPSP')?.value.trim()||'',
+        work_result:$('#taskDetailWorkResult')?.value.trim()||'',
+        professional_context:$('#taskDetailProfessionalContext')?.value.trim()||''
+      }}};
+    };
+    ['#taskDetailTaskCode','#taskDetailPSP','#taskDetailWorkResult','#taskDetailProfessionalContext'].forEach(selector=>{
+      $(selector)?.addEventListener('blur',()=>{void update(ctx,officeMeta)});
+    });
+  }
   blur('#taskDetailLabels',value=>({labels:value.split(',').map(s=>s.trim()).filter(Boolean)}));
   field('#taskDetailStart',validDate(value=>({start_date:value||null})));
   field('#taskDetailDue',validDate(value=>({due_date:value||null})));
@@ -260,13 +293,17 @@ async function perform(ctx,patch,rerender=false){
 function update(ctx,patch,rerender=false){
   if(!patch)return Promise.resolve();
   if(!ctx.task){status('Bitte die Aufgabe zuerst anlegen.',true);return Promise.resolve()}
-  if(!Object.keys(patch).length)return Promise.resolve();
   if(ctx.blocked){status('Bearbeitung angehalten: bitte den Fehler prüfen und neu laden.',true);return Promise.resolve()}
-  const changed=Object.entries(patch).filter(([k,v])=>JSON.stringify(ctx.task[k])!==JSON.stringify(v));
-  if(!changed.length)return ctx.queue;
-  status('Speichere …');
-  const values=Object.fromEntries(changed);
-  ctx.queue=ctx.queue.then(()=>perform(ctx,values,rerender));
+  const changes=()=>typeof patch==='function'?patch():patch;
+  ctx.queue=ctx.queue.then(async()=>{
+    if(ctx.blocked||ctx.ticket!==generation)return;
+    const current=changes();
+    if(!current||!Object.keys(current).length)return;
+    const changed=Object.entries(current).filter(([k,v])=>JSON.stringify(ctx.task[k])!==JSON.stringify(v));
+    if(!changed.length)return;
+    status('Speichere …');
+    await perform(ctx,Object.fromEntries(changed),rerender);
+  });
   return ctx.queue;
 }
 async function changeProject(ctx,id){
@@ -294,7 +331,12 @@ function readDraft(){
     category_id:$('#taskDetailCategory')?(v('#taskDetailCategory')||null):undefined,
     reminder_time:v('#taskDetailReminder')||null,labels:v('#taskDetailLabels').split(',').map(s=>s.trim()).filter(Boolean),
     notes:v('#taskDetailNotes'),checklist:$('#taskDetailChecks')?collectChecks():[],
-    metadata:{planning:{estimated_minutes:Number(v('#taskDetailEstimate')||0)||0}}};
+    metadata:{planning:{estimated_minutes:Number(v('#taskDetailEstimate')||0)||0},
+      ...(HIDE_CATEGORY?{office_planner:{
+        task_code:v('#taskDetailTaskCode').trim(),terminplan_psp:v('#taskDetailPSP').trim(),
+        work_result:v('#taskDetailWorkResult').trim(),
+        professional_context:v('#taskDetailProfessionalContext').trim()
+      }}:{})}};
 }
 async function createTask(ctx){
   const title=$('#taskDetailTitle')?.value.trim();
@@ -316,7 +358,13 @@ async function createTask(ctx){
     assignee:null,labels:$('#taskDetailLabels').value.split(',').map(s=>s.trim()).filter(Boolean),
     notes:$('#taskDetailNotes').value,checklist:collectChecks(),
     completed_at:statusValue==='completed'?new Date().toISOString():null,
-    metadata:{planning:{estimated_minutes:estimate}},reminder_time:$('#taskDetailDue').value?($('#taskDetailReminder').value||null):null,
+    metadata:{planning:{estimated_minutes:estimate},
+      ...(HIDE_CATEGORY?{office_planner:{
+        task_code:$('#taskDetailTaskCode')?.value.trim()||'',
+        terminplan_psp:$('#taskDetailPSP')?.value.trim()||'',
+        work_result:$('#taskDetailWorkResult')?.value.trim()||'',
+        professional_context:$('#taskDetailProfessionalContext')?.value.trim()||''
+      }}:{})},reminder_time:$('#taskDetailDue').value?($('#taskDetailReminder').value||null):null,
     sort_order:0,work_sort_order:10};
   status('Lege an …');
   const button=$('#taskDetailCreate');button.disabled=true;
@@ -453,5 +501,17 @@ async function createQuick({title,date=null,categoryKey=null,projectKey=null,cli
   return task;
 }
 
-window.MINDS_TASK_DETAIL={open,datesValid,createQuick};
+// Open the SAME canonical task detail renderer with a read-only template object.
+// The template never enters the task read/write, upload or allocation paths.
+function preview({task,buckets=[],projectName='Muster LPH 3'}={}){
+  if(!task||!task.id)return;
+  const ticket=++generation;
+  const ctx={ticket,task,projectId:'__muster_lph3__',categoryId:null,
+    choices:{projects:[{id:'__muster_lph3__',name:projectName}],
+      buckets:buckets.map(b=>({id:b.id,name:b.name})),categories:[],people:[]},
+    opts:{bucketId:task.work_bucket_id},queue:Promise.resolve(),blocked:false,
+    teamIds:[],allocations:[],readOnly:true};
+  render(ctx);
+}
+window.MINDS_TASK_DETAIL={open,datesValid,createQuick,preview};
 })();
