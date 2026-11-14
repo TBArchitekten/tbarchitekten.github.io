@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` 299/299; Chromium-Test des Muster-Planners 5/5 lokal; Toolbar hochkant gerendert.
 - Quedó pendiente o sin probar: der Link in der iPhone-App selbst (nicht automatisierbar hier); er nutzt jetzt denselben Weg wie die Karte, die bei Gari funktioniert.
 - Riesgos o decisiones que necesitan a Gari: Listenansicht am iPhone einmal antippen, um wieder Spalten zu sehen (Einstellung bleibt auf dem Gerät).
-- PR:
+- PR: #93
 
 ### 2026-11-14 · Planner wieder wie bei Isabella: «Liste» ohne überlappende Buckets, quer alle Karten · Claude
 - Qué cambió y por qué: Gari meldete am iPhone (Muster LPH 3 und Planner Bernried) übereinanderliegende Buckets in «Liste» und im Querformat unsichtbare Karten; im Planner von Isabella (Window) funktioniert es. Vergleich mit Window (`gari01234/minds@d45775c`): alle Planner-Stylesheets sind identisch, nur Office lädt zusätzlich `office.css`. Fünf Regeln von Office #38 (05.11.) überschrieben Windows Layout: `.work-bucket{flex:0 0 328px}` / `flex-basis:300px` (in der Liste wird die Breite zur Höhe → 300 px hohe Buckets, Karten laufen über den nächsten), `.work-bucket-scroll{max-height:calc(100dvh - 260/250px)}` (quer ~130 px Kartenbereich) und `.work-board{…align-items:stretch…}`. Diese fünf Regeln sind entfernt; es gilt wieder Windows Layout. Gerendert mit Window-CSS, Office alt und Office neu bei 390×844 (Spalten und Liste), 844×390 und 1440×900: Office neu = Window in allen Fällen. «Liste» wird pro Gerät gespeichert (`minds-work-mobile-planner-layout-v1`), daher betraf es Muster und Projekte zugleich.
