@@ -728,7 +728,7 @@ async function loadPlanner(){
     }
   }
   buckets=b||[];
-  const {data:t,error:te}=await sb.from('isabella_tasks').select('id,client_key,title,due_date,completed_at,notes,work_bucket_id,work_status,priority,start_date,assignee,labels,checklist,attachments,links,sort_order,work_sort_order,assignee_person_id').eq('project_id',project.id).is('archived_at',null).order('work_sort_order',{ascending:true,nullsFirst:false}).order('sort_order').order('id');if(te)throw te;tasks=t||[];
+  const {data:t,error:te}=await sb.from('isabella_tasks').select('id,client_key,title,due_date,completed_at,notes,work_bucket_id,work_status,priority,start_date,assignee,labels,checklist,attachments,links,sort_order,work_sort_order,assignee_person_id,metadata').eq('project_id',project.id).is('archived_at',null).order('work_sort_order',{ascending:true,nullsFirst:false}).order('sort_order').order('id');if(te)throw te;tasks=t||[];
   if(tasks.length){
   const teamIdsFor=(links,primary)=>{
     const ids=[...new Set([...links].filter(x=>x.person_id)
@@ -807,6 +807,42 @@ async function hydratePlannerImages(root=document){
   const imgs=[...root.querySelectorAll?.('[data-work-task-image],[data-work-edit-image]')||[]].filter(x=>!x.dataset.loaded);
   await Promise.all(imgs.map(async img=>{const path=img.dataset.workTaskImage||img.dataset.workEditImage;if(!path)return;const url=await workSignedUrl(path);if(url&&img.isConnected){img.src=url;img.dataset.loaded='1'}}));
 }
+// Planner ↔ Terminplan: dates of linked tasks follow the project Terminplan, only after confirmation.
+async function syncFromTerminplan(){
+  const S=window.TBAPlannerTerminplanSync;
+  if(!S){setStatus('Terminplan-Abgleich ist nicht geladen. Bitte die Seite neu laden.');return}
+  const linked=tasks.filter(t=>S.linkOf(t));
+  if(!linked.length){setStatus('Keine Aufgabe ist mit dem Terminplan verknüpft.');return}
+  setStatus('Lese Terminplan …');
+  const ids=[...new Set(linked.map(t=>S.linkOf(t).instance_id).filter(Boolean))];
+  const {data,error}=await sb.from('office_terminplan_instances').select('id,state,updated_at').in('id',ids);
+  if(error){setStatus('Terminplan konnte nicht gelesen werden: '+error.message);return}
+  const results=(data||[]).map(inst=>S.plan(tasks,inst));
+  const changes=results.flatMap(r=>r.changes),missing=results.flatMap(r=>r.missing);
+  const unchanged=results.reduce((n,r)=>n+r.unchanged,0),done=results.reduce((n,r)=>n+r.done,0);
+  setStatus('');
+  const d=v=>v?v.slice(8,10)+'.'+v.slice(5,7)+'.'+v.slice(2,4):'–';
+  const span=(a,b)=>(a&&a!==b?d(a)+' – ':'')+d(b);
+  const rows=changes.map(c=>'<li class="work-sync-row"><strong>'+esc(c.title)+'</strong><span>'+esc(span(c.before.start_date,c.before.due_date))+' → <b>'+esc(span(c.after.start_date,c.after.due_date))+'</b>'+
+    (c.before.terminplan_psp!==c.after.terminplan_psp?' · PSP '+esc(c.after.terminplan_psp):'')+'</span></li>').join('');
+  const lost=missing.length?'<p class="small">Nicht mehr im Terminplan (bleiben unverändert): '+missing.map(m=>esc(m.title)).join(', ')+'</p>':'';
+  const info='<p class="small">'+linked.length+' verknüpfte Aufgaben · '+unchanged+' stimmen schon'+(done?' · '+done+' erledigt (bleiben unverändert)':'')+'</p>';
+  window.ISABELLA_APP?.openModal?.('Termine aus Terminplan',`<div class="form work-bucket-editor work-sync">${info}
+    ${changes.length?'<p>'+changes.length+' Aufgabe'+(changes.length===1?'':'n')+' bekommen neue Termine:</p><ul class="work-sync-list">'+rows+'</ul>':'<p>Alle verknüpften Aufgaben stimmen mit dem Terminplan überein.</p>'}${lost}
+    <div class="confirm-actions"><button id="workSyncCancel" class="secondary">${changes.length?'Abbrechen':'Schließen'}</button>${changes.length?'<button id="workSyncApply" class="primary">Übernehmen</button>':''}</div></div>`);
+  $('#workSyncCancel').onclick=()=>window.ISABELLA_APP?.closeModal?.();
+  if(!changes.length)return;
+  $('#workSyncApply').onclick=async()=>{
+    $('#workSyncApply').disabled=true;
+    const byId=new Map(tasks.map(t=>[t.id,t])),now=new Date().toISOString();
+    const writes=changes.map(c=>sb.from('isabella_tasks').update({start_date:c.after.start_date,due_date:c.after.due_date,
+      metadata:S.metadataWith(byId.get(c.id),c.after.terminplan_psp),updated_at:now}).eq('id',c.id));
+    const failed=(await Promise.all(writes)).filter(r=>r.error).length;
+    window.ISABELLA_APP?.closeModal?.();
+    await renderPlanner();
+    setStatus(failed?(changes.length-failed)+' Aufgaben aktualisiert, '+failed+' nicht gespeichert – bitte erneut versuchen.':changes.length+' Aufgabe'+(changes.length===1?'':'n')+' aus dem Terminplan aktualisiert.');
+  };
+}
 async function renderPlanner(preview=false){
   if(preview){
     const result=await fetch('./data/muster-planner-lph3-v0.3.json?v=lph3-031',{cache:'no-store'});
@@ -832,7 +868,7 @@ async function renderPlanner(preview=false){
   const body=$('#workBody'),unbucketed=tasks.some(t=>!t.work_bucket_id),columns=[...(unbucketed?[{id:'__none',name:'Ohne Bucket',virtual:true}]:[]),...buckets];
   // Buckets side by side by default (scroll sideways on the phone); the list is opt-in.
   const mobileList=localStorage.getItem(WORK_MOBILE_LAYOUT_KEY)==='list';
-  body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Listenansicht</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
+  body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Listenansicht</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':(tasks.some(t=>window.TBAPlannerTerminplanSync?.linkOf(t))?'<button type="button" data-work-terminplan-sync title="Termine der verknüpften Aufgaben aus dem Projekt-Terminplan übernehmen">Termine aus Terminplan</button>':'')+'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
     <div class="work-board ${mobileList?'mobile-stack':''}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
       ${b.terminplan_ref?`<div class="work-bucket-pretitle">Abgabe / Planungspaket${preview?' · '+esc(b.id):''}</div>`:''}
       <header class="work-bucket-header">${b.virtual
@@ -875,6 +911,7 @@ async function renderPlanner(preview=false){
     localStorage.setItem(WORK_MOBILE_LAYOUT_KEY,listMode?'list':'columns');
   });
   if(preview)return; // The Muster shares the real Planner renderer, but NEVER its write handlers.
+  $('[data-work-terminplan-sync]')?.addEventListener('click',()=>void syncFromTerminplan());
   $('[data-work-team]')?.addEventListener('click',()=>void window.MINDS_WORK_TEAM.open(project,()=>renderPlanner()).catch(e=>setStatus('Team: '+(e?.message||e))));
   $('[data-work-add-bucket]')?.addEventListener('click',()=>void addBucket());
   $('[data-work-show-bucket-archive]')?.addEventListener('click',()=>void openArchivedBuckets());
