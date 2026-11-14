@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` (282) und die Chromium-Tests lokal grün. Entscheidend ist der Fähigkeits-Vergleich in Window (`Isabella bench (capability)`, Lauf 43517908330): 31 erfundene Gesprächsmomente, je dreimal gespielt, einmal über den alten Weg (mit immer richtigem Router, langen Blöcken und ganz vorgeladenem Projekt: sein bester Fall) und einmal über den neuen. **Neuer Weg 100 % (31/31), alter Weg 87 % (27/31); verloren geht nichts.** Besser werden vier Momente, darunter der schwere Angebotsvergleich (3/3 statt 1/3) und Romys Deutsch. Einer der Momente deckte eine echte Lücke in **beiden** Wegen auf: auf «das Morgenresümee bitte um 7:30» legte sie eine **zweite** Routine an, statt die vorhandene zu ändern; die Notiz zu Routinen sagt das jetzt, und der Moment besteht 3/3.
 - Quedó pendiente o sin probar: ein echter Zug von Gari in Romy. Rückweg ohne Codeänderung: `ISABELLA_ROUTER=on` (alter Weg), `ISABELLA_DETAILS=legacy` (lange Blöcke).
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: #PRNUM
+- PR: #88
 
 ---
 
