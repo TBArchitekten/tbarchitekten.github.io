@@ -40,8 +40,22 @@ window.ISABELLA_APP={getState:()=>({}),openModal:(title,html)=>{
 <script src="./task-team.js"></script>
 <script src="./task-detail.js"></script>
 <script src="./work.js"></script></body></html>`;
+// Second harness: EVERY stylesheet of the real page in its real order and the real shell frame.
+// The small harness above cannot see conflicts between Window and Office rules (e.g. list mode).
+const pageCss=[...fs.readFileSync(path.join(root,'app/index.html'),'utf8').matchAll(/<link rel="stylesheet" href="([^"]+)">/g)]
+  .map(m=>'<link rel="stylesheet" href="'+m[1]+'">').join('');
+const fullHarness=harness
+  .replace(/<link rel="stylesheet"[^>]*>\s*/g,'').replace('<meta name="viewport" content="width=device-width,initial-scale=1">','<meta name="viewport" content="width=device-width,initial-scale=1">'+pageCss)
+  .replace(/<style>[\s\S]*?<\/style>/,'<style>#modalRoot[hidden]{display:none}</style>')
+  .replace('<body data-section="work" class="office-app">\n<div class="work-project-switch"></div><div id="workProjectTitle"></div>\n<nav><button data-work-view="planner">Planner</button><button data-work-view="overview">Panorama</button></nav>\n<div id="workStatus"></div><div id="workBody"></div>',
+    '<body data-section="work" class="office-app"><div class="app" id="app"><main id="swipeArea" class="swipe-area"><section id="workScreen" class="screen work-screen active" data-screen="work"><div class="work-shell">'+
+    '<div class="work-head"><div><h1 id="workProjectTitle">Work</h1></div><div class="work-project-switch"></div></div>'+
+    '<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner" class="active">Planner</button></div>'+
+    '<div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div></div></section></main></div>');
+if(fullHarness===harness||!fullHarness.includes('office.css')||!fullHarness.includes('class="work-body"'))throw Error('full-CSS harness not built');
 const server=http.createServer((req,res)=>{
  const pathname=decodeURIComponent((req.url||'').split('?')[0]);
+ if(pathname==='/app/__muster_full_css__.html'){res.writeHead(200,{'content-type':'text/html'});res.end(fullHarness);return;}
  if(pathname==='/app/__muster_preview_harness__.html'){
    res.writeHead(200,{'content-type':'text/html'});res.end(harness);return;
  }
@@ -99,5 +113,54 @@ test('Mobile Muster retains original Planner list switch and read-only detail',a
    assert.equal(await page.locator('#taskDetailAddFile').isDisabled(),true);
    assert.deepEqual(await page.evaluate(()=>window.__dbWrites),[]);
    assert.deepEqual(errors,[]);
+ }finally{await page.close()}
+});
+
+const fullUrl=()=>`http://localhost:${server.address().port}/app/__muster_full_css__.html#section=work&muster=LPH3`;
+const bucketBoxes=page=>page.evaluate(()=>[...document.querySelectorAll('.work-bucket')].map(b=>{
+  const r=b.getBoundingClientRect(),s=b.querySelector('.work-bucket-scroll');
+  return {top:r.top,bottom:r.bottom,height:r.height,content:b.scrollHeight,scrollClient:s?.clientHeight??0,scrollContent:s?.scrollHeight??0};
+}));
+
+test('Phone list mode stacks Buckets without overlap with all Office stylesheets (Muster and projects)',async()=>{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ try{
+   await page.addInitScript(()=>localStorage.setItem('minds-work-mobile-planner-layout-v1','list'));
+   await page.goto(fullUrl());
+   await page.locator('[data-work-task="L3.GRU.1"]').waitFor({state:'attached'});
+   assert.equal(await page.locator('.work-board.mobile-stack').count(),1);
+   const boxes=await bucketBoxes(page);
+   assert.equal(boxes.length,7);
+   boxes.forEach((b,i)=>{
+     assert.ok(b.height+2>=b.content,'Bucket '+(i+1)+' grows with its cards ('+Math.round(b.height)+' < '+b.content+')');
+     if(i)assert.ok(boxes[i-1].bottom<=b.top+0.5,'Bucket '+(i+1)+' starts below Bucket '+i);
+   });
+   assert.deepEqual(errors,[]);
+ }finally{await page.close()}
+});
+
+test('Phone landscape shows every card: no tiny inner card area per Bucket',async()=>{
+ const page=await browser.newPage({viewport:{width:844,height:390},isMobile:true,hasTouch:true});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ try{
+   await page.goto(fullUrl());
+   await page.locator('[data-work-task="L3.GRU.1"]').waitFor({state:'attached'});
+   for(const [i,b] of (await bucketBoxes(page)).entries())
+     assert.ok(b.scrollClient+1>=b.scrollContent,'Bucket '+(i+1)+' hides cards ('+b.scrollClient+' of '+b.scrollContent+' px visible)');
+   const last=page.locator('[data-work-task="L3.A7.ABS"]');
+   await last.scrollIntoViewIfNeeded();
+   assert.ok(await last.isVisible());
+   assert.deepEqual(errors,[]);
+ }finally{await page.close()}
+});
+
+test('Desktop keeps Buckets side by side with all Office stylesheets',async()=>{
+ const page=await browser.newPage({viewport:{width:1440,height:900}});
+ try{
+   await page.goto(fullUrl());
+   await page.locator('[data-work-task="L3.GRU.1"]').waitFor({state:'attached'});
+   const boxes=await bucketBoxes(page);
+   assert.ok(boxes.every(b=>Math.abs(b.top-boxes[0].top)<1),'all Buckets in one row');
  }finally{await page.close()}
 });
