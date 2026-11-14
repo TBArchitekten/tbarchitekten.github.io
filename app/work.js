@@ -245,10 +245,10 @@ function cockpitPflegeLine(state){
   if(run.status==='fehler')return '<p class="cockpit-pflege"><b>Romy:</b> konnte die Akte letzte Nacht nicht prüfen ('+esc(when)+'). Heute Nacht versucht sie es erneut.</p>';
   if(run.status==='nichts_neu')return '<p class="cockpit-pflege"><b>Romy, '+esc(when)+':</b> nichts Neues seit der letzten Prüfung.</p>';
   const parts=[run.steckbrief?'Steckbrief actualizado':'',run.fristen?run.fristen+' Frist(en)':'',run.entscheidungen?run.entscheidungen+' Entscheidung(en)':'',run.aufgaben?run.aufgaben+' Aufgabe(n)':'',run.widersprueche?run.widersprueche+' Widerspruch/-sprüche':''].filter(Boolean);
-  return '<p class="cockpit-pflege"><b>Isabella, '+esc(when)+':</b> '+esc(run.zusammenfassung||(parts.length?'propuso '+parts.join(', ')+'.':'nada relevante en lo nuevo.'))+'</p>';
+  return '<p class="cockpit-pflege"><b>Romy, '+esc(when)+':</b> '+esc(run.zusammenfassung||(parts.length?'hat '+parts.join(', ')+' vorgeschlagen.':'nichts Relevantes im Neuen.'))+'</p>';
 }
 function cockpitSource(r){
-  const bits=[r.metadata?.thema,r.metadata?.quelle,r.metadata?.source==='isabella_akte_pflege'?'propuesta de Isabella':r.metadata?.source==='claude_connector'?'Claude':''].filter(Boolean);
+  const bits=[r.metadata?.thema,r.metadata?.quelle,r.metadata?.source==='isabella_akte_pflege'?'Vorschlag von Romy':r.metadata?.source==='claude_connector'?'Claude':''].filter(Boolean);
   return bits.length?'<small>'+esc(bits.join(' · '))+'</small>':'';
 }
 // Why Isabella proposes it: her one-line reason and the exact passage of the source.
@@ -278,7 +278,7 @@ function cockpitParaTi(m){
   for(const t of m.overdue)cards.push('<article class="cockpit-card is-overdue"><span class="cockpit-kind">Vencida · '+esc(cockpitIn(cockpitDayDiff(m.today,t.due_date)))+'</span><p>'+esc(t.title||'Ohne Titel')+'</p>'+(t.assignee?'<small>'+esc(t.assignee)+'</small>':'')+
     '<div class="cockpit-actions"><button type="button" class="secondary" data-work-edit-task="'+esc(t.id)+'">Aufgabe öffnen</button><button type="button" class="secondary" data-cockpit-done="'+esc(t.id)+'">Erledigt</button></div></article>');
   const toConfirm=m.conflicts.length+m.pending.length+m.proposedTasks.length;
-  const head=[toConfirm?toConfirm+' por confirmar':'',m.overdue.length?m.overdue.length+(m.overdue.length===1?' vencida':' vencidas'):''].filter(Boolean).join(' · ');
+  const head=[toConfirm?toConfirm+' zu bestätigen':'',m.overdue.length?m.overdue.length+(m.overdue.length===1?' überfällig':' überfällig'):''].filter(Boolean).join(' · ');
   const limit=8,shown=paraTiExpanded?cards:cards.slice(0,limit);
   return '<section class="cockpit-section" aria-labelledby="cockpitParaTi"><div class="cockpit-head"><h2 id="cockpitParaTi">Für dich</h2><span>'+esc(head||'Nichts offen')+'</span></div>'+
     (cards.length?'<div class="cockpit-cards">'+shown.join('')+'</div>'+(cards.length>limit?'<button type="button" class="cockpit-more" data-cockpit-more>'+(paraTiExpanded?'Weniger anzeigen':(cards.length-limit)+' weitere anzeigen')+'</button>':'')
@@ -1518,7 +1518,7 @@ async function sendThreadMessage(thread,overrideMessage=null){
     if(reply)await persistThreadMessage(cid,'assistant',reply,{sources:Array.isArray(result?.sources)?result.sources.slice(0,8):[],artifacts:Array.isArray(result?.artifacts)?result.artifacts.slice(0,8):[],incomplete_response:!!result?.incomplete,incomplete_reason:result?.incomplete_reason||null});
     const proposal=result?.proposal||(Array.isArray(result?.proposals)?result.proposals[0]:null);
     await sb.from('minds_work_threads').update({last_activity_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',thread.id);
-    setThreadProgress(thread.id,'received',result?.incomplete?'Teilantwort erhalten. Du kannst sie fortsetzen.':reply?'Respuesta recibida.':'Solicitud procesada; no hubo respuesta textual.');
+    setThreadProgress(thread.id,'received',result?.incomplete?'Teilantwort erhalten. Du kannst sie fortsetzen.':reply?'Antwort erhalten.':'Anfrage bearbeitet; es kam keine Textantwort.');
     setStatus('');
     if(activeThreadId===thread.id&&view==='threads')await renderThreads();
     if(proposal&&!result?.incomplete)window.MINDS_PROPOSALS?.edit?.(proposal);

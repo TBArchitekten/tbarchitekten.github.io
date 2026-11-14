@@ -91,7 +91,7 @@ test('Muster is rendered inside EXISTING Office Work Planner (no second custom b
   assert.match(detail,/function preview\(\{task,buckets=\[\],projectName='Muster LPH 3'/);
   assert.match(detail,/if\(ctx\.readOnly\)\{/);
   assert.match(detail,/return; \/\/ No autoguardado, Upload, Checklistenänderung, Archiv oder Zeitplanung/);
-  assert.match(index,/work\.js\?v=office44/);
+  assert.match(index,/work\.js\?v=office45/);
   assert.match(index,/task-detail\.js\?v=office4/);
 });
 

@@ -22,7 +22,7 @@ function canonicalFeedPreferences(value={}){
   const p=value&&typeof value==='object'?value:{};
   return {mode:'situational_personal',instructions:String(p.instructions||'').trim(),weatherLocation:String(p.weatherLocation||'').trim(),topics:[],customTopics:[],following:[],followGraph:[]};
 }
-function apiError(e){return e?.message||String(e||'Error desconocido')}
+function apiError(e){return e?.message||String(e||'Unbekannter Fehler')}
 async function init(){
   if(!sb||!app){setStatus('Nur lokal · Office nicht erreichbar');if(authButton)authButton.textContent='Nur lokal';return}
   const {data,error}=await sb.auth.getSession();

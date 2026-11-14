@@ -71,7 +71,7 @@ test('Romy uses the existing Window modal for review, trace and owner retraction
    "window.confirm(p.kind==='remember'"
  ])assert.ok(ui.includes(needle),'Memory UI missing '+needle);
  assert.ok(html.includes('office-assistant.js?v=office37'));
- assert.ok(html.includes('app.js?v=office52'));
+ assert.ok(html.includes('app.js?v=office53'));
  assert.ok(!ui.includes('office-chat-layout'));
  new Function(ui);
 });
