@@ -296,7 +296,7 @@ async function handleReviewDeepLink(){
       confirmProposal({...row.candidate,request_id:requestId});
       return true;
     }
-    modal('Revisión',`<div class="small">Esta propuesta ya no está pendiente o ya fue resuelta. Puedes volver al chat de Isabella para continuar.</div>`);
+    modal('Prüfung',`<div class="small">Dieser Vorschlag ist nicht mehr offen oder schon erledigt. Du kannst im Gespräch mit Romy weitermachen.</div>`);
     return true;
   }catch{return false}
 }
@@ -779,7 +779,7 @@ function closeIdeaWorkspace(){
 }
 function artifactPreviewMarkup(a,compact=false){
   const title=String(a?.title||'Vista previa'),path=String(a?.storage_path||'');if(!path)return '';
-  return `<button class="generated-artifact-preview ${compact?'compact':''}" data-artifact-open-image="${esc(path)}" data-artifact-title="${esc(title)}" type="button" aria-label="Abrir vista previa"><img loading="lazy" data-artifact-image="${esc(path)}" alt="Vista previa del documento"></button>`;
+  return `<button class="generated-artifact-preview ${compact?'compact':''}" data-artifact-open-image="${esc(path)}" data-artifact-title="${esc(title)}" type="button" aria-label="Vorschau öffnen"><img loading="lazy" data-artifact-image="${esc(path)}" alt="Dokumentvorschau"></button>`;
 }
 function artifactMarkup(a,compact=false){
   const kind=String(a?.kind||''),title=String(a?.title||'Artefacto'),path=String(a?.storage_path||'');
@@ -1245,6 +1245,11 @@ function latestExposureScope(){
 // Office (08.11.2026, review of the Romy phases): receipts in German, and kept in the conversation
 // Romy reads. The browser may not write assistant rows there; the RPC checks the owner and accepts
 // only a short system notice. Without it, Romy kept saying a confirmed change was still pending.
+//
+// Since 14.11.2026 every one of these lines is written in German where it is produced — here at the
+// call site, in turn-integrity.js (officeSummary) and in the engine (assistant-voice.mjs). What is
+// left of this table is a reader for the history: lines stored in Spanish before that date. Do not
+// add a row. A notice that comes out in Spanish is a line whose own source still has to be fixed.
 const OFFICE_NOTICE_DE=[
   [/^Sin cambios\.$/,'Keine Änderung.'],
   [/^Guardado\.$/,'Gespeichert.'],
@@ -1656,33 +1661,33 @@ function proposalLabel(p){
   }
   if(p.kind==='assistant_preferences'){
     const add=(p.add_rules||[]).length,remove=(p.remove_rules||[]).length;
-    return ['Mejorar Isabella',add?('adoptar '+add+(add===1?' regla':' reglas')):'',remove?('retirar '+remove):''].filter(Boolean).join(' · ');
+    return ['Romy verbessern',add?(add+(add===1?' Regel':' Regeln')+' übernehmen'):'',remove?(remove+' zurücknehmen'):''].filter(Boolean).join(' · ');
   }
   if(p.kind==='standing_intent')return ['Erinnern, wenn',p.trigger_text,p.project||''].filter(Boolean).join(' · ');
   if(p.kind==='expectation')return ['Erwartet',p.title,p.due_date,p.due_time||''].filter(Boolean).join(' · ');
   if(p.kind==='commitment')return ['Im Blick behalten',p.title,p.project||p.scope||''].filter(Boolean).join(' · ');
-  if(p.kind==='work_claim')return ['Guardar conocimiento',p.project,p.claim_type,p.statement].filter(Boolean).join(' · ');
-  if(p.kind==='skill_proposal')return ['Crear Skill',p.agent==='sofia'?'Sofía':'Isabella',p.name].filter(Boolean).join(' · ');
+  if(p.kind==='work_claim')return ['Wissen speichern',p.project,p.claim_type,p.statement].filter(Boolean).join(' · ');
+  if(p.kind==='skill_proposal')return ['Fähigkeit anlegen',p.agent==='sofia'?'Sofía':'Romy',p.name].filter(Boolean).join(' · ');
   const action=p.action||'create';
-  const actionName=action==='update'?'Modificar':action==='delete'?'Eliminar':action==='complete'?'Completar':action==='archive'?'Archivieren':'Agregar';
-  const bits=[actionName,p.kind==='event'?'evento':'tarea',p.title,p.date];
+  const actionName=action==='update'?'Ändern':action==='delete'?'Löschen':action==='complete'?'Abschließen':action==='archive'?'Archivieren':'Anlegen';
+  const bits=[actionName,p.kind==='event'?'Termin':'Aufgabe',p.title,p.date];
   if(p.time)bits.push(p.time);
   if(p.duration_minutes)bits.push(p.duration_minutes+' min');
   if(p.category)bits.push(p.category);
   if(p.project)bits.push(p.project);
-  if(p.reminder_time)bits.push('recordatorio '+p.reminder_time);
+  if(p.reminder_time)bits.push('Erinnerung '+p.reminder_time);
   if(p.recurrence)bits.push(p.recurrence);
   return bits.filter(Boolean).join(' · ');
 }
 function proposalEditor(p,onDone){
   if(p.kind==='standing_intent'){
-    modal('Revisar memoria futura',`<div class="form proposal-editor">
-      <div class="small">Esto no tiene una hora fija. Isabella lo recordará cuando vuelva a aparecer esta situación, con cooldown y límite de activaciones.</div>
-      <label>Cuando ocurra<textarea id="standingTrigger" rows="3">${esc(p.trigger_text||'')}</textarea></label>
-      <label>Recordarme<textarea id="standingReminder" rows="3">${esc(p.reminder_text||'')}</textarea></label>
-      <label>Proyecto (opcional)<input id="standingProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label>
-      <label>Palabras de activación<input id="standingTerms" value="${esc((p.trigger_terms||[]).join(', '))}" placeholder="dachentwässerung, entwässerung"></label>
-      <div class="form-grid-3"><label>Cooldown (h)<input id="standingCooldown" type="number" min="0" value="${Number(p.cooldown_hours??24)}"></label><label>Máx. avisos<input id="standingMax" type="number" min="1" max="12" value="${Number(p.max_triggers||3)}"></label><label>Caduca (días)<input id="standingExpiry" type="number" min="1" max="365" value="${Number(p.expires_days||90)}"></label></div>
+    modal('Künftige Erinnerung prüfen',`<div class="form proposal-editor">
+      <div class="small">Das hat keine feste Uhrzeit. Romy erinnert dich daran, sobald diese Situation wieder auftaucht — mit Sperrzeit und begrenzter Anzahl.</div>
+      <label>Wenn das eintritt<textarea id="standingTrigger" rows="3">${esc(p.trigger_text||'')}</textarea></label>
+      <label>Daran erinnern<textarea id="standingReminder" rows="3">${esc(p.reminder_text||'')}</textarea></label>
+      <label>Projekt (optional)<input id="standingProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label>
+      <label>Auslösende Wörter<input id="standingTerms" value="${esc((p.trigger_terms||[]).join(', '))}" placeholder="dachentwässerung, entwässerung"></label>
+      <div class="form-grid-3"><label>Sperrzeit (h)<input id="standingCooldown" type="number" min="0" value="${Number(p.cooldown_hours??24)}"></label><label>Max. Hinweise<input id="standingMax" type="number" min="1" max="12" value="${Number(p.max_triggers||3)}"></label><label>Läuft ab (Tage)<input id="standingExpiry" type="number" min="1" max="365" value="${Number(p.expires_days||90)}"></label></div>
       <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Übernehmen</button></div>
     </div>`);
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
@@ -1691,13 +1696,13 @@ function proposalEditor(p,onDone){
   }
 
   if(p.kind==='expectation'){
-    const types=[['reply','Respuesta'],['delivery','Entrega'],['decision','Decisión'],['document','Documento'],['external_event','Evento externo'],['other','Otro']];
-    modal('Revisar expectativa',`<div class="form proposal-editor">
-      <div class="small">Esto no es una tarea. Es algo que esperas que ocurra. Si llega la fecha sin confirmación, Isabella lo marcará como pendiente de comprobar; no asumirá que no ocurrió.</div>
-      <label>Nombre<input id="expectationTitle" value="${esc(p.title||'')}" placeholder="Respuesta del consultor"></label>
-      <label>Qué esperas que ocurra<textarea id="expectationEvent" rows="4">${esc(p.expected_event||'')}</textarea></label>
-      <div class="form-grid-2"><label>Tipo<select id="expectationType">${types.map(([v,l])=>`<option value="${v}" ${v===(p.expectation_type||'other')?'selected':''}>${l}</option>`).join('')}</select></label><label>Proyecto (opcional)<input id="expectationProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label></div>
-      <div class="form-grid-2"><label>Fecha esperada<input id="expectationDate" type="date" value="${esc(p.due_date||'')}"></label><label>Hora exacta (opcional)<input id="expectationTime" type="time" value="${esc(p.due_time||'')}"></label></div>
+    const types=[['reply','Antwort'],['delivery','Lieferung'],['decision','Entscheidung'],['document','Dokument'],['external_event','Externer Termin'],['other','Anderes']];
+    modal('Erwartung prüfen',`<div class="form proposal-editor">
+      <div class="small">Das ist keine Aufgabe, sondern etwas, das du erwartest. Kommt das Datum ohne Bestätigung, markiert Romy es als unbestätigt; sie nimmt nicht an, dass es nicht eingetreten ist.</div>
+      <label>Name<input id="expectationTitle" value="${esc(p.title||'')}" placeholder="Antwort des Beraters"></label>
+      <label>Was du erwartest<textarea id="expectationEvent" rows="4">${esc(p.expected_event||'')}</textarea></label>
+      <div class="form-grid-2"><label>Art<select id="expectationType">${types.map(([v,l])=>`<option value="${v}" ${v===(p.expectation_type||'other')?'selected':''}>${l}</option>`).join('')}</select></label><label>Projekt (optional)<input id="expectationProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label></div>
+      <div class="form-grid-2"><label>Erwartetes Datum<input id="expectationDate" type="date" value="${esc(p.due_date||'')}"></label><label>Genaue Uhrzeit (optional)<input id="expectationTime" type="time" value="${esc(p.due_time||'')}"></label></div>
       <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Übernehmen</button></div>
     </div>`);
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
@@ -1717,46 +1722,46 @@ function proposalEditor(p,onDone){
   }
 
     if(p.kind==='commitment'){
-    const sourceNote=p.source_open_loop?'<div class="small">Origen: asunto abierto detectado en un checkpoint. Al confirmar se conservará esa procedencia sin convertirla en hecho.</div><blockquote>'+esc(p.source_open_loop)+'</blockquote>':'';
-    modal('Revisar continuidad',`<div class="form proposal-editor">
-      <div class="small">${p.persistent_work?'Al confirmar, Isabella mantendrá este objetivo vivo y empezará a trabajarlo en segundo plano. El trabajo interno no obtiene permisos adicionales y cualquier acción externa seguirá su confirmación normal.':'Un Commitment mantiene un objetivo vivo entre conversaciones. No crea tareas, rutinas ni acciones por sí mismo.'}</div>
+    const sourceNote=p.source_open_loop?'<div class="small">Herkunft: offener Punkt, in einem Checkpoint erkannt. Mit der Bestätigung bleibt diese Herkunft erhalten, ohne zur Tatsache zu werden.</div><blockquote>'+esc(p.source_open_loop)+'</blockquote>':'';
+    modal('Kontinuität prüfen',`<div class="form proposal-editor">
+      <div class="small">${p.persistent_work?'Mit der Bestätigung hält Romy dieses Ziel präsent und beginnt, im Hintergrund daran zu arbeiten. Die interne Arbeit erhält keine zusätzlichen Rechte, und jede Aktion nach außen braucht weiterhin deine normale Bestätigung.':'Eine Kontinuität hält ein Ziel über Gespräche hinweg präsent. Sie legt von sich aus keine Aufgaben, Routinen oder Aktionen an.'}</div>
       ${sourceNote}
-      <label>Nombre<input id="commitmentTitle" value="${esc(p.title||'')}" placeholder="Qué mantener vivo"></label>
-      <label>Objetivo<textarea id="commitmentObjective" rows="5">${esc(p.objective||'')}</textarea></label>
-      <div class="form-grid-2"><label>Ámbito<select id="commitmentScope">${[['global','Global'],['personal','Personal'],['project','Proyecto'],['theory','Theory'],['other','Otro']].map(([v,l])=>`<option value="${v}" ${v===(p.scope||'global')?'selected':''}>${l}</option>`).join('')}</select></label><label>Proyecto (opcional)<input id="commitmentProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label></div>
-      <label>Criterio de cierre (opcional)<textarea id="commitmentCriteria" rows="3">${esc(p.completion_criteria||'')}</textarea></label>
-      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Volver</button><button id="proposalEditSave" class="primary">${p.persistent_work?'Encárgate':'Mantener vivo'}</button></div>
+      <label>Name<input id="commitmentTitle" value="${esc(p.title||'')}" placeholder="Was präsent bleiben soll"></label>
+      <label>Ziel<textarea id="commitmentObjective" rows="5">${esc(p.objective||'')}</textarea></label>
+      <div class="form-grid-2"><label>Bereich<select id="commitmentScope">${[['global','Global'],['personal','Persönlich'],['project','Projekt'],['theory','Theory'],['other','Anderes']].map(([v,l])=>`<option value="${v}" ${v===(p.scope||'global')?'selected':''}>${l}</option>`).join('')}</select></label><label>Projekt (optional)<input id="commitmentProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label></div>
+      <label>Abschlusskriterium (optional)<textarea id="commitmentCriteria" rows="3">${esc(p.completion_criteria||'')}</textarea></label>
+      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">${p.persistent_work?'Übernimm das':'Präsent halten'}</button></div>
     </div>`);
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
     $('#proposalEditSave').onclick=()=>onDone?.({...p,title:$('#commitmentTitle').value.trim(),objective:$('#commitmentObjective').value.trim(),scope:$('#commitmentScope').value,project:$('#commitmentProject').value.trim()||null,completion_criteria:$('#commitmentCriteria').value.trim()||null});
     return;
   }
   if(p.kind==='work_claim'){
-    modal('Revisar conocimiento de proyecto',`<div class="form proposal-editor">
-      <div class="small">Una fuente puede afirmar algo sin que MINDS lo trate automáticamente como verdad. Revisa el estado y la procedencia antes de guardarlo.</div>
-      <label>Proyecto<input id="claimProject" value="${esc(p.project||'')}"></label>
+    modal('Projektwissen prüfen',`<div class="form proposal-editor">
+      <div class="small">Eine Quelle kann etwas behaupten, ohne dass das Office es automatisch als Tatsache behandelt. Bitte Status und Herkunft prüfen, bevor du es speicherst.</div>
+      <label>Projekt<input id="claimProject" value="${esc(p.project||'')}"></label>
       <label>Claim<textarea id="claimStatement" rows="4">${esc(p.statement||'')}</textarea></label>
-      <div class="form-grid-2"><label>Tipo<select id="claimType">${['fact','decision','requirement','deadline','dependency','open_question','assumption','constraint','other'].map(x=>`<option value="${x}" ${x===p.claim_type?'selected':''}>${x}</option>`).join('')}</select></label><label>Estado<select id="claimStatus">${[["proposed","Propuesto"],["confirmed","Confirmado"],["disputed","En disputa"],["resolved","Resuelto"],["rejected","Descartado"]].map(([v,l])=>`<option value="${v}" ${v===(p.status||"proposed")?"selected":""}>${l}</option>`).join('')}</select></label></div>
-      <div class="form-grid-2"><label>Disciplina<input id="claimDiscipline" value="${esc(p.discipline||'')}"></label><label>Tema<input id="claimTopic" value="${esc(p.topic||'')}"></label></div>
-      <label>Procedencia<select id="claimProvenance">${['user','project_source','external','inferred'].map(x=>`<option value="${x}" ${x===p.provenance_class?'selected':''}>${x}</option>`).join('')}</select></label>
-      <label>Evidencia o comentario de revisión<textarea id="claimEvidence" rows="3">${esc(p.evidence_excerpt||'')}</textarea></label>
-      <div class="form-grid-2"><label>Válido hasta<input id="claimValidTo" type="date" value="${esc((p.valid_to||'').slice(0,10))}"></label><label>Relación de la evidencia<select id="claimStance"><option value="supports">Apoya</option><option value="contradicts">Contradice</option><option value="context">Contexto</option></select></label></div>
-      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Volver</button><button id="proposalEditSave" class="primary">Guardar claim</button></div>
+      <div class="form-grid-2"><label>Typ<select id="claimType">${['fact','decision','requirement','deadline','dependency','open_question','assumption','constraint','other'].map(x=>`<option value="${x}" ${x===p.claim_type?'selected':''}>${x}</option>`).join('')}</select></label><label>Status<select id="claimStatus">${[["proposed","Vorgeschlagen"],["confirmed","Bestätigt"],["disputed","Umstritten"],["resolved","Geklärt"],["rejected","Verworfen"]].map(([v,l])=>`<option value="${v}" ${v===(p.status||"proposed")?"selected":""}>${l}</option>`).join('')}</select></label></div>
+      <div class="form-grid-2"><label>Fachbereich<input id="claimDiscipline" value="${esc(p.discipline||'')}"></label><label>Thema<input id="claimTopic" value="${esc(p.topic||'')}"></label></div>
+      <label>Herkunft<select id="claimProvenance">${['user','project_source','external','inferred'].map(x=>`<option value="${x}" ${x===p.provenance_class?'selected':''}>${x}</option>`).join('')}</select></label>
+      <label>Beleg oder Prüfkommentar<textarea id="claimEvidence" rows="3">${esc(p.evidence_excerpt||'')}</textarea></label>
+      <div class="form-grid-2"><label>Gültig bis<input id="claimValidTo" type="date" value="${esc((p.valid_to||'').slice(0,10))}"></label><label>Verhältnis des Belegs<select id="claimStance"><option value="supports">Stützt</option><option value="contradicts">Widerspricht</option><option value="context">Kontext</option></select></label></div>
+      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Claim speichern</button></div>
     </div>`);
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
     $('#proposalEditSave').onclick=()=>onDone?.({...p,project:$('#claimProject').value.trim(),statement:$('#claimStatement').value.trim(),claim_type:$('#claimType').value,status:$('#claimStatus').value,discipline:$('#claimDiscipline').value.trim()||null,topic:$('#claimTopic').value.trim()||null,provenance_class:$('#claimProvenance').value,evidence_excerpt:$('#claimEvidence')?.value.trim()||null,valid_to:$('#claimValidTo').value?$('#claimValidTo').value+'T23:59:59Z':null,evidence_stance:$('#claimStance').value});
     return;
   }
   if(p.kind==='skill_proposal'){
-    modal('Revisar nueva Skill',`<div class="form proposal-editor">
-      <div class="small">La Skill será personal y versionable. No se activa hasta que confirmes esta revisión.</div>
-      <label>Agente<select id="skillAgent"><option value="isabella" ${p.agent!=='sofia'?'selected':''}>Isabella</option><option value="sofia" ${p.agent==='sofia'?'selected':''}>Sofía</option></select></label>
-      <label>Nombre<input id="skillName" value="${esc(p.name||'')}"></label>
+    modal('Neue Fähigkeit prüfen',`<div class="form proposal-editor">
+      <div class="small">Die Fähigkeit ist persönlich und versionierbar. Sie wird erst mit dieser Bestätigung aktiv.</div>
+      <label>Agent<select id="skillAgent"><option value="isabella" ${p.agent!=='sofia'?'selected':''}>Romy</option><option value="sofia" ${p.agent==='sofia'?'selected':''}>Sofía</option></select></label>
+      <label>Name<input id="skillName" value="${esc(p.name||'')}"></label>
       <label>Slug<input id="skillSlug" value="${esc(p.slug||'')}"></label>
-      <label>Descripción<textarea id="skillDescription" rows="3">${esc(p.description||'')}</textarea></label>
-      <label>Instrucciones<textarea id="skillInstructions" rows="7">${esc(p.instructions||'')}</textarea></label>
-      <label>Tools preferidas<input id="skillTools" value="${esc((p.preferred_tools||[]).join(', '))}"></label>
-      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Volver</button><button id="proposalEditSave" class="primary">Crear Skill</button></div>
+      <label>Beschreibung<textarea id="skillDescription" rows="3">${esc(p.description||'')}</textarea></label>
+      <label>Anweisungen<textarea id="skillInstructions" rows="7">${esc(p.instructions||'')}</textarea></label>
+      <label>Bevorzugte Tools<input id="skillTools" value="${esc((p.preferred_tools||[]).join(', '))}"></label>
+      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Fähigkeit anlegen</button></div>
     </div>`);
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
     $('#proposalEditSave').onclick=()=>onDone?.({...p,agent:$('#skillAgent').value,name:$('#skillName').value.trim(),slug:$('#skillSlug').value.trim(),description:$('#skillDescription').value.trim(),instructions:$('#skillInstructions').value.trim(),preferred_tools:$('#skillTools').value.split(/[,\n]+/).map(x=>x.trim()).filter(Boolean)});
@@ -1764,11 +1769,11 @@ function proposalEditor(p,onDone){
   }
 
   if(p.kind==='assistant_preferences'){
-    modal('Revisar mejora de Isabella',`<div class="form proposal-editor assistant-rule-editor">
-      <div class="small">Estas reglas afectan cómo trabaja Isabella contigo. No modifican código y puedes retirarlas después.</div>
-      <label>Reglas a adoptar<textarea id="assistantRulesAdd" rows="5">${esc((p.add_rules||[]).join('\n'))}</textarea></label>
-      <label>Reglas a retirar<textarea id="assistantRulesRemove" rows="3">${esc((p.remove_rules||[]).join('\n'))}</textarea></label>
-      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Volver</button><button id="proposalEditSave" class="primary">Usar estas reglas</button></div>
+    modal('Verbesserung von Romy prüfen',`<div class="form proposal-editor assistant-rule-editor">
+      <div class="small">Diese Regeln betreffen, wie Romy mit dir arbeitet. Sie ändern keinen Code, und du kannst sie später zurücknehmen.</div>
+      <label>Regeln übernehmen<textarea id="assistantRulesAdd" rows="5">${esc((p.add_rules||[]).join('\n'))}</textarea></label>
+      <label>Regeln zurücknehmen<textarea id="assistantRulesRemove" rows="3">${esc((p.remove_rules||[]).join('\n'))}</textarea></label>
+      <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Diese Regeln verwenden</button></div>
     </div>`);
     const lines=v=>String(v||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
     $('#proposalEditCancel').onclick=()=>onDone?.(null);
@@ -1877,8 +1882,8 @@ function proposalDetails(p){
   if(p.kind==='expectation')return `<p>${esc(p.expected_event||'')}</p><div class="small">${esc(p.due_date||'')}${p.due_time?' · '+esc(p.due_time):' · ohne genaue Uhrzeit'} · Läuft es ohne Beleg ab, bleibt es zur Prüfung offen.</div>`;
   if(p.kind==='standing_intent')return `<p>${esc(p.reminder_text||'')}</p><div class="small">Erinnerung im Gespräch; keine externe Überwachung · höchstens ${Number(p.max_triggers||3)} Hinweise · Abstand: ${Number(p.cooldown_hours??24)} Std. · läuft nach ${Number(p.expires_days||90)} Tagen ab</div>`;
   if(p.kind==='commitment')return `<p>${esc(p.objective||'')}</p><div class="small">Bereich: ${esc(p.project||p.scope||'global')}${p.completion_criteria?' · Abschluss: '+esc(p.completion_criteria):''}</div>${p.persistent_work?'<div class="small" style="margin-top:7px">Al confirmar, Isabella empezará a trabajar en esto y podrá continuar aunque cierres MINDS. Te pedirá algo solo si realmente queda bloqueada.</div>':''}${p.source_open_loop?'<div class="small" style="margin-top:7px">Procedencia: open loop derivado, pendiente de esta revisión.</div>':''}`;
-  if(p.kind==='work_claim')return `<p class="small">Estado: ${esc(p.status||'proposed')} · Procedencia: ${esc(p.provenance_class||'inferred')}</p>${p.evidence_excerpt?`<blockquote>${esc(p.evidence_excerpt)}</blockquote>`:''}${p.supersedes_id?'<p class="small">Sustituirá una formulación anterior y conservará su historia.</p>':''}`;
-  if(p.kind==='skill_proposal')return `<p>${esc(p.description||'')}</p><details open><summary>Instrucciones de la habilidad</summary><p style="white-space:pre-wrap;max-height:35vh;overflow:auto">${esc(p.instructions||'')}</p></details>`;
+  if(p.kind==='work_claim')return `<p class="small">Status: ${esc(p.status||'proposed')} · Herkunft: ${esc(p.provenance_class||'inferred')}</p>${p.evidence_excerpt?`<blockquote>${esc(p.evidence_excerpt)}</blockquote>`:''}${p.supersedes_id?'<p class="small">Ersetzt eine frühere Formulierung und behält ihre Geschichte.</p>':''}`;
+  if(p.kind==='skill_proposal')return `<p>${esc(p.description||'')}</p><details open><summary>Anweisungen der Fähigkeit</summary><p style="white-space:pre-wrap;max-height:35vh;overflow:auto">${esc(p.instructions||'')}</p></details>`;
   return '';
 }
 window.MINDS_PROPOSALS={review:p=>confirmProposal(p),edit:p=>proposalEditor(p,q=>{if(q)confirmProposal(q);else closeModal()})};
@@ -1951,7 +1956,7 @@ function confirmProposal(p){
   p={...p,request_id:p.request_id||crypto.randomUUID()};
   const reviewHint=p.kind==='routine'?'Du kannst so bestätigen oder Inhalt und Zeitplan vorher anpassen.':p.kind==='standing_intent'?'Wird aktiv, wenn das Thema im Gespräch wieder auftaucht. Es wird nichts extern überwacht.':p.kind==='expectation'?'Das verfolgt ein künftiges Ereignis; ein verstrichenes Datum ohne Beleg gilt nicht als Fehler.':p.kind==='commitment'?'Das Ziel bleibt präsent, führt aber von sich aus keine Aktionen aus.':p.kind==='work_claim'?'Bitte besonders Status und Herkunft prüfen: Eine Quelle ist nicht automatisch eine bestätigte Tatsache.':p.kind==='skill_proposal'?'Diese Fähigkeit ist persönlich und wird erst mit der Bestätigung aktiv.':p.kind==='feed_preferences'?'Puedes revisar la constelación y los temas antes de modificar tu Feed.':p.kind==='assistant_preferences'?'Du kannst diese Verbesserung prüfen, bevor Romy sie übernimmt.':'Du kannst so bestätigen oder Name, Datum, Uhrzeit, Kategorie oder Projekt vorher anpassen.';
   modal('Bestätigen',`<div class="row"><div class="row-main"><b>${esc(proposalLabel(p))}</b><div class="small" style="margin-top:7px">${esc(reviewHint)}</div>${proposalDetails(p)}</div></div><div class="proposal-actions"><button id="proposalCancel" class="secondary">Abbrechen</button><button id="proposalEdit" class="secondary">Anpassen</button><button id="proposalConfirm" class="primary">Bestätigen</button></div>`);
-  $('#proposalCancel').onclick=()=>{state.pendingIntent=null;save();proposalFeedback('rejected',p);finalizeInlineReview(p,'rejected');closeModal();sayEvent('Sin cambios.')};
+  $('#proposalCancel').onclick=()=>{state.pendingIntent=null;save();proposalFeedback('rejected',p);finalizeInlineReview(p,'rejected');closeModal();sayEvent('Keine Änderung.')};
   $('#proposalEdit').onclick=()=>proposalEditor(p,q=>{if(q)confirmProposal(reviewedProposal(p,q));else confirmProposal(p)});
   $('#proposalConfirm').onclick=()=>{
     const b=$('#proposalConfirm');if(b.disabled)return;
@@ -1966,7 +1971,7 @@ function confirmProposal(p){
       const marked=finalizeInlineReview(p,verified?'applied_verified':'reviewed_locally');
       if(verified&&p.kind==='task'&&!marked)sayEvent(confirmationText([p]));
     }).catch(e=>{
-      sayEvent('No pude guardar el cambio, así que no lo doy por hecho: '+(e?.message||String(e)));
+      sayEvent('Die Änderung konnte nicht gespeichert werden und gilt nicht als erledigt: '+(e?.message||String(e)));
       if(b.isConnected){b.disabled=false;b.textContent='Confirmar'}
     }).finally(()=>{if(b.isConnected&&b.disabled){b.disabled=false;b.textContent='Confirmar'}});
   };
@@ -1985,7 +1990,7 @@ function confirmProposals(list){
       if(verified)proposalFeedback('accepted',p);
       if(verified&&p.kind==='task')appliedTasks.push(p);
       marked=finalizeInlineReview(p,verified?'applied_verified':'reviewed_locally')||marked;
-    }closeModal();if(appliedTasks.length&&!marked)sayEvent(confirmationText(appliedTasks))}catch(e){if(appliedTasks.length)sayEvent(confirmationText(appliedTasks));sayEvent('No pude guardar todos los cambios: '+(e?.message||String(e)));if(b.isConnected){b.disabled=false;b.textContent='Confirmar todo'}}};
+    }closeModal();if(appliedTasks.length&&!marked)sayEvent(confirmationText(appliedTasks))}catch(e){if(appliedTasks.length)sayEvent(confirmationText(appliedTasks));sayEvent('Nicht alle Änderungen konnten gespeichert werden: '+(e?.message||String(e)));if(b.isConnected){b.disabled=false;b.textContent='Confirmar todo'}}};
 }
 function findTarget(p){
   const list=p.kind==='task'?state.tasks:state.events;
@@ -2026,7 +2031,7 @@ async function createStandingIntentProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Bitte anmelden, um diese Erinnerung zu speichern.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
   const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
+  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.');return}
   if(!String(p.trigger_text||'').trim()||!String(p.reminder_text||'').trim()){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Faltan la situación y el recordatorio.');return}
   const expires=new Date(Date.now()+Math.max(1,Math.min(365,Number(p.expires_days||90)))*86400000).toISOString();
   const spec={
@@ -2041,17 +2046,17 @@ async function createStandingIntentProposal(p){
   const {error}=await sb.rpc('minds_create_prospective_memory',{
     p_spec:spec,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true
   });
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude guardar ese recordatorio todavía: '+error.message);return}
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Die Erinnerung konnte noch nicht gespeichert werden: '+error.message);return}
   closeModal();
-  sayEvent('Listo. Lo guardaré como recordatorio por situación. No estaré vigilando una fuente externa: te lo recordaré cuando ese contexto vuelva a aparecer en nuestra conversación.');
+  sayEvent('Erledigt. Ich merke es mir als situationsbezogene Erinnerung. Ich überwache dafür keine externe Quelle: Ich erinnere dich daran, sobald dieser Zusammenhang im Gespräch wieder auftaucht.');
 }
 async function createExpectationProposal(p){
-  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Necesito la memoria conectada para seguir esta expectativa.');return}
+  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Dafür muss das Gedächtnis verbunden sein; sonst kann ich diese Erwartung nicht verfolgen.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
   const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
+  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.');return}
   if(!String(p.title||'').trim()||!String(p.expected_event||'').trim()||!String(p.due_date||'').trim()){
-    const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('La expectativa necesita un nombre, qué se espera y una fecha.');return
+    const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Die Erwartung braucht einen Namen, was erwartet wird, und ein Datum.');return
   }
   const time=String(p.due_time||'').trim()||null;
   const timezone=String(p.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin');
@@ -2072,17 +2077,17 @@ async function createExpectationProposal(p){
     p_request_id:p.request_id||crypto.randomUUID(),
     p_confirmed:true
   });
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude guardar esa expectativa todavía: '+error.message);return}
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Die Erwartung konnte noch nicht gespeichert werden: '+error.message);return}
   closeModal();
   const row=data?.expectation||{};
   const due=row.due_at?new Date(row.due_at).toLocaleString('de-DE',{timeZone:row.timezone||timezone,dateStyle:'medium',...(row.due_precision==='datetime'?{timeStyle:'short'}:{})}):p.due_date;
-  say('assistant',`Listo. Mantendré “${row.title||p.title}” pendiente hasta ${due}. Si llega ese momento sin confirmación, te diré que sigue sin comprobar; no asumiré que no ocurrió.`);
+  say('assistant',`Erledigt. Ich halte «${row.title||p.title}» bis ${due} offen. Kommt dieser Zeitpunkt ohne Bestätigung, sage ich dir, dass es weiterhin unbestätigt ist; ich nehme nicht an, dass es nicht eingetreten ist.`);
 }
 async function createCommitmentProposal(p){
-  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Necesito la memoria conectada para mantener esto vivo entre conversaciones.');return}
+  const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Dafür muss das Gedächtnis verbunden sein; sonst kann ich das über Gespräche hinweg nicht offenhalten.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
   const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude identificar el proyecto. Corrige su nombre antes de guardar.');return}
+  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.');return}
   if(!String(p.title||'').trim()||!String(p.objective||'').trim()){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('El trabajo necesita un nombre y un objetivo claros.');return}
   const persistent=!!p.persistent_work;
   const skillTrace=Array.isArray(p.skill_trace)?p.skill_trace.slice(0,4).map(x=>({
@@ -2108,16 +2113,16 @@ async function createCommitmentProposal(p){
     }
   };
   const {data,error}=await sb.rpc('minds_create_commitment',{p_commitment:payload,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude mantener este objetivo vivo todavía: '+error.message);return}
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Das Ziel konnte noch nicht gespeichert werden: '+error.message);return}
   if(!persistent){
-    closeModal();sayEvent(`Listo. Mantendré “${data?.title||p.title}” vivo. No lo convertiré automáticamente en tareas ni acciones.`);return;
+    closeModal();sayEvent(`Erledigt. Ich halte «${data?.title||p.title}» präsent. Daraus entstehen nicht automatisch Aufgaben oder Aktionen.`);return;
   }
 
   const {data:workspaceResult,error:workspaceError}=await sb.rpc('minds_ensure_commitment_workspace',{p_commitment_id:data?.id});
   const workspace=workspaceResult?.workspace||null;
   if(workspaceError||workspaceResult?.status!=='ok'||!workspace?.id){
     closeModal();
-    sayEvent(`Mantendré “${data?.title||p.title}” vivo, pero no pude empezar el trabajo persistente todavía. El objetivo no se perdió; puedo reintentarlo.`);
+    sayEvent(`Ich halte «${data?.title||p.title}» präsent, konnte die dauerhafte Arbeit daran aber noch nicht starten. Das Ziel ist nicht verloren; ich kann es erneut versuchen.`);
     return;
   }
 
@@ -2129,30 +2134,30 @@ async function createCommitmentProposal(p){
   });
   if(missionError||!['ok','already_active'].includes(String(missionResult?.status||''))){
     closeModal();
-    sayEvent(`Mantendré “${data?.title||p.title}” vivo, pero no pude arrancar el trabajo en segundo plano. El objetivo quedó guardado y puedo retomarlo.`);
+    sayEvent(`Ich halte «${data?.title||p.title}» präsent, konnte die Arbeit im Hintergrund aber nicht anstoßen. Das Ziel ist gespeichert und ich kann es wieder aufnehmen.`);
     return;
   }
   const run=missionResult?.run||{};
   closeModal();
-  sayEvent(`Listo. Me encargo de “${data?.title||p.title}”. Puedes cerrar MINDS; seguiré avanzando y volveré a ti si necesito una decisión o cuando haya algo que realmente merezca tu atención.`);
+  sayEvent(`Erledigt. Ich kümmere mich um «${data?.title||p.title}». Du kannst das Office schließen; ich arbeite weiter und melde mich, wenn ich eine Entscheidung brauche oder es etwas gibt, das deine Aufmerksamkeit wirklich verdient.`);
 }
 async function createWorkClaimProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();return}
   const proj=await dbWorkProjectByName(p.project);
-  if(!proj){sayEvent('No pude identificar ese proyecto de Work.');return}
+  if(!proj){sayEvent('Das Work-Projekt wurde nicht erkannt.');return}
   if(!String(p.statement||'').trim()){sayEvent('Escribe el contenido del conocimiento antes de guardarlo.');return}
   const evidence=Array.isArray(p.evidence)?p.evidence:(p.source_file_id||p.evidence_excerpt)?[{source_file_id:p.source_file_id||null,source_message_id:p.source_message_id||null,excerpt:p.evidence_excerpt||null,source_kind:p.source_file_id?'work_file':'conversation',stance:p.evidence_stance||'supports',locator:p.locator||{}}]:[];
   const {data,error}=await sb.rpc('minds_save_work_claim',{p_claim:{...p,project_id:proj.id},p_evidence:evidence,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
   if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Wissen und Beleg wurden nicht gespeichert: '+error.message);return}
-  closeModal();sayEvent(`Guardé el conocimiento en ${proj.name} como ${data?.status==='confirmed'?'confirmado':'propuesto'}, junto con su evidencia.`);
+  closeModal();sayEvent(`Ich habe das Wissen in ${proj.name} als ${data?.status==='confirmed'?'bestätigt':'vorgeschlagen'} gespeichert, zusammen mit dem Beleg.`);
   window.MINDS_WORK?.refresh?.();
 }
 async function createSkillProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();return}
   if(!String(p.instructions||'').trim()||!String(p.name||'').trim()){sayEvent('La habilidad necesita un nombre e instrucciones.');return}
   const {data,error}=await sb.rpc('minds_apply_personal_skill',{p_skill:p,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
-  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('No pude activar la habilidad: '+error.message);return}
-  closeModal();sayEvent(`La habilidad “${data.name}” quedó activa para ${data.agent==='sofia'?'Sofía':'Isabella'} como v${data.version}.`);
+  if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Die Fähigkeit konnte nicht aktiviert werden: '+error.message);return}
+  closeModal();sayEvent(`Die Fähigkeit «${data.name}» ist für ${data.agent==='sofia'?'Sofía':'Romy'} als v${data.version} aktiv.`);
 }
 function applyFeedPreferencesProposal(p){
   const prefs={...base.feedPreferences,...(state.feedPreferences||{})};
@@ -2197,7 +2202,7 @@ function applyAssistantPreferencesProposal(p){
   for(const raw of p.add_rules||[]){const rule=String(raw||'').trim();if(rule&&!rules.some(x=>key(x)===key(rule)))rules.push(rule)}
   state.assistantPreferences={...prefs,behaviorRules:rules.slice(0,20)};
   save();closeModal();
-  sayEvent('Listo. Adopté esta mejora como una preferencia de comportamiento. Puedes revisarla o quitarla desde Proactividad de Isabella.');
+  sayEvent('Erledigt. Ich habe diese Verbesserung als Verhaltensregel übernommen. Sag Bescheid, wenn ich sie wieder zurücknehmen soll.');
 }
 /* Canonical, reviewed task UPDATE: no optimistic local mutation.
  * The RPC owns the transaction, shadow decision and idempotent receipt.
@@ -2331,7 +2336,7 @@ async function applyDirectCalendarCreate(p){
     kind:p.kind,title:row.title,action:'create',
     date:p.kind==='task'?(row.due_date||null):new Date(row.starts_at).toLocaleDateString('sv-SE'),
     duration_defaulted:p.kind==='event'&&p.duration_defaulted===true,
-    when:p.kind==='task'?(row.due_date||'sin fecha'):new Date(row.starts_at).toLocaleString('de-DE'),
+    when:p.kind==='task'?(row.due_date||'ohne Datum'):new Date(row.starts_at).toLocaleString('de-DE'),
     entity_client_key:receipt.entity_client_key,entity_id:receipt.entity_id};
 }
 // This is a narrow reversal of an owner-quoted create, not a general delete.
@@ -2432,7 +2437,7 @@ function applyProposal(p,opts={}){
     if(action==='complete'&&p.kind==='task'){
       target.done=true;target.completedAt=new Date().toISOString();
       mutation('task','complete',before,target,'assistant');
-      save();renderCalendar();closeModal();sayEvent('Marcada como completada.');return;
+      save();renderCalendar();closeModal();sayEvent('Als erledigt markiert.');return;
     }
     if(action==='archive'&&p.kind==='task'){
       target.archivedAt=new Date().toISOString();
@@ -3961,7 +3966,7 @@ async function continuityPanel(){
       const e=latest.get(x.id),last=x?.metadata?.last_continuity||null,projectName=x.isabella_projects?.name||null,workspace=workspaceByCommitment.get(x.id);
       const missionCount=workspace?workspaceItems.filter(i=>i.workspace_id===workspace.id).length:0;
       const workspaceState=workspace?humanSurface()?.workspace?.(workspace.status):null;
-      const workspaceTechnical=workspace?`<div class="human-tech-grid"><span>Mission Workspace</span><b>${esc(workspace.status)}</b><span>Entradas</span><b>${missionCount}</b><span>Actualizado</span><b>${new Date(workspace.updated_at).toLocaleString('de-DE')}</b></div>`:'';
+      const workspaceTechnical=workspace?`<div class="human-tech-grid"><span>Mission Workspace</span><b>${esc(workspace.status)}</b><span>Entradas</span><b>${missionCount}</b><span>Aktualisiert</span><b>${new Date(workspace.updated_at).toLocaleString('de-DE')}</b></div>`:'';
       const mission=workspace?`<div class="continuity-cause human-work-card">${humanStateHTML(workspaceState,workspaceTechnical)}${workspace.summary?`<p class="human-work-summary">${esc(workspace.summary)}</p>`:''}<button class="secondary" data-mission-workspace="${esc(workspace.id)}">Ver trabajo</button></div>`:'';
       const why=last?.signal_title?`<div class="continuity-cause"><span>ÚLTIMO CAMBIO RELEVANTE</span><b>${esc(last.signal_title)}</b>${last.signal_body?`<p>${esc(last.signal_body)}</p>`:''}<small>${esc(last.reason||'')} · ${new Date(last.linked_at||last.occurred_at||x.updated_at).toLocaleString('de-DE')}</small></div>`:(e&&['reactivated','signal_linked'].includes(e.event_type)?`<div class="continuity-cause"><span>ÚLTIMO CAMBIO</span><b>${esc(e.body||e.event_type)}</b><small>${new Date(e.created_at).toLocaleString('de-DE')}</small></div>`:'');
       return `<article class="commitment-card ${esc(x.status)}"><div class="commitment-card-head"><span class="commitment-status">${esc(commitmentStatusLabel(x.status))}</span><span class="commitment-project">${esc(projectName||x.scope||'global')}</span></div><h3>${esc(x.title)}</h3><p>${esc(x.objective)}</p>${x.completion_criteria?`<div class="commitment-criteria"><span>CIERRE</span>${esc(x.completion_criteria)}</div>`:''}${x.source_open_loop?'<div class="small">Nació de un open loop que tú decidiste elevar.</div>':''}${mission}${why}</article>`;
@@ -3979,11 +3984,11 @@ async function missionRunControlUI(runId,action,workspaceId){
     const {data,error}=await sb.rpc(rpc,params);if(error)throw error;
     if(data?.status!=='ok')throw new Error(data?.status||'No disponible');
     await missionWorkspacePanel(workspaceId);
-  }catch(e){sayEvent('No pude cambiar ese trabajo ahora mismo: '+(e?.message||String(e)))}
+  }catch(e){sayEvent('Diese Arbeit konnte gerade nicht geändert werden: '+(e?.message||String(e)))}
 }
 async function missionWorkspacePanel(id){
   const sb=window.MINDS_SUPABASE;if(!sb||!id)return;
-  modal('Trabajo de Isabella','<div class="surface-loading">Leyendo lo que sigue en marcha…</div>');
+  modal('Romys Arbeit','<div class="surface-loading">Lese, was gerade läuft …</div>');
   try{
     const [wQ,iQ,rQ]=await Promise.all([
       sb.from('minds_commitment_workspaces').select('id,commitment_id,title,objective_snapshot,completion_criteria_snapshot,status,summary,updated_at').eq('id',id).single(),
@@ -3992,18 +3997,18 @@ async function missionWorkspacePanel(id){
     ]);
     if(wQ.error)throw wQ.error;if(iQ.error)throw iQ.error;if(rQ.error)throw rQ.error;
     const w=wQ.data,items=iQ.data||[],runs=rQ.data||[],current=runs.find(x=>['queued','running','waiting','waiting_for_user','paused'].includes(x.status))||runs[0]||null;
-    const labels={plan:'Plan',finding:'Hallazgo',source:'Fuente',question:'Pregunta',decision:'Decisión propuesta',note:'Nota'};
-    const itemRows=items.map(x=>`<div class="doctor-log"><b>${esc(labels[x.kind]||x.kind)}</b><span>${esc(x.content)}</span><time>${new Date(x.created_at).toLocaleString('de-DE')}</time><details class="human-tech"><summary>Procedencia</summary><div class="small">${esc(x.status)} · ${esc(x.provenance_class)} · ${esc(x.source_kind)}</div></details></div>`).join('');
-    const runControls=current&&['queued','running','waiting'].includes(current.status)?`<button class="secondary" data-mission-run-action="pause" data-run-id="${esc(current.id)}">Pausar</button><button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Cancelar</button>`:current?.status==='paused'?`<button class="secondary" data-mission-run-action="resume" data-run-id="${esc(current.id)}">Reanudar</button><button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Cancelar</button>`:current?.status==='waiting_for_user'?`<button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Cancelar</button>`:'';
+    const labels={plan:'Plan',finding:'Befund',source:'Quelle',question:'Frage',decision:'Vorgeschlagene Entscheidung',note:'Notiz'};
+    const itemRows=items.map(x=>`<div class="doctor-log"><b>${esc(labels[x.kind]||x.kind)}</b><span>${esc(x.content)}</span><time>${new Date(x.created_at).toLocaleString('de-DE')}</time><details class="human-tech"><summary>Herkunft</summary><div class="small">${esc(x.status)} · ${esc(x.provenance_class)} · ${esc(x.source_kind)}</div></details></div>`).join('');
+    const runControls=current&&['queued','running','waiting'].includes(current.status)?`<button class="secondary" data-mission-run-action="pause" data-run-id="${esc(current.id)}">Pausieren</button><button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Abbrechen</button>`:current?.status==='paused'?`<button class="secondary" data-mission-run-action="resume" data-run-id="${esc(current.id)}">Fortsetzen</button><button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Abbrechen</button>`:current?.status==='waiting_for_user'?`<button class="secondary" data-mission-run-action="cancel" data-run-id="${esc(current.id)}">Abbrechen</button>`:'';
     const workspaceState=humanSurface()?.workspace?.(w.status);
-    const workspaceTechnical=`<div class="human-tech-grid"><span>Mission Workspace</span><b>${esc(w.status)}</b><span>Actualizado</span><b>${new Date(w.updated_at).toLocaleString('de-DE')}</b></div>`;
+    const workspaceTechnical=`<div class="human-tech-grid"><span>Mission Workspace</span><b>${esc(w.status)}</b><span>Aktualisiert</span><b>${new Date(w.updated_at).toLocaleString('de-DE')}</b></div>`;
     const runState=current?humanSurface()?.mission?.(current,w.title):null;
-    const waitTechnical=current?.status==='waiting'?`<span>Espera</span><b>${esc(current.wait_kind||'—')}</b>${current.wake_at?`<span>Retoma</span><b>${new Date(current.wake_at).toLocaleString('de-DE')}</b>`:''}`:'';
-    const runTechnical=current?`<div class="human-tech-grid"><span>Mission Run</span><b>${esc(current.status)}</b><span>Fase</span><b>${esc(current.phase||'—')}</b><span>Checkpoint</span><b>${Number(current.iteration||0)} / ${Number(current.max_iterations||0)}</b><span>Reintentos</span><b>${Number(current.retry_count||0)}</b>${waitTechnical}<span>Actualizado</span><b>${new Date(current.updated_at).toLocaleString('de-DE')}</b></div>`:'';
+    const waitTechnical=current?.status==='waiting'?`<span>Wartet auf</span><b>${esc(current.wait_kind||'—')}</b>${current.wake_at?`<span>Weiter am</span><b>${new Date(current.wake_at).toLocaleString('de-DE')}</b>`:''}`:'';
+    const runTechnical=current?`<div class="human-tech-grid"><span>Mission Run</span><b>${esc(current.status)}</b><span>Phase</span><b>${esc(current.phase||'—')}</b><span>Checkpoint</span><b>${Number(current.iteration||0)} / ${Number(current.max_iterations||0)}</b><span>Neuversuche</span><b>${Number(current.retry_count||0)}</b>${waitTechnical}<span>Aktualisiert</span><b>${new Date(current.updated_at).toLocaleString('de-DE')}</b></div>`:'';
     const runPanel=current?`<div class="mission-run-card">${humanStateHTML(runState,runTechnical)}${current.last_error&&current.status==='failed'?`<div class="human-inline-error">${esc(current.last_error)}</div>`:''}${runControls?`<div class="confirm-actions">${runControls}</div>`:''}</div>`:'';
-    modal('Trabajo de Isabella',`<div class="continuity-intro"><b>${esc(w.title)}</b><p>${esc(w.objective_snapshot)}</p>${w.completion_criteria_snapshot?`<div class="commitment-criteria"><span>Cuándo estará resuelto</span>${esc(w.completion_criteria_snapshot)}</div>`:''}${humanStateHTML(workspaceState,workspaceTechnical)}${w.summary?`<div class="continuity-cause"><span>Lo que sé hasta ahora</span><p>${esc(w.summary)}</p></div>`:''}${runPanel}<div class="small">Aquí conservo el trabajo intermedio para poder continuar entre conversaciones. Los hallazgos siguen siendo evidencia de trabajo, no memoria personal ni hechos confirmados; tampoco puedo ejecutar acciones externas o confirmar una decisión por mi cuenta.</div></div><div class="small section-label">Lo que he ido reuniendo</div>${itemRows||'<div class="empty-panel">Todavía no he registrado avances en este trabajo.</div>'}`);
+    modal('Romys Arbeit',`<div class="continuity-intro"><b>${esc(w.title)}</b><p>${esc(w.objective_snapshot)}</p>${w.completion_criteria_snapshot?`<div class="commitment-criteria"><span>Wann es gelöst ist</span>${esc(w.completion_criteria_snapshot)}</div>`:''}${humanStateHTML(workspaceState,workspaceTechnical)}${w.summary?`<div class="continuity-cause"><span>Was ich bisher weiß</span><p>${esc(w.summary)}</p></div>`:''}${runPanel}<div class="small">Hier bewahre ich die Zwischenarbeit auf, um über Gespräche hinweg weitermachen zu können. Befunde bleiben Arbeitsbelege — weder persönliches Gedächtnis noch bestätigte Tatsachen; Aktionen nach außen oder eine Entscheidung kann ich von mir aus ebenfalls nicht durchführen.</div></div><div class="small section-label">Was ich zusammengetragen habe</div>${itemRows||'<div class="empty-panel">Zu dieser Arbeit habe ich noch keine Fortschritte festgehalten.</div>'}`);
     document.querySelectorAll('[data-mission-run-action]').forEach(b=>b.onclick=()=>void missionRunControlUI(b.dataset.runId,b.dataset.missionRunAction,id));
-  }catch{modal('Trabajo de Isabella','<div class="small">No pude leer este trabajo ahora mismo.</div>')}
+  }catch{modal('Romys Arbeit','<div class="small">Diese Arbeit konnte gerade nicht gelesen werden.</div>')}
 }
 async function previewArtifactIntake(id){
   const sb=window.MINDS_SUPABASE;if(!sb||!id)return;
@@ -4309,7 +4314,7 @@ async function contextualCounterfactualPanel(unit){
 }
 function reviewContextualPermission(unit,permission,mode){
   const grant=mode==='allow',scope=unit||permission;
-  modal(grant?'Autorizar este permiso':'Volver a confirmar',`<div class="continuity-intro"><p>${grant?'Isabella podrá guardar tareas sencillas en esta categoría, sin proyecto, cuando tu petición directa incluya la categoría y el texto de la tarea.':'Isabella volverá a pedirte confirmación para esta clase de tarea.'}</p><p><b>${esc(scope.scope_label)}</b><br>${esc(autonomyContextLabel(scope.context_key))}</p><p>${grant?'El permiso dura 30 días. Puedes revocarlo aquí en cualquier momento. Eventos, tareas de proyecto, recurrencias y recordatorios quedan fuera. Ante dudas o nuevas correcciones, Isabella vuelve a pedir confirmación.':'Las tareas ya guardadas se conservan. Este cambio afecta a las peticiones siguientes.'}</p></div>${grant?autonomyEvidenceHTML(unit):''}<div class="proposal-actions"><button id="permissionCancel" class="secondary">Cancelar</button><button id="permissionConfirm" class="primary">${grant?'Autorizar durante 30 días':'Revocar permiso'}</button></div><div id="permissionError" class="small" role="status"></div>`);
+  modal(grant?'Autorizar este permiso':'Volver a confirmar',`<div class="continuity-intro"><p>${grant?'Isabella podrá guardar tareas sencillas en esta categoría, sin proyecto, cuando tu petición directa incluya la categoría y el texto de la tarea.':'Isabella volverá a pedirte confirmación para esta clase de tarea.'}</p><p><b>${esc(scope.scope_label)}</b><br>${esc(autonomyContextLabel(scope.context_key))}</p><p>${grant?'El permiso dura 30 días. Puedes revocarlo aquí en cualquier momento. Eventos, tareas de proyecto, recurrencias y recordatorios quedan fuera. Ante dudas o nuevas correcciones, Isabella vuelve a pedir confirmación.':'Las tareas ya guardadas se conservan. Este cambio afecta a las peticiones siguientes.'}</p></div>${grant?autonomyEvidenceHTML(unit):''}<div class="proposal-actions"><button id="permissionCancel" class="secondary">Abbrechen</button><button id="permissionConfirm" class="primary">${grant?'Autorizar durante 30 días':'Revocar permiso'}</button></div><div id="permissionError" class="small" role="status"></div>`);
   const requestId=crypto.randomUUID();
   $('#permissionCancel').onclick=()=>void contextualAutonomyPanel();
   $('#permissionConfirm').onclick=async()=>{
@@ -4743,8 +4748,8 @@ async function standingIntentsPanel(){
     const expectationCard=x=>{
       const due=expectationDueLabel(x),project=x.isabella_projects?.name?esc(x.isabella_projects.name)+' · ':'';
       const actions=x.status==='due_unconfirmed'
-        ?`<div class="confirm-actions"><button class="primary" data-expectation-review="${x.id}" data-expectation-decision="fulfilled">Sí, ocurrió</button><button class="secondary" data-expectation-review="${x.id}" data-expectation-decision="not_occurred">No ocurrió</button><button class="secondary" data-expectation-reschedule="${x.id}">Nueva fecha</button><button class="secondary" data-expectation-review="${x.id}" data-expectation-decision="cancel">Cancelar</button></div>`
-        :`<div class="confirm-actions"><button class="secondary" data-expectation-review="${x.id}" data-expectation-decision="fulfilled">Ya ocurrió</button><button class="secondary" data-expectation-reschedule="${x.id}">Cambiar fecha</button><button class="secondary" data-expectation-review="${x.id}" data-expectation-decision="cancel">Cancelar</button></div>`;
+        ?`<div class="confirm-actions"><button class="primary" data-expectation-review="${x.id}" data-expectation-decision="fulfilled">Sí, ocurrió</button><button class="secondary" data-expectation-review="${x.id}" data-expectation-decision="not_occurred">No ocurrió</button><button class="secondary" data-expectation-reschedule="${x.id}">Nueva fecha</button><button class="secondary" data-expectation-review="${x.id}" data-expectation-decision="cancel">Abbrechen</button></div>`
+        :`<div class="confirm-actions"><button class="secondary" data-expectation-review="${x.id}" data-expectation-decision="fulfilled">Ya ocurrió</button><button class="secondary" data-expectation-reschedule="${x.id}">Cambiar fecha</button><button class="secondary" data-expectation-review="${x.id}" data-expectation-decision="cancel">Abbrechen</button></div>`;
       return `<div class="intent-row expectation-row ${esc(x.status)}"><div class="row-main"><b>${esc(x.title)}</b><div>${esc(x.expected_event)}</div><div class="small">${project}${esc(expectationStateLabel(x.status))} · ${esc(due)}</div>${x.status==='due_unconfirmed'?'<div class="small">La fecha ya llegó, pero MINDS no sabe todavía si ocurrió.</div>':''}${actions}</div></div>`;
     };
 
@@ -4758,7 +4763,7 @@ async function standingIntentsPanel(){
     const liveWatches=watches.filter(x=>!['cancelled','done','expired'].includes(x.status));
     const historyWatches=watches.filter(x=>['cancelled','done','expired'].includes(x.status));
 
-    const cancelButton=x=>['pending','armed','fired'].includes(x.status)?`<button data-intent-cancel="${x.id}">Cancelar</button>`:'';
+    const cancelButton=x=>['pending','armed','fired'].includes(x.status)?`<button data-intent-cancel="${x.id}">Abbrechen</button>`:'';
     const reminderCard=x=>`<div class="intent-row ${esc(x.status)}"><div class="row-main"><b>Cuando: ${esc(x.trigger_text)}</b><div>${esc(x.reminder_text)}</div><div class="small">${x.isabella_projects?.name?esc(x.isabella_projects.name)+' · ':''}Recordatorio · visto a través de ti · ${esc(x.status)} · ${x.trigger_count||0}/${x.max_triggers||3} activaciones${x.expires_at?' · caduca '+new Date(x.expires_at).toLocaleDateString('de-DE'):''}</div><div class="small">No es vigilancia: MINDS detecta la condición cuando reaparece en la conversación.</div></div>${cancelButton(x)}</div>`;
     const channelByKey=new Map(channels.map(x=>[String(x.channel_key||''),x]));
     const watchCard=x=>{

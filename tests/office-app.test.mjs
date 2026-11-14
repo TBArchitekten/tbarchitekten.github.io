@@ -59,7 +59,7 @@ test('Office runs the shared Window chat under Office profile and isolates legac
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
   assert.match(src('work.js'),/window\.MINDS_WORK=/);
-  assert.match(appIndex,/src="\.\/work\.js\?v=office44"/);
+  assert.match(appIndex,/src="\.\/work\.js\?v=office45"/);
 });
 test('Sync: members only, everyone sees the projects, own calendar, no realtime',()=>{
   const sync=src('sync.js');

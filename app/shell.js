@@ -8,10 +8,10 @@ const NAV_ICONS = ({
   thoughts:navIcon('<path d="m12 2 9 5-9 5-9-5 9-5zM3 7v10l9 5 9-5V7M12 12v10"/>'),
   bandeja:navIcon('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>')
 });
-// TBA Office: Window's frame in German. Chat, Bandeja, Lecturas and Thoughts stay in the page (the copied code
+// TBA Office: Window's frame in German. Chat, Eingang, Lecturas and Thoughts stay in the page (the copied code
 // expects their elements) but are hidden until the office has an assistant. Tools links to the office tools.
 NAV_ICONS.tools='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
-// Only «Por confirmar» carries a number; the web and the iPhone show the same count.
+// Only «Zu bestätigen» carries a number; the web and the iPhone show the same count.
 const bandejaBadge='<span class="nav-badge hidden" data-bandeja-badge aria-hidden="true"></span>';
 
 document.body.innerHTML = `
@@ -69,26 +69,26 @@ document.body.innerHTML = `
       </div>
     </section>
 
-    <section id="bandejaScreen" class="screen surface-screen bandeja-screen" data-screen="bandeja" aria-label="Bandeja">
+    <section id="bandejaScreen" class="screen surface-screen bandeja-screen" data-screen="bandeja" aria-label="Eingang">
       <div class="surface-scroll bandeja-scroll">
-        <div class="pull-refresh-indicator" data-pull-indicator="bandeja" aria-hidden="true"><span>Desliza para actualizar</span></div>
+        <div class="pull-refresh-indicator" data-pull-indicator="bandeja" aria-hidden="true"><span>Zum Aktualisieren ziehen</span></div>
         <header class="bandeja-head">
-          <div><h1>Bandeja</h1><p>Lo que Isabella propone, para cuando tengas tiempo.</p></div>
+          <div><h1>Eingang</h1><p>Was Romy vorschlägt — für wenn du Zeit hast.</p></div>
           <span class="minds-menu-slot" data-menu-slot="bandeja"></span>
         </header>
-        <div class="bandeja-tabs" role="tablist" aria-label="Vista de la Bandeja">
-          <button type="button" role="tab" class="active" aria-selected="true" aria-controls="bandejaConfirm" data-bandeja-view="confirm">Por confirmar</button>
-          <button type="button" role="tab" aria-selected="false" aria-controls="bandejaSuggest" data-bandeja-view="suggest">Sugerencias</button>
-          <button type="button" role="tab" aria-selected="false" aria-controls="ideasScreen" data-bandeja-view="ideas">Ideas</button>
+        <div class="bandeja-tabs" role="tablist" aria-label="Ansicht des Eingangs">
+          <button type="button" role="tab" class="active" aria-selected="true" aria-controls="bandejaConfirm" data-bandeja-view="confirm">Zu bestätigen</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="bandejaSuggest" data-bandeja-view="suggest" hidden>Vorschläge</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="ideasScreen" data-bandeja-view="ideas" hidden>Ideen</button>
         </div>
-        <div id="bandejaConfirm" class="bandeja-panel" role="tabpanel" data-bandeja-panel="confirm"><div class="surface-loading">Leyendo lo que espera tu confirmación…</div></div>
+        <div id="bandejaConfirm" class="bandeja-panel" role="tabpanel" data-bandeja-panel="confirm"><div class="surface-loading">Lese, was auf Bestätigung wartet …</div></div>
         <div id="bandejaSuggest" class="bandeja-panel hidden" role="tabpanel" data-bandeja-panel="suggest">
           <div class="bandeja-tools"><span id="feedRefreshStatus" class="surface-refresh-status" aria-live="polite"></span></div>
-          <div id="feedList" class="surface-list"><div class="surface-loading">Leyendo tu situación…</div></div>
+          <div id="feedList" class="surface-list"><div class="surface-loading">Lese die Lage …</div></div>
         </div>
         <div id="ideasScreen" class="bandeja-panel hidden" role="tabpanel" data-bandeja-panel="ideas" data-screen-alias="ideas">
-          <div class="bandeja-tools"><button type="button" id="generateIdeas" class="surface-text-action">Explorar nuevas ideas</button></div>
-          <div id="ideasList" class="surface-list"><div class="surface-loading">Buscando algo que valga la pena producir…</div></div>
+          <div class="bandeja-tools"><button type="button" id="generateIdeas" class="surface-text-action">Neue Ideen erkunden</button></div>
+          <div id="ideasList" class="surface-list"><div class="surface-loading">Suche etwas, das sich zu produzieren lohnt …</div></div>
         </div>
       </div>
     </section>
