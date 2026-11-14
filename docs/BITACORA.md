@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` 306/306; Chromium lokal 6/6 (Muster-Planner 5, Termin-Abgleich 1); `build.py` alle Prüfungen OK.
 - Quedó pendiente o sin probar: der Knopf mit echter Anmeldung (nur mit lokaler Fake-Datenbank geprüft). Die Verknüpfung eines laufenden Projekt-Planners mit seinem Terminplan erfolgt separat in der Datenbank (Details in der Projektakte, nicht hier).
 - Riesgos o decisiones que necesitan a Gari: BOD.1 ist ein Vorschlag (fachlich prüfen).
-- PR:
+- PR: #95
 
 ### 2026-11-14 · Muster LPH 3 v1.4: Bemusterungsvorbereitung 20 AT; Muster-Planner v0.3.2 · Claude
 - Qué cambió y por qué: Entscheidung Gari (14.11.2026): Vorbereitung der Bemusterungsunterlagen 20 statt 15 AT. Vorlage LPH3 **v1.4**: nur `t058` (20 AT, 03.02.–02.03.2027) und Übergabe `t059` (02.03.) verschieben sich; Abstimmung `t030` (04.03.), alle übrigen Termine und das Musterende bleiben. Muster-Planner (Aufgabenbibliothek) **v0.3.2** aus v1.4 neu erzeugt: Inhalt unverändert, A5-Vorbereitungskarten enden am 02.03.; alle Prüfungen OK (zeitliche Konsistenz: Vorbereitung endet vor M05). Excel-Dateiname folgt jetzt der Version.
