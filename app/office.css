@@ -98,23 +98,9 @@
 
 /* Office #38: same Window Work components and layout; data is resolved only by Office adapter. */
 .office-app[data-section="work"] .work-body{min-width:0;width:100%;max-width:none}
-.office-app[data-section="work"] .work-body .work-board{display:flex;align-items:stretch;gap:14px;overflow-x:auto;padding:5px 4px 20px}
-.office-app[data-section="work"] .work-body .work-bucket{flex:0 0 328px;min-width:288px;max-width:380px}
-.office-app[data-section="work"] .work-body .work-bucket-scroll{min-height:20px;max-height:calc(100dvh - 260px);overflow:auto}
-/* Planner «Liste» (Handy hochkant): die Office-Spaltenbreite oben darf in der Liste nicht zur Höhe werden –
-   sonst ist jeder Bucket 300 px hoch und die Karten laufen über den nächsten Bucket. Spalten bleiben unverändert. */
-@media(max-width:620px){
- .office-app[data-section="work"] .work-body .work-board.mobile-stack{flex-direction:column;align-items:stretch;overflow:visible;height:auto}
- .office-app[data-section="work"] .work-body .work-board.mobile-stack .work-bucket{flex:0 0 auto;width:100%;min-width:0;max-width:none;height:auto;max-height:none}
- .office-app[data-section="work"] .work-body .work-board.mobile-stack .work-bucket-scroll{max-height:none;overflow:visible}
-}
-/* Niedrige Bildschirme (Handy quer): kein eigener Kartenbereich von nur ~140 px je Bucket; der Bucket wächst mit
-   seinen Karten, die Seite scrollt senkrecht und das Board weiter waagerecht. */
-@media(max-height:520px){
- .office-app[data-section="work"] .work-body .work-board{align-items:flex-start}
- .office-app[data-section="work"] .work-body .work-bucket{height:auto;max-height:none}
- .office-app[data-section="work"] .work-body .work-bucket-scroll{max-height:none;overflow:visible}
-}
+/* Planner-Board, Buckets und Kartenbereich: KEINE Office-Regeln. Es gilt das Layout von Window (app.css, work-apple.css,
+   mobile-refinement.css) – wie im Planner von Isabella. Die früheren Regeln von hier (Spaltenbreite 328/300 px, Kartenbereich
+   100dvh − 250/260 px) machten in «Liste» die Breite zur Bucket-Höhe und ließen im Querformat ~130 px für Karten. */
 .office-app[data-section="work"] .work-body .work-planner-toolbar{display:flex;align-items:center;justify-content:space-between}
 .office-app[data-section="work"] .work-body .work-files{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:12px}
 .office-app[data-section="work"] .work-body .work-file{min-width:0;text-decoration:none}
@@ -140,8 +126,6 @@
 .office-app[data-section="calendar"] #calendarScreen .cal-toolbar>.cal-toolbar-right{grid-column:3;justify-self:end}
 .office-app[data-section="calendar"] #calendarScreen .cal-nav{width:100%;max-width:none}
 @media(max-width:700px){
- .office-app[data-section="work"] .work-body .work-bucket{flex-basis:300px}
- .office-app[data-section="work"] .work-body .work-bucket-scroll{max-height:calc(100dvh - 250px)}
  .office-app .office-plan-library-heading+.office-projects-list{grid-template-columns:1fr}
 }
 
