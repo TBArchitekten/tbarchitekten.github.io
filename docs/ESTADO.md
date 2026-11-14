@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 14.11.2026 · Claude · Planner Bernried verknüpft:** Der Planner von Bernried enthält die 7 Abgabe-Buckets und 53 Aufgaben der Bibliothek v0.3.3 (alle offen, keine abgehakt), jede mit den Vorgängen seines Terminplans verknüpft; „Termine aus Terminplan“ übernimmt künftige Verschiebungen. Die 2 bestehenden Buckets und 13 Aufgaben sind unverändert.
+
 **Stand 14.11.2026 · Claude · Bibliothek v0.3.3 + Termin-Abgleich:** Muster-Planner v0.3.3 (53 Aufgaben, neu Themenpaket Bodenbeläge; Themen mit Optionen, Muster und Entscheidungsblatt). Projekt-Planner: Knopf „Termine aus Terminplan“ für Aufgaben mit `metadata.office_planner.terminplan` (Vorschau, Speichern nach Bestätigung; `app/planner-terminplan-sync.js`).
 
 **Stand 14.11.2026 · Claude · Muster LPH 3 v1.4:** Aktive LPH3-Vorlage **v1.4** (Bemusterungsvorbereitung `t058` 20 AT, Übergabe `t059` 02.03.2027; sonst wie v1.3). Muster-Planner **v0.3.2** daraus erzeugt (52 Aufgaben, 334 Prüfpunkte).
