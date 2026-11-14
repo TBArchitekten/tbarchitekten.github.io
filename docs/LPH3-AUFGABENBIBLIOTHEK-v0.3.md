@@ -1,5 +1,5 @@
-# TBA Office · Aufgabenbibliothek LPH 3 · v0.3.2
-Stand 14.11.2026 (v0.3.2: Vorlage v1.4) · **Entwurf zur gemeinsamen Prüfung, nicht freigegeben** · ersetzt als Muster-Planner die Fassung v0.2.1 (`app/data/muster-planner-lph3-v0.2.json` bleibt als Referenz der Konkordanz im Repo)
+# TBA Office · Aufgabenbibliothek LPH 3 · v0.3.3
+Stand 14.11.2026 (v0.3.3: Vorlage v1.4, Themenpaket Bodenbeläge) · **Entwurf zur gemeinsamen Prüfung, nicht freigegeben** · ersetzt als Muster-Planner die Fassung v0.2.1 (`app/data/muster-planner-lph3-v0.2.json` bleibt als Referenz der Konkordanz im Repo)
 
 ## Was das ist
 Ein System, das den Muster-Terminplan LPH 3 mit dem Planner verbindet. Wer ein Projekt beginnt, soll einen strukturierten, änderbaren Arbeitsraum bekommen: Abgaben als Buckets, Aufgaben mit Prüfpunkten, und jede Aufgabe weiß, welchen Vorgang sie ausführt und welche Ergebnisse sie braucht.
@@ -22,6 +22,12 @@ Bis v1.2 hatte die Vorbereitung der Bemusterung keinen Vorgang; 04.03 (`t030`) b
 - `t030` wartet zusätzlich auf `t059` (EA + 1).
 
 Kein bestehender Vorgang verschiebt sich, das Musterende bleibt. Folge für die PSP: Abstimmung `t030` ist jetzt 04.05, M06 `t031` 04.06. In der Bibliothek führen die acht Vorbereitungskarten `t058` aus, `L3.A5.AUS` endet mit `t059`, und `L3.A5.ABS` umfasst Bemusterungstermin(e) `t030` bis M06 `t031`.
+
+## Themenpakete (seit v0.3.3)
+Bäder (BAD), Treppen (TRE), Fassade (FAS), Licht (LIC) und neu **Bodenbeläge (BOD)**. Jede Themenkarte enthält zusätzlich: Optionen je Entscheidungsfeld (mindestens zwei Varianten mit Empfehlung und Kostenwirkung) sowie Muster je Option, aufbereitet als Entscheidungsblatt für den Auftraggeber. `L3.MUS.1` (Muster beschaffen) braucht die Ergebnisse aller aktiven Themen.
+
+## Planner ↔ Terminplan (seit 14.11.2026)
+Eine Projekt-Aufgabe ist verknüpft, wenn `metadata.office_planner.terminplan = {instance_id, executes, waits_for, anchor}` gesetzt ist (Vorgangs-IDs des Projekt-Terminplans). Der Knopf **„Termine aus Terminplan“** im Planner (nur sichtbar, wenn es verknüpfte Aufgaben gibt) rechnet Start = frühester Start, Fällig = spätestes Ende der ausgeführten Vorgänge (ohne eigenen Vorgang: Ankerdatum), zeigt alle Änderungen und speichert erst nach „Übernehmen“. Erledigte Aufgaben bleiben unverändert. Logik: `app/planner-terminplan-sync.js` (rein, getestet).
 
 ## Dateien
 - `app/data/muster-planner-lph3-v0.3.json` – vom Planner gelesen (`app/work.js`, nur Ansicht). Enthält zusätzlich `coding`, `steps`, `blocks`, `results`, `parameters`, `retired`, `validation` und je Aufgabe `produces`, `requires`, `schedule`, `origin`.

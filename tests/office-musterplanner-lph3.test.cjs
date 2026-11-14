@@ -10,9 +10,9 @@ const all=model.buckets.flatMap(bucket=>bucket.tasks.map(task=>({...task,bucket:
 const tasks=new Map(all.map(task=>[task.id,task]));
 const fromOld=id=>all.filter(t=>t.origin.muster_v021.includes(id));
 test('Masterplanner is a versioned, explicitly unapproved LPH3 draft',()=>{
- assert.equal(model.phase,'LPH3');assert.equal(model.draft,true);assert.equal(model.version,'0.3.2-draft');
+ assert.equal(model.phase,'LPH3');assert.equal(model.draft,true);assert.equal(model.version,'0.3.3-draft');
  assert.deepEqual(model.buckets.map(x=>x.id),['A1','A2','A3','A4','A5','A6','A7']);
- assert.equal(all.length,52);assert.equal(all.reduce((n,x)=>n+x.checks.length,0),334);
+ assert.equal(all.length,53);assert.equal(all.reduce((n,x)=>n+x.checks.length,0),350);
  assert.equal(tasks.size,all.length);
  assert.match(model.reference,/Muster-Terminplan LPH 3 v1\.4/);
  assert.match(model.status,/nicht freigegeben/);
@@ -30,10 +30,16 @@ test('Only TBA-owned work is represented, never Fachplaner deliveries or Bauherr
  assert.ok(!all.some(x=>/^\s*(TWP|HLS|ELT|BRS)\s*[·-]/.test(x.title)),'no external planner outputs copied as TBA tasks');
 });
 test('Bemusterung has real research, alternatives, samples, documents, drawings and cost handoff',()=>{
- const b=model.buckets.find(b=>b.id==='A5');assert.equal(b.tasks.length,10);
+ const b=model.buckets.find(b=>b.id==='A5');assert.equal(b.tasks.length,11);
  for(const id of ['L3-BEM-03','L3-BEM-04','L3-BEM-05','L3-BEM-07','L3-BEM-08',
    'L3-BEM-09','L3-BEM-10','L3-BEM-11','L3-BEM-12','L3-BEM-13','L3-BEM-14'])assert.ok(fromOld(id).some(t=>t.bucket==='A5'),id);
- for(const id of ['L3.MUS.1','L3.BAD.1','L3.TRE.1','L3.FAS.1','L3.LIC.1'])assert.match(tasks.get(id).scope,/Bedingt/);
+ for(const id of ['L3.MUS.1','L3.BAD.1','L3.TRE.1','L3.FAS.1','L3.LIC.1','L3.BOD.1'])assert.match(tasks.get(id).scope,/Bedingt/);
+ // Je Thema: Optionen, Muster je Option und Entscheidungsblatt für den Auftraggeber (Gari, 14.11.2026)
+ for(const id of ['L3.BAD.1','L3.TRE.1','L3.FAS.1','L3.LIC.1','L3.BOD.1']){
+   assert.ok(tasks.get(id).checks.some(c=>/Optionen ausgearbeitet/.test(c)),id+' Optionen');
+   assert.ok(tasks.get(id).checks.some(c=>/Muster je Option angefordert/.test(c)&&/Entscheidungsblatt/.test(c)),id+' Muster und Entscheidung');
+   assert.ok(tasks.get('L3.MUS.1').requires.includes(id.slice(3)),'Muster beschaffen braucht '+id);
+ }
  assert.match(tasks.get('L3.FAS.1').basis,/LPH 5/);
  assert.ok(model.buckets.some(b=>b.id==='A6'&&b.tasks.some(t=>t.id==='L3.KOB.1'&&t.requires.includes('QUA.2'))));
  assert.ok(b.tasks.filter(t=>t.step==='Erarbeiten').every(t=>t.schedule.executes.includes('t058')),'own preparation Vorgang');

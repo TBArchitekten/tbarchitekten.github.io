@@ -82,3 +82,9 @@
 
 .work-bucket-pretitle{font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:#8a97a5;padding:1px 4px 7px}
 .work-muster-preview .work-bucket-grab{cursor:default;user-select:text}
+
+/* Termine aus Terminplan: Vorschau der Änderungen vor dem Speichern. */
+.work-sync-list{list-style:none;margin:8px 0 12px;padding:0;max-height:50vh;overflow:auto;border-top:1px solid #eceef1}
+.work-sync-row{display:grid;gap:2px;padding:8px 2px;border-bottom:1px solid #eceef1;font-size:12px}
+.work-sync-row strong{font-weight:600;color:#25282d}
+.work-sync-row span{color:#69707a}

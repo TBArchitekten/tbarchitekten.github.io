@@ -19,14 +19,14 @@ const origin=key=>{const m=new Map();for(const {bucket,task} of all)for(const o 
 test('LPH3 Musterplanner is draft only, with exactly seven delivery-linked Buckets and no transversal bucket',()=>{
   assert.equal(planner.phase,'LPH3');
   assert.equal(planner.draft,true);
-  assert.equal(planner.version,'0.3.2-draft');
+  assert.equal(planner.version,'0.3.3-draft');
   assert.equal(planner.buckets.length,7);
   assert.ok(planner.buckets.every(b=>b.kind==='Abgabe'&&b.gate&&b.tasks.length>0));
   assert.deepEqual(planner.buckets.map(b=>b.id),['A1','A2','A3','A4','A5','A6','A7']);
   assert.ok(!planner.buckets.some(b=>/ORG|Organisation/i.test(b.id)));
-  assert.equal(all.length,52);
-  assert.equal(new Set(all.map(x=>x.task.id)).size,52);
-  assert.equal(all.reduce((sum,x)=>sum+x.task.checks.length,0),334);
+  assert.equal(all.length,53);
+  assert.equal(new Set(all.map(x=>x.task.id)).size,53);
+  assert.equal(all.reduce((sum,x)=>sum+x.task.checks.length,0),350);
 });
 
 test('Every card has an assignable TBA role, documented result and checklist, and no invented effort hours',()=>{
@@ -85,7 +85,7 @@ test('Results are linked as one system: every requirement is produced once and i
 test('Bemusterung Bucket uses the REAL v1.4 preparation, handover, Abstimmung and M06',()=>{
   const bm=planner.buckets.find(x=>x.id==='A5');
   assert.ok(bm);
-  assert.equal(bm.tasks.length,10);
+  assert.equal(bm.tasks.length,11);
   assert.deepEqual(bm.scheduleReferences.map(r=>[r.taskId,r.role]),[['t059','Ausgabe'],['t030','Weiterer Vorgang'],['t031','Abschluss']]);
   assert.equal(taskById.get('t058').name,'Bemusterungsunterlagen vorbereiten · Qualitäten, Materialien und Themenpläne');
   assert.equal(taskById.get('t059').name,'Bemusterungsunterlagen an Auftraggeber übergeben');
@@ -97,7 +97,7 @@ test('Bemusterung Bucket uses the REAL v1.4 preparation, handover, Abstimmung an
   assert.equal(taskById.get('t031').type,'milestone');
   assert.ok(bm.gate.includes('M06'));
   const prep=bm.tasks.filter(t=>t.step==='Erarbeiten');
-  assert.equal(prep.length,8);
+  assert.equal(prep.length,9);
   assert.ok(prep.every(t=>t.schedule.executes.length===1&&t.schedule.executes[0]==='t058'),'preparation executes t058');
   assert.ok(prep.every(t=>t.schedule.templateEnd===taskById.get('t058').end));
   assert.deepEqual(bm.tasks.find(t=>t.id==='L3.A5.AUS').schedule.executes,['t059']);
@@ -111,7 +111,7 @@ test('Bemusterung Bucket uses the REAL v1.4 preparation, handover, Abstimmung an
 test('Bemusterung includes distinct decisions, samples, bathroom plans, staircase, façade, light and cost inputs',()=>{
   const bm=planner.buckets.find(x=>x.id==='A5');
   const ids=bm.tasks.map(t=>t.id);
-  for(const id of ['L3.QUA.1','L3.MAT.1','L3.MUS.1','L3.MAP.1','L3.BAD.1','L3.TRE.1','L3.FAS.1','L3.LIC.1'])
+  for(const id of ['L3.QUA.1','L3.MAT.1','L3.MUS.1','L3.MAP.1','L3.BAD.1','L3.TRE.1','L3.FAS.1','L3.LIC.1','L3.BOD.1'])
     assert.ok(ids.includes(id),'missing Bemusterung task '+id);
   const m=origin('muster_v021');
   for(const id of ['L3-BEM-03','L3-BEM-04','L3-BEM-05','L3-BEM-07','L3-BEM-08',
@@ -158,7 +158,7 @@ test('Muster is rendered inside EXISTING Office Work Planner (no second custom b
   assert.match(detail,/function preview\(\{task,buckets=\[\],projectName='Muster LPH 3'/);
   assert.match(detail,/if\(ctx\.readOnly\)\{/);
   assert.match(detail,/return; \/\/ No autoguardado, Upload, Checklistenänderung, Archiv oder Zeitplanung/);
-  assert.match(index,/work\.js\?v=office47/);
+  assert.match(index,/work\.js\?v=office48/);
   assert.match(work,/fetch\('\.\/data\/muster-planner-lph3-v0\.3\.json/);
   assert.match(index,/task-detail\.js\?v=office4/);
 });

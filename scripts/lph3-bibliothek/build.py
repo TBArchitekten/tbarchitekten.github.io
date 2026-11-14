@@ -10,7 +10,7 @@ import os, pathlib, tempfile
 REPO = str(pathlib.Path(__file__).resolve().parents[2])
 OUT = sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="lph3-bibliothek-")
 os.makedirs(OUT, exist_ok=True)
-VERSION, STAND = "0.3.2-draft", "2026-11-14"
+VERSION, STAND = "0.3.3-draft", "2026-11-14"
 TPL = "1.4"
 
 # ───────── Muster-Terminplan (Seed der Seite)

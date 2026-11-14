@@ -1,6 +1,6 @@
 {
  "id": "tba-lph3-aufgabenbibliothek",
- "version": "0.3.2-draft",
+ "version": "0.3.3-draft",
  "draft": true,
  "phase": "LPH3",
  "updated": "2026-11-14",
@@ -344,6 +344,17 @@
    }
   },
   {
+   "code": "BOD",
+   "name": "Themenpläne Bodenbeläge",
+   "states": {
+    "1": "Belagsplan (Entwurf)"
+   },
+   "toolHook": "Planungshilfen des Büros",
+   "producedBy": {
+    "1": "L3.BOD.1"
+   }
+  },
+  {
    "code": "MEN",
    "name": "Mengenermittlung",
    "states": {
@@ -453,7 +464,7 @@
   {
    "code": "P-THE",
    "name": "Aktive Themenpakete",
-   "values": "BAD, TRE, FAS, LIC, weitere",
+   "values": "BAD, TRE, FAS, LIC, BOD, weitere",
    "effect": "Je aktivem Thema wird eine Themenkarte angelegt. Weitere Themen nach dem Themenpaket-Muster."
   },
   {
@@ -490,12 +501,12 @@
   {
    "check": "Codes eindeutig und formgerecht (L3.<Objekt>.<Zustand>)",
    "result": "OK",
-   "detail": "52 Codes"
+   "detail": "53 Codes"
   },
   {
    "check": "Jeder erzeugte Ergebnisstand ist im Ergebnisregister definiert",
    "result": "OK",
-   "detail": "52 Ergebnisstände, 15 Abgabe-Zustände"
+   "detail": "53 Ergebnisstände, 15 Abgabe-Zustände"
   },
   {
    "check": "Jeder Ergebnisstand wird von genau einer Aufgabe erzeugt",
@@ -505,7 +516,7 @@
   {
    "check": "Jede Voraussetzung verweist auf einen erzeugten Ergebnisstand",
    "result": "OK",
-   "detail": "137 Verweise aufgelöst"
+   "detail": "146 Verweise aufgelöst"
   },
   {
    "check": "Abhängigkeiten ohne Zirkelbezug",
@@ -540,12 +551,12 @@
   {
    "check": "HOAI Anlage 10 LPH 3: jede Grundleistung a) bis g) ist mindestens einer Aufgabe zugeordnet",
    "result": "OK",
-   "detail": "a) 28, b) 12, c) 3, d) 2, e) 4, f) 7, g) 6"
+   "detail": "a) 29, b) 12, c) 3, d) 2, e) 4, f) 7, g) 6"
   },
   {
    "check": "Checklisten: Länge nach Bedarf, höchstens 10 Punkte",
    "result": "OK",
-   "detail": "334 Prüfpunkte, je Karte 4 bis 10; Verteilung {4: 2, 5: 13, 6: 16, 7: 9, 8: 7, 9: 4, 10: 1}"
+   "detail": "350 Prüfpunkte, je Karte 4 bis 10; Verteilung {4: 2, 5: 12, 6: 14, 7: 9, 8: 10, 9: 5, 10: 1}"
   },
   {
    "check": "Konkordanz vollständig: jede Karte der drei Vorversionen ist zugeordnet oder begründet entfallen",
@@ -3359,7 +3370,7 @@
      "title": "Muster beschaffen, prüfen und dokumentieren",
      "result": "Musterliste mit Eingangsstand; geprüfte, nummerierte und fotografisch dokumentierte Muster",
      "checks": [
-      "Musterliste erstellt: benötigte Muster mit Referenzcode, Hersteller und Liefertermin",
+      "Musterliste erstellt: benötigte Muster je Thema und Option mit Referenzcode, Hersteller und Liefertermin",
       "Muster angefragt; Eingang nachgehalten; fehlende Muster als Vorbehalt markiert",
       "Muster gegen die Produktdaten geprüft (Farbe, Oberfläche, Format); Abweichungen protokolliert",
       "Muster im Zusammenhang beurteilt (Kombination, Licht) und fotografisch dokumentiert",
@@ -3396,7 +3407,12 @@
       "MUS.1"
      ],
      "requires": [
-      "MAT.1"
+      "MAT.1",
+      "BAD.1",
+      "TRE.1",
+      "FAS.1",
+      "LIC.1",
+      "BOD.1"
      ],
      "hoai": [
       "a"
@@ -3504,6 +3520,8 @@
       "Sanitärgegenstände und Installationswände mit HLS abgestimmt; offene Fragen an den Fachplaner gestellt",
       "Material- und Ausstattungscodes aus der Qualitäts- und Ausstattungsliste eingetragen",
       "Kostenrelevante Mengen ableitbar (Belagsflächen, Stückzahlen)",
+      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
+      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet",
       "Als Entwurf gekennzeichnet – keine Verlege- oder Ausführungsplanung (LPH 5)"
      ],
      "checkCodes": [
@@ -3513,12 +3531,16 @@
       "L3.BAD.1-04",
       "L3.BAD.1-05",
       "L3.BAD.1-06",
-      "L3.BAD.1-07"
+      "L3.BAD.1-07",
+      "L3.BAD.1-08",
+      "L3.BAD.1-09"
      ],
      "checkBlocks": [
       "THEMA",
       "THEMA",
       null,
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA",
       "THEMA",
@@ -3548,7 +3570,7 @@
       "a"
      ],
      "condition": "P-THE enthält BAD",
-     "doneWhen": "Themenpläne vollständig; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Themenpläne vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
      "schedule": {
       "executes": [
        "t058"
@@ -3579,6 +3601,8 @@
       "Geländer, Handlauf und Oberflächen im Prinzip dargestellt",
       "Tragprinzip mit der Tragwerksplanung abgestimmt; Anforderungen an notwendige Treppen geklärt",
       "Material- und Ausstattungscodes eingetragen; kostenrelevante Mengen ableitbar",
+      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
+      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet",
       "Ausführungsdetails ausdrücklich der LPH 5 vorbehalten"
      ],
      "checkCodes": [
@@ -3587,12 +3611,16 @@
       "L3.TRE.1-03",
       "L3.TRE.1-04",
       "L3.TRE.1-05",
-      "L3.TRE.1-06"
+      "L3.TRE.1-06",
+      "L3.TRE.1-07",
+      "L3.TRE.1-08"
      ],
      "checkBlocks": [
       "THEMA",
       null,
       null,
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA",
       "THEMA"
@@ -3622,7 +3650,7 @@
       "a"
      ],
      "condition": "P-THE enthält TRE",
-     "doneWhen": "Themenpläne vollständig; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Themenpläne vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
      "schedule": {
       "executes": [
        "t058"
@@ -3652,6 +3680,8 @@
       "Sonnenschutz und Öffnungsarten festgelegt",
       "Bauphysikalische und statische Fragen an die Fachplaner adressiert (Wärmebrücken, Befestigung)",
       "Material- und Ausstattungscodes eingetragen; Fassadenfläche je Typ für die Kostenberechnung ableitbar",
+      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
+      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet",
       "Ausführungsreife Details der LPH 5 vorbehalten"
      ],
      "checkCodes": [
@@ -3660,12 +3690,16 @@
       "L3.FAS.1-03",
       "L3.FAS.1-04",
       "L3.FAS.1-05",
-      "L3.FAS.1-06"
+      "L3.FAS.1-06",
+      "L3.FAS.1-07",
+      "L3.FAS.1-08"
      ],
      "checkBlocks": [
       "THEMA",
       null,
       null,
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA",
       "THEMA"
@@ -3695,7 +3729,7 @@
       "a"
      ],
      "condition": "P-THE enthält FAS",
-     "doneWhen": "Prinzipschnitt vollständig; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Prinzipschnitt vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
      "schedule": {
       "executes": [
        "t058"
@@ -3724,19 +3758,25 @@
       "Leuchtenpositionen im Prinzip in Grundrissen bzw. Deckenspiegeln dargestellt",
       "Einbauleuchten mit Deckenaufbau und Tragwerk abgeglichen",
       "Schnittstelle zur Elektroplanung geklärt (Auslässe, Schaltung/Steuerung im Grundsatz); Zuständigkeit Lichtplaner/ELT/Architekt festgelegt",
-      "Leuchtenqualitäten in die Qualitäts- und Ausstattungsliste aufgenommen (Kostenbezug)"
+      "Leuchtenqualitäten in die Qualitäts- und Ausstattungsliste aufgenommen (Kostenbezug)",
+      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
+      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet"
      ],
      "checkCodes": [
       "L3.LIC.1-01",
       "L3.LIC.1-02",
       "L3.LIC.1-03",
       "L3.LIC.1-04",
-      "L3.LIC.1-05"
+      "L3.LIC.1-05",
+      "L3.LIC.1-06",
+      "L3.LIC.1-07"
      ],
      "checkBlocks": [
       "THEMA",
       null,
       null,
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA"
      ],
@@ -3764,7 +3804,7 @@
       "a"
      ],
      "condition": "P-THE enthält LIC",
-     "doneWhen": "Lichtkonzept vollständig; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Lichtkonzept vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
      "schedule": {
       "executes": [
        "t058"
@@ -3780,6 +3820,83 @@
       "muster_v021": [],
       "chatgpt_v01": [],
       "note": "Neu in v0.3 – Vorschlag"
+     }
+    },
+    {
+     "id": "L3.BOD.1",
+     "title": "Themenpaket Bodenbeläge: Belagsplan und Übergänge",
+     "result": "Bodenbelagsplan je Geschoss mit Belagsbereichen, Übergängen und Aufbauhöhen; Optionen mit Mustern zur Entscheidung",
+     "checks": [
+      "Belagsarten je Raum bzw. Raumgruppe festgelegt (Nutzung, Beanspruchung, Rutschhemmung)",
+      "Bodenbelagsplan im Grundriss: Belagsbereiche, Verlegerichtung im Prinzip, Übergänge und Schwellen",
+      "Fußbodenaufbau je Belag mit dem Bauteilkatalog abgeglichen (Aufbauhöhen, Fußbodenheizung, Trittschall); mit HLS und Tragwerksplanung abgestimmt",
+      "Material- und Ausstattungscodes aus der Qualitäts- und Ausstattungsliste eingetragen",
+      "Kostenrelevante Mengen ableitbar (Belagsflächen je Belag, Sockelleisten)",
+      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
+      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet",
+      "Als Entwurf gekennzeichnet – keine Verlegeplanung (LPH 5)"
+     ],
+     "checkCodes": [
+      "L3.BOD.1-01",
+      "L3.BOD.1-02",
+      "L3.BOD.1-03",
+      "L3.BOD.1-04",
+      "L3.BOD.1-05",
+      "L3.BOD.1-06",
+      "L3.BOD.1-07",
+      "L3.BOD.1-08"
+     ],
+     "checkBlocks": [
+      "THEMA",
+      null,
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA"
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "Bedingt: Bodenbeläge als eigenes Thema vereinbart",
+     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "review": "Projektleitung",
+     "participants": "HLS (Fußbodenheizung); Tragwerk (Aufbauhöhen)",
+     "basis": "I: Neu in v0.3.3 (Thema am 14.11.2026 genannt) – in keiner der drei Vorversionen enthalten, fachlich noch zu prüfen. V: nur bei entsprechendem Auftrag.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Geschosse und Belagsarten",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "BOD.1"
+     ],
+     "requires": [
+      "QUA.1",
+      "GRU.1",
+      "BTK.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": "P-THE enthält BOD",
+     "doneWhen": "Belagsplan vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-03-02",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [],
+      "chatgpt_v01": [],
+      "note": "Neu in v0.3.3 – Vorschlag"
      }
     },
     {
@@ -3836,7 +3953,8 @@
       "BAD.1",
       "TRE.1",
       "FAS.1",
-      "LIC.1"
+      "LIC.1",
+      "BOD.1"
      ],
      "hoai": [
       "a",
@@ -3873,7 +3991,7 @@
      "title": "Bemusterung durchführen und Qualitätsentscheidungen dokumentieren (M06)",
      "result": "Durchgeführte Bemusterung; Bemusterungsprotokoll; konsolidierte Qualitäts- und Ausstattungsliste mit Status je Position; Bauteilkatalog Endstand",
      "checks": [
-      "Bemusterungstermin(e) durchgeführt; je Entscheidungsfeld Ergebnis festgehalten: entschieden (mit Referenzcode) oder offen (mit Frist)",
+      "Bemusterungstermin(e) durchgeführt; je Thema und Entscheidungsfeld Ergebnis festgehalten: gewählte Option (mit Referenzcode) oder offen (mit Frist)",
       "Bemusterungsprotokoll erstellt: Entscheidungen mit Referenzcode, Datum und Entscheider",
       "Qualitäts- und Ausstattungsliste konsolidiert: je Position Status „bestätigt“ oder „offen mit Kostenannahme“",
       "Kosten- und Terminfolgen geänderter Qualitäten dokumentiert",

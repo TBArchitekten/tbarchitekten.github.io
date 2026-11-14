@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 14.11.2026 · Claude · Bibliothek v0.3.3 + Termin-Abgleich:** Muster-Planner v0.3.3 (53 Aufgaben, neu Themenpaket Bodenbeläge; Themen mit Optionen, Muster und Entscheidungsblatt). Projekt-Planner: Knopf „Termine aus Terminplan“ für Aufgaben mit `metadata.office_planner.terminplan` (Vorschau, Speichern nach Bestätigung; `app/planner-terminplan-sync.js`).
+
 **Stand 14.11.2026 · Claude · Muster LPH 3 v1.4:** Aktive LPH3-Vorlage **v1.4** (Bemusterungsvorbereitung `t058` 20 AT, Übergabe `t059` 02.03.2027; sonst wie v1.3). Muster-Planner **v0.3.2** daraus erzeugt (52 Aufgaben, 334 Prüfpunkte).
 
 **Stand 14.11.2026 · Claude · Muster-Planner-Links:** Beide «Muster-Planner ansehen» laden die Seite über `muster-planner.html` neu (in der iPhone-App öffnete der #-Link sonst das letzte Projekt). Karte zeigt v0.3.1 · 52 Aufgaben. Planner-Knopf «Listenansicht» (pro Gerät gespeichert; Voreinstellung Spalten wie bei Isabella).
