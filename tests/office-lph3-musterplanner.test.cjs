@@ -146,7 +146,9 @@ test('Muster is rendered inside EXISTING Office Work Planner (no second custom b
     detail=read('app/task-detail.js'),office=read('app/office-projects.js'),index=read('app/index.html');
   assert.match(html,/location\.replace\('\.\/app\/#section=work&muster=LPH3'\)/);
   assert.doesNotMatch(html,/id="board"/);
-  assert.match(office,/planner\.href='\.\/#section=work&muster=LPH3'/);
+  // Beide Muster-Planner-Links laden die Seite neu (iPhone-App: ein reiner #-Wechsel öffnete das letzte Projekt).
+  assert.match(office,/planner\.href='\.\.\/muster-planner\.html'/);
+  assert.doesNotMatch(office,/planner\.href='\.\/#section=work&muster=LPH3'/);
   assert.match(work,/function isMusterPlanner\(\)/);
   assert.match(work,/await waitForWork\(renderPlanner\(true\),'Muster-Planner'\)/);
   assert.match(work,/async function renderPlanner\(preview=false\)/);
@@ -156,7 +158,7 @@ test('Muster is rendered inside EXISTING Office Work Planner (no second custom b
   assert.match(detail,/function preview\(\{task,buckets=\[\],projectName='Muster LPH 3'/);
   assert.match(detail,/if\(ctx\.readOnly\)\{/);
   assert.match(detail,/return; \/\/ No autoguardado, Upload, Checklistenänderung, Archiv oder Zeitplanung/);
-  assert.match(index,/work\.js\?v=office46/);
+  assert.match(index,/work\.js\?v=office47/);
   assert.match(work,/fetch\('\.\/data\/muster-planner-lph3-v0\.3\.json/);
   assert.match(index,/task-detail\.js\?v=office4/);
 });
@@ -191,4 +193,11 @@ test('Obsolete second Muster board scripts and stylesheet are no longer used',()
   const fs=require('node:fs');
   assert.equal(fs.existsSync(require('node:path').join(root,'muster-planner.js')),false);
   assert.equal(fs.existsSync(require('node:path').join(root,'muster-planner.css')),false);
+});
+
+test('Terminpläne library card names the published Muster version and counts (no stale text)',()=>{
+  const office=read('app/office-projects.js');
+  const version=planner.version.replace(/-draft$/,'');
+  const text='Entwurf v'+version+' · '+planner.buckets.length+' Abgabe-Buckets · '+all.length+' TBA-Aufgaben · schreibgeschützte Vorlage';
+  assert.ok(office.includes(text),'office-projects.js must say: '+text);
 });
