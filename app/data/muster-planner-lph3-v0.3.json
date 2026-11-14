@@ -1,11 +1,11 @@
 {
  "id": "tba-lph3-aufgabenbibliothek",
- "version": "0.3.1-draft",
+ "version": "0.3.2-draft",
  "draft": true,
  "phase": "LPH3",
  "updated": "2026-11-14",
  "status": "Entwurf zur gemeinsamen Prüfung · nicht freigegeben",
- "reference": "Muster-Terminplan LPH 3 v1.3 / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. und 14.11.2026",
+ "reference": "Muster-Terminplan LPH 3 v1.4 / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. und 14.11.2026",
  "warning": "Jeder Bucket ist eine Abgabe des Muster-Terminplans. Nur TBA-eigene Arbeit; Leistungen der Fachplaner und Prüfzeiten des Auftraggebers sind Wartezeit. Keine Stundenwerte. Termine des Musters sind keine Vertragsfristen.",
  "coding": {
   "pattern": "L3.<Objekt>.<Zustand>",
@@ -3162,7 +3162,7 @@
      "role": "Ausgabe",
      "name": "Bemusterungsunterlagen an Auftraggeber übergeben",
      "type": "milestone",
-     "date": "2027-02-23"
+     "date": "2027-03-02"
     },
     {
      "taskId": "t030",
@@ -3265,7 +3265,7 @@
       "waitsFor": [],
       "anchor": null,
       "templateStart": "2027-02-03",
-      "templateEnd": "2027-02-23",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {
@@ -3341,7 +3341,7 @@
       "waitsFor": [],
       "anchor": null,
       "templateStart": "2027-02-03",
-      "templateEnd": "2027-02-23",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {
@@ -3410,7 +3410,7 @@
       "waitsFor": [],
       "anchor": null,
       "templateStart": "2027-02-03",
-      "templateEnd": "2027-02-23",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {
@@ -3481,7 +3481,7 @@
       "waitsFor": [],
       "anchor": null,
       "templateStart": "2027-02-03",
-      "templateEnd": "2027-02-23",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {
@@ -3556,7 +3556,7 @@
       "waitsFor": [],
       "anchor": null,
       "templateStart": "2027-02-03",
-      "templateEnd": "2027-02-23",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {
@@ -3630,7 +3630,7 @@
       "waitsFor": [],
       "anchor": null,
       "templateStart": "2027-02-03",
-      "templateEnd": "2027-02-23",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {
@@ -3703,7 +3703,7 @@
       "waitsFor": [],
       "anchor": null,
       "templateStart": "2027-02-03",
-      "templateEnd": "2027-02-23",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {
@@ -3772,7 +3772,7 @@
       "waitsFor": [],
       "anchor": null,
       "templateStart": "2027-02-03",
-      "templateEnd": "2027-02-23",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {
@@ -3850,8 +3850,8 @@
       ],
       "waitsFor": [],
       "anchor": null,
-      "templateStart": "2027-02-23",
-      "templateEnd": "2027-02-23",
+      "templateStart": "2027-03-02",
+      "templateEnd": "2027-03-02",
       "noOwnActivity": false
      },
      "origin": {

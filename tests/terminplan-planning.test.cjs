@@ -157,7 +157,7 @@ test('browser feature scripts parse and preserve explicit write approval',()=>{
   assert.match(ui,/!bridge\.canEdit\(\)/,'write permission checked');
 });
 
-test('LPH3 v1.2 migration stays the historic reference; v1.3 differs only by the Bemusterung preparation',()=>{
+test('LPH3 v1.2 migration stays the historic reference; v1.3/v1.4 differ only by the Bemusterung preparation',()=>{
   const sql=read('supabase/migrations/20261109131000_office_lph3_template_v12.sql');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
   const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
@@ -168,7 +168,7 @@ test('LPH3 v1.2 migration stays the historic reference; v1.3 differs only by the
   assert.equal(v12.tasks.reduce((n,t)=>n+t.dependencies.length,0),96);
   assert.doesNotMatch(sql,/office_terminplan_instances|delete\s+from|truncate|drop\s+table/i,
     'existing project instances are not modified');
-  // v1.3 = v1.2 + t058/t059 + one predecessor of t030; every other Vorgang keeps name, dates and links.
+  // v1.3/v1.4 = v1.2 + t058/t059 + one predecessor of t030; every other Vorgang keeps name, dates and links.
   const now=new Map(tpl.state.tasks.map(t=>[t.id,t]));
   assert.deepEqual([...now.keys()].filter(id=>!v12.tasks.some(t=>t.id===id)).sort(),['t058','t059']);
   for(const old of v12.tasks){
@@ -183,15 +183,40 @@ test('LPH3 v1.2 migration stays the historic reference; v1.3 differs only by the
   assert.equal(tpl.state.project.end,v12.project.end,'Bemusterung preparation does not extend the Muster');
 });
 
-test('LPH3 v1.3 migration is exactly the reviewed generic seed and never mutates project instances',()=>{
+test('LPH3 v1.3 migration stays historic; v1.4 only lengthens the Bemusterung preparation to 20 AT',()=>{
   const sql=read('supabase/migrations/20261114170000_office_lph3_template_v13.sql');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
   const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
   assert.ok(match,'versioned migration contains a JSONB template');
+  const v13=JSON.parse(match[1]);
+  assert.match(sql,/'1\.3','Office Standard'/);
+  assert.equal(v13.tasks.find(t=>t.id==='t058').durationAT,15);
+  assert.equal(tpl.state.tasks.find(t=>t.id==='t058').durationAT,20);
+  assert.doesNotMatch(sql,/office_terminplan_instances|delete\s+from|truncate|drop\s+table/i);
+  const now=new Map(tpl.state.tasks.map(t=>[t.id,t]));
+  assert.equal(now.size,v13.tasks.length);
+  for(const old of v13.tasks){
+    const cur=now.get(old.id);
+    assert.deepEqual(cur.dependencies,old.dependencies,old.id+' links unchanged');
+    assert.equal(cur.name,old.name,old.id);
+    if(old.id==='t058'||old.id==='t059')continue;
+    assert.equal(cur.start,old.start,old.id+' start unchanged');
+    assert.equal(cur.end,old.end,old.id+' end unchanged');
+  }
+  assert.equal(now.get('t059').end,'2027-03-02');
+  assert.ok(now.get('t059').end<now.get('t030').start,'Unterlagen liegen vor der Abstimmung vor');
+  assert.equal(tpl.state.project.end,v13.project.end);
+});
+
+test('LPH3 v1.4 migration is exactly the reviewed generic seed and never mutates project instances',()=>{
+  const sql=read('supabase/migrations/20261114200000_office_lph3_template_v14.sql');
+  const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
+  const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
+  assert.ok(match,'versioned migration contains a JSONB template');
   assert.deepEqual(JSON.parse(match[1]),tpl.state,'deployed migration must match reviewed seed');
-  assert.equal(tpl.version,'1.3');
+  assert.equal(tpl.version,'1.4');
   assert.match(sql,/on conflict \(phase,version\) do nothing/);
-  assert.match(sql,/set is_active=false\s+where phase='LPH3' and version<>'1\.3'/);
+  assert.match(sql,/set is_active=false\s+where phase='LPH3' and version<>'1\.4'/);
   assert.doesNotMatch(sql,/office_terminplan_instances|delete\s+from|truncate|drop\s+table/i,
     'existing project instances are not modified');
   assert.ok(tpl.state.tasks.every(t=>!('actualStart' in t)&&!('actualEnd' in t)));

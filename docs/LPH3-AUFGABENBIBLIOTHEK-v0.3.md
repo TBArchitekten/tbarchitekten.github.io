@@ -1,5 +1,5 @@
-# TBA Office · Aufgabenbibliothek LPH 3 · v0.3.1
-Stand 14.11.2026 · **Entwurf zur gemeinsamen Prüfung, nicht freigegeben** · ersetzt als Muster-Planner die Fassung v0.2.1 (`app/data/muster-planner-lph3-v0.2.json` bleibt als Referenz der Konkordanz im Repo)
+# TBA Office · Aufgabenbibliothek LPH 3 · v0.3.2
+Stand 14.11.2026 (v0.3.2: Vorlage v1.4) · **Entwurf zur gemeinsamen Prüfung, nicht freigegeben** · ersetzt als Muster-Planner die Fassung v0.2.1 (`app/data/muster-planner-lph3-v0.2.json` bleibt als Referenz der Konkordanz im Repo)
 
 ## Was das ist
 Ein System, das den Muster-Terminplan LPH 3 mit dem Planner verbindet. Wer ein Projekt beginnt, soll einen strukturierten, änderbaren Arbeitsraum bekommen: Abgaben als Buckets, Aufgaben mit Prüfpunkten, und jede Aufgabe weiß, welchen Vorgang sie ausführt und welche Ergebnisse sie braucht.
@@ -15,9 +15,9 @@ Ein System, das den Muster-Terminplan LPH 3 mit dem Planner verbindet. Wer ein P
 6. **Verknüpfung mit dem Terminplan über die Vorgangs-ID** (`t030`), nie über PSP oder Titel: `executes` (eigener Vorgang), `waitsFor` (Vorgang Dritter), `anchor` (Fälligkeit). Die PSP-Nummern im JSON sind aus der Vorlage abgeleitet.
 7. Keine Stundenwerte; Mustertermine sind keine Vertragsfristen; nur TBA-eigene Arbeit.
 
-## Bemusterung (A5) seit Muster-Terminplan v1.3
+## Bemusterung (A5) seit Muster-Terminplan v1.3 (Dauer seit v1.4: 20 AT)
 Bis v1.2 hatte die Vorbereitung der Bemusterung keinen Vorgang; 04.03 (`t030`) bildete nur die Abstimmung ab. v1.3 ergänzt in PSP 04:
-- `t058` **Bemusterungsunterlagen vorbereiten · Qualitäten, Materialien und Themenpläne** (ARC, 15 AT, Anfang nach `t010` Rückmeldung zum Arbeitsstand 01; Orientierungswert),
+- `t058` **Bemusterungsunterlagen vorbereiten · Qualitäten, Materialien und Themenpläne** (ARC, 20 AT seit v1.4 – vorher 15 AT, Anfang nach `t010` Rückmeldung zum Arbeitsstand 01; Orientierungswert),
 - `t059` **Bemusterungsunterlagen an Auftraggeber übergeben** (Meilenstein),
 - `t030` wartet zusätzlich auf `t059` (EA + 1).
 

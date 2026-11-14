@@ -10,11 +10,11 @@ const all=model.buckets.flatMap(bucket=>bucket.tasks.map(task=>({...task,bucket:
 const tasks=new Map(all.map(task=>[task.id,task]));
 const fromOld=id=>all.filter(t=>t.origin.muster_v021.includes(id));
 test('Masterplanner is a versioned, explicitly unapproved LPH3 draft',()=>{
- assert.equal(model.phase,'LPH3');assert.equal(model.draft,true);assert.equal(model.version,'0.3.1-draft');
+ assert.equal(model.phase,'LPH3');assert.equal(model.draft,true);assert.equal(model.version,'0.3.2-draft');
  assert.deepEqual(model.buckets.map(x=>x.id),['A1','A2','A3','A4','A5','A6','A7']);
  assert.equal(all.length,52);assert.equal(all.reduce((n,x)=>n+x.checks.length,0),334);
  assert.equal(tasks.size,all.length);
- assert.match(model.reference,/Muster-Terminplan LPH 3 v1\.3/);
+ assert.match(model.reference,/Muster-Terminplan LPH 3 v1\.4/);
  assert.match(model.status,/nicht freigegeben/);
 });
 test('Only TBA-owned work is represented, never Fachplaner deliveries or Bauherrn waiting as tasks',()=>{
