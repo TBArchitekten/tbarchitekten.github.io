@@ -2027,11 +2027,30 @@ async function dbWorkProjectByName(name){
   const {data}=await sb.from('isabella_projects').select('id,name,client_key').eq('archived',false);
   return (data||[]).find(x=>String(x.client_key||'').toLowerCase()===key)||(data||[]).find(x=>String(x.name||'').toLowerCase()===key)||null;
 }
+// A project name Romy proposes that the catalogue does not have must not cost the member the whole
+// confirmation (14.11.2026, Gari): a Commitment for «Schwarz» — a project the office does not have —
+// was refused after he had already confirmed it, and the objective was lost. Now the objective is
+// saved without the project link and the receipt says so. The project is the link, not the reason
+// to drop what was already approved. A Projektwissen claim is the exception: it has nowhere to live
+// without its project, so that one still asks for a correction.
+async function resolveProposalProject(p){
+  const name=String(p?.project||'').trim();
+  if(!name)return {project:null,note:''};
+  const project=await dbWorkProjectByName(name);
+  if(project)return {project,note:''};
+  return {project:null,note:` «${name}» ist kein Projekt im Office, deshalb ohne Projektbezug gespeichert.`};
+}
+const COMMITMENT_SCOPES=new Set(['global','personal','project','theory','other']);
+/** The scope the database accepts: 'project' only with a project, and never a free-text name. */
+function commitmentScope(project,scope){
+  if(project)return 'project';
+  const s=String(scope||'').trim();
+  return s&&s!=='project'&&COMMITMENT_SCOPES.has(s)?s:'other';
+}
 async function createStandingIntentProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Bitte anmelden, um diese Erinnerung zu speichern.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
-  const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.');return}
+  const {project:proj,note:projectNote}=await resolveProposalProject(p);
   if(!String(p.trigger_text||'').trim()||!String(p.reminder_text||'').trim()){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Faltan la situación y el recordatorio.');return}
   const expires=new Date(Date.now()+Math.max(1,Math.min(365,Number(p.expires_days||90)))*86400000).toISOString();
   const spec={
@@ -2048,13 +2067,12 @@ async function createStandingIntentProposal(p){
   });
   if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Die Erinnerung konnte noch nicht gespeichert werden: '+error.message);return}
   closeModal();
-  sayEvent('Erledigt. Ich merke es mir als situationsbezogene Erinnerung. Ich überwache dafür keine externe Quelle: Ich erinnere dich daran, sobald dieser Zusammenhang im Gespräch wieder auftaucht.');
+  sayEvent('Erledigt. Ich merke es mir als situationsbezogene Erinnerung. Ich überwache dafür keine externe Quelle: Ich erinnere dich daran, sobald dieser Zusammenhang im Gespräch wieder auftaucht.'+projectNote);
 }
 async function createExpectationProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Dafür muss das Gedächtnis verbunden sein; sonst kann ich diese Erwartung nicht verfolgen.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
-  const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.');return}
+  const {project:proj,note:projectNote}=await resolveProposalProject(p);
   if(!String(p.title||'').trim()||!String(p.expected_event||'').trim()||!String(p.due_date||'').trim()){
     const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Die Erwartung braucht einen Namen, was erwartet wird, und ein Datum.');return
   }
@@ -2081,13 +2099,12 @@ async function createExpectationProposal(p){
   closeModal();
   const row=data?.expectation||{};
   const due=row.due_at?new Date(row.due_at).toLocaleString('de-DE',{timeZone:row.timezone||timezone,dateStyle:'medium',...(row.due_precision==='datetime'?{timeStyle:'short'}:{})}):p.due_date;
-  say('assistant',`Erledigt. Ich halte «${row.title||p.title}» bis ${due} offen. Kommt dieser Zeitpunkt ohne Bestätigung, sage ich dir, dass es weiterhin unbestätigt ist; ich nehme nicht an, dass es nicht eingetreten ist.`);
+  say('assistant',`Erledigt. Ich halte «${row.title||p.title}» bis ${due} offen. Kommt dieser Zeitpunkt ohne Bestätigung, sage ich dir, dass es weiterhin unbestätigt ist; ich nehme nicht an, dass es nicht eingetreten ist.${projectNote}`);
 }
 async function createCommitmentProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();sayEvent('Dafür muss das Gedächtnis verbunden sein; sonst kann ich das über Gespräche hinweg nicht offenhalten.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){closeModal();return}
-  const proj=p.project?await dbWorkProjectByName(p.project):null;
-  if(p.project&&!proj){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.');return}
+  const {project:proj,note:projectNote}=await resolveProposalProject(p);
   if(!String(p.title||'').trim()||!String(p.objective||'').trim()){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('El trabajo necesita un nombre y un objetivo claros.');return}
   const persistent=!!p.persistent_work;
   const skillTrace=Array.isArray(p.skill_trace)?p.skill_trace.slice(0,4).map(x=>({
@@ -2098,7 +2115,7 @@ async function createCommitmentProposal(p){
     agent:'isabella',
     title:String(p.title).trim(),
     objective:String(p.objective).trim(),
-    scope:proj?'project':String(p.scope||'global'),
+    scope:commitmentScope(proj,p.scope),
     project_id:proj?.id||null,
     completion_criteria:String(p.completion_criteria||'').trim()||null,
     source_kind:p.source_flush_id&&p.source_open_loop?'checkpoint':'user',
@@ -2115,7 +2132,7 @@ async function createCommitmentProposal(p){
   const {data,error}=await sb.rpc('minds_create_commitment',{p_commitment:payload,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
   if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Das Ziel konnte noch nicht gespeichert werden: '+error.message);return}
   if(!persistent){
-    closeModal();sayEvent(`Erledigt. Ich halte «${data?.title||p.title}» präsent. Daraus entstehen nicht automatisch Aufgaben oder Aktionen.`);return;
+    closeModal();sayEvent(`Erledigt. Ich halte «${data?.title||p.title}» präsent. Daraus entstehen nicht automatisch Aufgaben oder Aktionen.${projectNote}`);return;
   }
 
   const {data:workspaceResult,error:workspaceError}=await sb.rpc('minds_ensure_commitment_workspace',{p_commitment_id:data?.id});
@@ -2139,12 +2156,20 @@ async function createCommitmentProposal(p){
   }
   const run=missionResult?.run||{};
   closeModal();
-  sayEvent(`Erledigt. Ich kümmere mich um «${data?.title||p.title}». Du kannst das Office schließen; ich arbeite weiter und melde mich, wenn ich eine Entscheidung brauche oder es etwas gibt, das deine Aufmerksamkeit wirklich verdient.`);
+  sayEvent(`Erledigt. Ich kümmere mich um «${data?.title||p.title}». Du kannst das Office schließen; ich arbeite weiter und melde mich, wenn ich eine Entscheidung brauche oder es etwas gibt, das deine Aufmerksamkeit wirklich verdient.${projectNote}`);
 }
 async function createWorkClaimProposal(p){
   const sb=window.MINDS_SUPABASE;if(!sb){closeModal();return}
   const proj=await dbWorkProjectByName(p.project);
-  if(!proj){sayEvent('Das Work-Projekt wurde nicht erkannt.');return}
+  // Knowledge belongs to a project, so here the name has to be right. Say which ones exist instead
+  // of only that this one does not: «Anpassen» is where the member corrects it.
+  if(!proj){
+    const {data}=await sb.from('isabella_projects').select('name').eq('archived',false).order('name');
+    const known=(data||[]).map(x=>x.name).filter(Boolean).join(', ');
+    sayEvent(`«${String(p.project||'').trim()||'—'}» ist kein Projekt im Office.`+
+      (known?` Es gibt: ${known}. Über «Anpassen» kannst du den Namen ändern.`:''));
+    return;
+  }
   if(!String(p.statement||'').trim()){sayEvent('Escribe el contenido del conocimiento antes de guardarlo.');return}
   const evidence=Array.isArray(p.evidence)?p.evidence:(p.source_file_id||p.evidence_excerpt)?[{source_file_id:p.source_file_id||null,source_message_id:p.source_message_id||null,excerpt:p.evidence_excerpt||null,source_kind:p.source_file_id?'work_file':'conversation',stance:p.evidence_stance||'supports',locator:p.locator||{}}]:[];
   const {data,error}=await sb.rpc('minds_save_work_claim',{p_claim:{...p,project_id:proj.id},p_evidence:evidence,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
