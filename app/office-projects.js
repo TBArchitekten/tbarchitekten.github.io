@@ -91,7 +91,9 @@ function showPlans(){
     actions.append(open);
     if(template.phase==='LPH3'){
       const planner=document.createElement('a');
-      planner.href='./#section=work&muster=LPH3';
+      // Volle Seitennavigation wie die Muster-Planner-Karte: in der iPhone-App fängt die Tab-Leiste einen
+      // reinen #-Wechsel ab und öffnet Work mit dem zuletzt gewählten Projekt statt des Musters.
+      planner.href='../muster-planner.html';
       planner.textContent='Muster-Planner ansehen';
       planner.className='office-plan-library-link';
       planner.title='Entwurf LPH 3 · nur Ansicht und lokale Review-Notizen';
@@ -105,7 +107,7 @@ function showPlans(){
   plannerNumber.textContent='LPH3 · MUSTER-PLANNER';
   const plannerTitle=document.createElement('h2');plannerTitle.textContent='Muster-Planner LPH 3';
   const plannerMeta=document.createElement('p');plannerMeta.className='office-project-meta';
-  plannerMeta.textContent='Entwurf v0.2.1 · 7 Abgabe-Buckets · 57 TBA-Aufgaben · schreibgeschützte Vorlage';
+  plannerMeta.textContent='Entwurf v0.3.1 · 7 Abgabe-Buckets · 52 TBA-Aufgaben · schreibgeschützte Vorlage';
   const plannerActions=document.createElement('div');plannerActions.className='office-project-actions';
   const plannerOpen=document.createElement('a');plannerOpen.href='../muster-planner.html';
   plannerOpen.textContent='Muster-Planner ansehen';plannerOpen.className='office-plan-library-link';

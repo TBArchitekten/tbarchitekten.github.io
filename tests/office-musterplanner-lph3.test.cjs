@@ -48,5 +48,7 @@ test('The Muster uses the canonical Planner renderer and cannot trigger project 
  assert.match(detail,/function preview\(\{task,buckets=\[\]/);
  assert.match(detail,/if\(ctx\.readOnly\)\{/);
  assert.match(detail,/host\?\.querySelectorAll\('input,textarea,select,button'\)/);
- assert.match(app,/planner\.href='\.\/#section=work&muster=LPH3'/);
+ // Beide Muster-Planner-Links laden die Seite neu (iPhone-App: ein reiner #-Wechsel öffnete das letzte Projekt).
+ assert.match(app,/planner\.href='\.\.\/muster-planner\.html'/);
+ assert.doesNotMatch(app,/planner\.href='\.\/#section=work&muster=LPH3'/);
 });

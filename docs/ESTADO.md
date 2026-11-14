@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 14.11.2026 · Claude · Muster-Planner-Links:** Beide «Muster-Planner ansehen» laden die Seite über `muster-planner.html` neu (in der iPhone-App öffnete der #-Link sonst das letzte Projekt). Karte zeigt v0.3.1 · 52 Aufgaben. Planner-Knopf «Listenansicht» (pro Gerät gespeichert; Voreinstellung Spalten wie bei Isabella).
+
 **Stand 14.11.2026 · Claude · Planner wie bei Isabella:** `office.css` überschreibt Board, Buckets und Kartenbereich nicht mehr; es gilt Windows Layout. «Liste» am Handy ohne Überlappung, quer alle Karten sichtbar. Test `office-planner-layout` verhindert neue Office-Größenregeln; der Chromium-Test lädt alle Stylesheets der Seite.
 
 **Stand 14.11.2026 · Claude · Muster LPH 3 v1.3 + Aufgabenbibliothek v0.3.1:** Aktive LPH3-Vorlage ist **v1.3** (59 Vorgänge, 99 Beziehungen): neu `t058` „Bemusterungsunterlagen vorbereiten“ (PSP 04.03) und Meilenstein `t059` „Bemusterungsunterlagen an Auftraggeber übergeben“ (04.04) vor der Abstimmung `t030` (jetzt 04.05) und M06 `t031` (04.06); alle übrigen Mustertermine unverändert. Der read-only Muster-Planner (`/app/#section=work&muster=LPH3`) zeigt die **Aufgabenbibliothek v0.3.1**: 7 Abgabe-Buckets, 52 Aufgaben, 334 Prüfpunkte, Codes `L3.<Objekt>.<Zustand>`, je Aufgabe Vorgangs-ID (`schedule`) und Ergebnisregister (`produces`/`requires`). Quelle und Prüfung: `scripts/lph3-bibliothek/` – das JSON nie von Hand ändern. Beschreibung: `docs/LPH3-AUFGABENBIBLIOTHEK-v0.3.md`. Nicht freigegeben; keine Übernahme in Projekt-Buckets.
