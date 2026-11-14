@@ -8,7 +8,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const planner=JSON.parse(read('app/data/muster-planner-lph3-v0.3.json'));
 const previous=JSON.parse(read('app/data/muster-planner-lph3-v0.2.json'));
 const templates=JSON.parse(read('supabase/seed/terminplan-templates.json'));
-const schedule=templates.find(x=>x.phase==='LPH3'&&x.version==='1.3').state;
+const schedule=templates.find(x=>x.phase==='LPH3'&&x.version==='1.4').state;
 const taskById=new Map(schedule.tasks.map(t=>[t.id,t]));
 const all=planner.buckets.flatMap(b=>b.tasks.map(t=>({bucket:b,task:t})));
 const pspOf=(()=>{const wbs=new Map(schedule.groups.map(g=>[g.id,g.wbs])),n={},m=new Map();
@@ -19,7 +19,7 @@ const origin=key=>{const m=new Map();for(const {bucket,task} of all)for(const o 
 test('LPH3 Musterplanner is draft only, with exactly seven delivery-linked Buckets and no transversal bucket',()=>{
   assert.equal(planner.phase,'LPH3');
   assert.equal(planner.draft,true);
-  assert.equal(planner.version,'0.3.1-draft');
+  assert.equal(planner.version,'0.3.2-draft');
   assert.equal(planner.buckets.length,7);
   assert.ok(planner.buckets.every(b=>b.kind==='Abgabe'&&b.gate&&b.tasks.length>0));
   assert.deepEqual(planner.buckets.map(b=>b.id),['A1','A2','A3','A4','A5','A6','A7']);
@@ -56,7 +56,7 @@ test('Every Abgabe has one Ausgabe card (label Abgabe) and one Abschluss card, l
     assert.ok(absRefs.includes(done.taskId),b.id+' Abschluss bound to its Vorgang');
     for(const r of b.scheduleReferences){
       const v=taskById.get(r.taskId);
-      assert.ok(v,r.taskId+' exists in Muster-Terminplan v1.3');
+      assert.ok(v,r.taskId+' exists in Muster-Terminplan v1.4');
       assert.equal(r.name,v.name);assert.equal(r.psp,pspOf(r.taskId));
       if(v.type==='milestone')assert.equal(r.date,v.end);else assert.equal(r.dateEnd,v.end);
       assert.ok(b.gate.includes(pspOf(r.taskId)),b.id+' gate shows PSP '+pspOf(r.taskId));
@@ -82,7 +82,7 @@ test('Results are linked as one system: every requirement is produced once and i
   assert.ok(planner.validation.every(v=>v.result!=='FEHLER'));
 });
 
-test('Bemusterung Bucket uses the REAL v1.3 preparation, handover, Abstimmung and M06',()=>{
+test('Bemusterung Bucket uses the REAL v1.4 preparation, handover, Abstimmung and M06',()=>{
   const bm=planner.buckets.find(x=>x.id==='A5');
   assert.ok(bm);
   assert.equal(bm.tasks.length,10);

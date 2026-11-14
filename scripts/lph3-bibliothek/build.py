@@ -10,8 +10,8 @@ import os, pathlib, tempfile
 REPO = str(pathlib.Path(__file__).resolve().parents[2])
 OUT = sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="lph3-bibliothek-")
 os.makedirs(OUT, exist_ok=True)
-VERSION, STAND = "0.3.1-draft", "2026-11-14"
-TPL = "1.3"
+VERSION, STAND = "0.3.2-draft", "2026-11-14"
+TPL = "1.4"
 
 # ───────── Muster-Terminplan (Seed der Seite)
 tpl = [x for x in json.load(open(f"{REPO}/supabase/seed/terminplan-templates.json", encoding="utf-8")) if x["phase"] == "LPH3" and x["version"] == TPL][0]["state"]
@@ -330,7 +330,7 @@ for i, (k, v) in enumerate(BLOCKS.items(), 1):
 
 # Prüfprotokoll
 sheet("Prüfprotokoll", ["Maschinelle Prüfung", "Ergebnis", "Detail"], [list(p) for p in P], [80, 12, 120])
-wb.save(f"{OUT}/TBA_Aufgabenbibliothek_LPH3_v0.3.1_Matrix.xlsx")
+wb.save(f"{OUT}/TBA_Aufgabenbibliothek_LPH3_v{VERSION.split('-')[0]}_Matrix.xlsx")
 json.dump(dict(n_tasks=nT, n_checks=nC, per_bucket=dict(Counter(t["abg"] for t in TASKS)), checks_per_bucket={a["id"]: sum(len(t["checks"]) for t in TASKS if t["abg"] == a["id"]) for a in ABG},
                bedingt=[t["id"] for t in TASKS if t["bedingt"]], dist=dict(sorted(Counter(nc).items())), validation=P), open(f"{OUT}/stats.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 print("xlsx ok:", OUT)

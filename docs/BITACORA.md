@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-14 · Muster LPH 3 v1.4: Bemusterungsvorbereitung 20 AT; Muster-Planner v0.3.2 · Claude
+- Qué cambió y por qué: Entscheidung Gari (14.11.2026): Vorbereitung der Bemusterungsunterlagen 20 statt 15 AT. Vorlage LPH3 **v1.4**: nur `t058` (20 AT, 03.02.–02.03.2027) und Übergabe `t059` (02.03.) verschieben sich; Abstimmung `t030` (04.03.), alle übrigen Termine und das Musterende bleiben. Muster-Planner (Aufgabenbibliothek) **v0.3.2** aus v1.4 neu erzeugt: Inhalt unverändert, A5-Vorbereitungskarten enden am 02.03.; alle Prüfungen OK (zeitliche Konsistenz: Vorbereitung endet vor M05). Excel-Dateiname folgt jetzt der Version.
+- Archivos: `supabase/seed/terminplan-templates.json`, `supabase/migrations/20261114200000_office_lph3_template_v14.sql` (neu), `app/data/muster-planner-lph3-v0.3.json`, `scripts/lph3-bibliothek/build.py`, `app/office-projects.js` (Kartentext v0.3.2), `app/index.html` (`office-projects.js?v=office49`), `docs/LPH3-AUFGABENBIBLIOTHEK-v0.3.md`; Tests: `office-core`, `terminplan-planning` (v1.3-Migration bleibt geprüft: v1.4 ändert nur t058/t059; neue Prüfung v1.4-Migration = Seed), `office-lph5-v02`, beide Muster-Planner-Tests.
+- Base de datos: migración `20261114200000_office_lph3_template_v14.sql` — aplicada en Supabase: siehe Nachtrag (nach CI).
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` 300/300; `build.py` alle Prüfungen OK; v1.3-Termine vor der Änderung exakt reproduziert.
+- Quedó pendiente o sin probar: —. Eine laufende Projektinstanz wurde auf Garis Wunsch separat fortgeschrieben (Details in der Projektakte, nicht hier).
+- Riesgos o decisiones que necesitan a Gari: 20 AT Vorbereitung laufen im Muster parallel zu `t011` (Vorabzug 02 fortschreiben) – Personalbedarf.
+- PR:
+
 ### 2026-11-14 · Muster-Planner-Link aus der Terminplan-Karte, Kartentext v0.3.1, «Listenansicht» · Claude
 - Qué cambió y por qué: (1) In der Karte «Muster-Terminplan LPH 3» führte «Muster-Planner ansehen» in der iPhone-App zu Work mit dem zuletzt gewählten Projekt (Bernried). Seit #85 (13.11.) war der Link ein reiner #-Wechsel (`./#section=work&muster=LPH3`); die Tab-Leiste der App fängt ihn ab. Vorher und in der separaten Muster-Planner-Karte (funktioniert) ist es eine volle Navigation über `../muster-planner.html` – jetzt wieder beide so. (2) Die Muster-Planner-Karte nannte noch «v0.2.1 · 57 TBA-Aufgaben» → «v0.3.1 · 7 Abgabe-Buckets · 52 TBA-Aufgaben»; ein Test prüft den Text gegen das JSON. (3) Gari sah die Buckets hochkant untereinander: Die Listenansicht ist auf seinem iPhone eingeschaltet (pro Gerät gespeichert, `minds-work-mobile-planner-layout-v1`); Isabella hat denselben Schalter («Vista lista») mit derselben Voreinstellung (Spalten). Gemessen: hochkant mit Spalten nebeneinander (300 px), mit Liste untereinander ohne Überlappung. Der Knopf hieß nur «Liste» (neben «‹ Terminpläne» leicht als Navigation zu lesen) → «Listenansicht», wie Windows «Vista lista».
 - Archivos: `app/office-projects.js`, `app/work.js` (Knopftext), `app/index.html` (`work.js?v=office47`, `office-projects.js?v=office48`), Tests: beide Muster-Planner-Tests (Link über `muster-planner.html`; neuer Test Kartentext = JSON), fünf Tests mit `work.js?v=`.
