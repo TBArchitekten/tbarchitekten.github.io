@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-14 · Terminplan Bernried: Meilenstein integrierter Planstand 02, Bemusterung zwei Wochen früher · Claude
+- Qué cambió y por qué: Garis Entscheidungen (14.11.2026). (1) Neuer Meilenstein „Integrierter Planstand 02 an Bauherren übergeben“ (PSP 03.06, nach dem integrierten Arbeitsstand 02) und Prüfphase der Bauherren (03.07, 5 AT wie im Muster); M06 wartet auf deren Ende. Grund: der Vorabzug 02 (01.08) enthielt nur die Architektur; die Abgabe A4 im Planner hing deshalb an einem zu frühen Termin. (2) Bemusterungsblock (Vorbereitung 20 AT, Übergabe, Bemusterung) um 10 AT vorgezogen, weil die Vorbereitung bereits läuft. Kein anderer Termin bewegt sich; M06 und M10 bleiben.
+- Archivos: nur Bitácora/Estado (Datenänderung, kein Code).
+- Base de datos: keine Migration. Ein `DO`-Block (eine Transaktion): Sicherung „Vor Planänderung · 2026-11-14 · Revision 13“ in `office_terminplan_versions`, Terminplan-Instanz Revision 13 → 14 (2 Vorgänge neu, 4 geändert, PDF-Belege und Basisplan unverändert), 13 Planner-Aufgaben (Termine; bei `L3.A4.AUS`/`L3.A4.ABS` auch Verknüpfung und Notiz) und PSP-Referenz des Buckets A4. Nichts gelöscht.
+- Deploy de funciones: ninguno.
+- Cómo se probó: vorher mit der Engine gerechnet (`analyze` gültig, Kaskade ab jedem geänderten Vorgang ohne Folgeverschiebung) und als Trockenlauf gegen die Datenbank (md5 identisch, 47 PDF-Belege erhalten); danach md5 des Plans und der Planner-Aufgaben = Erwartung; Termin-Abgleich 53 verknüpft, 0 Änderungen; keine abgehakte oder erledigte Aufgabe berührt.
+- Quedó pendiente o sin probar: Sicht im echten Terminplan und Planner mit Anmeldung (Gari).
+- Riesgos o decisiones que necesitan a Gari: —
+- PR: #97
+
 ### 2026-11-14 · Planner Bernried aus der Aufgabenbibliothek v0.3.3 angelegt und mit dem Terminplan verknüpft · Claude
 - Qué cambió y por qué: Auf Garis Wunsch (14.11.2026) hat der Planner des Projekts Bernried jetzt die 7 Abgabe-Buckets und alle 53 Aufgaben der Bibliothek v0.3.3 – auch die, deren Termine schon vorbei sind, **keine als erledigt markiert** (Gari prüft sie einzeln). Jede Aufgabe ist über `metadata.office_planner.terminplan` mit den Vorgängen der Terminplan-Instanz des Projekts verknüpft; Start/Fällig kommen aus dem Terminplan (Regel wie im Knopf „Termine aus Terminplan“). Wo der Projekt-Terminplan einen Muster-Vorgang nicht hat, steht der Ersatzvorgang in der Notiz der Aufgabe.
 - Archivos: nur Bitácora/Estado (Datenänderung, kein Code).
