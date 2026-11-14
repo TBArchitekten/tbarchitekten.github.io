@@ -12,10 +12,20 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó:
 - Quedó pendiente o sin probar:
 - Riesgos o decisiones que necesitan a Gari:
-- PR:
+- PR: #92
 ```
 
 ---
+
+### 2026-11-14 · Planner wieder wie bei Isabella: «Liste» ohne überlappende Buckets, quer alle Karten · Claude
+- Qué cambió y por qué: Gari meldete am iPhone (Muster LPH 3 und Planner Bernried) übereinanderliegende Buckets in «Liste» und im Querformat unsichtbare Karten; im Planner von Isabella (Window) funktioniert es. Vergleich mit Window (`gari01234/minds@d45775c`): alle Planner-Stylesheets sind identisch, nur Office lädt zusätzlich `office.css`. Fünf Regeln von Office #38 (05.11.) überschrieben Windows Layout: `.work-bucket{flex:0 0 328px}` / `flex-basis:300px` (in der Liste wird die Breite zur Höhe → 300 px hohe Buckets, Karten laufen über den nächsten), `.work-bucket-scroll{max-height:calc(100dvh - 260/250px)}` (quer ~130 px Kartenbereich) und `.work-board{…align-items:stretch…}`. Diese fünf Regeln sind entfernt; es gilt wieder Windows Layout. Gerendert mit Window-CSS, Office alt und Office neu bei 390×844 (Spalten und Liste), 844×390 und 1440×900: Office neu = Window in allen Fällen. «Liste» wird pro Gerät gespeichert (`minds-work-mobile-planner-layout-v1`), daher betraf es Muster und Projekte zugleich.
+- Archivos: `app/office.css` (fünf Regeln entfernt, Kommentar), `app/index.html` (`office.css?v=office42`), `tests/office-planner-layout.test.mjs` (neu: office.css darf Board/Bucket/Kartenbereich nicht dimensionieren; Windows Listen-/Desktopregeln vorhanden), `tests/browser/office-musterplanner.chromium.mjs` (neuer Harness mit allen Stylesheets der echten Seite; Liste ohne Überlappung, quer keine versteckten Karten, Desktop in einer Reihe).
+- Base de datos: keine.
+- Deploy de funciones: ninguno.
+- Cómo se probó: die neuen Tests schlagen mit dem alten `office.css` fehl (Bucket 300 px bei 756 px Inhalt; quer 130 von 3587 px) und bestehen jetzt; Chromium 5/5 lokal; `node --test tests/*.test.cjs tests/*.test.mjs` 298/298.
+- Quedó pendiente o sin probar: Prüfung auf Garis iPhone; ggf. Seite neu laden, bis `office.css?v=office42` aktiv ist.
+- Riesgos o decisiones que necesitan a Gari: keine. Lehre: Office soll Windows Planner-Layout nicht überschreiben; der alte Test-Harness lud nur 5 Stylesheets und konnte das nicht sehen.
+- PR: #92
 
 ### 2026-11-14 · Muster-Terminplan LPH 3 v1.3 und Aufgabenbibliothek v0.3.1 im Muster-Planner · Claude
 - Qué cambió y por qué: Garis Entscheidungen vom 13. und 14.11.2026. (1) **Muster-Terminplan LPH 3 v1.3:** Die Vorbereitung der Bemusterung hatte keinen Vorgang (04.03/`t030` war nur die Abstimmung). Neu in PSP 04: `t058` „Bemusterungsunterlagen vorbereiten · Qualitäten, Materialien und Themenpläne“ (ARC, 15 AT als Orientierungswert, nach `t010`) und Meilenstein `t059` „Bemusterungsunterlagen an Auftraggeber übergeben“; `t030` wartet zusätzlich auf `t059`. 59 Vorgänge, 99 Beziehungen; kein bestehender Termin und nicht das Musterende verschiebt sich; `t030` ist jetzt PSP 04.05, M06 04.06. v1.2 bleibt inaktiv referenzierbar. (2) **Muster-Planner = Aufgabenbibliothek v0.3.1** statt v0.2.1: 7 Abgabe-Buckets, 52 Aufgaben, 334 Prüfpunkte (4–10 je Karte statt fest 4), Kodierung `L3.<Objekt>.<Zustand>`, je Abgabe genau eine Ausgabe-Karte (Label „Abgabe“) und eine Abschluss-Karte, Bemusterungskarten nach Thema zusammengeführt (14 → 10), Pläne nach Planart und Thema geteilt, jede Aufgabe über die Vorgangs-ID verknüpft und mit `produces`/`requires` ins Ergebnisregister eingebunden. Beschreibung: `docs/LPH3-AUFGABENBIBLIOTHEK-v0.3.md`.
