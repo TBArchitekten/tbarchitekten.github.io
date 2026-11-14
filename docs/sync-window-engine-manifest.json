@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "99013abdc97d8ab7b1943c582cfc017177a49156",
+  "source_sha": "d45775c5d3a286d3b415645df088d24f97234887",
   "mode": "engine",
   "files": [
     {
@@ -144,14 +144,14 @@
     {
       "source": "supabase/functions/_shared/isabella-core-details.mjs",
       "target": "supabase/functions/_shared/isabella-core-details.mjs",
-      "sha": "617974a0cafdaa5cb81f26753fda0d06e23b5984",
-      "bytes": 33171
+      "sha": "d6439cedd82d2350dd4988dd30ce2e723ba94525",
+      "bytes": 33178
     },
     {
       "source": "supabase/functions/_shared/isabella-core.mjs",
       "target": "supabase/functions/_shared/isabella-core.mjs",
-      "sha": "21d0150fdec8139138a247f4e02b0abedec938a9",
-      "bytes": 26453
+      "sha": "4f807988c12c62320aa76b0e0910f1a589c6292a",
+      "bytes": 26444
     },
     {
       "source": "supabase/functions/_shared/isabella-dream.mjs",
@@ -180,8 +180,8 @@
     {
       "source": "supabase/functions/_shared/isabella-tools.mjs",
       "target": "supabase/functions/_shared/isabella-tools.mjs",
-      "sha": "65aaf4ecab2610408289235a1200fb73c8ed2753",
-      "bytes": 46842
+      "sha": "97b96eb493fef8785c740e78fc957895f1dce4e9",
+      "bytes": 47089
     },
     {
       "source": "supabase/functions/_shared/isabella-turn.mjs",
@@ -516,8 +516,8 @@
     {
       "source": "supabase/functions/isabella-chat/index.ts",
       "target": "supabase/functions/isabella-chat/index.ts",
-      "sha": "de0197ced42a2a058c910e55e4945078dcc06083",
-      "bytes": 308285
+      "sha": "ba478421291054448440e00a60d5e5b3465e2f3e",
+      "bytes": 308292
     },
     {
       "source": "supabase/functions/isabella-delivery-runner/index.ts",

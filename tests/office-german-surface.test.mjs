@@ -36,10 +36,13 @@ test('Die Formulare zum Prüfen eines Vorschlags sind deutsch',()=>{
 
 test('Die Quittungen nach dem Speichern sind deutsch',()=>{
   for(const line of ['Keine Änderung.','Als erledigt markiert.',
-    'Das Projekt wurde nicht erkannt. Bitte den Namen korrigieren.',
     'Die Erwartung braucht einen Namen, was erwartet wird, und ein Datum.',
-    'Das Work-Projekt wurde nicht erkannt.'])
+    'Die Erinnerung konnte noch nicht gespeichert werden: ',
+    'Die Fähigkeit konnte nicht aktiviert werden: '])
     assert.ok(app.includes("sayEvent('"+line+"')")||app.includes("sayEvent('"+line),'fehlt: '+line);
+  // Der unbekannte Projektname verwirft seit dem 14.11. keine Bestätigung mehr; die deutsche
+  // Fassung dieser Zeile lebt jetzt in resolveProposalProject und bei Projektwissen.
+  assert.match(app,/ist kein Projekt im Office/);
   for(const gone of ['Sin cambios.','Marcada como completada.','No pude identificar el proyecto',
     'No pude guardar esa expectativa','No pude activar la habilidad','No pude cambiar ese trabajo'])
     assert.ok(!app.includes("sayEvent('"+gone),'noch spanisch: '+gone);
