@@ -12,7 +12,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó:
 - Quedó pendiente o sin probar:
 - Riesgos o decisiones que necesitan a Gari:
-- PR:
+- PR: #92
 ```
 
 ---
