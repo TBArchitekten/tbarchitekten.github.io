@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "7d767caf338858832eb8c91f4b4c665014479b47",
+  "source_sha": "99013abdc97d8ab7b1943c582cfc017177a49156",
   "mode": "engine",
   "files": [
     {
@@ -150,8 +150,8 @@
     {
       "source": "supabase/functions/_shared/isabella-core.mjs",
       "target": "supabase/functions/_shared/isabella-core.mjs",
-      "sha": "7b9169028cff5e4cfb316b16cdee3b6cfdcd544f",
-      "bytes": 22892
+      "sha": "21d0150fdec8139138a247f4e02b0abedec938a9",
+      "bytes": 26453
     },
     {
       "source": "supabase/functions/_shared/isabella-dream.mjs",
@@ -180,8 +180,14 @@
     {
       "source": "supabase/functions/_shared/isabella-tools.mjs",
       "target": "supabase/functions/_shared/isabella-tools.mjs",
-      "sha": "57fdf3274f52c544cff81892ba7f5c6d933cf643",
-      "bytes": 44805
+      "sha": "65aaf4ecab2610408289235a1200fb73c8ed2753",
+      "bytes": 46842
+    },
+    {
+      "source": "supabase/functions/_shared/isabella-turn.mjs",
+      "target": "supabase/functions/_shared/isabella-turn.mjs",
+      "sha": "2ff4b68f1017949eec3078c9535ae01447a2ff67",
+      "bytes": 7755
     },
     {
       "source": "supabase/functions/_shared/light-conversation-context.mjs",
@@ -510,8 +516,8 @@
     {
       "source": "supabase/functions/isabella-chat/index.ts",
       "target": "supabase/functions/isabella-chat/index.ts",
-      "sha": "a17ce39ff63e6edeb99fb708e077c8d911ca9a36",
-      "bytes": 302412
+      "sha": "de0197ced42a2a058c910e55e4945078dcc06083",
+      "bytes": 308285
     },
     {
       "source": "supabase/functions/isabella-delivery-runner/index.ts",
