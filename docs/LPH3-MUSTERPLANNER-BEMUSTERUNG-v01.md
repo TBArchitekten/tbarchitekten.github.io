@@ -1,6 +1,8 @@
 # TBA Office · Muster-Planner LPH 3 · Bemusterung und Kostenberechnung
 Stand 12.11.2026 · **Arbeitsentwurf, nicht freigegeben**
 
+> **Überholt (14.11.2026):** Muster-Terminplan v1.3 ergänzt Vorbereitung (`t058`) und Übergabe (`t059`) der Bemusterungsunterlagen; der Muster-Planner ist jetzt die Aufgabenbibliothek v0.3.1. Siehe `docs/LPH3-AUFGABENBIBLIOTHEK-v0.3.md`.
+
 ## 1. Was im bestehenden Muster-Terminplan wirklich steht
 Die im Repository vorliegende aktive LPH3-Vorlage **v1.2** enthält den Vorgang **PSP 04.03 / t030 „Qualitätsfestlegungen und kostenrelevante Bemusterung abstimmen“** (Mustertermine 04.–17.03.2027, 10 AT). Er ist kein eigener Meilenstein. Das anschließende **PSP 04.04 / M06 / t031 „Abstimmung Entwurfsstand LPH 3 mit Auftraggeber abgeschlossen“** ist ein zusammenfassender Entscheidungs-Meilenstein am 17.03.2027. Die **Kostenberechnung und der Vergleich mit der Kostenschätzung** liegen in PSP 06; die Kostenbesprechung **PSP 06.03 / M08 / t039** am 19.04.2027.
 

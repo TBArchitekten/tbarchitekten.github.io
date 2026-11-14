@@ -51,7 +51,7 @@ test('Fachplaner are parallel and M03, M06, M07 require all mandatory contributi
 });
 
 test('Old LPH3 remains intact and creating a historic LPH5 start shifts all dates deterministically',()=>{
- assert.equal(templates.find(t=>t.phase==='LPH3').version,'1.2');
+ assert.equal(templates.find(t=>t.phase==='LPH3').version,'1.3');
  const source=JSON.stringify(tpl);
  const args={start:'2026-11-02',number:'2601',name:'Testprojekt',phase:'LPH5',version:'0.2',today:'2026-11-11'};
  const state=C.cloneStateForProject(tpl.state,args);

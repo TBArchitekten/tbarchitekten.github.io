@@ -101,7 +101,7 @@ test('Completed reconstruction discloses previous links even if the new source h
 
 test('Since 07.11.2026 Work is Window\'s own work.js on Window\'s tables (one data model)',()=>{
  const index=read('app/index.html'),work=read('app/work.js'),ops=read('app/office-desktop-ops.js');
- assert.match(index,/<script src="\.\/work\.js\?v=office45"><\/script>/);
+ assert.match(index,/<script src="\.\/work\.js\?v=office46"><\/script>/);
  assert.doesNotMatch(index,/office-work\.js|office-window-work-surface\.js/);
  assert.ok(!fs.existsSync(new URL('../app/office-work.js',import.meta.url)));
  for(const table of ['isabella_projects','isabella_tasks','minds_work_buckets','minds_work_folders','minds_work_files'])

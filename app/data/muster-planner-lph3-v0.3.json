@@ -1,0 +1,5039 @@
+{
+ "id": "tba-lph3-aufgabenbibliothek",
+ "version": "0.3.1-draft",
+ "draft": true,
+ "phase": "LPH3",
+ "updated": "2026-11-14",
+ "status": "Entwurf zur gemeinsamen Prüfung · nicht freigegeben",
+ "reference": "Muster-Terminplan LPH 3 v1.3 / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. und 14.11.2026",
+ "warning": "Jeder Bucket ist eine Abgabe des Muster-Terminplans. Nur TBA-eigene Arbeit; Leistungen der Fachplaner und Prüfzeiten des Auftraggebers sind Wartezeit. Keine Stundenwerte. Termine des Musters sind keine Vertragsfristen.",
+ "coding": {
+  "pattern": "L3.<Objekt>.<Zustand>",
+  "checkpoint": "<Aufgabe>-NN",
+  "object": "Arbeitsergebnis (3 Buchstaben, phasenunabhängig) oder Abgabe (A1 … A7)",
+  "state": "Stand des Ergebnisses (1, 2, 3) oder Schritt der Abgabe (PRF, AUS, ABS)",
+  "rule": "Eine Aufgabe trägt den Code des Ergebnisstands, den sie erzeugt. Codes werden nie neu vergeben."
+ },
+ "steps": {
+  "E": "Erarbeiten",
+  "PRF": "Prüfen",
+  "AUS": "Ausgeben",
+  "ABS": "Abschließen"
+ },
+ "blocks": {
+  "PLAN": "Planroutine: Plankopf, Index, Datum, Planliste",
+  "AUS": "Ausgaberoutine: Vollständigkeit, Vier-Augen-Prüfung, Freigabe, Versandnachweis, Frist",
+  "F": "Terminplan fortschreiben (HOAI Anlage 10 LPH 3 f) – in jeder Ausgabe",
+  "ABS": "Abschlussroutine: Rückmeldung erfassen, bewerten, zuweisen, Entscheidungsliste",
+  "THEMA": "Themenpaket-Muster: Geometrie – Material – Schnittstellen – Kostenbezug – Abgrenzung LPH 5"
+ },
+ "results": [
+  {
+   "code": "PSV",
+   "name": "Projektstartvermerk LPH 3",
+   "states": {
+    "1": "Vermerk mit Projektparametern"
+   },
+   "toolHook": "Projektakte (später)",
+   "producedBy": {
+    "1": "L3.PSV.1"
+   }
+  },
+  {
+   "code": "PLI",
+   "name": "Planliste und Dokumentenstruktur",
+   "states": {
+    "1": "angelegt; wird bis zum Abgabeverzeichnis fortgeschrieben"
+   },
+   "toolHook": "Standarddokument Planliste (geplant)",
+   "producedBy": {
+    "1": "L3.PLI.1"
+   }
+  },
+  {
+   "code": "FPB",
+   "name": "Fachplanerbedarf und Beauftragungsempfehlung",
+   "states": {
+    "1": "Entscheidungshilfe für den Auftraggeber"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.FPB.1"
+   }
+  },
+  {
+   "code": "SSM",
+   "name": "Schnittstellen- und Liefermatrix",
+   "states": {
+    "1": "v0 (Vorschlag des Büros)",
+    "2": "v1 (mit Fachplanern abgestimmt, mit Kick-off-Protokoll)"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.SSM.1",
+    "2": "L3.A1.ABS"
+   }
+  },
+  {
+   "code": "PGF",
+   "name": "Planungsgrundlagen-Paket für Fachplaner",
+   "states": {
+    "1": "Teilstand mit Austauschdaten und Fragenliste"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.PGF.1"
+   }
+  },
+  {
+   "code": "GRU",
+   "name": "Grundrisse",
+   "states": {
+    "1": "Arbeitsstand 01",
+    "2": "Stand 02 (integriert)",
+    "3": "Endstand LPH 3"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.GRU.1",
+    "2": "L3.GRU.2",
+    "3": "L3.PLA.3"
+   }
+  },
+  {
+   "code": "SCH",
+   "name": "Schnitte",
+   "states": {
+    "1": "Arbeitsstand 01",
+    "2": "Stand 02 (integriert)",
+    "3": "Endstand LPH 3"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.SCH.1",
+    "2": "L3.SCH.2",
+    "3": "L3.PLA.3"
+   }
+  },
+  {
+   "code": "ANS",
+   "name": "Ansichten",
+   "states": {
+    "1": "Arbeitsstand 01",
+    "2": "Stand 02 (integriert)",
+    "3": "Endstand LPH 3"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.ANS.1",
+    "2": "L3.ANS.2",
+    "3": "L3.PLA.3"
+   }
+  },
+  {
+   "code": "LAG",
+   "name": "Lageplan",
+   "states": {
+    "1": "Arbeitsstand 01",
+    "2": "Stand 02",
+    "3": "Endstand LPH 3"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.LAG.1",
+    "2": "L3.GRU.2",
+    "3": "L3.PLA.3"
+   }
+  },
+  {
+   "code": "BTK",
+   "name": "Bauteilkatalog (Regelaufbauten)",
+   "states": {
+    "1": "Arbeitsstand 01",
+    "2": "Stand 02 (nach Fachplanung)",
+    "3": "Endstand (nach Qualitätsentscheidungen)"
+   },
+   "toolHook": "Planungshilfen des Büros",
+   "producedBy": {
+    "1": "L3.BTK.1",
+    "2": "L3.BTK.2",
+    "3": "L3.A5.ABS"
+   }
+  },
+  {
+   "code": "FLA",
+   "name": "Flächen- und Rauminhaltsaufstellung",
+   "states": {
+    "1": "Arbeitsstand 01",
+    "2": "Stand 02",
+    "3": "Endstand LPH 3"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.FLA.1",
+    "2": "L3.GRU.2",
+    "3": "L3.PLA.3"
+   }
+  },
+  {
+   "code": "GEN",
+   "name": "Baurechts-Check (Genehmigungsfähigkeit)",
+   "states": {
+    "1": "Erstprüfung mit Vermerken",
+    "2": "Stand 02 mit Übergabeliste LPH 4"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.GEN.1",
+    "2": "L3.GEN.2"
+   }
+  },
+  {
+   "code": "OBJ",
+   "name": "Objektbeschreibung",
+   "states": {
+    "1": "Arbeitsstand 01",
+    "2": "Stand 02 (mit Fachplanungsbeiträgen)",
+    "3": "Endstand LPH 3"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.OBJ.1",
+    "2": "L3.OBJ.2",
+    "3": "L3.OBJ.3"
+   }
+  },
+  {
+   "code": "RML",
+   "name": "Rückmelde- und Änderungsliste Auftraggeber",
+   "states": {
+    "1": "zum Arbeitsstand 01",
+    "2": "zum Stand 02"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.A2.ABS",
+    "2": "L3.A4.ABS"
+   }
+  },
+  {
+   "code": "KLA",
+   "name": "Klärungsliste Koordination mit Protokollen",
+   "states": {
+    "1": "Runde 01",
+    "2": "Runde 02 (Bestätigung je Disziplin)",
+    "3": "geschlossen nach Endbeiträgen M07"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.KLA.1",
+    "2": "L3.KLA.2",
+    "3": "L3.KLA.3"
+   }
+  },
+  {
+   "code": "ENV",
+   "name": "Entscheidungsvorlage",
+   "states": {
+    "1": "Vorlage M04"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.ENV.1"
+   }
+  },
+  {
+   "code": "ENP",
+   "name": "Entscheidungsprotokoll",
+   "states": {
+    "1": "Entscheidungen M05"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.A3.ABS"
+   }
+  },
+  {
+   "code": "QUA",
+   "name": "Qualitäts- und Ausstattungsliste",
+   "states": {
+    "1": "Vorschlag (Konzept)",
+    "2": "konsolidiert nach Bemusterung (Status je Position)"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.QUA.1",
+    "2": "L3.A5.ABS"
+   }
+  },
+  {
+   "code": "MAT",
+   "name": "Material- und Produktvergleich",
+   "states": {
+    "1": "Vergleichsmatrix mit Empfehlung"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.MAT.1"
+   }
+  },
+  {
+   "code": "MUS",
+   "name": "Muster (Musterliste und Musterbewertung)",
+   "states": {
+    "1": "geprüft und dokumentiert"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.MUS.1"
+   }
+  },
+  {
+   "code": "MAP",
+   "name": "Material- und Ausstattungsübersichtspläne",
+   "states": {
+    "1": "Übersichtspläne mit Materialcodes"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.MAP.1"
+   }
+  },
+  {
+   "code": "BAD",
+   "name": "Themenpläne Bäder",
+   "states": {
+    "1": "Entwurf je Badtyp"
+   },
+   "toolHook": "Planungshilfen des Büros",
+   "producedBy": {
+    "1": "L3.BAD.1"
+   }
+  },
+  {
+   "code": "TRE",
+   "name": "Themenpläne Treppen",
+   "states": {
+    "1": "Entwurf"
+   },
+   "toolHook": "Planungshilfen des Büros",
+   "producedBy": {
+    "1": "L3.TRE.1"
+   }
+  },
+  {
+   "code": "FAS",
+   "name": "Themenpläne Fassade",
+   "states": {
+    "1": "Prinzipschnitt"
+   },
+   "toolHook": "Planungshilfen des Büros",
+   "producedBy": {
+    "1": "L3.FAS.1"
+   }
+  },
+  {
+   "code": "LIC",
+   "name": "Lichtkonzept",
+   "states": {
+    "1": "Konzept"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.LIC.1"
+   }
+  },
+  {
+   "code": "MEN",
+   "name": "Mengenermittlung",
+   "states": {
+    "1": "auf maßgeblichem Planstand"
+   },
+   "toolHook": "Kostenberechnung (geplant)",
+   "producedBy": {
+    "1": "L3.MEN.1"
+   }
+  },
+  {
+   "code": "KOB",
+   "name": "Kostenberechnung mit Vergleich zur Kostenschätzung",
+   "states": {
+    "1": "vorgelegter Stand (M08)",
+    "2": "Endstand nach Kostenentscheidung (M08A)"
+   },
+   "toolHook": "Kostenberechnung (geplant)",
+   "producedBy": {
+    "1": "L3.KOB.1",
+    "2": "L3.A6.ABS"
+   }
+  },
+  {
+   "code": "DOK",
+   "name": "Entwurfsdokumentation LPH 3",
+   "states": {
+    "1": "zusammengestellt"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.DOK.1"
+   }
+  },
+  {
+   "code": "UEP",
+   "name": "Übergabeprotokoll LPH 3",
+   "states": {
+    "1": "Abschlussbesprechung M10"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.A7.AUS"
+   }
+  },
+  {
+   "code": "FRG",
+   "name": "Freigabe des Auftraggebers",
+   "states": {
+    "1": "in Textform dokumentiert (M11)"
+   },
+   "toolHook": "–",
+   "producedBy": {
+    "1": "L3.A7.ABS"
+   }
+  },
+  {
+   "code": "PAB",
+   "name": "Phasenabschlussblatt",
+   "states": {
+    "1": "Nachkalkulation und Vorschläge"
+   },
+   "toolHook": "Controlling (geplant)",
+   "producedBy": {
+    "1": "L3.PAB.1"
+   }
+  },
+  {
+   "code": "TPL",
+   "name": "Terminplan und Entscheidungsliste",
+   "states": {},
+   "toolHook": "Terminplan (vorhanden)",
+   "producedBy": {}
+  }
+ ],
+ "parameters": [
+  {
+   "code": "P-FPL",
+   "name": "Fachplaner bei Phasenbeginn beauftragt",
+   "values": "ja / nein",
+   "effect": "Bei „ja“ entfällt L3.FPB.1; das Kick-off folgt unmittelbar auf M01. Die Option gibt es im Terminplan bereits."
+  },
+  {
+   "code": "P-DIS",
+   "name": "Beteiligte Disziplinen",
+   "values": "TWP, HLS, ELT, BRS, BPH, …",
+   "effect": "Steuert die disziplinbezogenen Prüfpunkte in SSM, PGF, A1.ABS, KLA, OBJ.2 und KOB. Ohne Fachplaner entfallen SSM, PGF, A1.AUS, A1.ABS und KLA."
+  },
+  {
+   "code": "P-GKL",
+   "name": "Gebäudeklasse und Sonderbau",
+   "values": "GK 1–5; Sonderbau ja / nein",
+   "effect": "Steuert die Prüfpflichten in FPB.1 und GEN.1."
+  },
+  {
+   "code": "P-AGT",
+   "name": "Art des Auftraggebers",
+   "values": "privat / öffentlich",
+   "effect": "Bei öffentlichem Auftraggeber: Bemusterung produktneutral (MAT.1); Vergabe der Fachplaner als eigener Terminstrang – nicht ausgearbeitet."
+  },
+  {
+   "code": "P-KOT",
+   "name": "Kostenberechnung: Normfassung und Gliederungstiefe",
+   "values": "DIN 276 Fassung; 2. / 3. Ebene",
+   "effect": "Steuert den Umfang von MEN.1 und KOB.1."
+  },
+  {
+   "code": "P-THE",
+   "name": "Aktive Themenpakete",
+   "values": "BAD, TRE, FAS, LIC, weitere",
+   "effect": "Je aktivem Thema wird eine Themenkarte angelegt. Weitere Themen nach dem Themenpaket-Muster."
+  },
+  {
+   "code": "P-MUS",
+   "name": "Physische Muster / Mustermappe vereinbart",
+   "values": "ja / nein",
+   "effect": "Bei „nein“ entfällt L3.MUS.1."
+  },
+  {
+   "code": "P-BES",
+   "name": "Neubau oder Bestand",
+   "values": "Neubau / Bestand",
+   "effect": "Bestand erfordert zusätzliche Grundlagen – nicht ausgearbeitet."
+  },
+  {
+   "code": "P-GRO",
+   "name": "Projektgröße",
+   "values": "klein / mittel / groß",
+   "effect": "Planarten je Person teilen oder bündeln; bei kleinen Projekten KLA.1 und KLA.2 zusammenlegen."
+  }
+ ],
+ "retired": {
+  "claude_v01": {
+   "L3-ORG-04": "entfällt als Karte – Prüfpunkt „Terminplan fortgeschrieben“ in jeder Ausgabe-Karte und in L3.DOK.1"
+  },
+  "muster_v021": {
+   "L3-ORG-04": "entfällt als Karte – Prüfpunkt „Terminplan fortgeschrieben“ in jeder Ausgabe-Karte und in L3.DOK.1"
+  },
+  "chatgpt_v01": {
+   "L3-024": "entfällt als Karte – die Entscheidungsliste wird in jeder Abschluss-Karte fortgeschrieben"
+  }
+ },
+ "validation": [
+  {
+   "check": "Codes eindeutig und formgerecht (L3.<Objekt>.<Zustand>)",
+   "result": "OK",
+   "detail": "52 Codes"
+  },
+  {
+   "check": "Jeder erzeugte Ergebnisstand ist im Ergebnisregister definiert",
+   "result": "OK",
+   "detail": "52 Ergebnisstände, 15 Abgabe-Zustände"
+  },
+  {
+   "check": "Jeder Ergebnisstand wird von genau einer Aufgabe erzeugt",
+   "result": "OK",
+   "detail": "kein Stand doppelt, keiner ohne Aufgabe"
+  },
+  {
+   "check": "Jede Voraussetzung verweist auf einen erzeugten Ergebnisstand",
+   "result": "OK",
+   "detail": "137 Verweise aufgelöst"
+  },
+  {
+   "check": "Abhängigkeiten ohne Zirkelbezug",
+   "result": "OK",
+   "detail": "Graph ist zyklenfrei"
+  },
+  {
+   "check": "Zeitliche Konsistenz: kein Ergebnis wird früher gebraucht, als es laut Muster-Terminplan fertig ist",
+   "result": "OK",
+   "detail": "alle Voraussetzungen liegen terminlich vor dem Verbraucher"
+  },
+  {
+   "check": "Wartezeiten enden vor der Fälligkeit der wartenden Aufgabe",
+   "result": "OK",
+   "detail": "alle externen Vorgänge enden rechtzeitig"
+  },
+  {
+   "check": "Alle 59 Vorgänge des Muster-Terminplans sind einer Aufgabe zugeordnet (ausgeführt, Wartezeit oder Anker)",
+   "result": "OK",
+   "detail": "59 Vorgänge zugeordnet"
+  },
+  {
+   "check": "Vorgänge Dritter sind nie als Büroarbeit verknüpft",
+   "result": "OK",
+   "detail": "nur 00.02 (t001) ist als fachliche Zuarbeit an den Auftraggeber verknüpft (L3.FPB.1)"
+  },
+  {
+   "check": "Jede Abgabe hat genau eine Ausgabe- und eine Abschluss-Karte; ihr Lieferumfang entsteht im eigenen Bucket",
+   "result": "OK",
+   "detail": "7 Abgaben mit gleicher Anatomie"
+  },
+  {
+   "check": "HOAI Anlage 10 LPH 3: jede Grundleistung a) bis g) ist mindestens einer Aufgabe zugeordnet",
+   "result": "OK",
+   "detail": "a) 28, b) 12, c) 3, d) 2, e) 4, f) 7, g) 6"
+  },
+  {
+   "check": "Checklisten: Länge nach Bedarf, höchstens 10 Punkte",
+   "result": "OK",
+   "detail": "334 Prüfpunkte, je Karte 4 bis 10; Verteilung {4: 2, 5: 13, 6: 16, 7: 9, 8: 7, 9: 4, 10: 1}"
+  },
+  {
+   "check": "Konkordanz vollständig: jede Karte der drei Vorversionen ist zugeordnet oder begründet entfallen",
+   "result": "OK",
+   "detail": "Claude v0.1: 29, Muster v0.2.1: 57, ChatGPT v0.1: 51"
+  },
+  {
+   "check": "Aufgaben ohne eigenen Vorgang im Muster-Terminplan (Lücke – Vorschlag: Vorgang ergänzen)",
+   "result": "OK",
+   "detail": "keine"
+  },
+  {
+   "check": "Ergebnisstände, die weder Lieferumfang noch Voraussetzung sind (reine Arbeitsstände oder Abschlüsse)",
+   "result": "Hinweis",
+   "detail": "ANS.3; FLA.3; FPB.1; LAG.3; SCH.3; UEP.1"
+  }
+ ],
+ "buckets": [
+  {
+   "id": "A1",
+   "code": "L3.A1",
+   "title": "Planungsgrundlagen für Fachplaner",
+   "gate": "PSP 01.07 (M01) / 02.01 (M02) / 00.08",
+   "kind": "Abgabe",
+   "recipient": "Fachplaner",
+   "summary": "Projektstart, Planliste, Schnittstellenmatrix und vorläufige Planungsgrundlagen; Abschluss mit Kick-off und abgestimmter Schnittstellenliste.",
+   "plannerDescription": "Projektstart, Planliste, Schnittstellenmatrix und vorläufige Planungsgrundlagen; Abschluss mit Kick-off und abgestimmter Schnittstellenliste.",
+   "scheduleReferences": [
+    {
+     "taskId": "t012",
+     "psp": "01.07",
+     "role": "Ausgabe",
+     "name": "M01 · Vorläufige Planungsgrundlagen an beauftragte Fachplaner übermittelt",
+     "type": "milestone",
+     "date": "2027-01-13"
+    },
+    {
+     "taskId": "t016",
+     "psp": "02.01",
+     "role": "Weiterer Meilenstein",
+     "name": "M02 · Kick-off Fachplaner",
+     "type": "milestone",
+     "date": "2027-01-26"
+    },
+    {
+     "taskId": "t005",
+     "psp": "00.08",
+     "role": "Abschluss",
+     "name": "Schnittstellenliste mit beauftragten Fachplanern abstimmen",
+     "type": "task",
+     "dateStart": "2027-01-27",
+     "dateEnd": "2027-02-02"
+    }
+   ],
+   "deliverables": [
+    "PGF.1",
+    "SSM.1"
+   ],
+   "closingResults": [
+    "SSM.2"
+   ],
+   "note": null,
+   "tasks": [
+    {
+     "id": "L3.PSV.1",
+     "title": "Projektstart LPH 3: Grundlagen und Auftrag klären",
+     "result": "Projektstartvermerk LPH 3 mit bestätigten Grundlagen, Projektparametern und offenen Punkten; Protokoll des Projektauftakts M00",
+     "checks": [
+      "Vorplanung (LPH 2) vom Auftraggeber in Textform freigegeben oder Änderungswünsche dokumentiert",
+      "Beauftragter Leistungsumfang LPH 3 geprüft: Grundleistungen, vereinbarte Besondere Leistungen (z. B. Bemusterung, Innenraumplanung), Ausschlüsse",
+      "Kostenschätzung LPH 2 und Kostenvorgabe/Budget liegen vor; Bezugsstand für den späteren Vergleich festgelegt",
+      "Fassung der DIN 276 und Gliederungstiefe der Kostenberechnung vertraglich geklärt",
+      "Planungsgrundlagen vollständig: Vermessung/Lageplan, Baugrund, Bestandsunterlagen, Bebauungsplan/Satzungen, Raumprogramm",
+      "Status der Fachplaner erfasst: Disziplin, beauftragt ja/nein, beauftragte Leistungsphasen, Ansprechpartner",
+      "Projektparameter für den Planner festgelegt: Disziplinen, Gebäudeklasse/Sonderbau, Themenpakete, Kostentiefe, Art des Auftraggebers",
+      "Rollen im Büro benannt: Projektleitung, Bearbeitung je Planart und Thema, Kostenplanung, Prüfung/Freigabe",
+      "Projektauftakt M00 durchgeführt und protokolliert; offene Punkte mit Termin und Verantwortlichem"
+     ],
+     "checkCodes": [
+      "L3.PSV.1-01",
+      "L3.PSV.1-02",
+      "L3.PSV.1-03",
+      "L3.PSV.1-04",
+      "L3.PSV.1-05",
+      "L3.PSV.1-06",
+      "L3.PSV.1-07",
+      "L3.PSV.1-08",
+      "L3.PSV.1-09"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "00.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Auftraggeber",
+     "basis": "H: HOAI § 3; Anlage 10 LPH 2 i) als Vorleistung. R: BGB § 650p. E: ByAK zur Fassung der DIN 276. I: Vermerk, Projektparameter.",
+     "effortHours": null,
+     "effortDrivers": "Vollständigkeit der LPH-2-Ergebnisse; Zahl der Fachdisziplinen; Art des Auftraggebers",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "PSV.1"
+     ],
+     "requires": [],
+     "hoai": [],
+     "condition": null,
+     "doneWhen": "Vermerk liegt in der Projektablage; die Projektparameter sind gesetzt. Fehlt die Freigabe der LPH 2 oder ist der Leistungsumfang unklar: Eskalation an die Büroleitung vor Planungsbeginn.",
+     "schedule": {
+      "executes": [
+       "t002"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-04",
+      "templateEnd": "2027-01-04",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ORG-01"
+      ],
+      "muster_v021": [
+       "L3-ORG-01"
+      ],
+      "chatgpt_v01": [
+       "L3-001",
+       "L3-002"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.PLI.1",
+     "title": "Planliste und Dokumentenstruktur anlegen",
+     "result": "Planliste (alle vorgesehenen Pläne mit Plannummer, Maßstab, Index, Status) und projektbezogene Ablagestruktur",
+     "checks": [
+      "Planliste aus der Bürovorlage angelegt; vorgesehene Pläne der LPH 3 eingetragen (Lageplan, Grundrisse je Ebene, Schnitte, Ansichten, Themenpläne)",
+      "Plannummern, Maßstäbe und Indexlogik nach Bürostandard vergeben",
+      "Plankopf und Layoutvorlagen im CAD-Projekt eingerichtet",
+      "Ablagestruktur für Eingang/Ausgang, Fachplaner, Behörden und Protokolle angelegt",
+      "Verteiler je Abgabe festgelegt: wer erhält was in welchem Format",
+      "Austauschformate mit den Fachplanern festgelegt (Dateiformat, Nullpunkt, Layer- bzw. Modellstruktur)"
+     ],
+     "checkCodes": [
+      "L3.PLI.1-01",
+      "L3.PLI.1-02",
+      "L3.PLI.1-03",
+      "L3.PLI.1-04",
+      "L3.PLI.1-05",
+      "L3.PLI.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "00.03"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: dient HOAI Anlage 10 LPH 3 g). I: Inhalt und Form (Bürostandard).",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Pläne und Ebenen; vorhandener CAD-/BIM-Standard",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "PLI.1"
+     ],
+     "requires": [
+      "PSV.1"
+     ],
+     "hoai": [
+      "g"
+     ],
+     "condition": null,
+     "doneWhen": "Planliste und Struktur von der Projektleitung freigegeben. Die Planliste wird mit jeder Ausgabe nachgeführt und in L3.DOK.1 zum Abgabeverzeichnis finalisiert.",
+     "schedule": {
+      "executes": [
+       "t003"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-08",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ORG-02"
+      ],
+      "muster_v021": [
+       "L3-ORG-02"
+      ],
+      "chatgpt_v01": [
+       "L3-004"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.FPB.1",
+     "title": "Fachplanerbedarf klären und Beauftragung fachlich unterstützen",
+     "result": "Liste Fachplanerbedarf (Disziplin, erforderliche Leistungsphasen, Schnittstellen) und bewertete Angebote als Entscheidungshilfe für den Auftraggeber",
+     "checks": [
+      "Erforderliche Disziplinen bestimmt und begründet: Tragwerk, HLS, ELT, Brandschutz, Bauphysik, Geotechnik, Vermessung, Freianlagen",
+      "Je Disziplin erforderliche Leistungsphasen und Besondere Leistungen benannt (mindestens LPH 3 einschließlich Kostenbeitrag)",
+      "Prüfpflichten geklärt: Standsicherheits- und Brandschutznachweis je Gebäudeklasse/Sonderbau (BayBO Art. 62a, 62b)",
+      "Leistungsabgrenzung zwischen den Disziplinen auf Lücken und Doppelungen geprüft",
+      "Angebote fachlich bewertet (Leistungsumfang, Termine); Empfehlung dokumentiert",
+      "Entscheidungshilfe an den Auftraggeber übergeben; Entscheidung bis zum Kick-off angefordert"
+     ],
+     "checkCodes": [
+      "L3.FPB.1-01",
+      "L3.FPB.1-02",
+      "L3.FPB.1-03",
+      "L3.FPB.1-04",
+      "L3.FPB.1-05",
+      "L3.FPB.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "00.02",
+      "00.05"
+     ],
+     "scope": "Bedingt: Fachplaner noch nicht beauftragt",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Auftraggeber (entscheidet und beauftragt)",
+     "basis": "H: HOAI Anlage 10 LPH 1 c), d) – nachgeholt. R: BayBO Art. 62a, 62b. I: Ablauf und Unterlagen.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Disziplinen; öffentlicher Auftraggeber (Vergabeverfahren); bestehende Rahmenverträge",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "FPB.1"
+     ],
+     "requires": [
+      "PSV.1"
+     ],
+     "hoai": [],
+     "condition": "P-FPL = nein",
+     "doneWhen": "Die Karte endet mit der Übergabe der Empfehlung. Die Beauftragung (M00A) ist Sache des Auftraggebers und Voraussetzung für das Kick-off (L3.A1.ABS).",
+     "schedule": {
+      "executes": [
+       "t001",
+       "t051"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-19",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ORG-03"
+      ],
+      "muster_v021": [
+       "L3-ORG-03"
+      ],
+      "chatgpt_v01": [
+       "L3-002",
+       "L3-003"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.SSM.1",
+     "title": "Schnittstellen- und Liefermatrix (v0) aufstellen",
+     "result": "Schnittstellenmatrix v0: Themen/Bauteile × Disziplinen mit Zuständigkeit (plant / wirkt mit / liefert Angaben), Lieferterminen und Formaten",
+     "checks": [
+      "Bürovorlage Schnittstellenmatrix verwendet; Disziplinen des Projekts eingetragen",
+      "Schnittstellenthemen erfasst: Gründung/Tragwerk, Schächte und Trassen, Technikflächen, Durchführungen (Grundsatz), Brandschutz, Wärme- und Schallschutz, Fassade, Aufzug, Entwässerung, Anschlüsse Außenanlagen",
+      "Je Thema die Zuständigkeit eindeutig einer Disziplin zugewiesen",
+      "Zuarbeit zu Objektbeschreibung, Kostenberechnung (Kostengruppen je Disziplin) und Terminplan zugeordnet",
+      "Liefertermine an die Meilensteine des Terminplans gekoppelt (M01, M03, M07)",
+      "Offene Zuständigkeiten als Klärungspunkte für das Kick-off markiert"
+     ],
+     "checkCodes": [
+      "L3.SSM.1-01",
+      "L3.SSM.1-02",
+      "L3.SSM.1-03",
+      "L3.SSM.1-04",
+      "L3.SSM.1-05",
+      "L3.SSM.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "00.04"
+     ],
+     "scope": "Regelfall bei Fachplanern",
+     "owner": "Projektleitung",
+     "review": "–",
+     "participants": "Mitarbeiter/in Architektur",
+     "basis": "H: HOAI Anlage 10 LPH 3 b). E: ByAK-Schnittstellenliste. I: Aufbau der Matrix.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Disziplinen; Technisierungsgrad; Qualität der Vorlage",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "SSM.1"
+     ],
+     "requires": [
+      "PSV.1"
+     ],
+     "hoai": [
+      "b"
+     ],
+     "condition": "P-DIS nicht leer",
+     "doneWhen": "Version v0 liegt vor M01 vor und ist dem Planungsgrundlagen-Paket beigefügt.",
+     "schedule": {
+      "executes": [
+       "t004"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-12",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-FPL-01"
+      ],
+      "muster_v021": [
+       "L3-FPL-01"
+      ],
+      "chatgpt_v01": [
+       "L3-005"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.PGF.1",
+     "title": "Planungsgrundlagen für die Fachplaner zusammenstellen",
+     "result": "Planungsgrundlagen-Paket: Teilstand der Pläne (PDF und Austauschdatei), Grundlagen der LPH 2 und Fragenliste je Disziplin",
+     "checks": [
+      "Teilstand der Pläne eingefroren und gekennzeichnet: „vorläufig – kein freigegebener Entwurf“, mit Datum/Index",
+      "Geometrische Grundlagen enthalten: Achsraster, Geschosshöhen, Höhenbezug, Schnitte durch die maßgeblichen Bereiche",
+      "Annahmen zu Tragstruktur, Schächten und Technikflächen kenntlich gemacht",
+      "Austauschdatei nach vereinbartem Standard exportiert und geprüft (Nullpunkt, Struktur, Maßstab)",
+      "Unterlagen der LPH 2, Baugrund/Vermessung und Raumprogramm beigefügt",
+      "Fragenliste je Disziplin erstellt (z. B. Tragwerk: Spannweiten, Gründung; Technik: Zentralen, Schächte; Brandschutz: Rettungswege)"
+     ],
+     "checkCodes": [
+      "L3.PGF.1-01",
+      "L3.PGF.1-02",
+      "L3.PGF.1-03",
+      "L3.PGF.1-04",
+      "L3.PGF.1-05",
+      "L3.PGF.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "01.07"
+     ],
+     "scope": "Regelfall bei Fachplanern",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: HOAI Anlage 10 LPH 3 b) (Bereitstellen der Arbeitsergebnisse). I: Inhalt des Pakets.",
+     "effortHours": null,
+     "effortDrivers": "Datenqualität CAD/BIM; Zahl der Disziplinen",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "PGF.1"
+     ],
+     "requires": [
+      "SSM.1",
+      "PLI.1"
+     ],
+     "hoai": [
+      "b"
+     ],
+     "condition": "P-DIS nicht leer",
+     "doneWhen": "Paket vollständig an die Projektleitung übergeben. Grundlage ist ein Teilstand der laufenden Planarbeit (L3.GRU.1, L3.SCH.1), kein abgeschlossener Arbeitsstand.",
+     "schedule": {
+      "executes": [],
+      "waitsFor": [],
+      "anchor": {
+       "taskId": "t012",
+       "edge": "end"
+      },
+      "templateStart": null,
+      "templateEnd": "2027-01-13",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-FPL-02"
+      ],
+      "muster_v021": [
+       "L3-FPL-02",
+       "L3-FPL-03"
+      ],
+      "chatgpt_v01": [
+       "L3-013",
+       "L3-014",
+       "L3-015"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A1.AUS",
+     "title": "Planungsgrundlagen prüfen und an die Fachplaner ausgeben (M01)",
+     "result": "Versandtes Planungsgrundlagen-Paket mit Schnittstellenmatrix v0 und Versandnachweis",
+     "checks": [
+      "Paket vollständig: Pläne (PDF und Austauschdatei), Grundlagen, Schnittstellenmatrix v0, Fragenliste",
+      "Kennzeichnung „vorläufig“ und Index auf allen Unterlagen geprüft",
+      "Terminplan fortgeschrieben; Liefertermine der Fachplaner (M03, M07) im Anschreiben genannt",
+      "Versand an alle Fachplaner dokumentiert (Datum, Verteiler, Index); Planliste aktualisiert"
+     ],
+     "checkCodes": [
+      "L3.A1.AUS-01",
+      "L3.A1.AUS-02",
+      "L3.A1.AUS-03",
+      "L3.A1.AUS-04"
+     ],
+     "checkBlocks": [
+      "AUS",
+      "AUS",
+      "F",
+      "AUS"
+     ],
+     "psp": [
+      "01.07"
+     ],
+     "scope": "Regelfall bei Fachplanern",
+     "owner": "Projektleitung",
+     "review": "–",
+     "participants": "Fachplaner (Empfänger)",
+     "basis": "H: HOAI Anlage 10 LPH 3 b), f). I: Ausgaberoutine.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Empfänger",
+     "sourceType": "TBA-eigene Prüfung und Ausgabe",
+     "step": "Ausgeben",
+     "labels": [
+      "Abgabe"
+     ],
+     "produces": [
+      "A1.AUS"
+     ],
+     "requires": [
+      "PGF.1",
+      "SSM.1"
+     ],
+     "hoai": [
+      "b",
+      "f"
+     ],
+     "condition": "P-DIS nicht leer",
+     "doneWhen": "Versand erfolgt (M01). Die Übermittlung ist keine Freigabe des Entwurfs.",
+     "schedule": {
+      "executes": [
+       "t012"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-13",
+      "templateEnd": "2027-01-13",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-FPL-02"
+      ],
+      "muster_v021": [
+       "L3-FPL-03"
+      ],
+      "chatgpt_v01": [
+       "L3-013"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A1.ABS",
+     "title": "Kick-off Fachplanung durchführen und Schnittstellenliste abstimmen (M02)",
+     "result": "Kick-off-Protokoll; abgestimmte Schnittstellenliste v1; beantwortete Rückfragenliste",
+     "checks": [
+      "Agenda und Unterlagen vorab versendet",
+      "Entwurf, Planungsziele, Kostenvorgabe und Terminplan vorgestellt",
+      "Lieferumfang je Disziplin für Arbeitsstand 01 und Endstand vereinbart: Pläne, Schemata, Berechnungen, Kostenbeitrag, Beschreibungstexte",
+      "Kostenbeitrag je Disziplin vereinbart: Kostengruppen, Gliederungstiefe, Preisstand",
+      "Schnittstellenmatrix Punkt für Punkt durchgegangen; offene Zuständigkeiten entschieden",
+      "Rückfragen der Fachplaner zu den Planungsgrundlagen beantwortet oder mit Termin versehen",
+      "Koordinationsrhythmus und Kommunikationsweg festgelegt",
+      "Protokoll mit Schnittstellenliste v1 an alle verteilt"
+     ],
+     "checkCodes": [
+      "L3.A1.ABS-01",
+      "L3.A1.ABS-02",
+      "L3.A1.ABS-03",
+      "L3.A1.ABS-04",
+      "L3.A1.ABS-05",
+      "L3.A1.ABS-06",
+      "L3.A1.ABS-07",
+      "L3.A1.ABS-08"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      "ABS",
+      null,
+      "ABS"
+     ],
+     "psp": [
+      "00.06",
+      "00.07",
+      "00.08",
+      "02.01",
+      "02.02"
+     ],
+     "scope": "Regelfall bei Fachplanern",
+     "owner": "Projektleitung",
+     "review": "–",
+     "participants": "alle Fachplaner; ggf. Auftraggeber",
+     "basis": "H: HOAI Anlage 10 LPH 3 b); Anlagen 14 und 15 (Mitwirkung der Fachplaner). E: ByAK-Schnittstellenliste. I: Ablauf.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Disziplinen; Reifegrad der Vorplanung",
+     "sourceType": "TBA-eigene Nachbereitung und Abschluss",
+     "step": "Abschließen",
+     "labels": [],
+     "produces": [
+      "A1.ABS",
+      "SSM.2"
+     ],
+     "requires": [
+      "A1.AUS"
+     ],
+     "hoai": [
+      "b"
+     ],
+     "condition": "P-DIS nicht leer",
+     "doneWhen": "Protokoll verteilt; kein Widerspruch innerhalb der vereinbarten Frist – die Schnittstellenliste v1 gilt. Voraussetzung ist die Beauftragung der Fachplaner (M00A).",
+     "schedule": {
+      "executes": [
+       "t016",
+       "t005"
+      ],
+      "waitsFor": [
+       "t052",
+       "t053",
+       "t017"
+      ],
+      "anchor": null,
+      "templateStart": "2027-01-26",
+      "templateEnd": "2027-02-02",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-FPL-03"
+      ],
+      "muster_v021": [
+       "L3-FPL-04"
+      ],
+      "chatgpt_v01": [
+       "L3-016",
+       "L3-006"
+      ],
+      "note": null
+     }
+    }
+   ]
+  },
+  {
+   "id": "A2",
+   "code": "L3.A2",
+   "title": "Planpaket Arbeitsstand 01",
+   "gate": "PSP 01.03 / 01.05",
+   "kind": "Abgabe",
+   "recipient": "Auftraggeber",
+   "summary": "Erster vollständiger Entwurfsstand: Pläne je Planart, Bauteilkatalog, Flächen, Baurechts-Check, Objektbeschreibung; Abschluss mit ausgewerteter Rückmeldung.",
+   "plannerDescription": "Erster vollständiger Entwurfsstand: Pläne je Planart, Bauteilkatalog, Flächen, Baurechts-Check, Objektbeschreibung; Abschluss mit ausgewerteter Rückmeldung.",
+   "scheduleReferences": [
+    {
+     "taskId": "t008",
+     "psp": "01.03",
+     "role": "Ausgabe",
+     "name": "Planpaket · Arbeitsstand 01 an Auftraggeber versandt",
+     "type": "milestone",
+     "date": "2027-01-26"
+    },
+    {
+     "taskId": "t010",
+     "psp": "01.05",
+     "role": "Abschluss",
+     "name": "Anmerkungen Auftraggeber zum Arbeitsstand 01 eingegangen",
+     "type": "milestone",
+     "date": "2027-02-02"
+    }
+   ],
+   "deliverables": [
+    "GRU.1",
+    "SCH.1",
+    "ANS.1",
+    "LAG.1",
+    "BTK.1",
+    "FLA.1",
+    "GEN.1",
+    "OBJ.1"
+   ],
+   "closingResults": [
+    "RML.1"
+   ],
+   "note": null,
+   "tasks": [
+    {
+     "id": "L3.GRU.1",
+     "title": "Grundrisse Arbeitsstand 01 erarbeiten",
+     "result": "Grundrisse aller Geschosse im Arbeitsstand 01 – bei Gebäuden in der Regel M 1:100",
+     "checks": [
+      "Alle Geschosse dargestellt mit Raumbezeichnung, Raumnummer und Raumfläche",
+      "Achsraster, Hauptmaße und Höhenkoten eingetragen",
+      "Tragstruktur als Annahme dargestellt (tragende Wände, Stützen, Spannrichtungen)",
+      "Schächte und Technikflächen vorgehalten und gekennzeichnet",
+      "Erschließung und Rettungswege durchgängig (Treppenräume, Flure, Ausgänge)",
+      "Türen und Fenster mit Öffnungsmaßen und Aufschlagrichtung; Barrierefreiheit in den betroffenen Bereichen berücksichtigt",
+      "Raumprogramm abgeglichen; Abweichungen gegenüber der freigegebenen Vorplanung markiert und begründet",
+      "Plankopf, Index und Datum aktuell; Planliste nachgeführt"
+     ],
+     "checkCodes": [
+      "L3.GRU.1-01",
+      "L3.GRU.1-02",
+      "L3.GRU.1-03",
+      "L3.GRU.1-04",
+      "L3.GRU.1-05",
+      "L3.GRU.1-06",
+      "L3.GRU.1-07",
+      "L3.GRU.1-08"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "01.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: HOAI Anlage 10 LPH 3 a). I: Prüfpunkte (Berufspraxis, Bürostandard).",
+     "effortHours": null,
+     "effortDrivers": "BGF; Zahl der Geschosse und unterschiedlichen Grundrisse; Honorarzone; Neubau oder Bestand; Reife der Vorplanung",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "GRU.1"
+     ],
+     "requires": [
+      "PSV.1",
+      "PLI.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Grundrisssatz vollständig und in sich widerspruchsfrei; Übergabe an die Prüfung in L3.A2.AUS.",
+     "schedule": {
+      "executes": [
+       "t006"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-01"
+      ],
+      "muster_v021": [
+       "L3-ENT-01"
+      ],
+      "chatgpt_v01": [
+       "L3-007"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.SCH.1",
+     "title": "Schnitte Arbeitsstand 01 erarbeiten",
+     "result": "Schnitte durch alle maßgeblichen Bereiche im Arbeitsstand 01",
+     "checks": [
+      "Schnittführung durch alle maßgeblichen Bereiche: Treppen, Höhenversprünge, Dach, Gründung",
+      "Geschoss-, Raum- und Gebäudehöhen sowie Höhenbezug eingetragen",
+      "Decken-, Dach- und Bodenaufbauten mit den Aufbauhöhen des Bauteilkatalogs dargestellt",
+      "Geländeverlauf Bestand/Planung dargestellt",
+      "Treppen: Steigungsverhältnis und Durchgangshöhen im Prinzip geprüft",
+      "Mit den Grundrissen abgeglichen (Achsen, Wandstärken, Öffnungen)",
+      "Plankopf, Index und Datum aktuell; Planliste nachgeführt"
+     ],
+     "checkCodes": [
+      "L3.SCH.1-01",
+      "L3.SCH.1-02",
+      "L3.SCH.1-03",
+      "L3.SCH.1-04",
+      "L3.SCH.1-05",
+      "L3.SCH.1-06",
+      "L3.SCH.1-07"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "01.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: HOAI Anlage 10 LPH 3 a). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Schnitte; Geländeverlauf; Zahl der Höhenversprünge",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "SCH.1"
+     ],
+     "requires": [
+      "PSV.1",
+      "PLI.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Schnittsatz vollständig; Übergabe an die Prüfung in L3.A2.AUS.",
+     "schedule": {
+      "executes": [
+       "t006"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-01"
+      ],
+      "muster_v021": [
+       "L3-ENT-02"
+      ],
+      "chatgpt_v01": [
+       "L3-008"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.ANS.1",
+     "title": "Ansichten Arbeitsstand 01 erarbeiten",
+     "result": "Ansichten aller Gebäudeseiten im Arbeitsstand 01",
+     "checks": [
+      "Ansichten aller Gebäudeseiten vorhanden",
+      "Öffnungen nach Lage und Größe mit den Grundrissen abgeglichen",
+      "Höhen (Traufe, First/Attika, Gelände) mit den Schnitten abgeglichen",
+      "Geländeverlauf Bestand/Planung und Anschluss an die Nachbarbebauung dargestellt",
+      "Fassadengliederung und Materialangaben eingetragen; Annahmen gekennzeichnet",
+      "Plankopf, Index und Datum aktuell; Planliste nachgeführt"
+     ],
+     "checkCodes": [
+      "L3.ANS.1-01",
+      "L3.ANS.1-02",
+      "L3.ANS.1-03",
+      "L3.ANS.1-04",
+      "L3.ANS.1-05",
+      "L3.ANS.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "01.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: HOAI Anlage 10 LPH 3 a). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Ansichten; Komplexität der Fassade",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "ANS.1"
+     ],
+     "requires": [
+      "PSV.1",
+      "PLI.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Ansichtensatz vollständig; Übergabe an die Prüfung in L3.A2.AUS.",
+     "schedule": {
+      "executes": [
+       "t006"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-01"
+      ],
+      "muster_v021": [
+       "L3-ENT-03"
+      ],
+      "chatgpt_v01": [
+       "L3-009"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.LAG.1",
+     "title": "Lageplan und Erschließung erarbeiten",
+     "result": "Entwurfs-Lageplan mit Erschließung, Abstandsflächen (Vorabdarstellung) und Stellplätzen",
+     "checks": [
+      "Grundstücksgrenzen, Baugrenzen/-linien und Höhenbezug aus der Vermessung übernommen",
+      "Gebäude lage- und höhenmäßig eingetragen; mit den Grundrissen abgeglichen",
+      "Abstandsflächen als Vorabdarstellung eingetragen",
+      "Erschließung, Zufahrt, Stellplätze und Fahrradabstellplätze dargestellt",
+      "Feuerwehrzufahrt und Aufstellflächen geprüft, soweit erforderlich",
+      "Schnittstellen zu Freianlagen und Entwässerung markiert",
+      "Plankopf, Index und Datum aktuell; Planliste nachgeführt"
+     ],
+     "checkCodes": [
+      "L3.LAG.1-01",
+      "L3.LAG.1-02",
+      "L3.LAG.1-03",
+      "L3.LAG.1-04",
+      "L3.LAG.1-05",
+      "L3.LAG.1-06",
+      "L3.LAG.1-07"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "01.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: HOAI Anlage 10 LPH 3 a). I: Prüfpunkte; die baurechtliche Bewertung erfolgt in L3.GEN.1.",
+     "effortHours": null,
+     "effortDrivers": "Grundstückszuschnitt; Topografie; Zahl der Stellplätze",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "LAG.1"
+     ],
+     "requires": [
+      "PSV.1",
+      "PLI.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Lageplan vollständig; Übergabe an die Prüfung in L3.A2.AUS und an den Baurechts-Check.",
+     "schedule": {
+      "executes": [
+       "t006"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-01"
+      ],
+      "muster_v021": [
+       "L3-ENT-04"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.BTK.1",
+     "title": "Bauteilkatalog (Regelaufbauten) festlegen",
+     "result": "Bauteilkatalog Arbeitsstand 01: Regelaufbauten mit Schichten, Dicken, Anforderungen, Material und Kostengruppe",
+     "checks": [
+      "Regelaufbauten für alle raumabschließenden und tragenden Bauteile mit Schichten und Dicken definiert (Gründung, Außenwand, Innenwand, Decke, Dach, Fenster/Fassade, Bodenaufbauten)",
+      "Je Bauteil die Anforderungen benannt (Feuerwiderstand, Wärme-, Schall-, Feuchteschutz) und deren Quelle vermerkt",
+      "Aufbauhöhen und Wandstärken stimmen mit Grundrissen und Schnitten überein",
+      "Leitdetails im Prinzip geklärt: Sockel, Fensteranschluss, Attika/Traufe, Deckenanschluss",
+      "Materialien und Oberflächenqualitäten je Bauteil benannt",
+      "Jedes Bauteil einer Kostengruppe zugeordnet – in der Gliederung der späteren Kostenberechnung",
+      "Offene Punkte an Tragwerk, Bauphysik und Brandschutz adressiert"
+     ],
+     "checkCodes": [
+      "L3.BTK.1-01",
+      "L3.BTK.1-02",
+      "L3.BTK.1-03",
+      "L3.BTK.1-04",
+      "L3.BTK.1-05",
+      "L3.BTK.1-06",
+      "L3.BTK.1-07"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "01.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung oder erfahrene/r Mitarbeiter/in Architektur",
+     "review": "Büroleitung",
+     "participants": "ggf. Tragwerk, Bauphysik, Brandschutz",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), Grundlage für c) und e). I: Form als Bauteilkatalog; Bauteilwissen steht in den Planungshilfen.",
+     "effortHours": null,
+     "effortDrivers": "Zahl unterschiedlicher Bauteile; Bauweise; energetischer Standard; Bestand",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "BTK.1"
+     ],
+     "requires": [
+      "PSV.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Katalog von der Büroleitung freigegeben. Einmal festlegen, mehrfach nutzen: Objektbeschreibung, Qualitätsliste, Mengen.",
+     "schedule": {
+      "executes": [
+       "t006"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-02"
+      ],
+      "muster_v021": [
+       "L3-ENT-05"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.FLA.1",
+     "title": "Flächen und Rauminhalte ermitteln und mit dem Raumprogramm abgleichen",
+     "result": "Flächen- und Rauminhaltsaufstellung (BGF, Netto-Raumfläche gegliedert, BRI) je Geschoss mit Soll-Ist-Vergleich zum Raumprogramm",
+     "checks": [
+      "Ermittlungsgrundlage auf dem Deckblatt angegeben: Normfassung, Planstand/Index",
+      "BGF und BRI je Geschoss und gesamt ermittelt",
+      "Netto-Raumfläche nach Nutzungs-, Technik- und Verkehrsfläche gegliedert",
+      "Raumliste (Raumnummer, Nutzung, Fläche) aus dem CAD-Modell abgeleitet und stichprobenhaft nachgerechnet",
+      "Soll-Ist-Vergleich zum Raumprogramm mit Abweichungen und Begründung",
+      "Kennwerte gebildet (z. B. NUF/BGF, BRI/BGF) und mit der Vorplanung verglichen",
+      "Weitere Flächenarten nur ermittelt, wenn vereinbart (z. B. Wohnfläche, GRZ/GFZ)"
+     ],
+     "checkCodes": [
+      "L3.FLA.1-01",
+      "L3.FLA.1-02",
+      "L3.FLA.1-03",
+      "L3.FLA.1-04",
+      "L3.FLA.1-05",
+      "L3.FLA.1-06",
+      "L3.FLA.1-07"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "01.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: kein eigener Buchstabe; Grundlage für HOAI Anlage 10 LPH 3 e) und g). E: DIN 277 (Normtext nicht eingesehen). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Räume; Qualität des CAD-Modells; zusätzliche Flächenarten",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "FLA.1"
+     ],
+     "requires": [
+      "GRU.1",
+      "SCH.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Aufstellung geprüft und eindeutig einem Planstand zugeordnet.",
+     "schedule": {
+      "executes": [
+       "t006"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-05",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-03"
+      ],
+      "muster_v021": [
+       "L3-ENT-06"
+      ],
+      "chatgpt_v01": [
+       "L3-010"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.GEN.1",
+     "title": "Öffentlich-rechtliche Anforderungen prüfen und Genehmigungsfähigkeit vorabstimmen",
+     "result": "Baurechts-Check (Anforderung – Nachweis im Entwurf – Status) mit Gesprächsvermerken und Liste der voraussichtlichen Abweichungen und Befreiungen",
+     "checks": [
+      "Planungsrecht geprüft: Art und Maß der Nutzung, Baugrenzen/-linien, Festsetzungen bzw. Einfügen nach § 34 BauGB",
+      "Gebäudeklasse und Sonderbaueigenschaft nach BayBO bestimmt und dokumentiert",
+      "Abstandsflächen nach geltender BayBO und örtlicher Satzung vorab nachgewiesen",
+      "Stellplätze und Fahrradabstellplätze nach gemeindlicher Satzung geprüft",
+      "Rettungswege und Grundzüge des Brandschutzes geklärt – mit Brandschutzplaner, falls beauftragt",
+      "Barrierefreiheit, Spielplatz und örtliche Gestaltungsvorgaben geprüft",
+      "Prüfpflichten für Standsicherheits- und Brandschutznachweis festgestellt (BayBO Art. 62a, 62b)",
+      "Weitere Rechtsbereiche abgefragt: Denkmal, Wasser, Naturschutz, Immissionsschutz, Nachbarn",
+      "Abstimmungen mit Bauaufsicht und Fachstellen terminiert und jeweils mit Vermerk dokumentiert",
+      "Erforderliche Abweichungen/Befreiungen aufgelistet und dem Auftraggeber mit Risiko benannt"
+     ],
+     "checkCodes": [
+      "L3.GEN.1-01",
+      "L3.GEN.1-02",
+      "L3.GEN.1-03",
+      "L3.GEN.1-04",
+      "L3.GEN.1-05",
+      "L3.GEN.1-06",
+      "L3.GEN.1-07",
+      "L3.GEN.1-08",
+      "L3.GEN.1-09",
+      "L3.GEN.1-10"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "07.01"
+     ],
+     "scope": "Regelfall – Umfang projektabhängig",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Bauaufsicht, Fachstellen; ggf. Brandschutzplaner",
+     "basis": "H: HOAI Anlage 10 LPH 3 d). R: BayBO, insbesondere Art. 62–62b; Prüfpunkte am aktuellen Recht des Projekts verifizieren. I: Form des Baurechts-Checks.",
+     "effortHours": null,
+     "effortDrivers": "Planungsrechtliche Lage; Sonderbau; Zahl der Fachstellen; Bestand/Denkmal",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "GEN.1"
+     ],
+     "requires": [
+      "PSV.1"
+     ],
+     "hoai": [
+      "d"
+     ],
+     "condition": null,
+     "doneWhen": "Jede Anforderung hat den Status „erfüllt“, „offen mit Termin“ oder „Abweichung vorgesehen“. Antwortzeiten der Behörden sind Wartezeit.",
+     "schedule": {
+      "executes": [
+       "t041"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-13",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-GEN-01"
+      ],
+      "muster_v021": [
+       "L3-GEN-01"
+      ],
+      "chatgpt_v01": [
+       "L3-022",
+       "L3-023"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.OBJ.1",
+     "title": "Objektbeschreibung Arbeitsstand 01 erarbeiten",
+     "result": "Objektbeschreibung Arbeitsstand 01 nach Bürovorlage: Allgemeines, Entwurfskonzept, Baukonstruktion, Technische Anlagen (Platzhalter), Außenanlagen",
+     "checks": [
+      "Gliederung nach Bürovorlage angelegt – die Kapitelstruktur, in die die Fachplaner zuliefern",
+      "Entwurfs- und Nutzungskonzept, Erschließung und Flächenkennwerte beschrieben",
+      "Konstruktion und Bauteile aus dem Bauteilkatalog übernommen – keine abweichenden Angaben",
+      "Ausbau- und Oberflächenqualitäten je Raumgruppe beschrieben; Annahmen gekennzeichnet",
+      "Technik-Kapitel als Platzhalter mit benannten Zulieferern (HLS, ELT, ggf. weitere)",
+      "Mit den Plänen abgeglichen: keine Widersprüche bei Maßen, Materialien und Flächen"
+     ],
+     "checkCodes": [
+      "L3.OBJ.1-01",
+      "L3.OBJ.1-02",
+      "L3.OBJ.1-03",
+      "L3.OBJ.1-04",
+      "L3.OBJ.1-05",
+      "L3.OBJ.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "07.02"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: HOAI Anlage 10 LPH 3 c). E: ByAK-Schnittstellenliste (Dokumentationsstruktur des Architekten). I: Gliederung.",
+     "effortHours": null,
+     "effortDrivers": "Objektgröße; Zahl unterschiedlicher Nutzungsbereiche; Qualität der Vorlage",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "OBJ.1"
+     ],
+     "requires": [
+      "BTK.1"
+     ],
+     "hoai": [
+      "c"
+     ],
+     "condition": null,
+     "doneWhen": "Arbeitsstand 01 geprüft; Übergabe an L3.A2.AUS.",
+     "schedule": {
+      "executes": [
+       "t042"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-13",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-OBJ-01"
+      ],
+      "muster_v021": [
+       "L3-ENT-07"
+      ],
+      "chatgpt_v01": [
+       "L3-042"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A2.AUS",
+     "title": "Planpaket Arbeitsstand 01 prüfen und an den Auftraggeber ausgeben",
+     "result": "Versandtes Planpaket Arbeitsstand 01 mit Anschreiben (Lieferumfang, Prüffrist, erbetene Rückmeldungen) und Versandnachweis",
+     "checks": [
+      "Lieferumfang gegen die Planliste vollständig: Pläne, Objektbeschreibung, Flächenaufstellung, Baurechts-Check",
+      "Vier-Augen-Prüfung der Pläne: Konsistenz Grundriss/Schnitt/Ansicht/Lageplan, Maße, Beschriftung, Index",
+      "Pläne, Objektbeschreibung und Flächenaufstellung untereinander abgeglichen",
+      "Abweichungen von Vorplanung und Raumprogramm im Anschreiben benannt",
+      "Offene Punkte und erbetene Entscheidungen des Auftraggebers aufgelistet",
+      "Terminplan und Entscheidungsliste fortgeschrieben; aktueller Stand beigefügt",
+      "Gestalterische Freigabe durch die Büroleitung dokumentiert",
+      "Prüffrist und Form der Rückmeldung vereinbart und im Anschreiben genannt",
+      "Versand dokumentiert (Datum, Verteiler, Index); Planliste aktualisiert"
+     ],
+     "checkCodes": [
+      "L3.A2.AUS-01",
+      "L3.A2.AUS-02",
+      "L3.A2.AUS-03",
+      "L3.A2.AUS-04",
+      "L3.A2.AUS-05",
+      "L3.A2.AUS-06",
+      "L3.A2.AUS-07",
+      "L3.A2.AUS-08",
+      "L3.A2.AUS-09"
+     ],
+     "checkBlocks": [
+      "AUS",
+      "AUS",
+      null,
+      null,
+      null,
+      "F",
+      "AUS",
+      "AUS",
+      "AUS"
+     ],
+     "psp": [
+      "01.02",
+      "01.03"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung (Freigabe)",
+     "participants": "Auftraggeber",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), f). I: Ausgaberoutine (Vier-Augen-Prinzip, Anschreiben, Frist).",
+     "effortHours": null,
+     "effortDrivers": "Umfang des Plansatzes; Qualität der Zuarbeit",
+     "sourceType": "TBA-eigene Prüfung und Ausgabe",
+     "step": "Ausgeben",
+     "labels": [
+      "Abgabe"
+     ],
+     "produces": [
+      "A2.AUS"
+     ],
+     "requires": [
+      "GRU.1",
+      "SCH.1",
+      "ANS.1",
+      "LAG.1",
+      "BTK.1",
+      "FLA.1",
+      "GEN.1",
+      "OBJ.1"
+     ],
+     "hoai": [
+      "a",
+      "f"
+     ],
+     "condition": null,
+     "doneWhen": "Die Karte endet mit dem dokumentierten Versand (Meilenstein 01.03). Die Prüfphase des Auftraggebers ist Wartezeit und gehört nicht zu dieser Karte.",
+     "schedule": {
+      "executes": [
+       "t007",
+       "t008"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-01-20",
+      "templateEnd": "2027-01-26",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ABG-A2"
+      ],
+      "muster_v021": [
+       "L3-ABG-01"
+      ],
+      "chatgpt_v01": [
+       "L3-011",
+       "L3-012"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A2.ABS",
+     "title": "Rückmeldung des Auftraggebers zum Arbeitsstand 01 auswerten",
+     "result": "Rückmelde- und Änderungsliste: je Anmerkung Bewertung, Zuständigkeit und Zielstand",
+     "checks": [
+      "Rückmeldung vollständig erfasst (schriftlich oder protokolliert); jede Anmerkung einzeln nummeriert",
+      "Je Anmerkung bewertet: Korrektur im Rahmen der Planung, Planungsänderung/neuer Wunsch (Mehraufwand, Vergütung) oder Entscheidungspunkt",
+      "Kosten-, Termin- und Genehmigungsfolgen grob eingeschätzt",
+      "Bearbeitung je Anmerkung einer Person und dem Stand 02 zugewiesen",
+      "Entscheidungspunkte an die Entscheidungsvorlage übergeben; Entscheidungsliste aktualisiert",
+      "Bei ausbleibender Rückmeldung: Erinnerung dokumentiert und Auswirkung auf den Terminplan mitgeteilt"
+     ],
+     "checkCodes": [
+      "L3.A2.ABS-01",
+      "L3.A2.ABS-02",
+      "L3.A2.ABS-03",
+      "L3.A2.ABS-04",
+      "L3.A2.ABS-05",
+      "L3.A2.ABS-06"
+     ],
+     "checkBlocks": [
+      "ABS",
+      "ABS",
+      null,
+      "ABS",
+      "ABS",
+      null
+     ],
+     "psp": [
+      "01.04",
+      "01.05"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "–",
+     "participants": "Auftraggeber",
+     "basis": "H: HOAI § 10 als Hintergrund für Planungsänderungen. I: Abschlussroutine.",
+     "effortHours": null,
+     "effortDrivers": "Umfang der Anmerkungen; Entscheidungsstruktur des Auftraggebers",
+     "sourceType": "TBA-eigene Nachbereitung und Abschluss",
+     "step": "Abschließen",
+     "labels": [],
+     "produces": [
+      "A2.ABS",
+      "RML.1"
+     ],
+     "requires": [
+      "A2.AUS"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Liste verteilt. Damit ist die Abgabe A2 abgeschlossen; Auslöser ist der Eingang der Anmerkungen (Meilenstein 01.05).",
+     "schedule": {
+      "executes": [],
+      "waitsFor": [
+       "t009"
+      ],
+      "anchor": {
+       "taskId": "t010",
+       "edge": "end"
+      },
+      "templateStart": null,
+      "templateEnd": "2027-02-02",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ABG-A2"
+      ],
+      "muster_v021": [
+       "L3-ENT-08"
+      ],
+      "chatgpt_v01": [
+       "L3-025"
+      ],
+      "note": null
+     }
+    }
+   ]
+  },
+  {
+   "id": "A3",
+   "code": "L3.A3",
+   "title": "Koordination & Entscheidungsvorlage",
+   "gate": "PSP 03.04 (M04) / 04.02 (M05)",
+   "kind": "Abgabe",
+   "recipient": "Auftraggeber",
+   "summary": "Fachplanungsbeiträge prüfen, Konflikte klären, Entscheidungspunkte aufbereiten; Abschluss mit protokollierten Entscheidungen M05.",
+   "plannerDescription": "Fachplanungsbeiträge prüfen, Konflikte klären, Entscheidungspunkte aufbereiten; Abschluss mit protokollierten Entscheidungen M05.",
+   "scheduleReferences": [
+    {
+     "taskId": "t026",
+     "psp": "03.04",
+     "role": "Ausgabe",
+     "name": "M04 · Entscheidungspunkte an Auftraggeber bereitstellen",
+     "type": "milestone",
+     "date": "2027-02-24"
+    },
+    {
+     "taskId": "t029",
+     "psp": "04.02",
+     "role": "Abschluss",
+     "name": "M05 · Entscheidungsbesprechung Auftraggeber · Arbeitsstand 02",
+     "type": "milestone",
+     "date": "2027-03-03"
+    }
+   ],
+   "deliverables": [
+    "ENV.1"
+   ],
+   "closingResults": [
+    "ENP.1"
+   ],
+   "note": null,
+   "tasks": [
+    {
+     "id": "L3.KLA.1",
+     "title": "Fachplanungsbeiträge Arbeitsstand 01 prüfen und Koordinationsrunde 01 durchführen",
+     "result": "Klärungsliste (Konflikte und Abstimmungspunkte mit Verantwortlichem, Termin, Status) und Koordinationsprotokoll 01",
+     "checks": [
+      "Eingang je Disziplin gegen den vereinbarten Lieferumfang und Planstand/Index kontrolliert; Fehlendes angemahnt",
+      "Tragwerk: Stützen- und Wandstellungen, Spannweiten, Bauteildicken, Unterzüge und Gründung mit der Architektur abgeglichen",
+      "Technik: Technikflächen, Schächte, Trassenführung, Aufbauhöhen in Decken und Böden, Dachaufbauten, Hausanschlüsse geprüft",
+      "Brandschutz (falls beauftragt): Brandabschnitte, Rettungswege und Bauteilanforderungen mit Grundrissen und Bauteilkatalog abgeglichen",
+      "Fachplanungen untereinander geprüft: Durchführungen und Lasten zwischen Technik und Tragwerk",
+      "Jeder Konflikt in der Klärungsliste erfasst: Ort, Beteiligte, Lösungsvorschlag, Verantwortlicher, Frist",
+      "Punkte mit Kosten-, Termin- oder Gestaltungsfolgen als Entscheidungspunkte für den Auftraggeber markiert",
+      "Koordinationsbesprechung durchgeführt; Protokoll verteilt"
+     ],
+     "checkCodes": [
+      "L3.KLA.1-01",
+      "L3.KLA.1-02",
+      "L3.KLA.1-03",
+      "L3.KLA.1-04",
+      "L3.KLA.1-05",
+      "L3.KLA.1-06",
+      "L3.KLA.1-07",
+      "L3.KLA.1-08"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "02.03",
+      "02.04",
+      "02.05",
+      "02.06",
+      "02.07",
+      "03.01"
+     ],
+     "scope": "Regelfall bei Fachplanern",
+     "owner": "Projektleitung",
+     "review": "–",
+     "participants": "Mitarbeiter/in Architektur; Fachplaner",
+     "basis": "H: HOAI Anlage 10 LPH 3 b); Anlage 14 LPH 3 a), c); Anlage 15 LPH 3 c), d). E: ByAK-Schnittstellenliste. I: Klärungsliste.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Disziplinen; Technisierungsgrad; Planungsmethode (2D oder modellbasiert); Qualität der Beiträge",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "KLA.1"
+     ],
+     "requires": [
+      "SSM.2",
+      "GRU.1",
+      "SCH.1",
+      "BTK.1"
+     ],
+     "hoai": [
+      "b"
+     ],
+     "condition": "P-DIS nicht leer",
+     "doneWhen": "Alle Punkte sind zugewiesen und terminiert; die Entscheidungspunkte sind an L3.ENV.1 übergeben. Der Beginn mit Zwischenständen der Fachplaner ist im Terminplan beabsichtigt.",
+     "schedule": {
+      "executes": [
+       "t023"
+      ],
+      "waitsFor": [
+       "t018",
+       "t019",
+       "t020",
+       "t021",
+       "t022"
+      ],
+      "anchor": null,
+      "templateStart": "2027-02-11",
+      "templateEnd": "2027-02-24",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-KOO-01"
+      ],
+      "muster_v021": [
+       "L3-KOO-01",
+       "L3-KOO-02"
+      ],
+      "chatgpt_v01": [
+       "L3-017",
+       "L3-018",
+       "L3-019",
+       "L3-020"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.ENV.1",
+     "title": "Entscheidungsvorlage erstellen",
+     "result": "Entscheidungsvorlage: je Punkt Sachverhalt, Optionen, Empfehlung, Auswirkungen auf Kosten, Termine, Qualität und Genehmigung, Entscheidungsfrist",
+     "checks": [
+      "Entscheidungspunkte aus Klärungsliste, Rückmeldeliste und Baurechts-Check zusammengeführt; Punkte ohne Relevanz für den Auftraggeber aussortiert",
+      "Je Punkt Sachverhalt und Optionen mit Skizze oder Planausschnitt dargestellt",
+      "Kostenfolge je Option benannt – Tiefe nach Vertrag (eine vertiefte Kostenuntersuchung von Varianten ist Besondere Leistung)",
+      "Termin- und Genehmigungsfolgen je Option benannt",
+      "Empfehlung des Büros je Punkt formuliert",
+      "Entscheidungsfrist und Folgen einer verspäteten Entscheidung benannt"
+     ],
+     "checkCodes": [
+      "L3.ENV.1-01",
+      "L3.ENV.1-02",
+      "L3.ENV.1-03",
+      "L3.ENV.1-04",
+      "L3.ENV.1-05",
+      "L3.ENV.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "03.02"
+     ],
+     "scope": "Regelfall – Umfang nach Entscheidungsbedarf",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "–",
+     "basis": "H: Abgrenzung zu den Besonderen Leistungen der LPH 3 (Varianten mit Kostenuntersuchung). I: Aufbau der Vorlage.",
+     "effortHours": null,
+     "effortDrivers": "Zahl und Tragweite der Entscheidungspunkte; Variantenbedarf",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "ENV.1"
+     ],
+     "requires": [
+      "KLA.1",
+      "RML.1",
+      "GEN.1"
+     ],
+     "hoai": [
+      "a",
+      "b"
+     ],
+     "condition": null,
+     "doneWhen": "Vorlage vollständig; Übergabe an L3.A3.AUS.",
+     "schedule": {
+      "executes": [
+       "t024"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-18",
+      "templateEnd": "2027-02-24",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENV-01"
+      ],
+      "muster_v021": [
+       "L3-ENV-01"
+      ],
+      "chatgpt_v01": [
+       "L3-021"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A3.AUS",
+     "title": "Entscheidungsvorlage prüfen und dem Auftraggeber bereitstellen (M04)",
+     "result": "Versandte Entscheidungsvorlage mit Versandnachweis und bestätigtem Besprechungstermin",
+     "checks": [
+      "Annahmen und gesicherte Fakten in der Vorlage klar getrennt",
+      "Kostenaussagen intern plausibilisiert (Kostenplanung)",
+      "Terminplan und Entscheidungsliste fortgeschrieben; aktueller Stand beigefügt",
+      "Freigabe durch die Büroleitung dokumentiert",
+      "Versand dokumentiert; Termin der Entscheidungsbesprechung M05 bestätigt"
+     ],
+     "checkCodes": [
+      "L3.A3.AUS-01",
+      "L3.A3.AUS-02",
+      "L3.A3.AUS-03",
+      "L3.A3.AUS-04",
+      "L3.A3.AUS-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      "F",
+      "AUS",
+      "AUS"
+     ],
+     "psp": [
+      "03.04"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung (Freigabe)",
+     "participants": "Auftraggeber",
+     "basis": "H: HOAI Anlage 10 LPH 3 f). I: Ausgaberoutine.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Entscheidungspunkte",
+     "sourceType": "TBA-eigene Prüfung und Ausgabe",
+     "step": "Ausgeben",
+     "labels": [
+      "Abgabe"
+     ],
+     "produces": [
+      "A3.AUS"
+     ],
+     "requires": [
+      "ENV.1"
+     ],
+     "hoai": [
+      "a",
+      "f"
+     ],
+     "condition": null,
+     "doneWhen": "Die Karte endet mit dem dokumentierten Versand (M04).",
+     "schedule": {
+      "executes": [
+       "t026"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-24",
+      "templateEnd": "2027-02-24",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENV-01"
+      ],
+      "muster_v021": [
+       "L3-ABG-02"
+      ],
+      "chatgpt_v01": [
+       "L3-021"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A3.ABS",
+     "title": "Entscheidungsbesprechung durchführen und Entscheidungen dokumentieren (M05)",
+     "result": "Entscheidungsprotokoll M05: je Punkt Entscheidung, Datum, Entscheider; offene Punkte mit Frist und Annahme",
+     "checks": [
+      "Entscheidungsbesprechung M05 durchgeführt; jede Entscheidung mit Datum und Entscheider protokolliert",
+      "Nicht entschiedene Punkte mit neuer Frist und mit einer Annahme für die Weiterplanung versehen",
+      "Kosten- und Terminfolgen der Entscheidungen im Protokoll festgehalten",
+      "Protokoll dem Auftraggeber zur Bestätigung in Textform zugesandt",
+      "Entscheidungen an Planung, Fachplaner und Bemusterung weitergegeben; Entscheidungsliste aktualisiert"
+     ],
+     "checkCodes": [
+      "L3.A3.ABS-01",
+      "L3.A3.ABS-02",
+      "L3.A3.ABS-03",
+      "L3.A3.ABS-04",
+      "L3.A3.ABS-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      "ABS",
+      "ABS"
+     ],
+     "psp": [
+      "04.01",
+      "04.02"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Auftraggeber (entscheidet)",
+     "basis": "H: abgeleitet aus HOAI Anlage 10 LPH 3 a). I: Abschlussroutine.",
+     "effortHours": null,
+     "effortDrivers": "Entscheidungsstruktur des Auftraggebers (Einzelperson, Gremien)",
+     "sourceType": "TBA-eigene Nachbereitung und Abschluss",
+     "step": "Abschließen",
+     "labels": [],
+     "produces": [
+      "A3.ABS",
+      "ENP.1"
+     ],
+     "requires": [
+      "A3.AUS"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Protokoll verteilt. Damit ist die Abgabe A3 abgeschlossen. Die Prüffrist des Auftraggebers (04.01) ist Wartezeit.",
+     "schedule": {
+      "executes": [
+       "t029"
+      ],
+      "waitsFor": [
+       "t028"
+      ],
+      "anchor": null,
+      "templateStart": "2027-03-03",
+      "templateEnd": "2027-03-03",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-QUA-01"
+      ],
+      "muster_v021": [
+       "L3-ABG-02",
+       "L3-BEM-13"
+      ],
+      "chatgpt_v01": [
+       "L3-031"
+      ],
+      "note": null
+     }
+    }
+   ]
+  },
+  {
+   "id": "A4",
+   "code": "L3.A4",
+   "title": "Integrierter Planstand 02",
+   "gate": "PSP 01.08 / 01.10",
+   "kind": "Abgabe",
+   "recipient": "Auftraggeber",
+   "summary": "Zweiter Planstand mit Rückmeldung des Auftraggebers, Entscheidungen M05 und integrierter Fachplanung; Abschluss mit festgelegtem Planstand für die Kostenberechnung.",
+   "plannerDescription": "Zweiter Planstand mit Rückmeldung des Auftraggebers, Entscheidungen M05 und integrierter Fachplanung; Abschluss mit festgelegtem Planstand für die Kostenberechnung.",
+   "scheduleReferences": [
+    {
+     "taskId": "t013",
+     "psp": "01.08",
+     "role": "Ausgabe",
+     "name": "Planpaket · Vorabzug 02 an Auftraggeber vorlegen",
+     "type": "milestone",
+     "date": "2027-03-10"
+    },
+    {
+     "taskId": "t015",
+     "psp": "01.10",
+     "role": "Abschluss",
+     "name": "Abstimmung Planstand Vorabzug 02 abgeschlossen",
+     "type": "milestone",
+     "date": "2027-03-17"
+    }
+   ],
+   "deliverables": [
+    "GRU.2",
+    "SCH.2",
+    "ANS.2",
+    "LAG.2",
+    "FLA.2",
+    "BTK.2",
+    "GEN.2",
+    "OBJ.2"
+   ],
+   "closingResults": [
+    "RML.2"
+   ],
+   "note": null,
+   "tasks": [
+    {
+     "id": "L3.GRU.2",
+     "title": "Grundrisse auf Stand 02 fortschreiben",
+     "result": "Grundrisse Stand 02 mit Änderungsübersicht; nachgeführter Lageplan und nachgeführte Flächenaufstellung",
+     "checks": [
+      "Anmerkungen des Auftraggebers laut Rückmeldeliste abgearbeitet: je Anmerkung umgesetzt oder begründet nicht umgesetzt",
+      "Tragwerk integriert: Stützen, tragende Wände, Bauteildicken, Unterzüge, Gründung nach Angaben der Tragwerksplanung",
+      "Technik integriert: Technikräume, Schächte, Trassen, Hausanschlussraum",
+      "Brandschutzanforderungen dargestellt (Abschnitte, Rettungswege, Türanforderungen), soweit ein Konzept vorliegt",
+      "Entscheidungen aus M05 eingearbeitet; Annahmen gekennzeichnet",
+      "Punkte der Klärungsliste zeichnerisch gelöst und Status zurückgemeldet",
+      "Lageplan an den Stand 02 angepasst (Erschließung, Stellplätze, Entwässerungsschnittstellen)",
+      "Flächen- und Rauminhaltsaufstellung auf Stand 02 nachgeführt; Soll-Ist-Vergleich aktualisiert",
+      "Änderungen gegenüber Arbeitsstand 01 markiert (Änderungsübersicht); Index und Planliste aktuell"
+     ],
+     "checkCodes": [
+      "L3.GRU.2-01",
+      "L3.GRU.2-02",
+      "L3.GRU.2-03",
+      "L3.GRU.2-04",
+      "L3.GRU.2-05",
+      "L3.GRU.2-06",
+      "L3.GRU.2-07",
+      "L3.GRU.2-08",
+      "L3.GRU.2-09"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "01.06",
+      "03.03"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "Fachplaner",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), b). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Umfang der Änderungen des Auftraggebers; Zahl der Konflikte; Zeitpunkt der Entscheidungen",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "GRU.2",
+      "LAG.2",
+      "FLA.2"
+     ],
+     "requires": [
+      "GRU.1",
+      "LAG.1",
+      "FLA.1",
+      "RML.1",
+      "KLA.1",
+      "ENP.1"
+     ],
+     "hoai": [
+      "a",
+      "b"
+     ],
+     "condition": null,
+     "doneWhen": "Grundrisse vollständig; alle zeichnerisch relevanten Punkte der Klärungsliste geschlossen oder benannt. Führt die Vorgänge 01.06 und 03.03 in einem Ergebnis zusammen.",
+     "schedule": {
+      "executes": [
+       "t011",
+       "t025"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-03-10",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-04"
+      ],
+      "muster_v021": [
+       "L3-ENT-09",
+       "L3-ENT-11",
+       "L3-ENT-12"
+      ],
+      "chatgpt_v01": [
+       "L3-026",
+       "L3-028"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.SCH.2",
+     "title": "Schnitte auf Stand 02 fortschreiben",
+     "result": "Schnitte Stand 02 mit integrierten Aufbauhöhen und Tragwerk",
+     "checks": [
+      "Tragwerk integriert: Deckenstärken, Unterzüge, Gründung",
+      "Aufbauhöhen in Decken, Böden und Dach nach Technik und Bauteilkatalog Stand 02 angepasst",
+      "Geschoss- und Gebäudehöhen überprüft; Auswirkungen auf die Abstandsflächen an den Baurechts-Check gemeldet",
+      "Mit den Grundrissen Stand 02 abgeglichen",
+      "Änderungen markiert; Index und Planliste aktuell"
+     ],
+     "checkCodes": [
+      "L3.SCH.2-01",
+      "L3.SCH.2-02",
+      "L3.SCH.2-03",
+      "L3.SCH.2-04",
+      "L3.SCH.2-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "01.06",
+      "03.03"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "Fachplaner",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), b). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Schnitte; Umfang der Höhenänderungen",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "SCH.2"
+     ],
+     "requires": [
+      "SCH.1",
+      "RML.1",
+      "KLA.1"
+     ],
+     "hoai": [
+      "a",
+      "b"
+     ],
+     "condition": null,
+     "doneWhen": "Schnitte vollständig; Übergabe an L3.A4.AUS.",
+     "schedule": {
+      "executes": [
+       "t011",
+       "t025"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-03-10",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-04"
+      ],
+      "muster_v021": [
+       "L3-ENT-10",
+       "L3-ENT-11"
+      ],
+      "chatgpt_v01": [
+       "L3-027",
+       "L3-028"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.ANS.2",
+     "title": "Ansichten auf Stand 02 fortschreiben",
+     "result": "Ansichten Stand 02 mit abgestimmtem Fassadenstand",
+     "checks": [
+      "Öffnungen, Höhen und Dachaufbauten (Technik) an Grundrisse und Schnitte Stand 02 angepasst",
+      "Anmerkungen des Auftraggebers zur Fassade laut Rückmeldeliste abgearbeitet",
+      "Material- und Fassadenangaben mit dem Bauteilkatalog Stand 02 abgeglichen; offene Qualitäten gekennzeichnet",
+      "Geländeanschlüsse überprüft",
+      "Änderungen markiert; Index und Planliste aktuell"
+     ],
+     "checkCodes": [
+      "L3.ANS.2-01",
+      "L3.ANS.2-02",
+      "L3.ANS.2-03",
+      "L3.ANS.2-04",
+      "L3.ANS.2-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "01.06",
+      "03.03"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), b). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Ansichten; Umfang der Fassadenänderungen",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "ANS.2"
+     ],
+     "requires": [
+      "ANS.1",
+      "RML.1",
+      "KLA.1"
+     ],
+     "hoai": [
+      "a",
+      "b"
+     ],
+     "condition": null,
+     "doneWhen": "Ansichten vollständig; Übergabe an L3.A4.AUS.",
+     "schedule": {
+      "executes": [
+       "t011",
+       "t025"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-03-10",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-04"
+      ],
+      "muster_v021": [
+       "L3-ENT-10"
+      ],
+      "chatgpt_v01": [
+       "L3-027"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.BTK.2",
+     "title": "Bauteilkatalog auf Stand 02 nachführen",
+     "result": "Bauteilkatalog Stand 02 mit den Angaben der Fachplaner und Status je Qualität",
+     "checks": [
+      "Aufbauten nach den Angaben von Tragwerk, Bauphysik und Brandschutz angepasst (Dicken, Anforderungen)",
+      "Entscheidungen aus M05 eingearbeitet",
+      "Je Qualität Status geführt: entschieden oder offen (Bemusterung)",
+      "Änderungen an Schnitte, Objektbeschreibung und Kostenplanung gemeldet"
+     ],
+     "checkCodes": [
+      "L3.BTK.2-01",
+      "L3.BTK.2-02",
+      "L3.BTK.2-03",
+      "L3.BTK.2-04"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "03.03"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung oder erfahrene/r Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "Tragwerk, Bauphysik, Brandschutz",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), b). I: Statusführung der Qualitäten.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der geänderten Bauteile",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "BTK.2"
+     ],
+     "requires": [
+      "BTK.1",
+      "KLA.1",
+      "ENP.1"
+     ],
+     "hoai": [
+      "a",
+      "b"
+     ],
+     "condition": null,
+     "doneWhen": "Katalog auf Stand 02; Qualitäten tragen einen Status. Der Endstand entsteht nach der Bemusterung in L3.A5.ABS.",
+     "schedule": {
+      "executes": [
+       "t025"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-18",
+      "templateEnd": "2027-03-10",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-04"
+      ],
+      "muster_v021": [
+       "L3-ENT-12"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.KLA.2",
+     "title": "Koordinationsrunde 02: integrierten Stand mit den Fachplanern abgleichen",
+     "result": "Koordinationsprotokoll 02 mit Bestätigung oder Vorbehalt je Disziplin; fortgeschriebene Klärungsliste",
+     "checks": [
+      "Integrierten Planstand an alle Fachplaner zur Gegenprüfung verteilt",
+      "Rückmeldung je Disziplin eingeholt: stimmt überein oder Korrekturbedarf",
+      "Verbleibende Konflikte in der Besprechung gelöst oder als Vorbehalt dokumentiert",
+      "Angaben der Technik an die Tragwerksplanung zu Durchführungen und Lasten ausgetauscht und bestätigt",
+      "Maßgeblichen Planstand/Index für die abgestimmten Endbeiträge der Fachplaner (M07) festgelegt",
+      "Protokoll mit Bestätigung oder Vorbehalt je Disziplin verteilt"
+     ],
+     "checkCodes": [
+      "L3.KLA.2-01",
+      "L3.KLA.2-02",
+      "L3.KLA.2-03",
+      "L3.KLA.2-04",
+      "L3.KLA.2-05",
+      "L3.KLA.2-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "03.05"
+     ],
+     "scope": "Regelfall bei Fachplanern – bei kleinen Projekten mit KLA.1 zusammenlegbar",
+     "owner": "Projektleitung",
+     "review": "–",
+     "participants": "Fachplaner; Mitarbeiter/in Architektur",
+     "basis": "H: HOAI Anlage 10 LPH 3 b); Anlage 15 LPH 3 d). E: ByAK-Schnittstellenliste. I: Bestätigungsverfahren.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Disziplinen; Zahl der offenen Konflikte",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "KLA.2"
+     ],
+     "requires": [
+      "KLA.1",
+      "GRU.2",
+      "SCH.2"
+     ],
+     "hoai": [
+      "b"
+     ],
+     "condition": "P-DIS nicht leer",
+     "doneWhen": "Je Disziplin liegt eine Bestätigung oder ein dokumentierter Vorbehalt vor.",
+     "schedule": {
+      "executes": [
+       "t027"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-25",
+      "templateEnd": "2027-03-10",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-KOO-02"
+      ],
+      "muster_v021": [
+       "L3-ENT-11"
+      ],
+      "chatgpt_v01": [
+       "L3-034"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.GEN.2",
+     "title": "Offene genehmigungsrelevante Punkte klären",
+     "result": "Baurechts-Check Stand 02; Vermerke über Abstimmungen; Liste der für LPH 4 vorgesehenen Abweichungs- und Befreiungsanträge",
+     "checks": [
+      "Offene Punkte aus dem Baurechts-Check mit Behörde oder Fachstelle abgestimmt; Ergebnis mit Datum und Gesprächspartner vermerkt",
+      "Änderungen seit Arbeitsstand 01 erneut gegen Abstandsflächen, Maß der Nutzung und Rettungswege geprüft",
+      "Brandschutz: Stand des Konzepts und vorgesehene Abweichungen mit dem Brandschutzplaner geklärt",
+      "Mitwirkung der Fachplaner an Behördenabstimmungen eingeholt (z. B. Entwässerung, Versorger)",
+      "Erforderliche Abweichungen/Befreiungen mit Begründungsansatz aufgelistet",
+      "Restrisiken dem Auftraggeber in Textform mitgeteilt",
+      "Unterlagenbedarf für LPH 4 notiert: Bauvorlagen, Nachweise, Zuständigkeiten"
+     ],
+     "checkCodes": [
+      "L3.GEN.2-01",
+      "L3.GEN.2-02",
+      "L3.GEN.2-03",
+      "L3.GEN.2-04",
+      "L3.GEN.2-05",
+      "L3.GEN.2-06",
+      "L3.GEN.2-07"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "07.04"
+     ],
+     "scope": "Regelfall – entfällt weitgehend, wenn nach GEN.1 nichts offen ist",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Behörden; Fachplaner (Mitwirkung)",
+     "basis": "H: HOAI Anlage 10 LPH 3 d); Anlage 14 LPH 3 f); Anlage 15 LPH 3 e). I: Übergabeliste LPH 4.",
+     "effortHours": null,
+     "effortDrivers": "Reaktionszeit der Behörden; Zahl der Abweichungen; Sonderbau",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "GEN.2"
+     ],
+     "requires": [
+      "GEN.1",
+      "KLA.1"
+     ],
+     "hoai": [
+      "d"
+     ],
+     "condition": null,
+     "doneWhen": "Kein Punkt mehr „offen ohne Termin“; Restrisiken kommuniziert; Übergabeliste für LPH 4 liegt vor.",
+     "schedule": {
+      "executes": [
+       "t044"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-18",
+      "templateEnd": "2027-03-03",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-GEN-02"
+      ],
+      "muster_v021": [
+       "L3-GEN-02"
+      ],
+      "chatgpt_v01": [
+       "L3-043"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.OBJ.2",
+     "title": "Objektbeschreibung auf Stand 02 fortschreiben",
+     "result": "Objektbeschreibung Stand 02 mit integrierten Beiträgen von Tragwerk, Technik und ggf. Brandschutz",
+     "checks": [
+      "Textbeiträge der Fachplaner eingegangen und in die Kapitelstruktur eingefügt (Tragwerk, HLS, ELT, ggf. Brandschutz)",
+      "Fachplanertexte auf Widersprüche zur Architektur und untereinander geprüft",
+      "Bauteilbeschreibungen mit dem Bauteilkatalog Stand 02 abgeglichen",
+      "Entschiedene Qualitäten (M05) übernommen; offene Qualitäten als „offen – Bemusterung“ gekennzeichnet",
+      "Annahmen und Vorbehalte aktualisiert; erledigte Punkte entfernt"
+     ],
+     "checkCodes": [
+      "L3.OBJ.2-01",
+      "L3.OBJ.2-02",
+      "L3.OBJ.2-03",
+      "L3.OBJ.2-04",
+      "L3.OBJ.2-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "07.03"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "Fachplaner (Textbeiträge)",
+     "basis": "H: HOAI Anlage 10 LPH 3 c); Anlage 14 LPH 3 e). E: ByAK-Schnittstellenliste. I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Zahl und Qualität der Fachplanertexte; Umfang der Änderungen",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "OBJ.2"
+     ],
+     "requires": [
+      "OBJ.1",
+      "BTK.2",
+      "ENP.1"
+     ],
+     "hoai": [
+      "c"
+     ],
+     "condition": null,
+     "doneWhen": "Stand 02 geprüft; Übergabe an L3.A4.AUS. Der Schlussabgleich mit den Endbeiträgen (M07) und der Qualitätsliste erfolgt in L3.OBJ.3.",
+     "schedule": {
+      "executes": [
+       "t043"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-18",
+      "templateEnd": "2027-03-10",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-OBJ-02"
+      ],
+      "muster_v021": [
+       "L3-OBJ-02"
+      ],
+      "chatgpt_v01": [
+       "L3-042"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A4.AUS",
+     "title": "Integriertes Planpaket Stand 02 prüfen und dem Auftraggeber vorlegen",
+     "result": "Versandtes Planpaket Stand 02 mit Änderungsübersicht, Anschreiben und Prüffrist",
+     "checks": [
+      "Lieferumfang gegen die Planliste vollständig: Pläne Stand 02, Objektbeschreibung Stand 02, Flächen, Änderungsübersicht",
+      "Vier-Augen-Prüfung: Konsistenz der Pläne; Übereinstimmung mit der Fachplanung laut Koordinationsprotokoll 02",
+      "Alle Anmerkungen des Auftraggebers zum Arbeitsstand 01 mit Erledigungsvermerk beantwortet",
+      "Verbleibende Annahmen, offene Qualitäten und Vorbehalte im Anschreiben benannt",
+      "Im Anschreiben klargestellt: Die Rückmeldung zum Planstand ist nicht die Freigabe der Entwurfsplanung",
+      "Terminplan und Entscheidungsliste fortgeschrieben; aktueller Stand beigefügt",
+      "Gestalterische Freigabe durch die Büroleitung dokumentiert",
+      "Versand dokumentiert; Prüffrist vereinbart; Planliste aktualisiert"
+     ],
+     "checkCodes": [
+      "L3.A4.AUS-01",
+      "L3.A4.AUS-02",
+      "L3.A4.AUS-03",
+      "L3.A4.AUS-04",
+      "L3.A4.AUS-05",
+      "L3.A4.AUS-06",
+      "L3.A4.AUS-07",
+      "L3.A4.AUS-08"
+     ],
+     "checkBlocks": [
+      "AUS",
+      "AUS",
+      null,
+      null,
+      null,
+      "F",
+      "AUS",
+      "AUS"
+     ],
+     "psp": [
+      "01.08"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung (Freigabe)",
+     "participants": "Auftraggeber",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), f). I: Ausgaberoutine.",
+     "effortHours": null,
+     "effortDrivers": "Umfang des Plansatzes; Zahl der Änderungsrunden",
+     "sourceType": "TBA-eigene Prüfung und Ausgabe",
+     "step": "Ausgeben",
+     "labels": [
+      "Abgabe"
+     ],
+     "produces": [
+      "A4.AUS"
+     ],
+     "requires": [
+      "GRU.2",
+      "SCH.2",
+      "ANS.2",
+      "BTK.2",
+      "KLA.2",
+      "GEN.2",
+      "OBJ.2"
+     ],
+     "hoai": [
+      "a",
+      "f"
+     ],
+     "condition": null,
+     "doneWhen": "Die Karte endet mit dem dokumentierten Versand (Meilenstein 01.08).",
+     "schedule": {
+      "executes": [
+       "t013"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-03-10",
+      "templateEnd": "2027-03-10",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ABG-A4"
+      ],
+      "muster_v021": [
+       "L3-ABG-03"
+      ],
+      "chatgpt_v01": [
+       "L3-030"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A4.ABS",
+     "title": "Rückmeldung des Auftraggebers zum Stand 02 auswerten",
+     "result": "Rückmelde- und Änderungsliste zum Stand 02; festgelegter Planstand für die Kostenberechnung",
+     "checks": [
+      "Rückmeldung vollständig erfasst; jede Anmerkung einzeln nummeriert",
+      "Neue Änderungswünsche als Planungsänderung bewertet (Mehraufwand, Vergütung, Terminfolge) und dem Auftraggeber mitgeteilt",
+      "Korrekturen für den Endstand je Person zugewiesen",
+      "Maßgeblichen Planstand für die Kostenberechnung festgelegt und dokumentiert",
+      "Abstimmung des Planstands in Textform festgehalten; Entscheidungsliste aktualisiert"
+     ],
+     "checkCodes": [
+      "L3.A4.ABS-01",
+      "L3.A4.ABS-02",
+      "L3.A4.ABS-03",
+      "L3.A4.ABS-04",
+      "L3.A4.ABS-05"
+     ],
+     "checkBlocks": [
+      "ABS",
+      "ABS",
+      "ABS",
+      null,
+      "ABS"
+     ],
+     "psp": [
+      "01.09",
+      "01.10"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "–",
+     "participants": "Auftraggeber",
+     "basis": "H: HOAI § 10 als Hintergrund für Änderungen und wiederholte Grundleistungen. I: Abschlussroutine.",
+     "effortHours": null,
+     "effortDrivers": "Umfang der Anmerkungen",
+     "sourceType": "TBA-eigene Nachbereitung und Abschluss",
+     "step": "Abschließen",
+     "labels": [],
+     "produces": [
+      "A4.ABS",
+      "RML.2"
+     ],
+     "requires": [
+      "A4.AUS"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Liste verteilt. Damit ist die Abgabe A4 abgeschlossen (Meilenstein 01.10).",
+     "schedule": {
+      "executes": [],
+      "waitsFor": [
+       "t014"
+      ],
+      "anchor": {
+       "taskId": "t015",
+       "edge": "end"
+      },
+      "templateStart": null,
+      "templateEnd": "2027-03-17",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ABG-A4"
+      ],
+      "muster_v021": [
+       "L3-ABG-03"
+      ],
+      "chatgpt_v01": [
+       "L3-031"
+      ],
+      "note": null
+     }
+    }
+   ]
+  },
+  {
+   "id": "A5",
+   "code": "L3.A5",
+   "title": "Bemusterung & Qualitätsentscheidungen",
+   "gate": "PSP 04.04 / 04.05 / 04.06 (M06)",
+   "kind": "Abgabe",
+   "recipient": "Auftraggeber",
+   "summary": "Qualitäten vorbereiten, Varianten bewerten, Themenpakete ausarbeiten und die Bemusterungsunterlagen übergeben; Abschluss mit durchgeführter Bemusterung und konsolidierter Qualitätsliste als Kostenbasis.",
+   "plannerDescription": "Qualitäten vorbereiten, Varianten bewerten, Themenpakete ausarbeiten und die Bemusterungsunterlagen übergeben; Abschluss mit durchgeführter Bemusterung und konsolidierter Qualitätsliste als Kostenbasis.",
+   "scheduleReferences": [
+    {
+     "taskId": "t059",
+     "psp": "04.04",
+     "role": "Ausgabe",
+     "name": "Bemusterungsunterlagen an Auftraggeber übergeben",
+     "type": "milestone",
+     "date": "2027-02-23"
+    },
+    {
+     "taskId": "t030",
+     "psp": "04.05",
+     "role": "Weiterer Vorgang",
+     "name": "Qualitätsfestlegungen und kostenrelevante Bemusterung abstimmen",
+     "type": "task",
+     "dateStart": "2027-03-04",
+     "dateEnd": "2027-03-17"
+    },
+    {
+     "taskId": "t031",
+     "psp": "04.06",
+     "role": "Abschluss",
+     "name": "M06 · Abstimmung Entwurfsstand LPH 3 mit Auftraggeber abgeschlossen",
+     "type": "milestone",
+     "date": "2027-03-17"
+    }
+   ],
+   "deliverables": [
+    "QUA.1",
+    "MAT.1",
+    "MAP.1",
+    "MUS.1",
+    "BAD.1",
+    "TRE.1",
+    "FAS.1",
+    "LIC.1"
+   ],
+   "closingResults": [
+    "QUA.2",
+    "BTK.3"
+   ],
+   "note": "Seit Muster-Terminplan v1.3 mit eigenem Vorgang „Bemusterungsunterlagen vorbereiten“ (t058) und Meilenstein „Bemusterungsunterlagen an Auftraggeber übergeben“ (t059); die Abstimmung (t030) und M06 (t031) bilden den Abschluss.",
+   "tasks": [
+    {
+     "id": "L3.QUA.1",
+     "title": "Qualitäten- und Materialkonzept erarbeiten",
+     "result": "Qualitäts- und Ausstattungsliste (Stand Vorschlag) mit Entscheidungsfeldern, Materialkonzept und Bemusterungsumfang",
+     "checks": [
+      "Umfang der Bemusterung mit dem Vertrag abgeglichen: welche Bauteile, Räume und Themenpakete, in welcher Tiefe",
+      "Entscheidungsfelder festgelegt: kostenrelevante Qualitäten je Bauteil und Raumgruppe (Fassade, Fenster, Dach, Böden, Wände, Decken, Türen, Sanitär- und Elektrostandard)",
+      "Materialfamilien, Farben und Oberflächen je Bauteil/Raumgruppe als Konzept definiert",
+      "Funktionale und bauphysikalische Anforderungen je Material aus dem Bauteilkatalog übernommen",
+      "Je Position Kostengruppe und Mengenbezug vorgemerkt",
+      "Qualitäts- und Ausstattungsliste angelegt: je Position Qualität, Referenz und Status „Vorschlag“",
+      "Rückmeldung des Auftraggebers zum Arbeitsstand 01 auf Qualitätswünsche durchgesehen und übernommen",
+      "Bemusterungstermine mit dem Auftraggeber abgestimmt"
+     ],
+     "checkCodes": [
+      "L3.QUA.1-01",
+      "L3.QUA.1-02",
+      "L3.QUA.1-03",
+      "L3.QUA.1-04",
+      "L3.QUA.1-05",
+      "L3.QUA.1-06",
+      "L3.QUA.1-07",
+      "L3.QUA.1-08"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "TBA-Standard – Umfang nach Vertrag",
+     "owner": "Mitarbeiter/in Architektur (erfahren)",
+     "review": "Projektleitung",
+     "participants": "Büroleitung (gestalterisch)",
+     "basis": "H: abgeleitet aus HOAI Anlage 10 LPH 3 a) und e); § 2 Abs. 11 (kostenrelevante Erläuterungen). V: Umfang der Bemusterung. I: Qualitäts- und Ausstattungsliste.",
+     "effortHours": null,
+     "effortDrivers": "Ausbaustandard; Zahl der Raumgruppen und Entscheidungsfelder",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "QUA.1"
+     ],
+     "requires": [
+      "BTK.1",
+      "PSV.1",
+      "RML.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Liste von der Projektleitung freigegeben; die Themenpakete sind festgelegt.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-QUA-01"
+      ],
+      "muster_v021": [
+       "L3-BEM-01",
+       "L3-BEM-02"
+      ],
+      "chatgpt_v01": [
+       "L3-029"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.MAT.1",
+     "title": "Materialien und Produkte recherchieren und Varianten bewerten",
+     "result": "Vergleichsmatrix je Entscheidungsfeld mit Gestaltung, Funktion, Unterhalt, Kostenspanne und Empfehlung",
+     "checks": [
+      "Je Entscheidungsfeld geeignete Materialien/Produkte recherchiert; Herstellerdaten abgelegt",
+      "Eignung geprüft: Formate, technische Kennwerte, Pflege, Dauerhaftigkeit, Verfügbarkeit",
+      "Varianten in einer Vergleichsmatrix gegenübergestellt: Gestaltung, Funktion, Unterhalt, Kostenspanne",
+      "Preisquelle und Preisstand je Variante mit Datum festgehalten; ungeprüfte Herstellerangaben gekennzeichnet",
+      "Empfehlung je Entscheidungsfeld formuliert; offene Prüffragen benannt",
+      "Bei öffentlichem Auftraggeber: Qualitäten produktneutral beschrieben"
+     ],
+     "checkCodes": [
+      "L3.MAT.1-01",
+      "L3.MAT.1-02",
+      "L3.MAT.1-03",
+      "L3.MAT.1-04",
+      "L3.MAT.1-05",
+      "L3.MAT.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "TBA-Standard – bei öffentlichem Auftraggeber produktneutral",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "I: Organisationsvorschlag (keine HOAI-Grundleistung im Einzelnen). V: Umfang der Bemusterung. R: Produktneutralität bei öffentlichen Auftraggebern (VOB/A § 7).",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Entscheidungsfelder und Varianten",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "MAT.1"
+     ],
+     "requires": [
+      "QUA.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Vergleichsmatrix vollständig; Empfehlungen in die Qualitäts- und Ausstattungsliste übernommen.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [
+       "L3-BEM-03",
+       "L3-BEM-04"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.MUS.1",
+     "title": "Muster beschaffen, prüfen und dokumentieren",
+     "result": "Musterliste mit Eingangsstand; geprüfte, nummerierte und fotografisch dokumentierte Muster",
+     "checks": [
+      "Musterliste erstellt: benötigte Muster mit Referenzcode, Hersteller und Liefertermin",
+      "Muster angefragt; Eingang nachgehalten; fehlende Muster als Vorbehalt markiert",
+      "Muster gegen die Produktdaten geprüft (Farbe, Oberfläche, Format); Abweichungen protokolliert",
+      "Muster im Zusammenhang beurteilt (Kombination, Licht) und fotografisch dokumentiert",
+      "Muster eindeutig nummeriert und der Qualitäts- und Ausstattungsliste zugeordnet"
+     ],
+     "checkCodes": [
+      "L3.MUS.1-01",
+      "L3.MUS.1-02",
+      "L3.MUS.1-03",
+      "L3.MUS.1-04",
+      "L3.MUS.1-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "Bedingt: physische Muster vorgesehen",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "Hersteller",
+     "basis": "I: Organisationsvorschlag. V: Muster/Mustermappe nur, wenn vereinbart.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Muster; Lieferzeiten",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "MUS.1"
+     ],
+     "requires": [
+      "MAT.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": "P-MUS = ja",
+     "doneWhen": "Alle Muster liegen vor oder sind als Vorbehalt geführt. Lieferzeiten der Hersteller sind Wartezeit.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [
+       "L3-BEM-05",
+       "L3-BEM-06"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.MAP.1",
+     "title": "Material- und Ausstattungsübersichtspläne erstellen",
+     "result": "Übersichtspläne mit Materialcodes je Raum und Bauteil",
+     "checks": [
+      "Boden-, Wand- und Deckenqualitäten je Raum mit Materialcode zugeordnet",
+      "Fassaden- und Außenmaterialien in den Ansichten mit Materialcode gekennzeichnet",
+      "Planlegende stimmt mit der Qualitäts- und Ausstattungsliste überein",
+      "Unentschiedene Flächen gekennzeichnet",
+      "Planstand/Index der zugrunde liegenden Pläne angegeben; Planliste nachgeführt"
+     ],
+     "checkCodes": [
+      "L3.MAP.1-01",
+      "L3.MAP.1-02",
+      "L3.MAP.1-03",
+      "L3.MAP.1-04",
+      "L3.MAP.1-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "TBA-Standard – projektspezifisch",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "I: Organisationsvorschlag. H: Grundlage für HOAI Anlage 10 LPH 3 e) (Mengen- und Kostenbezug).",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Räume und Materialcodes",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "MAP.1"
+     ],
+     "requires": [
+      "QUA.1",
+      "GRU.1",
+      "ANS.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Übersichtspläne vollständig; Übergabe an L3.A5.AUS.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [
+       "L3-BEM-07"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.BAD.1",
+     "title": "Themenpaket Bäder: Grundrisse und Wandansichten",
+     "result": "Entwurfspläne je Badtyp (Grundriss und Wandansichten) mit Material- und Ausstattungscodes",
+     "checks": [
+      "Relevante Badtypen festgelegt (je Typ ein Plansatz)",
+      "Grundriss je Badtyp mit Sanitärgegenständen, Bewegungsflächen und Türaufschlag im vertieften Maßstab",
+      "Wandansichten je Badtyp mit Belagshöhen, Belagsbereichen, Nischen und Einbauten",
+      "Sanitärgegenstände und Installationswände mit HLS abgestimmt; offene Fragen an den Fachplaner gestellt",
+      "Material- und Ausstattungscodes aus der Qualitäts- und Ausstattungsliste eingetragen",
+      "Kostenrelevante Mengen ableitbar (Belagsflächen, Stückzahlen)",
+      "Als Entwurf gekennzeichnet – keine Verlege- oder Ausführungsplanung (LPH 5)"
+     ],
+     "checkCodes": [
+      "L3.BAD.1-01",
+      "L3.BAD.1-02",
+      "L3.BAD.1-03",
+      "L3.BAD.1-04",
+      "L3.BAD.1-05",
+      "L3.BAD.1-06",
+      "L3.BAD.1-07"
+     ],
+     "checkBlocks": [
+      "THEMA",
+      "THEMA",
+      null,
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA"
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "Bedingt: Bad-/Innenraumgestaltung beauftragt",
+     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "review": "Projektleitung",
+     "participants": "HLS",
+     "basis": "H: HOAI Anlage 10 LPH 3 a) (bei Innenräumen Maßstäbe 1:50 bis 1:20). V: nur bei entsprechendem Auftrag. I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Badtypen; Ausstattungsstandard",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "BAD.1"
+     ],
+     "requires": [
+      "QUA.1",
+      "GRU.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": "P-THE enthält BAD",
+     "doneWhen": "Themenpläne vollständig; Übergabe an L3.A5.AUS.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [
+       "L3-BEM-08",
+       "L3-BEM-09"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.TRE.1",
+     "title": "Themenpaket Treppen: Grundriss, Schnitt und Ansicht",
+     "result": "Treppenentwurf im vertieften Maßstab mit material- und kostenrelevanten Festlegungen",
+     "checks": [
+      "Treppengeometrie festgelegt: Steigungsverhältnis, Laufbreite, Podeste, Durchgangshöhe",
+      "Grundriss, Schnitt und Ansicht der Treppe im vertieften Maßstab",
+      "Geländer, Handlauf und Oberflächen im Prinzip dargestellt",
+      "Tragprinzip mit der Tragwerksplanung abgestimmt; Anforderungen an notwendige Treppen geklärt",
+      "Material- und Ausstattungscodes eingetragen; kostenrelevante Mengen ableitbar",
+      "Ausführungsdetails ausdrücklich der LPH 5 vorbehalten"
+     ],
+     "checkCodes": [
+      "L3.TRE.1-01",
+      "L3.TRE.1-02",
+      "L3.TRE.1-03",
+      "L3.TRE.1-04",
+      "L3.TRE.1-05",
+      "L3.TRE.1-06"
+     ],
+     "checkBlocks": [
+      "THEMA",
+      null,
+      null,
+      "THEMA",
+      "THEMA",
+      "THEMA"
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "Bedingt: besondere Treppen / Innenraumgestaltung",
+     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "review": "Projektleitung",
+     "participants": "Tragwerk; ggf. Brandschutz",
+     "basis": "H: HOAI Anlage 10 LPH 3 a). V: nur bei entsprechendem Auftrag. I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
+     "effortHours": null,
+     "effortDrivers": "Zahl und Komplexität der Treppen",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "TRE.1"
+     ],
+     "requires": [
+      "QUA.1",
+      "GRU.1",
+      "SCH.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": "P-THE enthält TRE",
+     "doneWhen": "Themenpläne vollständig; Übergabe an L3.A5.AUS.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [
+       "L3-BEM-10"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.FAS.1",
+     "title": "Themenpaket Fassade: Prinzipschnitt",
+     "result": "Kostenrelevanter Fassaden-Prinzipschnitt vom Sockel bis zum Dachrand",
+     "checks": [
+      "Fassadenschnitt im Prinzip vom Sockel bis zur Attika/Traufe mit Schichten und Dicken",
+      "Anschlüsse exemplarisch dargestellt: Sockel, Fenster (Laibung, Sturz, Brüstung), Dachrand",
+      "Sonnenschutz und Öffnungsarten festgelegt",
+      "Bauphysikalische und statische Fragen an die Fachplaner adressiert (Wärmebrücken, Befestigung)",
+      "Material- und Ausstattungscodes eingetragen; Fassadenfläche je Typ für die Kostenberechnung ableitbar",
+      "Ausführungsreife Details der LPH 5 vorbehalten"
+     ],
+     "checkCodes": [
+      "L3.FAS.1-01",
+      "L3.FAS.1-02",
+      "L3.FAS.1-03",
+      "L3.FAS.1-04",
+      "L3.FAS.1-05",
+      "L3.FAS.1-06"
+     ],
+     "checkBlocks": [
+      "THEMA",
+      null,
+      null,
+      "THEMA",
+      "THEMA",
+      "THEMA"
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "Bedingt: konstruktive oder materialbezogene Klärung erforderlich",
+     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "review": "Projektleitung",
+     "participants": "Tragwerk; Bauphysik",
+     "basis": "H: HOAI Anlage 10 LPH 3 a). I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Fassadentypen; Konstruktionsart",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "FAS.1"
+     ],
+     "requires": [
+      "QUA.1",
+      "BTK.1",
+      "ANS.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": "P-THE enthält FAS",
+     "doneWhen": "Prinzipschnitt vollständig; Übergabe an L3.A5.AUS.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [
+       "L3-BEM-11"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.LIC.1",
+     "title": "Themenpaket Lichtkonzept",
+     "result": "Lichtkonzept je Raumgruppe mit Leuchtenpositionen im Prinzip und geklärter Schnittstelle zur Elektroplanung",
+     "checks": [
+      "Lichtkonzept je Raumgruppe beschrieben (Grundbeleuchtung, Akzente, Tageslichtbezug)",
+      "Leuchtenpositionen im Prinzip in Grundrissen bzw. Deckenspiegeln dargestellt",
+      "Einbauleuchten mit Deckenaufbau und Tragwerk abgeglichen",
+      "Schnittstelle zur Elektroplanung geklärt (Auslässe, Schaltung/Steuerung im Grundsatz); Zuständigkeit Lichtplaner/ELT/Architekt festgelegt",
+      "Leuchtenqualitäten in die Qualitäts- und Ausstattungsliste aufgenommen (Kostenbezug)"
+     ],
+     "checkCodes": [
+      "L3.LIC.1-01",
+      "L3.LIC.1-02",
+      "L3.LIC.1-03",
+      "L3.LIC.1-04",
+      "L3.LIC.1-05"
+     ],
+     "checkBlocks": [
+      "THEMA",
+      null,
+      null,
+      "THEMA",
+      "THEMA"
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "Bedingt: Lichtkonzept beauftragt oder gestalterisch erforderlich",
+     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "review": "Projektleitung",
+     "participants": "ELT; ggf. Lichtplaner",
+     "basis": "I: Neu in v0.3 als Beispiel für ein weiteres Themenpaket (Thema am 13.11.2026 genannt) – in keiner der drei Vorversionen enthalten, fachlich noch zu prüfen. V: nur bei entsprechendem Auftrag.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Raumgruppen; Anspruch an die Lichtgestaltung",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "LIC.1"
+     ],
+     "requires": [
+      "QUA.1",
+      "GRU.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": "P-THE enthält LIC",
+     "doneWhen": "Lichtkonzept vollständig; Übergabe an L3.A5.AUS.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [],
+      "chatgpt_v01": [],
+      "note": "Neu in v0.3 – Vorschlag"
+     }
+    },
+    {
+     "id": "L3.A5.AUS",
+     "title": "Bemusterungsunterlagen zusammenstellen, prüfen und dem Auftraggeber übergeben",
+     "result": "Übergebene Bemusterungsunterlagen (Mustermappe physisch/digital) mit Anschreiben, Entscheidungsfeldern und Terminvorschlag für die Bemusterung",
+     "checks": [
+      "Bemusterungsunterlagen vollständig: Qualitäts- und Ausstattungsliste, Vergleichsmatrix, Übersichtspläne, aktive Themenpläne, Muster",
+      "Mustermappe einheitlich nummeriert; Varianten und Empfehlung klar unterschieden",
+      "Kostenfolgen der Varianten je Entscheidungsfeld benannt",
+      "Interne Prüfung und gestalterische Freigabe durch die Büroleitung dokumentiert",
+      "Terminplan und Entscheidungsliste fortgeschrieben; aktueller Stand beigefügt",
+      "Unterlagen dem Auftraggeber übergeben; Versand dokumentiert; Bemusterungstermin(e) vereinbart"
+     ],
+     "checkCodes": [
+      "L3.A5.AUS-01",
+      "L3.A5.AUS-02",
+      "L3.A5.AUS-03",
+      "L3.A5.AUS-04",
+      "L3.A5.AUS-05",
+      "L3.A5.AUS-06"
+     ],
+     "checkBlocks": [
+      "AUS",
+      null,
+      null,
+      "AUS",
+      "F",
+      "AUS"
+     ],
+     "psp": [
+      "04.04"
+     ],
+     "scope": "TBA-Standard – Umfang nach Vertrag",
+     "owner": "Projektleitung",
+     "review": "Büroleitung (Freigabe)",
+     "participants": "Auftraggeber",
+     "basis": "H: HOAI Anlage 10 LPH 3 f). V: Umfang der Bemusterung. I: Ausgaberoutine.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Entscheidungsfelder; Zahl der Termine; Entscheidungsstruktur des Auftraggebers",
+     "sourceType": "TBA-eigene Prüfung und Ausgabe",
+     "step": "Ausgeben",
+     "labels": [
+      "Abgabe"
+     ],
+     "produces": [
+      "A5.AUS"
+     ],
+     "requires": [
+      "QUA.1",
+      "MAT.1",
+      "MAP.1",
+      "MUS.1",
+      "BAD.1",
+      "TRE.1",
+      "FAS.1",
+      "LIC.1"
+     ],
+     "hoai": [
+      "a",
+      "f"
+     ],
+     "condition": null,
+     "doneWhen": "Die Karte endet mit der dokumentierten Übergabe der Unterlagen (Meilenstein t059). Die Bemusterung selbst gehört zu L3.A5.ABS.",
+     "schedule": {
+      "executes": [
+       "t059"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-23",
+      "templateEnd": "2027-02-23",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-QUA-01"
+      ],
+      "muster_v021": [
+       "L3-BEM-12",
+       "L3-BEM-13"
+      ],
+      "chatgpt_v01": [
+       "L3-029"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A5.ABS",
+     "title": "Bemusterung durchführen und Qualitätsentscheidungen dokumentieren (M06)",
+     "result": "Durchgeführte Bemusterung; Bemusterungsprotokoll; konsolidierte Qualitäts- und Ausstattungsliste mit Status je Position; Bauteilkatalog Endstand",
+     "checks": [
+      "Bemusterungstermin(e) durchgeführt; je Entscheidungsfeld Ergebnis festgehalten: entschieden (mit Referenzcode) oder offen (mit Frist)",
+      "Bemusterungsprotokoll erstellt: Entscheidungen mit Referenzcode, Datum und Entscheider",
+      "Qualitäts- und Ausstattungsliste konsolidiert: je Position Status „bestätigt“ oder „offen mit Kostenannahme“",
+      "Kosten- und Terminfolgen geänderter Qualitäten dokumentiert",
+      "Liste dem Auftraggeber zur Bestätigung in Textform vorgelegt",
+      "Festlegungen in den Bauteilkatalog übernommen (Endstand)",
+      "Qualitätsliste an Kostenplanung und Fachplaner übergeben; Entscheidungsliste aktualisiert"
+     ],
+     "checkCodes": [
+      "L3.A5.ABS-01",
+      "L3.A5.ABS-02",
+      "L3.A5.ABS-03",
+      "L3.A5.ABS-04",
+      "L3.A5.ABS-05",
+      "L3.A5.ABS-06",
+      "L3.A5.ABS-07"
+     ],
+     "checkBlocks": [
+      null,
+      "ABS",
+      null,
+      null,
+      "ABS",
+      null,
+      "ABS"
+     ],
+     "psp": [
+      "04.05",
+      "04.06"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Auftraggeber (entscheidet); Kostenplanung; Fachplaner",
+     "basis": "H: abgeleitet aus HOAI Anlage 10 LPH 3 a) und e). I: Abschlussroutine; Statusführung.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der offenen Positionen; Zahl der Änderungen",
+     "sourceType": "TBA-eigene Nachbereitung und Abschluss",
+     "step": "Abschließen",
+     "labels": [],
+     "produces": [
+      "A5.ABS",
+      "QUA.2",
+      "BTK.3"
+     ],
+     "requires": [
+      "A5.AUS",
+      "BTK.2"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": null,
+     "doneWhen": "Liste vorgelegt und übergeben. Der Auftraggeber entscheidet; die Karte dokumentiert, sie ersetzt keine Entscheidung. M06 ist erreicht, wenn die Bestätigung des Auftraggebers vorliegt; offene Positionen tragen eine Kostenannahme.",
+     "schedule": {
+      "executes": [
+       "t030",
+       "t031"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-03-04",
+      "templateEnd": "2027-03-17",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-QUA-01"
+      ],
+      "muster_v021": [
+       "L3-BEM-13",
+       "L3-BEM-14"
+      ],
+      "chatgpt_v01": [
+       "L3-029",
+       "L3-031"
+      ],
+      "note": null
+     }
+    }
+   ]
+  },
+  {
+   "id": "A6",
+   "code": "L3.A6",
+   "title": "Kostenberechnung & Kostenentscheidung",
+   "gate": "PSP 06.03 (M08) / 06.06 (M08A)",
+   "kind": "Abgabe",
+   "recipient": "Auftraggeber",
+   "summary": "Endbeiträge der Fachplaner prüfen, Mengen ermitteln, Kostenberechnung aufstellen und vorlegen; Abschluss mit dokumentierter Kostenentscheidung.",
+   "plannerDescription": "Endbeiträge der Fachplaner prüfen, Mengen ermitteln, Kostenberechnung aufstellen und vorlegen; Abschluss mit dokumentierter Kostenentscheidung.",
+   "scheduleReferences": [
+    {
+     "taskId": "t039",
+     "psp": "06.03",
+     "role": "Ausgabe",
+     "name": "M08 · Kostenbesprechung · Kostenberechnung mit Kostenschätzung vergleichen",
+     "type": "milestone",
+     "date": "2027-04-19"
+    },
+    {
+     "taskId": "t056",
+     "psp": "06.06",
+     "role": "Abschluss",
+     "name": "M08A · Kostenentscheidung und Budgetabgleich dokumentiert",
+     "type": "milestone",
+     "date": "2027-05-03"
+    }
+   ],
+   "deliverables": [
+    "KOB.1"
+   ],
+   "closingResults": [
+    "KOB.2"
+   ],
+   "note": null,
+   "tasks": [
+    {
+     "id": "L3.KLA.3",
+     "title": "Abgestimmte Endbeiträge der Fachplaner prüfen (M07)",
+     "result": "Eingangs- und Abweichungsliste der Endbeiträge; geschlossene Klärungsliste mit Restpunkten für LPH 4/5",
+     "checks": [
+      "Eingang je Disziplin vollständig: Pläne, Schemata, Berechnungen, Beschreibungstexte, Kostenbeitrag",
+      "Planstand/Index der Fachbeiträge entspricht dem in Runde 02 festgelegten maßgeblichen Stand",
+      "Fachpläne stichprobenhaft mit dem Architekturstand abgeglichen; Abweichungen an den Fachplaner zurückgegeben",
+      "Kostenbeiträge formal geprüft: Kostengruppen, Gliederungstiefe, Preisstand, Umsatzsteuer",
+      "Klärungsliste geschlossen; Restpunkte mit Zuständigkeit auf LPH 4/5 übertragen"
+     ],
+     "checkCodes": [
+      "L3.KLA.3-01",
+      "L3.KLA.3-02",
+      "L3.KLA.3-03",
+      "L3.KLA.3-04",
+      "L3.KLA.3-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "05.01",
+      "05.02",
+      "05.03",
+      "05.04",
+      "05.05",
+      "06.01"
+     ],
+     "scope": "Regelfall bei Fachplanern",
+     "owner": "Projektleitung",
+     "review": "–",
+     "participants": "Fachplaner",
+     "basis": "H: HOAI Anlage 10 LPH 3 b). E: ByAK-Schnittstellenliste (Kontrolle auf Lücken und Doppelungen). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Disziplinen; Qualität der Beiträge",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "KLA.3"
+     ],
+     "requires": [
+      "KLA.2"
+     ],
+     "hoai": [
+      "b"
+     ],
+     "condition": "P-DIS nicht leer",
+     "doneWhen": "Je Disziplin liegt ein geprüfter Endbeitrag vor oder die Abweichung ist zurückgegeben. Die Bearbeitungszeit der Fachplaner ist Wartezeit.",
+     "schedule": {
+      "executes": [
+       "t037"
+      ],
+      "waitsFor": [
+       "t032",
+       "t033",
+       "t034",
+       "t035",
+       "t036"
+      ],
+      "anchor": null,
+      "templateStart": "2027-03-18",
+      "templateEnd": "2027-04-02",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-KOO-02",
+       "L3-KOS-02"
+      ],
+      "muster_v021": [
+       "L3-KOS-02"
+      ],
+      "chatgpt_v01": [
+       "L3-032",
+       "L3-033",
+       "L3-035",
+       "L3-038"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.MEN.1",
+     "title": "Mengen ermitteln",
+     "result": "Mengenermittlung nach Bauteilen und Kostengruppen mit Bezug auf Planstand, Bauteilkatalog und Qualitätsliste",
+     "checks": [
+      "Maßgeblicher Planstand/Index und Gliederungstiefe auf dem Deckblatt genannt",
+      "Mengen je Bauteil des Bauteilkatalogs ermittelt (m², m³, m, Stück); Herleitung nachvollziehbar (Modellauswertung oder Aufmaßblatt)",
+      "Jede Menge einer Kostengruppe zugeordnet; kein Bauteil ohne Zuordnung",
+      "Mengen der bemusterten Qualitäten und aktiven Themenpakete berücksichtigt (z. B. Bäder, Treppen, Fassade)",
+      "Bezugseinheiten (BGF, BRI, NUF) aus der Flächenaufstellung Stand 02 übernommen",
+      "Plausibilisierung über Kennwerte (z. B. Außenwandfläche je BGF) und Vergleich mit der Vorplanung",
+      "Abgrenzung zu den Mengen der Fachplaner geklärt (Tragwerk: Betonstahl, Stahl, Holz; Technik: eigene Kostengruppen)",
+      "Stichprobenprüfung durch eine zweite Person dokumentiert"
+     ],
+     "checkCodes": [
+      "L3.MEN.1-01",
+      "L3.MEN.1-02",
+      "L3.MEN.1-03",
+      "L3.MEN.1-04",
+      "L3.MEN.1-05",
+      "L3.MEN.1-06",
+      "L3.MEN.1-07",
+      "L3.MEN.1-08"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "06.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Kostenplanung / Projektleitung",
+     "participants": "Tragwerksplanung (Mengen des Tragwerks)",
+     "basis": "H: HOAI Anlage 10 LPH 3 e); § 2 Abs. 11; Anlage 14 LPH 3 d) (Mengen des Tragwerks durch die Tragwerksplanung). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Gliederungstiefe (2. oder 3. Ebene); Modellqualität; Zahl der Bauteile; Bestand",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "MEN.1"
+     ],
+     "requires": [
+      "GRU.2",
+      "SCH.2",
+      "ANS.2",
+      "FLA.2",
+      "BTK.3",
+      "QUA.2",
+      "A4.ABS"
+     ],
+     "hoai": [
+      "e"
+     ],
+     "condition": null,
+     "doneWhen": "Mengen geprüft und an L3.KOB.1 übergeben.",
+     "schedule": {
+      "executes": [
+       "t037"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-03-18",
+      "templateEnd": "2027-04-02",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-KOS-01"
+      ],
+      "muster_v021": [
+       "L3-KOS-01"
+      ],
+      "chatgpt_v01": [
+       "L3-036"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.KOB.1",
+     "title": "Kostenberechnung aufstellen und mit der Kostenschätzung vergleichen",
+     "result": "Kostenberechnung in der vereinbarten Gliederung mit integrierten Kostenbeiträgen der Fachplaner, Erläuterungen und Vergleich mit der Kostenschätzung",
+     "checks": [
+      "Normfassung, Gliederungstiefe, Preisstand und Darstellung der Umsatzsteuer auf dem Deckblatt angegeben",
+      "Alle Kostengruppen der ersten Ebene behandelt: berechnet, vom Auftraggeber übernommen oder ausdrücklich „nicht enthalten“",
+      "Kostenansätze je Position mit Quelle belegt (Kennwerte, Erfahrungswerte, Richtpreisangebote)",
+      "Kostenansätze aus der konsolidierten Qualitätsliste abgeleitet; offene Qualitäten mit Kostenannahme gekennzeichnet",
+      "Geprüfte Kostenbeiträge der Fachplaner integriert und der richtigen Kostengruppe zugeordnet",
+      "Schnittstellen anhand der Schnittstellenliste auf Lücken und Doppelungen kontrolliert",
+      "Risiken, Annahmen und nicht enthaltene Leistungen benannt",
+      "Vergleich mit der Kostenschätzung je Kostengruppe; Abweichungen mit Ursache (Menge, Qualität, Preis, Änderung des Auftraggebers)",
+      "Vergleich mit Kostenvorgabe/Budget; bei Überschreitung Einsparvorschläge vorbereitet"
+     ],
+     "checkCodes": [
+      "L3.KOB.1-01",
+      "L3.KOB.1-02",
+      "L3.KOB.1-03",
+      "L3.KOB.1-04",
+      "L3.KOB.1-05",
+      "L3.KOB.1-06",
+      "L3.KOB.1-07",
+      "L3.KOB.1-08",
+      "L3.KOB.1-09"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "06.02"
+     ],
+     "scope": "Regelfall – vertiefte Kostenberechnung nur als Besondere Leistung",
+     "owner": "Kostenplanung / Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Fachplaner (Kostenbeiträge)",
+     "basis": "H: HOAI Anlage 10 LPH 3 e); §§ 4, 6; Anlage 14 LPH 3 g), h); Anlage 15 LPH 3 f), g). E: ByAK-Schnittstellenliste; DIN 276 (Normtext nicht eingesehen). V: Fassung und Gliederungstiefe.",
+     "effortHours": null,
+     "effortDrivers": "Gliederungstiefe; Zahl der Fachbeiträge; Datenbasis für Kostenkennwerte; Abstand zum Budget",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "KOB.1"
+     ],
+     "requires": [
+      "MEN.1",
+      "QUA.2",
+      "KLA.3",
+      "OBJ.2",
+      "SSM.2",
+      "PSV.1"
+     ],
+     "hoai": [
+      "e"
+     ],
+     "condition": null,
+     "doneWhen": "Kostenberechnung vollständig; Übergabe an die Prüfung in L3.A6.AUS.",
+     "schedule": {
+      "executes": [
+       "t038"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-03-25",
+      "templateEnd": "2027-04-16",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-KOS-02"
+      ],
+      "muster_v021": [
+       "L3-KOS-02",
+       "L3-KOS-03",
+       "L3-KOS-04",
+       "L3-KOS-05"
+      ],
+      "chatgpt_v01": [
+       "L3-037",
+       "L3-038",
+       "L3-039",
+       "L3-040"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A6.AUS",
+     "title": "Kostenberechnung prüfen, freigeben und in der Kostenbesprechung vorlegen (M08)",
+     "result": "Vorgelegte Kostenberechnung mit Kostenbericht (Kurzfassung) und Protokoll der Kostenbesprechung",
+     "checks": [
+      "Rechnerische Prüfung durch eine zweite Person dokumentiert (Summen, Verknüpfungen)",
+      "Interne Freigabe der Kostenberechnung durch die Büroleitung dokumentiert",
+      "Kostenbericht erstellt: Gesamtkosten, Vergleich mit Kostenschätzung und Budget, Hauptursachen, Risiken, nicht enthaltene Leistungen",
+      "Terminplan und Entscheidungsliste fortgeschrieben; aktueller Stand beigefügt",
+      "Unterlagen vor der Besprechung an den Auftraggeber versendet; Versand dokumentiert",
+      "Kostenbesprechung M08 durchgeführt; Fragen und Aufträge des Auftraggebers protokolliert",
+      "Im Protokoll festgehalten: Die Vorlage ist nicht die Entscheidung über Kosten- und Budgetfolgen; Prüffrist und Form der Kostenentscheidung vereinbart"
+     ],
+     "checkCodes": [
+      "L3.A6.AUS-01",
+      "L3.A6.AUS-02",
+      "L3.A6.AUS-03",
+      "L3.A6.AUS-04",
+      "L3.A6.AUS-05",
+      "L3.A6.AUS-06",
+      "L3.A6.AUS-07"
+     ],
+     "checkBlocks": [
+      "AUS",
+      "AUS",
+      null,
+      "F",
+      "AUS",
+      null,
+      null
+     ],
+     "psp": [
+      "06.03"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung (Freigabe)",
+     "participants": "Auftraggeber; Kostenplanung; ggf. Fachplaner",
+     "basis": "H: HOAI Anlage 10 LPH 3 e), f). I: Ausgaberoutine.",
+     "effortHours": null,
+     "effortDrivers": "Höhe der Abweichung vom Budget; Zahl der Beteiligten",
+     "sourceType": "TBA-eigene Prüfung und Ausgabe",
+     "step": "Ausgeben",
+     "labels": [
+      "Abgabe"
+     ],
+     "produces": [
+      "A6.AUS"
+     ],
+     "requires": [
+      "KOB.1"
+     ],
+     "hoai": [
+      "e",
+      "f"
+     ],
+     "condition": null,
+     "doneWhen": "Die Karte endet mit dem verteilten Protokoll der Kostenbesprechung (M08).",
+     "schedule": {
+      "executes": [
+       "t039"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-04-19",
+      "templateEnd": "2027-04-19",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ABG-A5"
+      ],
+      "muster_v021": [
+       "L3-ABG-04",
+       "L3-KOS-05"
+      ],
+      "chatgpt_v01": [
+       "L3-041"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A6.ABS",
+     "title": "Kostenentscheidung dokumentieren und Korrekturen einarbeiten (M08A)",
+     "result": "Kostenberechnung Endstand; dokumentierte Kostenentscheidung und Budgetabgleich in Textform",
+     "checks": [
+      "Rückmeldungen des Auftraggebers vollständig erfasst und bewertet",
+      "Abgestimmte Korrekturen eingearbeitet; Änderungen gegenüber dem vorgelegten Stand gekennzeichnet",
+      "Bei Einsparauflagen: Auswirkungen auf Entwurf, Objektbeschreibung und Fachplanung geprüft und zurückgemeldet; Planungsänderung und Vergütung geklärt",
+      "Kostenentscheidung des Auftraggebers in Textform dokumentiert (gebilligt / Budget angepasst / Auflagen)",
+      "Endstand als Bezugsbasis für die Kostenkontrolle der Folgephasen gekennzeichnet",
+      "Anrechenbare Kosten für die Honorarermittlung abgeleitet und an den Phasenabschluss (L3.PAB.1) übergeben"
+     ],
+     "checkCodes": [
+      "L3.A6.ABS-01",
+      "L3.A6.ABS-02",
+      "L3.A6.ABS-03",
+      "L3.A6.ABS-04",
+      "L3.A6.ABS-05",
+      "L3.A6.ABS-06"
+     ],
+     "checkBlocks": [
+      "ABS",
+      null,
+      null,
+      "ABS",
+      null,
+      null
+     ],
+     "psp": [
+      "06.04",
+      "06.05",
+      "06.06"
+     ],
+     "scope": "Regelfall",
+     "owner": "Kostenplanung / Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Auftraggeber (entscheidet)",
+     "basis": "H: HOAI § 6 Abs. 1, § 10. I: Abschlussroutine.",
+     "effortHours": null,
+     "effortDrivers": "Höhe der Abweichung; Umfang von Einsparrunden",
+     "sourceType": "TBA-eigene Nachbereitung und Abschluss",
+     "step": "Abschließen",
+     "labels": [],
+     "produces": [
+      "A6.ABS",
+      "KOB.2"
+     ],
+     "requires": [
+      "A6.AUS"
+     ],
+     "hoai": [
+      "e"
+     ],
+     "condition": null,
+     "doneWhen": "M08A erreicht: Kostenentscheidung und Budgetabgleich sind dokumentiert. Einsparrunden mit Umplanung sind im Muster-Terminplan nicht abgebildet.",
+     "schedule": {
+      "executes": [
+       "t040",
+       "t056"
+      ],
+      "waitsFor": [
+       "t057"
+      ],
+      "anchor": null,
+      "templateStart": "2027-04-27",
+      "templateEnd": "2027-05-03",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-KOS-03"
+      ],
+      "muster_v021": [
+       "L3-ABG-04"
+      ],
+      "chatgpt_v01": [
+       "L3-041"
+      ],
+      "note": null
+     }
+    }
+   ]
+  },
+  {
+   "id": "A7",
+   "code": "L3.A7",
+   "title": "Interne Abgabe & Schlussübergabe LPH 3",
+   "gate": "PSP 08.04 (M09) / 09.02 (M10) / 09.04 (M11)",
+   "kind": "Abgabe",
+   "recipient": "intern, dann Auftraggeber",
+   "summary": "Endstände, Entwurfsdokumentation, interne Abschlussprüfung und Übergabe; Abschluss mit dokumentierter Freigabe und Nachkalkulation.",
+   "plannerDescription": "Endstände, Entwurfsdokumentation, interne Abschlussprüfung und Übergabe; Abschluss mit dokumentierter Freigabe und Nachkalkulation.",
+   "scheduleReferences": [
+    {
+     "taskId": "t050",
+     "psp": "09.02",
+     "role": "Ausgabe",
+     "name": "M10 · Abschlussbesprechung · Ergebnisse LPH 3 übergeben und erläutern",
+     "type": "milestone",
+     "date": "2027-05-20"
+    },
+    {
+     "taskId": "t048",
+     "psp": "08.04",
+     "role": "Interne Prüfung",
+     "name": "M09 · Interne Abgabe und Abschlussprüfung LPH 3",
+     "type": "milestone",
+     "date": "2027-05-11"
+    },
+    {
+     "taskId": "t055",
+     "psp": "09.04",
+     "role": "Abschluss",
+     "name": "M11 · Freigabe LPH 3 durch Auftraggeber (vorläufig)",
+     "type": "milestone",
+     "date": "2027-05-28"
+    }
+   ],
+   "deliverables": [
+    "DOK.1"
+   ],
+   "closingResults": [
+    "FRG.1",
+    "PAB.1"
+   ],
+   "note": null,
+   "tasks": [
+    {
+     "id": "L3.PLA.3",
+     "title": "Plansatz auf Endstand bringen",
+     "result": "Grundrisse, Schnitte, Ansichten und Lageplan im Endstand LPH 3; Flächenaufstellung Endstand",
+     "checks": [
+      "Korrekturen aus der Rückmeldung des Auftraggebers zum Stand 02 eingearbeitet (Rückmeldeliste)",
+      "Abweichungen aus den Endbeiträgen der Fachplaner (M07) eingearbeitet",
+      "Bestätigte Qualitäten (M06) in Plänen und Legenden nachgeführt",
+      "Grundrisse, Schnitte, Ansichten und Lageplan untereinander abgeglichen",
+      "Flächen- und Rauminhaltsaufstellung auf Endstand; Abweichung zur Grundlage der Kostenberechnung geprüft und gemeldet",
+      "Index fortgeschrieben; verbleibende Vorbehalte dokumentiert; Planliste aktuell"
+     ],
+     "checkCodes": [
+      "L3.PLA.3-01",
+      "L3.PLA.3-02",
+      "L3.PLA.3-03",
+      "L3.PLA.3-04",
+      "L3.PLA.3-05",
+      "L3.PLA.3-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      "PLAN"
+     ],
+     "psp": [
+      "08.01"
+     ],
+     "scope": "Regelfall – bei mehreren Bearbeitern je Planart teilbar",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "–",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), g). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Umfang der Schlusskorrekturen",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "GRU.3",
+      "SCH.3",
+      "ANS.3",
+      "LAG.3",
+      "FLA.3"
+     ],
+     "requires": [
+      "GRU.2",
+      "SCH.2",
+      "ANS.2",
+      "LAG.2",
+      "FLA.2",
+      "RML.2",
+      "KLA.3",
+      "QUA.2"
+     ],
+     "hoai": [
+      "a",
+      "g"
+     ],
+     "condition": null,
+     "doneWhen": "Plansatz im Endstand; Übergabe an L3.DOK.1.",
+     "schedule": {
+      "executes": [
+       "t045"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-04-13",
+      "templateEnd": "2027-05-03",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-DOK-01"
+      ],
+      "muster_v021": [
+       "L3-DOK-01"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.OBJ.3",
+     "title": "Objektbeschreibung auf Endstand bringen",
+     "result": "Objektbeschreibung Endstand – widerspruchsfrei zu Plänen, Qualitätsliste und Kostenberechnung",
+     "checks": [
+      "Endbeiträge der Fachplaner (M07) eingearbeitet; Texte mit den Fachplänen abgeglichen",
+      "Bestätigte Qualitäten aus der Qualitäts- und Ausstattungsliste übernommen",
+      "Bauteilbeschreibungen mit dem Bauteilkatalog Endstand abgeglichen",
+      "Verbleibende Annahmen und offene Punkte gekennzeichnet",
+      "Übereinstimmung mit Plänen und Kostenberechnung geprüft (gleicher Planstand)"
+     ],
+     "checkCodes": [
+      "L3.OBJ.3-01",
+      "L3.OBJ.3-02",
+      "L3.OBJ.3-03",
+      "L3.OBJ.3-04",
+      "L3.OBJ.3-05"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "08.01"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "Fachplaner",
+     "basis": "H: HOAI Anlage 10 LPH 3 c). I: Prüfpunkte.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Fachplanertexte; Zahl der geänderten Qualitäten",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "OBJ.3"
+     ],
+     "requires": [
+      "OBJ.2",
+      "QUA.2",
+      "BTK.3",
+      "KLA.3"
+     ],
+     "hoai": [
+      "c"
+     ],
+     "condition": null,
+     "doneWhen": "Objektbeschreibung im Endstand; Übergabe an L3.DOK.1. Schließt die Lücke zwischen 07.03 (endet vor M07) und der Dokumentation.",
+     "schedule": {
+      "executes": [
+       "t045"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-04-13",
+      "templateEnd": "2027-05-03",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-DOK-01"
+      ],
+      "muster_v021": [
+       "L3-DOK-02"
+      ],
+      "chatgpt_v01": [
+       "L3-042"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.DOK.1",
+     "title": "Entwurfsdokumentation zusammenstellen",
+     "result": "Entwurfsdokumentation LPH 3: Abgabeverzeichnis, Erläuterungsbericht, Endstände, Kostenberechnung, Terminplan, Baurechts-Check, Unterlagen der Fachplaner",
+     "checks": [
+      "Erläuterungsbericht verfasst: Ergebnisse, Entscheidungen, offene Punkte und Annahmen",
+      "Plansatz Endstand, Objektbeschreibung Endstand und Flächenaufstellung eingefügt",
+      "Kostenberechnung Endstand mit Vergleich zur Kostenschätzung eingefügt",
+      "Fortgeschriebener Terminplan (mit Ausblick auf LPH 4 ff.) und Entscheidungsliste eingefügt",
+      "Baurechts-Check Stand 02 mit Liste der Abweichungen/Befreiungen und Übergabeliste LPH 4 eingefügt",
+      "Abgestimmte Unterlagen der Fachplaner beigefügt oder referenziert und als Fremdleistung gekennzeichnet",
+      "Planliste, Indizes und Abgabeverzeichnis finalisiert – jede Unterlage mit Stand und Datum",
+      "Digitale Ablage nach Dokumentenstruktur; Dateinamen nach Bürostandard"
+     ],
+     "checkCodes": [
+      "L3.DOK.1-01",
+      "L3.DOK.1-02",
+      "L3.DOK.1-03",
+      "L3.DOK.1-04",
+      "L3.DOK.1-05",
+      "L3.DOK.1-06",
+      "L3.DOK.1-07",
+      "L3.DOK.1-08"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      "F",
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "08.01",
+      "08.02"
+     ],
+     "scope": "Regelfall",
+     "owner": "Mitarbeiter/in Architektur",
+     "review": "Projektleitung",
+     "participants": "Fachplaner (Endunterlagen)",
+     "basis": "H: HOAI Anlage 10 LPH 3 g), f); Anlage 14 LPH 3 i); Anlage 15 LPH 3 h). I: Bestandteile der Dokumentation (Bürostandard).",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Fachplanerunterlagen; Qualität der laufenden Ablage",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "DOK.1"
+     ],
+     "requires": [
+      "GRU.3",
+      "OBJ.3",
+      "KOB.2",
+      "GEN.2",
+      "PLI.1"
+     ],
+     "hoai": [
+      "g",
+      "f"
+     ],
+     "condition": null,
+     "doneWhen": "Dokumentation vollständig; Übergabe an die interne Abschlussprüfung L3.A7.PRF.",
+     "schedule": {
+      "executes": [
+       "t045",
+       "t046"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-04-13",
+      "templateEnd": "2027-05-03",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-DOK-01"
+      ],
+      "muster_v021": [
+       "L3-DOK-03"
+      ],
+      "chatgpt_v01": [
+       "L3-044",
+       "L3-047",
+       "L3-050"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A7.PRF",
+     "title": "Interne Abschlussprüfung LPH 3 durchführen (M09)",
+     "result": "Dokumentierte interne Freigabe der Entwurfsdokumentation; Liste der Schlusskorrekturen",
+     "checks": [
+      "Vollständigkeit gegen das Abgabeverzeichnis und gegen die beauftragten Grundleistungen a) bis g) sowie die vereinbarten Besonderen Leistungen geprüft",
+      "Konsistenz geprüft: Pläne, Objektbeschreibung, Flächen und Kostenberechnung beziehen sich auf denselben Planstand",
+      "Unterlagen der Fachplaner vollständig und auf denselben Stand bezogen",
+      "Kostenentscheidung (M08A) und Abstimmung des Entwurfsstands (M06) liegen dokumentiert vor",
+      "Offene Punkte und Annahmen für LPH 4 aufgelistet",
+      "Liste der Schlusskorrekturen erstellt und zugewiesen",
+      "Gestalterische und fachliche Endfreigabe durch die Büroleitung dokumentiert"
+     ],
+     "checkCodes": [
+      "L3.A7.PRF-01",
+      "L3.A7.PRF-02",
+      "L3.A7.PRF-03",
+      "L3.A7.PRF-04",
+      "L3.A7.PRF-05",
+      "L3.A7.PRF-06",
+      "L3.A7.PRF-07"
+     ],
+     "checkBlocks": [
+      "AUS",
+      "AUS",
+      null,
+      null,
+      null,
+      null,
+      "AUS"
+     ],
+     "psp": [
+      "08.03",
+      "08.04"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung (Freigabe)",
+     "participants": "–",
+     "basis": "H: HOAI § 3 und Vertrag (Vollständigkeit der beauftragten Leistungen). I: Vier-Augen-Prinzip.",
+     "effortHours": null,
+     "effortDrivers": "Umfang der Dokumentation; Zahl der festgestellten Korrekturen",
+     "sourceType": "TBA-eigene Prüfung und Freigabe",
+     "step": "Prüfen",
+     "labels": [],
+     "produces": [
+      "A7.PRF"
+     ],
+     "requires": [
+      "DOK.1",
+      "A6.ABS"
+     ],
+     "hoai": [
+      "g"
+     ],
+     "condition": null,
+     "doneWhen": "M09 erreicht: interne Freigabe dokumentiert; Schlusskorrekturen benannt.",
+     "schedule": {
+      "executes": [
+       "t047",
+       "t048"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-05-04",
+      "templateEnd": "2027-05-11",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ABG-A6"
+      ],
+      "muster_v021": [
+       "L3-DOK-04",
+       "L3-ABG-05"
+      ],
+      "chatgpt_v01": [
+       "L3-045",
+       "L3-046"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A7.AUS",
+     "title": "Schlusskorrekturen einarbeiten, Ergebnisse übergeben und erläutern (M10)",
+     "result": "Übergebene Entwurfsdokumentation; Übergabeprotokoll der Abschlussbesprechung",
+     "checks": [
+      "Schlusskorrekturen aus der internen Prüfung eingearbeitet und gegengeprüft",
+      "Unterlagen an den Auftraggeber übergeben; Verteiler, Format und Datum dokumentiert",
+      "Abschlussbesprechung M10 durchgeführt: Entwurf, Kosten, Termine, Genehmigungsrisiken und offene Punkte erläutert",
+      "Protokoll mit Aufträgen und Fristen verteilt",
+      "Prüffrist und Form der Freigabe mit dem Auftraggeber vereinbart"
+     ],
+     "checkCodes": [
+      "L3.A7.AUS-01",
+      "L3.A7.AUS-02",
+      "L3.A7.AUS-03",
+      "L3.A7.AUS-04",
+      "L3.A7.AUS-05"
+     ],
+     "checkBlocks": [
+      null,
+      "AUS",
+      null,
+      null,
+      "AUS"
+     ],
+     "psp": [
+      "09.01",
+      "09.02"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Auftraggeber; ggf. Fachplaner",
+     "basis": "H: HOAI Anlage 10 LPH 3 g) (Erläutern der Ergebnisse). I: Ausgaberoutine.",
+     "effortHours": null,
+     "effortDrivers": "Umfang der Schlusskorrekturen; Zahl der Beteiligten",
+     "sourceType": "TBA-eigene Prüfung und Ausgabe",
+     "step": "Ausgeben",
+     "labels": [
+      "Abgabe"
+     ],
+     "produces": [
+      "A7.AUS",
+      "UEP.1"
+     ],
+     "requires": [
+      "A7.PRF"
+     ],
+     "hoai": [
+      "g"
+     ],
+     "condition": null,
+     "doneWhen": "Die Karte endet mit dem verteilten Übergabeprotokoll (M10).",
+     "schedule": {
+      "executes": [
+       "t049",
+       "t050"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-05-12",
+      "templateEnd": "2027-05-20",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-DOK-02"
+      ],
+      "muster_v021": [
+       "L3-DOK-04",
+       "L3-DOK-05"
+      ],
+      "chatgpt_v01": [
+       "L3-047",
+       "L3-048"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.A7.ABS",
+     "title": "Freigabe des Auftraggebers dokumentieren und Übergang in die LPH 4 klären (M11)",
+     "result": "Freigabe der Entwurfsplanung in Textform, ggf. mit Auflagen; Übergabeliste der offenen Punkte an die LPH 4",
+     "checks": [
+      "Rückfragen des Auftraggebers aus der Prüfung beantwortet",
+      "Freigabe des Auftraggebers in Textform dokumentiert; Vorbehalte und Auflagen mit Termin erfasst",
+      "Dokumentiert: projektseitige Freigabe, keine rechtsgeschäftliche Abnahme der Architektenleistung",
+      "Abruf bzw. Beauftragung der Folgephase (LPH 4) geklärt",
+      "Offene Punkte mit Zuständigkeit an die LPH 4 übergeben; Entscheidungsliste abgeschlossen"
+     ],
+     "checkCodes": [
+      "L3.A7.ABS-01",
+      "L3.A7.ABS-02",
+      "L3.A7.ABS-03",
+      "L3.A7.ABS-04",
+      "L3.A7.ABS-05"
+     ],
+     "checkBlocks": [
+      "ABS",
+      "ABS",
+      null,
+      null,
+      "ABS"
+     ],
+     "psp": [
+      "09.03",
+      "09.04"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "Auftraggeber",
+     "basis": "I: Abschlussroutine (Notiz im Terminplan zu M11).",
+     "effortHours": null,
+     "effortDrivers": "Entscheidungsstruktur des Auftraggebers; Umfang der Auflagen",
+     "sourceType": "TBA-eigene Nachbereitung und Abschluss",
+     "step": "Abschließen",
+     "labels": [],
+     "produces": [
+      "A7.ABS",
+      "FRG.1"
+     ],
+     "requires": [
+      "A7.AUS"
+     ],
+     "hoai": [
+      "g"
+     ],
+     "condition": null,
+     "doneWhen": "M11 erreicht: Freigabe liegt vor oder die Auflagen sind terminiert. Die rechtliche Einordnung der Freigabe ist mit einem Vertragsjuristen zu klären.",
+     "schedule": {
+      "executes": [],
+      "waitsFor": [
+       "t054"
+      ],
+      "anchor": {
+       "taskId": "t055",
+       "edge": "end"
+      },
+      "templateStart": null,
+      "templateEnd": "2027-05-28",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-DOK-02"
+      ],
+      "muster_v021": [
+       "L3-DOK-06"
+      ],
+      "chatgpt_v01": [
+       "L3-049",
+       "L3-050"
+      ],
+      "note": null
+     }
+    },
+    {
+     "id": "L3.PAB.1",
+     "title": "Phasenabschluss: Nachkalkulation und Rückmeldung zur Bibliothek",
+     "result": "Phasenabschlussblatt LPH 3: Soll-/Ist-Stunden je Abgabe, Status jeder Aufgabe (wie Vorlage / angepasst / entfallen / ergänzt), Änderungsvorschläge",
+     "checks": [
+      "Ist-Stunden der LPH 3 aus der Zeiterfassung übernommen und dem Stundenbudget gegenübergestellt – mindestens je Abgabe",
+      "Je Aufgabe Status vermerkt: wie Vorlage / angepasst / entfallen / neu hinzugefügt",
+      "Gestrichene und ergänzte Prüfpunkte mit kurzer Begründung notiert",
+      "Wartezeiten (Auftraggeber, Fachplaner, Behörden) getrennt von der Bearbeitungszeit ausgewiesen",
+      "Honorargrundlage geprüft: anrechenbare Kosten auf Basis der freigegebenen Kostenberechnung; Anpassung oder Nachtrag angestoßen, falls erforderlich",
+      "Änderungsvorschläge für die Bibliothek im Vorschlagsregister erfasst – keine direkte Änderung der Vorlage"
+     ],
+     "checkCodes": [
+      "L3.PAB.1-01",
+      "L3.PAB.1-02",
+      "L3.PAB.1-03",
+      "L3.PAB.1-04",
+      "L3.PAB.1-05",
+      "L3.PAB.1-06"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "09.04"
+     ],
+     "scope": "Regelfall (bürointern)",
+     "owner": "Projektleitung",
+     "review": "Büroleitung",
+     "participants": "–",
+     "basis": "H: HOAI § 6 Abs. 1, § 10 (Honorargrundlage). I: Lernschleife der Bibliothek.",
+     "effortHours": null,
+     "effortDrivers": "Qualität der Zeiterfassung; Zahl der Abweichungen von der Vorlage",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "PAB.1"
+     ],
+     "requires": [
+      "A7.ABS",
+      "KOB.2"
+     ],
+     "hoai": [],
+     "condition": null,
+     "doneWhen": "Phasenabschlussblatt von der Büroleitung zur Kenntnis genommen; Vorschläge stehen im Register.",
+     "schedule": {
+      "executes": [],
+      "waitsFor": [],
+      "anchor": {
+       "taskId": "t055",
+       "edge": "end"
+      },
+      "templateStart": null,
+      "templateEnd": "2027-05-28",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ORG-05"
+      ],
+      "muster_v021": [
+       "L3-ORG-05"
+      ],
+      "chatgpt_v01": [
+       "L3-051"
+      ],
+      "note": null
+     }
+    }
+   ]
+  }
+ ]
+}

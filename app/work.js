@@ -809,7 +809,7 @@ async function hydratePlannerImages(root=document){
 }
 async function renderPlanner(preview=false){
   if(preview){
-    const result=await fetch('./data/muster-planner-lph3-v0.2.json?v=office47',{cache:'no-store'});
+    const result=await fetch('./data/muster-planner-lph3-v0.3.json?v=lph3-031',{cache:'no-store'});
     if(!result.ok)throw new Error('Das Muster LPH 3 konnte nicht geladen werden.');
     const source=await result.json();
     if(source.phase!=='LPH3'||source.draft!==true||!Array.isArray(source.buckets)||
@@ -818,7 +818,7 @@ async function renderPlanner(preview=false){
       sort_order:i*10,archived:false}));
     tasks=source.buckets.flatMap(b=>b.tasks.map((t,i)=>({
       id:t.id,title:t.title,project_id:null,work_bucket_id:b.id,sort_order:i*10,work_sort_order:i*10,
-      work_status:'not_started',completed_at:null,priority:'normal',notes:'',labels:[],
+      work_status:'not_started',completed_at:null,priority:'normal',notes:'',labels:Array.isArray(t.labels)?t.labels:[],
       attachments:[],links:[],start_date:null,due_date:null,assignee:null,
       checklist:(t.checks||[]).map((text,j)=>({id:t.id+'-check-'+j,text,done:false})),
       metadata:{office_planner:{task_code:t.id,terminplan_psp:(t.psp||[]).join(', '),

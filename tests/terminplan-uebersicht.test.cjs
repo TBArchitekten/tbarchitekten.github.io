@@ -12,7 +12,7 @@ const shown=(plan,mode,selected=null,visible)=>view.visibleConnections(
 );
 
 test('Übersicht reduces each actual Muster to one timing representative per dependent task',()=>{
-  const expected={LPH3:{complete:96,overview:56},LPH5:{complete:95,overview:44}};
+  const expected={LPH3:{complete:99,overview:58},LPH5:{complete:95,overview:44}};
   for(const phase of Object.keys(expected)){
     const state=get(phase).state;
     const before=JSON.stringify(state);

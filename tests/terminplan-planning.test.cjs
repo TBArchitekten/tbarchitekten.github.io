@@ -157,13 +157,41 @@ test('browser feature scripts parse and preserve explicit write approval',()=>{
   assert.match(ui,/!bridge\.canEdit\(\)/,'write permission checked');
 });
 
-test('LPH3 v1.2 migration is exactly the reviewed generic seed and never mutates project instances',()=>{
+test('LPH3 v1.2 migration stays the historic reference; v1.3 differs only by the Bemusterung preparation',()=>{
   const sql=read('supabase/migrations/20261109131000_office_lph3_template_v12.sql');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
   const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
   assert.ok(match,'versioned migration contains a JSONB template');
+  const v12=JSON.parse(match[1]);
+  assert.match(sql,/'1\.2','Office Standard'/);
+  assert.equal(v12.tasks.length,57);
+  assert.equal(v12.tasks.reduce((n,t)=>n+t.dependencies.length,0),96);
+  assert.doesNotMatch(sql,/office_terminplan_instances|delete\s+from|truncate|drop\s+table/i,
+    'existing project instances are not modified');
+  // v1.3 = v1.2 + t058/t059 + one predecessor of t030; every other Vorgang keeps name, dates and links.
+  const now=new Map(tpl.state.tasks.map(t=>[t.id,t]));
+  assert.deepEqual([...now.keys()].filter(id=>!v12.tasks.some(t=>t.id===id)).sort(),['t058','t059']);
+  for(const old of v12.tasks){
+    const cur=now.get(old.id);
+    assert.ok(cur,old.id+' kept');
+    assert.equal(cur.name,old.name,old.id);
+    assert.equal(cur.start,old.start,old.id+' start unchanged');
+    assert.equal(cur.end,old.end,old.id+' end unchanged');
+    const extra=old.id==='t030'?[{pred:'t059',rel:'EA',lagDays:1}]:[];
+    assert.deepEqual(cur.dependencies,[...old.dependencies,...extra],old.id+' links');
+  }
+  assert.equal(tpl.state.project.end,v12.project.end,'Bemusterung preparation does not extend the Muster');
+});
+
+test('LPH3 v1.3 migration is exactly the reviewed generic seed and never mutates project instances',()=>{
+  const sql=read('supabase/migrations/20261114170000_office_lph3_template_v13.sql');
+  const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
+  const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
+  assert.ok(match,'versioned migration contains a JSONB template');
   assert.deepEqual(JSON.parse(match[1]),tpl.state,'deployed migration must match reviewed seed');
-  assert.equal(tpl.version,'1.2');
+  assert.equal(tpl.version,'1.3');
+  assert.match(sql,/on conflict \(phase,version\) do nothing/);
+  assert.match(sql,/set is_active=false\s+where phase='LPH3' and version<>'1\.3'/);
   assert.doesNotMatch(sql,/office_terminplan_instances|delete\s+from|truncate|drop\s+table/i,
     'existing project instances are not modified');
   assert.ok(tpl.state.tasks.every(t=>!('actualStart' in t)&&!('actualEnd' in t)));
