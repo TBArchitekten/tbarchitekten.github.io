@@ -184,7 +184,7 @@ test('LPH3 v1.2 migration stays the historic reference; v1.3 differs only by the
 });
 
 test('LPH3 v1.3 migration is exactly the reviewed generic seed and never mutates project instances',()=>{
-  const sql=read('supabase/migrations/20261114090000_office_lph3_template_v13.sql');
+  const sql=read('supabase/migrations/20261114170000_office_lph3_template_v13.sql');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
   const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
   assert.ok(match,'versioned migration contains a JSONB template');
