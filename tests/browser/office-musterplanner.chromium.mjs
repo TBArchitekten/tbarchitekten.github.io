@@ -61,21 +61,21 @@ test('Desktop Muster uses the real work-bucket + work-task-card + canonical task
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  try{
    await page.goto(url());
-   await page.locator('[data-work-task="L3-BEM-09"]').waitFor({state:'attached'});
+   await page.locator('[data-work-task="L3.BAD.1"]').waitFor({state:'attached'});
    assert.equal(await page.locator('.work-bucket').count(),7);
-   assert.equal(await page.locator('.work-task-card').count(),57);
+   assert.equal(await page.locator('.work-task-card').count(),52);
    assert.equal(await page.locator('.work-bucket-explanation').count(),7);
    assert.match(await page.locator('#workProjectTitle').innerText(),/Muster-Planner.*LPH 3/);
    assert.match(await page.locator('.work-bucket').nth(4).innerText(),/Bemusterung/);
-   assert.match(await page.locator('.work-bucket').nth(4).innerText(),/04\.03/);
+   assert.match(await page.locator('.work-bucket').nth(4).innerText(),/04\.04.*M06/);
    assert.equal(await page.locator('[data-work-add-bucket],[data-work-add-task]').count(),0);
-   await page.locator('[data-work-task="L3-BEM-09"]').click();
+   await page.locator('[data-work-task="L3.BAD.1"]').click();
    assert.equal(await page.locator('.minds-task-detail.is-muster-readonly').count(),1);
-   assert.match(await page.locator('#taskDetailTitle').inputValue(),/Bäderpläne/);
-   assert.match(await page.locator('#taskDetailWorkResult').inputValue(),/Badansichten/);
-   assert.match(await page.locator('#taskDetailProfessionalContext').inputValue(),/LPH3|Entwurfs/);
+   assert.match(await page.locator('#taskDetailTitle').inputValue(),/Themenpaket Bäder/);
+   assert.match(await page.locator('#taskDetailWorkResult').inputValue(),/Wandansichten/);
+   assert.match(await page.locator('#taskDetailProfessionalContext').inputValue(),/HOAI Anlage 10 LPH 3/);
    assert.match(await page.locator('#taskDetailPSP').inputValue(),/04\.03/);
-   assert.equal(await page.locator('.minds-task-check-row').count(),4);
+   assert.equal(await page.locator('.minds-task-check-row').count(),7);
    assert.equal(await page.locator('#taskDetailComplete').isDisabled(),true);
    assert.equal(await page.locator('#taskDetailWorkResult').isDisabled(),true);
    assert.equal(await page.locator('#taskDetailPropose').isDisabled(),true);
@@ -90,11 +90,11 @@ test('Mobile Muster retains original Planner list switch and read-only detail',a
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  try{
    await page.goto(url());
-   await page.locator('[data-work-task="L3-ENT-01"]').waitFor();
+   await page.locator('[data-work-task="L3.GRU.1"]').waitFor();
    await page.locator('[data-work-layout-toggle]').click();
    assert.equal(await page.locator('.work-board.mobile-stack').count(),1);
-   await page.locator('[data-work-task="L3-ENT-01"]').click();
-   assert.match(await page.locator('#taskDetailWorkResult').inputValue(),/Grundrisssatz/);
+   await page.locator('[data-work-task="L3.GRU.1"]').click();
+   assert.match(await page.locator('#taskDetailWorkResult').inputValue(),/Grundrisse aller Geschosse/);
    assert.equal(await page.locator('#taskDetailAddCheck').isDisabled(),true);
    assert.equal(await page.locator('#taskDetailAddFile').isDisabled(),true);
    assert.deepEqual(await page.evaluate(()=>window.__dbWrites),[]);

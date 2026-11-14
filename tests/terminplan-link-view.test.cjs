@@ -50,14 +50,14 @@ test('Display filtering preserves canonical dependency data and original task ob
 
 test('Real LPH3 and LPH5 Muster retain every link in technical all mode',()=>{
   const templates=JSON.parse(read('supabase/seed/terminplan-templates.json'));
-  const expected={LPH3:96,LPH5:95};
+  const expected={LPH3:99,LPH5:95};
   for(const template of templates){
     if(!expected[template.phase])continue;
     const tasks=template.state.tasks;
     assert.equal(view.visibleConnections(tasks,tasks.map(t=>t.id),'all',null,dependencyOf).length,expected[template.phase]);
     assert.equal(view.visibleConnections(tasks,tasks.map(t=>t.id),'hidden',null,dependencyOf).length,0);
     assert.equal(view.visibleConnections(tasks,tasks.map(t=>t.id),'overview',null,dependencyOf,
-      template.state.project.calendar).length,template.phase==='LPH3'?56:44);
+      template.state.project.calendar).length,template.phase==='LPH3'?58:44);
   }
 });
 
