@@ -11,7 +11,7 @@ REPO = str(pathlib.Path(__file__).resolve().parents[2])
 OUT = sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="lph3-bibliothek-")
 os.makedirs(OUT, exist_ok=True)
 VERSION, STAND = "0.3.4-draft", "2026-11-15"
-TPL = "1.5"
+TPL = "1.6"
 
 # ───────── Muster-Terminplan (Seed der Seite)
 tpl = [x for x in json.load(open(f"{REPO}/supabase/seed/terminplan-templates.json", encoding="utf-8")) if x["phase"] == "LPH3" and x["version"] == TPL][0]["state"]

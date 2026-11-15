@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-15 · Muster LPH 3 v1.6 ohne Notizen; Bernried: Übergabe Planstand 02 nach der Koordination Runde 02 · Claude
+- Qué cambió y por qué: Entscheidungen Gari (15.11.2026). (1) **Ein Terminplan enthält keine Notizen:** Vorlage LPH 3 v1.6 ohne die 33 Vorgangsnotizen und ohne `planningNotes`; Vorgänge, Termine und Verknüpfungen unverändert. Die Hinweise sind als Planungswissen erhalten in `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md` (je PSP/ID). (2) **Bernried, Option 2:** Der Meilenstein „Integrierter Planstand 02 an Bauherren übergeben“ wartet jetzt auch auf die Koordination Runde 02 (03.05) → Übergabe 21.01.2027, Prüfphase 22.–28.01., M06 28.01.; 13 Vorgänge rücken eine Woche, M10 25.02.2027 (vorher 18.02.). Planner: 15 Aufgaben per Termin-Abgleich nachgeführt.
+- Archivos: `supabase/seed/terminplan-templates.json`, `supabase/migrations/20261115190000_office_lph3_template_v16.sql` (neu), `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md` (neu), `scripts/lph3-bibliothek/build.py` (Vorlage 1.6), `app/data/muster-planner-lph3-v0.3.json` (nur Verweis auf v1.6), `docs/LPH3-AUFGABENBIBLIOTHEK-v0.3.md`; Tests: `office-core` (neu: Vorlage ohne Notizen), `terminplan-planning` (v1.5 historisch, v1.6 = v1.5 ohne Notizen, Hinweise vollständig im Dokument; v1.6-Migration = Seed), `office-lph5-v02`, beide Muster-Planner-Tests.
+- Base de datos: (1) migración `20261115190000_office_lph3_template_v16.sql` — aplicada en Supabase: siehe Nachtrag. (2) Bernried: ein `DO`-Block (eine Transaktion): Sicherung „Vor Planänderung · 2026-11-15 · Revision 15“, Revision 15 → 16, 15 Zeilen `isabella_tasks` (Termine, PSP-Text). Nichts gelöscht.
+- Deploy de funciones: ninguno.
+- Cómo se probó: Bernried mit der Engine gerechnet (gültig, Kaskaden danach ruhig) und als Trockenlauf (md5 identisch, 47 PDF-Belege, Basisplan gleich); danach md5 von Plan und Planner = Erwartung, keine Karte abgehakt berührt. `node --test` 314/314; `build.py` alle Prüfungen OK.
+- Quedó pendiente o sin probar: Muster LPH 5 v0.2 hat noch 24 Notizen (Entscheidung Gari). Der Terminplan-Editor hat weiterhin das Feld „Notiz / Lieferergebnis“ und der CSV-Export eine Spalte „Notiz“.
+- Riesgos o decisiones que necesitan a Gari: siehe oben (LPH 5, Editorfeld).
+- PR: #102
+
+---
+
 ### 2026-11-15 · Bernried: Bauphysik im Terminplan, Planner-Karten auf v0.3.4, keine Notizen; BTK.1 vor PGF.1 · Claude
 - Qué cambió y por qué: (1) Bibliothek v0.3.4: `L3.BTK.1` steht in A1 jetzt vor `L3.PGF.1` statt hinter den Abgabe-Karten (Reihenfolge folgte der Definition in `lib.py`); Inhalt unverändert. (2) Garis Entscheidungen (15.11.2026) für Bernried: Bauphysik ist noch nicht beauftragt (Angebotsanfragen versandt) → M00A nennt jetzt „HLS, ELT, BPH; BRS sofern erforderlich“; zwei BPH-Vorgänge wie bei HLS (Arbeitsstand 01 · Bauteilkatalog, PSP 02.08; abgestimmter Beitrag · Endstand, PSP 05.06, nicht vor M06), an M03, Koordination 01, M07 und Mengenermittlung gebunden – ohne Terminverschiebung. „In einem Terminplan stehen keine Notizen“: alle 8 Notizen entfernt. Die 8 von v0.3.3 auf v0.3.4 geänderten Planner-Karten (`BTK.1` nach A1, `BTK.2`, `KLA.1`, `KLA.3`, `A5.ABS`, `A1.AUS`, `SCH.1`, `OBJ.1`) auf den neuen Text gebracht und neu verknüpft; `A5.AUS` behält den Bernried-Text.
 - Archivos: `scripts/lph3-bibliothek/lib.py` (nur Reihenfolge), `app/data/muster-planner-lph3-v0.3.json` (neu erzeugt), Bitácora/Estado.

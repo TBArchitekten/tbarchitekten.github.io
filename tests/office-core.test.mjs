@@ -19,11 +19,14 @@ test('a project copy keeps the Muster and moves dates by working days',()=>{
 });
 
 
-test('LPH3 v1.5 keeps 00–09 PSP, parallel multi-dependency gates and required review stages',()=>{
+test('LPH3 v1.6 keeps 00–09 PSP, parallel multi-dependency gates and required review stages',()=>{
   const E=require('../terminplan-engine.js');
   const templates=JSON.parse(read('supabase/seed/terminplan-templates.json'));
   const tpl=templates.find(x=>x.phase==='LPH3');
-  assert.equal(tpl.version,'1.5');
+  assert.equal(tpl.version,'1.6');
+  // seit v1.6: ein Terminplan enthält keine Notizen (Entscheidung Gari, 15.11.2026)
+  assert.ok(tpl.state.tasks.every(t=>t.note===''),'keine Notizen an Vorgängen');
+  assert.equal(tpl.state.project.planningNotes,undefined,'keine Projektnotiz');
   assert.equal(tpl.state.project.scheduleModel,'network-v1');
   assert.equal(tpl.state.project.criticalPathState,'not_calculated');
   assert.deepEqual(tpl.state.groups.map(g=>g.wbs),Array.from({length:10},(_,i)=>String(i).padStart(2,'0')));
@@ -73,7 +76,7 @@ test('LPH3 v1.5 keeps 00–09 PSP, parallel multi-dependency gates and required 
   assert.equal(E.analyze(tpl.state).errors,0,'template has no broken dependency, cycle or date');
   const source=JSON.stringify(tpl);
   const copy=C.cloneStateForProject(tpl.state,{
-    start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.5',today:'2026-11-09'
+    start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.6',today:'2026-11-09'
   });
   assert.equal(copy.project.start,'2026-11-02');
   assert.equal(copy.project.end>=copy.project.start,true);
@@ -88,7 +91,7 @@ test('LPH3 v1.5 keeps 00–09 PSP, parallel multi-dependency gates and required 
 test('Already commissioned Fachplaner skip the procurement wait but not coordination or fictitious progress',()=>{
   const E=require('../terminplan-engine.js');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
-  const base={start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.5',today:'2026-11-09'};
+  const base={start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.6',today:'2026-11-09'};
   const ordinary=C.cloneStateForProject(tpl.state,base);
   const already=C.cloneStateForProject(tpl.state,{...base,fachplanerAlreadyCommissioned:true});
   assert.equal(already.tasks.length,59);
@@ -108,7 +111,7 @@ test('Bavarian holiday calendar is explicit and holiday starts are rejected',()=
     assert.ok(holidays.includes(date),date+' is a Bavarian statewide holiday');
   assert.ok(!holidays.includes('2027-08-08'),'city-specific Augsburg holiday is not assumed statewide');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
-  const args={number:'2701',name:'Beispiel',phase:'LPH3',version:'1.5',today:'2026-11-09'};
+  const args={number:'2701',name:'Beispiel',phase:'LPH3',version:'1.6',today:'2026-11-09'};
   assert.throws(()=>C.cloneStateForProject(tpl.state,{...args,start:'2027-05-27'}),/Feiertag/);
   assert.throws(()=>C.cloneStateForProject(tpl.state,{...args,start:'2027-05-29'}),/Werktag/);
   const plan=C.cloneStateForProject(tpl.state,{...args,start:'2027-03-30'});

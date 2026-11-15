@@ -216,7 +216,7 @@ test('LPH3 v1.3 migration stays historic; v1.4 only lengthens the Bemusterung pr
 
 test('LPH3 v1.4 migration stays historic; v1.5 only adds the Bauphysik with the Bauteilkatalog',()=>{
   const v14=migrationState('supabase/migrations/20261114200000_office_lph3_template_v14.sql');
-  const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
+  const tpl={state:migrationState('supabase/migrations/20261115120000_office_lph3_template_v15.sql')};
   const now=new Map(tpl.state.tasks.map(t=>[t.id,t]));
   assert.deepEqual([...now.keys()].filter(id=>!v14.tasks.some(t=>t.id===id)).sort(),['t060','t061']);
   const extra={t022:[{pred:'t060',rel:'EA',lagDays:0}],t023:[{pred:'t060',rel:'AA',lagDays:6}],
@@ -234,15 +234,32 @@ test('LPH3 v1.4 migration stays historic; v1.5 only adds the Bauphysik with the 
   assert.equal(tpl.state.project.end,v14.project.end,'Bauphysik does not extend the Muster');
 });
 
-test('LPH3 v1.5 migration is exactly the reviewed generic seed and never mutates project instances',()=>{
-  const sql=read('supabase/migrations/20261115120000_office_lph3_template_v15.sql');
+test('LPH3 v1.5 migration stays historic; v1.6 only removes the notes',()=>{
+  const v15=migrationState('supabase/migrations/20261115120000_office_lph3_template_v15.sql');
+  const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
+  assert.ok(v15.tasks.some(t=>t.note),'v1.5 hatte Notizen');
+  assert.equal(tpl.state.tasks.length,v15.tasks.length);
+  const strip=t=>({...t,note:''});
+  assert.deepEqual(tpl.state.tasks,v15.tasks.map(strip),'nur die Notizen entfallen');
+  const {planningNotes,standLabel,...rest15}=v15.project;
+  const {standLabel:label16,...rest16}=tpl.state.project;
+  assert.ok(planningNotes&&!('planningNotes' in tpl.state.project));
+  assert.equal(label16,'Muster v1.6');
+  assert.deepEqual(rest16,rest15);
+  assert.deepEqual(tpl.state.groups,v15.groups);
+  const hints=read('docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md');
+  for(const t of v15.tasks.filter(t=>t.note))assert.ok(hints.includes(t.note),t.id+' hint kept in docs');
+});
+
+test('LPH3 v1.6 migration is exactly the reviewed generic seed and never mutates project instances',()=>{
+  const sql=read('supabase/migrations/20261115190000_office_lph3_template_v16.sql');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
   const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
   assert.ok(match,'versioned migration contains a JSONB template');
   assert.deepEqual(JSON.parse(match[1]),tpl.state,'deployed migration must match reviewed seed');
-  assert.equal(tpl.version,'1.5');
+  assert.equal(tpl.version,'1.6');
   assert.match(sql,/on conflict \(phase,version\) do nothing/);
-  assert.match(sql,/set is_active=false\s+where phase='LPH3' and version<>'1\.5'/);
+  assert.match(sql,/set is_active=false\s+where phase='LPH3' and version<>'1\.6'/);
   assert.doesNotMatch(sql,/office_terminplan_instances|delete\s+from|truncate|drop\s+table/i,
     'existing project instances are not modified');
   assert.ok(tpl.state.tasks.every(t=>!('actualStart' in t)&&!('actualEnd' in t)));

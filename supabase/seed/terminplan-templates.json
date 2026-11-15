@@ -3,7 +3,7 @@
     "phase": "LPH3",
     "title": "Muster-Terminplan LPH 3",
     "description": "LPH 3 Referenzterminplan mit 10 PSP-Gruppen, 61 Vorgängen und Meilensteinen und expliziten Mehrfachabhängigkeiten; mit Auftraggeberprüfungen, Fachplanerbeauftragung, Bauphysik mit Bauteilkatalog, Vorbereitung und Übergabe der Bemusterungsunterlagen, Kosten- und Schlussfreigaben.",
-    "version": "1.5",
+    "version": "1.6",
     "status": "Office Standard",
     "is_active": true,
     "state": {
@@ -13,7 +13,7 @@
         "start": "2027-01-04",
         "end": "2027-05-28",
         "standDate": "2027-01-04",
-        "standLabel": "Muster v1.5",
+        "standLabel": "Muster v1.6",
         "scheduleModel": "network-v1",
         "criticalPathState": "not_calculated",
         "calendar": {
@@ -44,8 +44,7 @@
             "2028-12-25",
             "2028-12-26"
           ]
-        },
-        "planningNotes": "Richtwerte für einen privaten Auftrag mit bekannten Fachplanern. BRS optional, Fachplanerbeauftragung und lokale Feiertage prüfen."
+        }
       },
       "groups": [
         {
@@ -141,7 +140,7 @@
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "Leistungsbedarf, Disziplinen und Zuständigkeiten festhalten. Bei bereits beauftragten Fachplanern Angebots- und Beauftragungsphase überspringbar.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t002",
@@ -213,7 +212,7 @@
           "category": "ag",
           "start": "2027-01-13",
           "end": "2027-01-19",
-          "note": "Orientierungswert für private Direktbeauftragung bei bereits bekannten Fachplanern, kein VgV- oder gesetzlicher Mindestzeitraum.",
+          "note": "",
           "durationAT": 5,
           "earliestOffsetAT": 0,
           "status": "Nicht begonnen",
@@ -239,7 +238,7 @@
           "category": "ag",
           "start": "2027-01-20",
           "end": "2027-01-26",
-          "note": "Auftraggeber entscheidet und beauftragt. Bei öffentlicher Vergabe eigenes Verfahren mit gesetzlichen Fristen planen.",
+          "note": "",
           "durationAT": 5,
           "earliestOffsetAT": 0,
           "status": "Nicht begonnen",
@@ -323,7 +322,7 @@
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "Lieferumfang dokumentieren: Grundrisse, Ansichten, Schnitte, Erläuterungen und geeignete Arbeitsstände für Fachplaner.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t002",
@@ -348,7 +347,7 @@
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "Interne Vollständigkeits-/Konsistenzprüfung überlappt die letzten Arbeitstage der Planpaketerarbeitung (AA + EE).",
+          "note": "",
           "dependencies": [
             {
               "pred": "t006",
@@ -408,7 +407,7 @@
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "Regelfrist 5 AT nur bei vollständigen Unterlagen, abgestimmter Prüffrist und entscheidungsfähigem Auftraggeber.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t008",
@@ -458,7 +457,7 @@
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "Planungsaufwand orientierend 15 AT; für erhebliche Entwurfsänderungen projektspezifisch verlängern.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t010",
@@ -483,7 +482,7 @@
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "Teilstand an die beauftragten Fachplaner, keine Freigabe des vollständigen Entwurfs.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t006",
@@ -543,7 +542,7 @@
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "Regelfrist 5 AT. Rückmeldung und formale Entwurfsfreigabe sind separate Entscheidungen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t013",
@@ -648,7 +647,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Optional, nur bei erforderlicher bzw. beauftragter Brandschutzplanung. Bei Pflichtbeitrag zusätzlich als Vorgänger zu M03 verknüpfen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t017",
@@ -674,7 +673,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Elektrofachplanung als vereinbarter Regelumfang; projektspezifisch prüfen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t017",
@@ -724,7 +723,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Tragwerksplanung als vereinbarter Regelumfang; projektspezifisch prüfen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t017",
@@ -749,7 +748,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Bauphysik (Wärme-, Schall- und Feuchteschutz): Bemessen der Bauteile und Bauteilkatalog auf Grundlage der Aufbauvorgaben der Architektur (M01).",
+          "note": "",
           "dependencies": [
             {
               "pred": "t017",
@@ -774,7 +773,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Sammelt ELT, HLS, TWP und BPH. Falls BRS erforderlich ist, BRS als zusätzlichen Vorgänger aufnehmen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t019",
@@ -814,7 +813,7 @@
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "Überlappung bewusst: Koordination darf mit vorläufigen Fachplanungsständen beginnen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t019",
@@ -879,7 +878,7 @@
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "Integrierter Entwurf darf nicht vor dem Fachplanungs-Zwischenstand abgeschlossen sein (EE).",
+          "note": "",
           "dependencies": [
             {
               "pred": "t023",
@@ -1019,7 +1018,7 @@
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "Orientierungswert: Dauer nach Umfang der Bemusterung und Zahl der Themenpakete anpassen. Lieferzeiten für Muster sind Wartezeit.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t010",
@@ -1044,7 +1043,7 @@
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "Ausgabe der Bemusterungsunterlagen. Die Abstimmung mit dem Auftraggeber folgt im nächsten Vorgang.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t058",
@@ -1069,7 +1068,7 @@
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "Abstimmung auf Grundlage der übergebenen Bemusterungsunterlagen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t029",
@@ -1099,7 +1098,7 @@
           "progress": 0,
           "category": "ag",
           "critical": false,
-          "note": "Bauherrenabstimmung, Koordination, Rückmeldung und genehmigungsrelevante Punkte müssen vorliegen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t030",
@@ -1139,7 +1138,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Optionaler Brandschutz-Finalbeitrag. Bei verpflichtendem Umfang zusätzlich mit M07 verknüpfen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t027",
@@ -1260,7 +1259,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Bauteilkatalog mit den Entscheidungen der Bemusterung (M06) und den abgestimmten Beiträgen fortschreiben.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t027",
@@ -1295,7 +1294,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Sammelmeilenstein nur nach allen verpflichtenden Beiträgen (ELT, HLS, TWP, BPH). BRS ergänzen, soweit erforderlich.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t033",
@@ -1335,7 +1334,7 @@
           "progress": 0,
           "category": "cost",
           "critical": false,
-          "note": "Kostenbeiträge und Mengen können parallel zum Schlusslauf der Fachplanung zusammengeführt werden.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t031",
@@ -1380,7 +1379,7 @@
           "progress": 0,
           "category": "cost",
           "critical": false,
-          "note": "Kostenberechnung nach DIN 276 inkl. Vergleich zur Kostenschätzung; Abschluss erst nach benötigten Fachkostenbeiträgen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t037",
@@ -1415,7 +1414,7 @@
           "progress": 0,
           "category": "cost",
           "critical": false,
-          "note": "Vorlage der Kostenberechnung ist nicht identisch mit Auftraggeberentscheidung über Kosten-/Budgetfolgen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t038",
@@ -1442,7 +1441,7 @@
           "category": "cost",
           "start": "2027-04-20",
           "end": "2027-04-26",
-          "note": "Prüffrist für Kostenentscheidung, nicht als normative oder vertraglich garantierte Frist verstehen.",
+          "note": "",
           "durationAT": 5,
           "earliestOffsetAT": 0,
           "status": "Nicht begonnen",
@@ -1525,7 +1524,7 @@
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "Genehmigungsfähigkeit mit erforderlichen Stellen vorabstimmen, soweit anwendbar; nicht Genehmigungsantrag LPH 4.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t006",
@@ -1575,7 +1574,7 @@
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "Objektbeschreibung fortschreiben, während Fachplanung läuft, aber erst nach vollständiger Integration abschließen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t042",
@@ -1610,7 +1609,7 @@
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "Externe Behördenantworten nicht mit internen Bearbeitungstagen gleichsetzen; ggf. eigene Wartefrist ergänzen.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t041",
@@ -1640,7 +1639,7 @@
           "progress": 0,
           "category": "arch",
           "critical": false,
-          "note": "Dokumentation kann fortlaufend beginnen; endgültiger Stand hängt von Kostenkorrekturen und Fachplanung ab.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t038",
@@ -1715,7 +1714,7 @@
           "progress": 0,
           "category": "qa",
           "critical": false,
-          "note": "Abschlussprüfung der vollständigen Objekt- und Fachplanungsunterlagen einschließlich Kostenentscheidung.",
+          "note": "",
           "dependencies": [
             {
               "pred": "t045",
@@ -1852,7 +1851,7 @@
           "category": "ag",
           "start": "2027-05-28",
           "end": "2027-05-28",
-          "note": "Projektseitige vorläufige Freigabe; nicht als zivilrechtliche Abnahme des Architektenvertrags auslegen.",
+          "note": "",
           "durationAT": 0,
           "earliestOffsetAT": 0,
           "status": "Nicht begonnen",

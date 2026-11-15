@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 15.11.2026 · Claude · Muster LPH 3 v1.6 + Bernried Revision 16:** Vorlage ohne Notizen (Hinweise in `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md`). Bernried: Übergabe integrierter Planstand 02 am 21.01.2027 nach der Koordination Runde 02, M06 28.01., M10 25.02.2027; Planner nachgeführt.
+
 **Stand 15.11.2026 · Claude · Bernried Revision 15:** Bauphysik in M00A und zwei BPH-Vorgänge (02.08, 05.06) ohne Terminverschiebung; Terminplan ohne Notizen. Planner: die 8 geänderten Karten auf Bibliothek v0.3.4 (`BTK.1` in A1). Bibliothek: `BTK.1` vor `PGF.1`.
 
 **Stand 15.11.2026 · Claude · Der Eingang ist keine Sackgasse mehr (PR #100):** `bandeja.js` ist aus Window portiert, auf Deutsch und nur mit dem Tab «Zu bestätigen» — `isabella-feed` und `isabella-ideas` gibt es im Office nicht. Vorher fehlte die Datei, obwohl `app.js`, `ahora.js` und `work.js` `window.MINDS_BANDEJA` rufen: der Bildschirm blieb auf der Ladezeile, und die Zeile «N zu bestätigen» in Heute erschien nie. Der Navigationseintrag bleibt verborgen; der Eingang taucht über Heute auf, sobald etwas darin liegt. Heute liegt nichts darin, und das stimmt: das Office hat **null Dokumente**, deshalb meldet die nächtliche Akte-Pflege `nothing_new`. App-Versionen: bandeja `office1`, work `office49`.

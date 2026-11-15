@@ -1,5 +1,5 @@
 # TBA Office · Aufgabenbibliothek LPH 3 · v0.3.4
-Stand 15.11.2026 (v0.3.4: Vorlage v1.5, Bauteilkatalog durch die Bauphysik; v0.3.3: Themenpaket Bodenbeläge) · **Entwurf zur gemeinsamen Prüfung, nicht freigegeben** · ersetzt als Muster-Planner die Fassung v0.2.1 (`app/data/muster-planner-lph3-v0.2.json` bleibt als Referenz der Konkordanz im Repo)
+Stand 15.11.2026 (v0.3.4: Bauteilkatalog durch die Bauphysik, bezogen auf Vorlage v1.6 – ohne Notizen, Hinweise in `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md`; v0.3.3: Themenpaket Bodenbeläge) · **Entwurf zur gemeinsamen Prüfung, nicht freigegeben** · ersetzt als Muster-Planner die Fassung v0.2.1 (`app/data/muster-planner-lph3-v0.2.json` bleibt als Referenz der Konkordanz im Repo)
 
 ## Was das ist
 Ein System, das den Muster-Terminplan LPH 3 mit dem Planner verbindet. Wer ein Projekt beginnt, soll einen strukturierten, änderbaren Arbeitsraum bekommen: Abgaben als Buckets, Aufgaben mit Prüfpunkten, und jede Aufgabe weiß, welchen Vorgang sie ausführt und welche Ergebnisse sie braucht.
