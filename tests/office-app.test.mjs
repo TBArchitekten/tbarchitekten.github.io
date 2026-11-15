@@ -40,10 +40,15 @@ test('Office runs the shared Window chat under Office profile and isolates legac
   // database and disabled personal navigation remain Office responsibilities.
   for(const f of ['ai.js','chat-stream-recovery.js','turn-integrity.js','final-round.js','voice-output.js','office-engine-chat.js'])
     assert.ok(loaded.includes(f),f+' is part of the canonical Office chat');
-  for(const f of ['bandeja.js','ambient.js','akte-skills.js','credit.js','situation.js'])
+  for(const f of ['ambient.js','akte-skills.js','credit.js','situation.js'])
     assert.ok(!loaded.includes(f),f+' is excluded from Office');
-  for(const f of ['shell.js','app.js','work.js','ahora.js','sync.js','task-detail.js','office-fristen.js','office-assistant.js'])
+  // bandeja.js was excluded until 15.11.2026, and that left a dead end: app.js and ahora.js call
+  // window.MINDS_BANDEJA, so without the file the Eingang stayed on its loading line and the link
+  // «N zu bestätigen» in Heute never appeared (lastCount() was undefined). Ported on Gari's
+  // request, with only the «Zu bestätigen» tab — isabella-feed and isabella-ideas do not exist here.
+  for(const f of ['shell.js','app.js','work.js','bandeja.js','ahora.js','sync.js','task-detail.js','office-fristen.js','office-assistant.js'])
     assert.ok(loaded.includes(f),f+' is loaded');
+  assert.ok(loaded.indexOf('bandeja.js')>loaded.indexOf('work.js'),'the Eingang needs MINDS_WORK.akte');
   assert.ok(loaded.indexOf('office-fristen.js')<loaded.indexOf('app.js'));
   assert.ok(loaded.indexOf('ai.js')<loaded.indexOf('app.js'),'common AI initializes before canonical app');
   assert.ok(loaded.indexOf('office-engine-chat.js')>loaded.indexOf('app.js'));
@@ -59,7 +64,7 @@ test('Office runs the shared Window chat under Office profile and isolates legac
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
   assert.match(src('work.js'),/window\.MINDS_WORK=/);
-  assert.match(appIndex,/src="\.\/work\.js\?v=office48"/);
+  assert.match(appIndex,/src="\.\/work\.js\?v=office49"/);
 });
 test('Sync: members only, everyone sees the projects, own calendar, no realtime',()=>{
   const sync=src('sync.js');

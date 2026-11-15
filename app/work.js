@@ -275,7 +275,7 @@ function akteToConfirm(rows){
 }
 function cockpitParaTi(m){
   const cards=[...m.conflicts,...m.pending,...m.proposedTasks].map(akteCard);
-  for(const t of m.overdue)cards.push('<article class="cockpit-card is-overdue"><span class="cockpit-kind">Vencida · '+esc(cockpitIn(cockpitDayDiff(m.today,t.due_date)))+'</span><p>'+esc(t.title||'Ohne Titel')+'</p>'+(t.assignee?'<small>'+esc(t.assignee)+'</small>':'')+
+  for(const t of m.overdue)cards.push('<article class="cockpit-card is-overdue"><span class="cockpit-kind">Überfällig · '+esc(cockpitIn(cockpitDayDiff(m.today,t.due_date)))+'</span><p>'+esc(t.title||'Ohne Titel')+'</p>'+(t.assignee?'<small>'+esc(t.assignee)+'</small>':'')+
     '<div class="cockpit-actions"><button type="button" class="secondary" data-work-edit-task="'+esc(t.id)+'">Aufgabe öffnen</button><button type="button" class="secondary" data-cockpit-done="'+esc(t.id)+'">Erledigt</button></div></article>');
   const toConfirm=m.conflicts.length+m.pending.length+m.proposedTasks.length;
   const head=[toConfirm?toConfirm+' zu bestätigen':'',m.overdue.length?m.overdue.length+(m.overdue.length===1?' überfällig':' überfällig'):''].filter(Boolean).join(' · ');
