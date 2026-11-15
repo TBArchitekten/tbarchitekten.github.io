@@ -11,8 +11,11 @@ const templates=JSON.parse(read('supabase/seed/terminplan-templates.json'));
 const tpl=templates.find(x=>x.phase==='LPH5');
 const links=state=>state.tasks.reduce((sum,t)=>sum+(t.dependencies||[]).length,0);
 
-test('LPH5 v0.2 is a complete generic 8-group network with typed multi-predecessor gates',()=>{
- assert.equal(tpl.version,'0.2');
+test('LPH5 v0.3 is a complete generic 8-group network with typed multi-predecessor gates',()=>{
+ assert.equal(tpl.version,'0.3');
+ // seit v0.3: ein Terminplan enthält keine Notizen (Entscheidung Gari, 15.11.2026)
+ assert.ok(tpl.state.tasks.every(t=>!t.note),'keine Notizen an Vorgängen');
+ assert.equal(tpl.state.project.planningNotes,undefined,'keine Projektnotiz');
  assert.equal(tpl.state.project.scheduleModel,'network-v1');
  assert.equal(tpl.state.project.releaseMilestoneId,'m60');
  assert.deepEqual(tpl.state.groups.map(x=>x.wbs),['00','01','02','03','04','05','06','07']);
@@ -53,7 +56,7 @@ test('Fachplaner are parallel and M03, M06, M07 require all mandatory contributi
 test('Old LPH3 remains intact and creating a historic LPH5 start shifts all dates deterministically',()=>{
  assert.equal(templates.find(t=>t.phase==='LPH3').version,'1.6');
  const source=JSON.stringify(tpl);
- const args={start:'2026-11-02',number:'2601',name:'Testprojekt',phase:'LPH5',version:'0.2',today:'2026-11-11'};
+ const args={start:'2026-11-02',number:'2601',name:'Testprojekt',phase:'LPH5',version:'0.3',today:'2026-11-11'};
  const state=C.cloneStateForProject(tpl.state,args);
  const again=C.cloneStateForProject(tpl.state,args);
  assert.deepEqual(state,again);
@@ -74,13 +77,24 @@ test('Old LPH3 remains intact and creating a historic LPH5 start shifts all date
  assert.equal(JSON.stringify(tpl),source,'source template is not altered');
 });
 
-test('SQL migration mirrors seed exactly; older active LPH5 remains referential but is inactivated only',()=>{
- const sql=read('supabase/migrations/20261111110000_office_lph5_template_v02.sql');
+test('LPH5 v0.2 migration stays historic; v0.3 only removes the notes',()=>{
+ const v02=JSON.parse(/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(read('supabase/migrations/20261111110000_office_lph5_template_v02.sql'))[1]);
+ assert.ok(v02.tasks.some(t=>t.note));
+ assert.deepEqual(tpl.state.tasks,v02.tasks.map(t=>'note' in t?{...t,note:''}:t),'nur die Notizen entfallen');
+ const {planningNotes,standLabel,...rest02}=v02.project,{standLabel:label03,...rest03}=tpl.state.project;
+ assert.ok(planningNotes);assert.equal(label03,'Muster v0.3');assert.deepEqual(rest03,rest02);
+ assert.deepEqual(tpl.state.groups,v02.groups);
+ const hints=read('docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md');
+ for(const t of v02.tasks.filter(t=>t.note))assert.ok(hints.includes(t.note),t.id+' hint kept in docs');
+});
+
+test('SQL migration v0.3 mirrors seed exactly; older active LPH5 remains referential but is inactivated only',()=>{
+ const sql=read('supabase/migrations/20261115200000_office_lph5_template_v03.sql');
  const match=/\$tpl\$([\s\S]*?)\$tpl\$::jsonb/.exec(sql);
  assert.ok(match);
  assert.deepEqual(JSON.parse(match[1]),tpl.state);
  assert.match(sql,/on conflict \(phase,version\) do nothing/);
- assert.match(sql,/update public\.office_terminplan_templates set is_active=false/);
+ assert.match(sql,/update public\.office_terminplan_templates set is_active=false where phase='LPH5' and version<>'0\.3'/);
  assert.doesNotMatch(sql,/office_terminplan_instances|delete\s+from|truncate|drop\s+table/i);
 });
 

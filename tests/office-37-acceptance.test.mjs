@@ -54,7 +54,7 @@ test('Model uncertainties, invalid dependencies and changed revision reject repl
  assert.equal(builder.stable(template),original);
 });
 
-test('Structural edits preserve old task identity, progress, protected dates and notes',()=>{
+test('Structural edits preserve old task identity, progress and protected dates, but drop notes (no notes in a Terminplan)',()=>{
  const before={
   project:{projectNumber:'2401',projectName:'Bernried',phase:'LPH3',
    start:'2026-07-01',end:'2027-05-31',standDate:'2026-11-05',sourceFileName:'Source.pdf'},
@@ -62,7 +62,7 @@ test('Structural edits preserve old task identity, progress, protected dates and
   tasks:[{id:'t-a',group:'g-a',name:'Bestehende Planung',type:'task',
    start:'2026-09-01',end:'2026-09-30',owner:'ARC',category:'arch',
    status:'In Bearbeitung',progress:70,critical:true,
-   protectedDate:'2026-09-30',note:'Bestehende freigegebene Notiz',
+   protectedDate:'2026-09-30',note:'',
    pred:'',rel:'EA',dependencies:[]}]
  };
  const edited={
@@ -94,7 +94,7 @@ test('Structural edits preserve old task identity, progress, protected dates and
  assert.equal(draft.preview.state.tasks[0].critical,true);
  assert.equal(draft.preview.state.tasks[0].status,'In Bearbeitung');
  assert.equal(draft.preview.state.tasks[0].protectedDate,'2026-09-30');
- assert.equal(draft.preview.state.tasks[0].note,'Bestehende freigegebene Notiz');
+ assert.equal(draft.preview.state.tasks[0].note,'');
  assert.equal(draft.preview.state.tasks[1].dependencies[0].pred,'t-a');
  assert.equal(draft.preview.state.project.sourceFileName,'Source.pdf');
  assert.equal(draft.preview.state.project.start,'2026-07-01');
@@ -148,3 +148,18 @@ test('Work uses Window tables; the team is office_project_members, edited in Pro
  new Function(team);new Function(projects);
 });
 
+
+test('Rebuild never carries notes: a legacy note is removed and shown as an edit, a source note is ignored',()=>{
+ const before={project:{projectNumber:'2401',projectName:'X',phase:'LPH3',start:'2026-07-01',end:'2027-05-31',standDate:'2026-11-05'},
+  groups:[{id:'g-a',wbs:'01',name:'A',category:'arch',collapsed:false}],
+  tasks:[{id:'t-a',group:'g-a',name:'Planung',type:'task',start:'2026-09-01',end:'2026-09-30',owner:'ARC',category:'arch',
+   status:'Nicht begonnen',progress:0,critical:false,note:'Alte Notiz',pred:'',rel:'EA',dependencies:[]}]};
+ const edited={source_version:'Planänderung',complete:true,summary:'unverändert',uncertainties:[],
+  expected_counts:{groups:1,activities:1,milestones:0},
+  groups:[{code:'g-a',wbs:'01',name:'A',category:'arch'}],
+  tasks:[{row_id:'t-a',group_code:'g-a',name:'Planung',type:'task',start:'2026-09-01',end:'2026-09-30',owner:'ARC',category:'arch',
+   note:'Neue Notiz aus der Quelle',predecessors:[]}]};
+ const draft=builder.preview({state:before,result:edited,revision:3,requestId:'r3',sourceName:'Anweisung',standDate:'2026-11-05',mode:'transform'});
+ assert.equal(draft.preview.state.tasks[0].note,'');
+ assert.equal(draft.proposal.diff.tasks.edited.length,1,'removing the legacy note is visible before confirming');
+});

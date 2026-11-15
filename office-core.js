@@ -94,8 +94,8 @@
       state.project.planningAssumptions={
         fachplanerAlreadyCommissioned:phase==='LPH3'&&skip,
         includePostIssueLPH5:phase==='LPH5'&&!!includePostIssueLPH5,
-        requiredDisciplines:['TWP','HLS','ELT'],
-        note:'BRS projektspezifisch ergänzen; Feiertage auf kommunale Besonderheiten prüfen. Bei LPH5 spätere Planläufe nur mit realen Voraussetzungen terminieren.'
+        requiredDisciplines:['TWP','HLS','ELT']
+        // keine Notiz: ein Terminplan enthält keine Notizen (Gari, 15.11.2026); Hinweise in docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md
       };
       state.tasks=(state.tasks||[]).filter(t=>
         (!skip||t.planningCondition!=='commissioning_pending')&&

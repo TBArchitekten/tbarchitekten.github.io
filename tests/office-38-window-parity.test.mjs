@@ -78,7 +78,7 @@ test('Full-plan replacement cannot silently discard known links or unidentified 
  assert.match(html,/const missingGraph=dialogueProposal/);
  assert.match(html,/if\(proposal\.graph_not_transcribed\)/);
  assert.match(html,/providerBody=await response\.json\(\)/);
- assert.match(html,/terminplan-rebuild\.js\?v=office39/);
+ assert.match(html,/terminplan-rebuild\.js\?v=office40/);
  for(const match of html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g))new Function(match[1]);
 });
 test('Completed reconstruction discloses previous links even if the new source has none',()=>{
@@ -110,3 +110,12 @@ test('Since 07.11.2026 Work is Window\'s own work.js on Window\'s tables (one da
  assert.match(ops,/const folderTable=office\?'office_project_folders':'minds_work_folders'/);
 });
 
+
+test('A Terminplan has no notes: no note field in the editor, no Notiz column in the CSV export (Gari, 15.11.2026)',()=>{
+ const html=read('terminplan.html');
+ assert.doesNotMatch(html,/id="taskNote"/);
+ assert.doesNotMatch(html,/Notiz \/ Lieferergebnis/);
+ assert.doesNotMatch(html,/'Manuelle_Risikomarkierung','Notiz'/);
+ assert.match(html,/critical:\$\('#taskCritical'\)\.checked,note:''/);
+ assert.match(read('terminplan-rebuild.js'),/note:"",/);
+});
