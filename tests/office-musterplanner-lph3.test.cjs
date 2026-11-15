@@ -14,7 +14,7 @@ test('Masterplanner is a versioned, explicitly unapproved LPH3 draft',()=>{
  assert.deepEqual(model.buckets.map(x=>x.id),['A1','A2','A3','A4','A5','A6','A7']);
  assert.equal(all.length,53);assert.equal(all.reduce((n,x)=>n+x.checks.length,0),355);
  assert.equal(tasks.size,all.length);
- assert.match(model.reference,/Muster-Terminplan LPH 3 v1\.5/);
+ assert.match(model.reference,/Muster-Terminplan LPH 3 v1\.6/);
  assert.match(model.status,/nicht freigegeben/);
 });
 test('Only TBA-owned work is represented, never Fachplaner deliveries or Bauherrn waiting as tasks',()=>{
