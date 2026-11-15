@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 15.11.2026 · Claude · Muster LPH 3 v1.5 + Bibliothek v0.3.4:** Den Bauteilkatalog erstellt die Bauphysik: Vorlage v1.5 mit `t060` (BPH Arbeitsstand 01 · Bauteilkatalog, vor M03) und `t061` (BPH abgestimmter Beitrag · Endstand, vor M07, nach M06); keine Terminänderung. Bibliothek v0.3.4: `L3.BTK.1` Aufbauvorgaben der Architektur (A1, mit M01), Prüfung in `L3.KLA.1`, `L3.BTK.2` Katalog der Bauphysik prüfen und übernehmen, Endstand in `L3.KLA.3`. 53 Aufgaben, 355 Prüfpunkte. App: `office-projects.js?v=office50`.
+
 **Stand 14.11.2026 · Claude · Terminplan Bernried Revision 14:** Neuer Meilenstein „Integrierter Planstand 02 an Bauherren übergeben“ (03.06) mit Prüfphase (03.07) vor M06; die Abgabe A4 im Planner hängt jetzt daran. Bemusterungsblock zwei Wochen früher; übrige Termine, M06 und M10 unverändert.
 
 **Stand 14.11.2026 · Claude · Planner Bernried verknüpft:** Der Planner von Bernried enthält die 7 Abgabe-Buckets und 53 Aufgaben der Bibliothek v0.3.3 (alle offen, keine abgehakt), jede mit den Vorgängen seines Terminplans verknüpft; „Termine aus Terminplan“ übernimmt künftige Verschiebungen. Die 2 bestehenden Buckets und 13 Aufgaben sind unverändert.

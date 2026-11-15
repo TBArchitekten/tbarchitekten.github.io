@@ -10,8 +10,8 @@ import os, pathlib, tempfile
 REPO = str(pathlib.Path(__file__).resolve().parents[2])
 OUT = sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="lph3-bibliothek-")
 os.makedirs(OUT, exist_ok=True)
-VERSION, STAND = "0.3.3-draft", "2026-11-14"
-TPL = "1.4"
+VERSION, STAND = "0.3.4-draft", "2026-11-15"
+TPL = "1.5"
 
 # ───────── Muster-Terminplan (Seed der Seite)
 tpl = [x for x in json.load(open(f"{REPO}/supabase/seed/terminplan-templates.json", encoding="utf-8")) if x["phase"] == "LPH3" and x["version"] == TPL][0]["state"]
@@ -87,7 +87,7 @@ for t in TASKS:
     for x in t["wartet"]: cov[x]["wartet"].append(t["id"])
     if t["anker"]: cov[t["anker"][0]]["anker"].append(t["id"])
 chk(f"Alle {len(ORDER)} Vorgänge des Muster-Terminplans sind einer Aufgabe zugeordnet (ausgeführt, Wartezeit oder Anker)", [f"{x} {V[x]['psp']}" for x in ORDER if x not in cov], f"{len(ORDER)} Vorgänge zugeordnet")
-EXT = re.compile(r"^(Auftraggeber|Fachplaner|BRS|ELT|HLS|TWP)$")
+EXT = re.compile(r"^(Auftraggeber|Fachplaner|BRS|BPH|ELT|HLS|TWP)$")
 chk("Vorgänge Dritter sind nie als Büroarbeit verknüpft", [f"{x} {V[x]['psp']} ({V[x]['owner']}) in {cov[x]['aus']}" for x in ORDER if EXT.match(V[x]["owner"]) and cov[x]["aus"] and x != "t001"],
     "nur 00.02 (t001) ist als fachliche Zuarbeit an den Auftraggeber verknüpft (L3.FPB.1)")
 anat = []
@@ -150,7 +150,7 @@ for a in ABG:
         plannerDescription=a["summary"], scheduleReferences=refs, deliverables=a["liefer"], closingResults=a["abschluss_erg"], note=a.get("hinweis"), tasks=jt))
 lib = dict(id="tba-lph3-aufgabenbibliothek", version=VERSION, draft=True, phase="LPH3", updated=STAND,
     status="Entwurf zur gemeinsamen Prüfung · nicht freigegeben",
-    reference=f"Muster-Terminplan LPH 3 v{TPL} / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. und 14.11.2026",
+    reference=f"Muster-Terminplan LPH 3 v{TPL} / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. bis 15.11.2026",
     warning="Jeder Bucket ist eine Abgabe des Muster-Terminplans. Nur TBA-eigene Arbeit; Leistungen der Fachplaner und Prüfzeiten des Auftraggebers sind Wartezeit. Keine Stundenwerte. Termine des Musters sind keine Vertragsfristen.",
     coding=dict(pattern="L3.<Objekt>.<Zustand>", checkpoint="<Aufgabe>-NN", object="Arbeitsergebnis (3 Buchstaben, phasenunabhängig) oder Abgabe (A1 … A7)",
                 state="Stand des Ergebnisses (1, 2, 3) oder Schritt der Abgabe (PRF, AUS, ABS)", rule="Eine Aufgabe trägt den Code des Ergebnisstands, den sie erzeugt. Codes werden nie neu vergeben."),

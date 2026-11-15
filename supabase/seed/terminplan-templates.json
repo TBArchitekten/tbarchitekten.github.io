@@ -2,8 +2,8 @@
   {
     "phase": "LPH3",
     "title": "Muster-Terminplan LPH 3",
-    "description": "LPH 3 Referenzterminplan mit 10 PSP-Gruppen, 59 Vorgängen und Meilensteinen und expliziten Mehrfachabhängigkeiten; mit Auftraggeberprüfungen, Fachplanerbeauftragung, Vorbereitung und Übergabe der Bemusterungsunterlagen, Kosten- und Schlussfreigaben.",
-    "version": "1.4",
+    "description": "LPH 3 Referenzterminplan mit 10 PSP-Gruppen, 61 Vorgängen und Meilensteinen und expliziten Mehrfachabhängigkeiten; mit Auftraggeberprüfungen, Fachplanerbeauftragung, Bauphysik mit Bauteilkatalog, Vorbereitung und Übergabe der Bemusterungsunterlagen, Kosten- und Schlussfreigaben.",
+    "version": "1.5",
     "status": "Office Standard",
     "is_active": true,
     "state": {
@@ -13,7 +13,7 @@
         "start": "2027-01-04",
         "end": "2027-05-28",
         "standDate": "2027-01-04",
-        "standLabel": "Muster v1.4",
+        "standLabel": "Muster v1.5",
         "scheduleModel": "network-v1",
         "criticalPathState": "not_calculated",
         "calendar": {
@@ -738,6 +738,31 @@
           "earliestOffsetAT": 0
         },
         {
+          "id": "t060",
+          "name": "BPH · Fachplanungsbeitrag Arbeitsstand 01 · Bauteilkatalog (sofern beauftragt)",
+          "type": "task",
+          "group": "g03",
+          "owner": "BPH",
+          "start": "2027-02-03",
+          "end": "2027-02-23",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "category": "fach",
+          "critical": false,
+          "note": "Bauphysik (Wärme-, Schall- und Feuchteschutz): Bemessen der Bauteile und Bauteilkatalog auf Grundlage der Aufbauvorgaben der Architektur (M01).",
+          "dependencies": [
+            {
+              "pred": "t017",
+              "rel": "EA",
+              "lagDays": 1
+            }
+          ],
+          "pred": "t017",
+          "rel": "EA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
+        },
+        {
           "id": "t022",
           "name": "M03 · Zieltermin Fachplanungsbeiträge Arbeitsstand 01",
           "type": "milestone",
@@ -749,7 +774,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Sammelt ELT, HLS und TWP. Falls BRS erforderlich ist, BRS als zusätzlichen Vorgänger aufnehmen.",
+          "note": "Sammelt ELT, HLS, TWP und BPH. Falls BRS erforderlich ist, BRS als zusätzlichen Vorgänger aufnehmen.",
           "dependencies": [
             {
               "pred": "t019",
@@ -763,6 +788,11 @@
             },
             {
               "pred": "t021",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t060",
               "rel": "EA",
               "lagDays": 0
             }
@@ -798,6 +828,11 @@
             },
             {
               "pred": "t021",
+              "rel": "AA",
+              "lagDays": 6
+            },
+            {
+              "pred": "t060",
               "rel": "AA",
               "lagDays": 6
             }
@@ -1214,6 +1249,41 @@
           "earliestOffsetAT": 0
         },
         {
+          "id": "t061",
+          "name": "BPH · abgestimmter Fachplanungsbeitrag · Bauteilkatalog Endstand (sofern beauftragt)",
+          "type": "task",
+          "group": "g06",
+          "owner": "BPH",
+          "start": "2027-03-04",
+          "end": "2027-03-24",
+          "status": "Nicht begonnen",
+          "progress": 0,
+          "category": "fach",
+          "critical": false,
+          "note": "Bauteilkatalog mit den Entscheidungen der Bemusterung (M06) und den abgestimmten Beiträgen fortschreiben.",
+          "dependencies": [
+            {
+              "pred": "t027",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t060",
+              "rel": "EA",
+              "lagDays": 1
+            },
+            {
+              "pred": "t031",
+              "rel": "EE",
+              "lagDays": 0
+            }
+          ],
+          "pred": "t027",
+          "rel": "AA",
+          "durationAT": 15,
+          "earliestOffsetAT": 0
+        },
+        {
           "id": "t036",
           "name": "M07 · abgestimmte Beiträge der beauftragten Fachplaner bereitgestellt",
           "type": "milestone",
@@ -1225,7 +1295,7 @@
           "progress": 0,
           "category": "fach",
           "critical": false,
-          "note": "Sammelmeilenstein nur nach allen verpflichtenden Beiträgen (ELT, HLS, TWP). BRS ergänzen, soweit erforderlich.",
+          "note": "Sammelmeilenstein nur nach allen verpflichtenden Beiträgen (ELT, HLS, TWP, BPH). BRS ergänzen, soweit erforderlich.",
           "dependencies": [
             {
               "pred": "t033",
@@ -1239,6 +1309,11 @@
             },
             {
               "pred": "t035",
+              "rel": "EA",
+              "lagDays": 0
+            },
+            {
+              "pred": "t061",
               "rel": "EA",
               "lagDays": 0
             }
@@ -1279,6 +1354,11 @@
             },
             {
               "pred": "t035",
+              "rel": "AA",
+              "lagDays": 5
+            },
+            {
+              "pred": "t061",
               "rel": "AA",
               "lagDays": 5
             }

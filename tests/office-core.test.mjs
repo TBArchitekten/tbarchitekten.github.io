@@ -19,16 +19,16 @@ test('a project copy keeps the Muster and moves dates by working days',()=>{
 });
 
 
-test('LPH3 v1.4 keeps 00–09 PSP, parallel multi-dependency gates and required review stages',()=>{
+test('LPH3 v1.5 keeps 00–09 PSP, parallel multi-dependency gates and required review stages',()=>{
   const E=require('../terminplan-engine.js');
   const templates=JSON.parse(read('supabase/seed/terminplan-templates.json'));
   const tpl=templates.find(x=>x.phase==='LPH3');
-  assert.equal(tpl.version,'1.4');
+  assert.equal(tpl.version,'1.5');
   assert.equal(tpl.state.project.scheduleModel,'network-v1');
   assert.equal(tpl.state.project.criticalPathState,'not_calculated');
   assert.deepEqual(tpl.state.groups.map(g=>g.wbs),Array.from({length:10},(_,i)=>String(i).padStart(2,'0')));
-  assert.equal(tpl.state.tasks.length,59);
-  assert.equal(tpl.state.tasks.reduce((sum,t)=>sum+(t.dependencies||[]).length,0),99);
+  assert.equal(tpl.state.tasks.length,61);
+  assert.equal(tpl.state.tasks.reduce((sum,t)=>sum+(t.dependencies||[]).length,0),107);
   const byId=new Map(tpl.state.tasks.map(t=>[t.id,t]));
   for(const task of tpl.state.tasks){
     assert.equal(task.status,'Nicht begonnen');
@@ -43,15 +43,22 @@ test('LPH3 v1.4 keeps 00–09 PSP, parallel multi-dependency gates and required 
   }
   for(const [id,days] of [['t009',5],['t014',5],['t028',5],['t054',5],
     ['t007',5],['t047',5],['t038',15],['t040',5],['t049',5],
-    ['t019',15],['t020',15],['t021',15],['t033',15],['t034',15],['t035',15]])
+    ['t019',15],['t020',15],['t021',15],['t060',15],['t033',15],['t034',15],['t035',15],['t061',15]])
     assert.equal(byId.get(id).durationAT,days,id+' correct initial duration');
   assert.equal(byId.get('t051').planningCondition,'commissioning_pending');
   assert.equal(byId.get('t052').planningCondition,'commissioning_pending');
   assert.equal(byId.get('t018').optional,true);
   assert.equal(byId.get('t032').optional,true);
   const incoming=id=>byId.get(id).dependencies.map(d=>d.pred);
-  assert.deepEqual(incoming('t022').sort(),['t019','t020','t021'].sort());
-  assert.deepEqual(incoming('t036').sort(),['t033','t034','t035'].sort());
+  assert.deepEqual(incoming('t022').sort(),['t019','t020','t021','t060'].sort());
+  assert.deepEqual(incoming('t036').sort(),['t033','t034','t035','t061'].sort());
+  // seit v1.5: Bauphysik liefert den Bauteilkatalog (Arbeitsstand 01 vor M03, Endstand vor M07 nach den Entscheidungen der Bemusterung M06).
+  assert.equal(byId.get('t060').owner,'BPH');assert.equal(byId.get('t061').owner,'BPH');
+  assert.match(byId.get('t060').name,/Bauteilkatalog/);assert.match(byId.get('t061').name,/Bauteilkatalog Endstand/);
+  assert.deepEqual(incoming('t060'),['t017']);
+  assert.deepEqual(incoming('t061').sort(),['t027','t031','t060'].sort());
+  assert.ok(byId.get('t061').end>=byId.get('t031').end,'Endstand nach den Qualitätsentscheidungen');
+  assert.ok(incoming('t023').includes('t060')&&incoming('t037').includes('t061'));
   for(const id of ['t030','t027','t015','t044'])assert.ok(incoming('t031').includes(id));
   // seit v1.3: Bemusterungsunterlagen werden vorbereitet und übergeben, bevor die Abstimmung t030 beginnt.
   assert.equal(byId.get('t058').durationAT,20); // v1.4: 20 statt 15 AT
@@ -66,13 +73,13 @@ test('LPH3 v1.4 keeps 00–09 PSP, parallel multi-dependency gates and required 
   assert.equal(E.analyze(tpl.state).errors,0,'template has no broken dependency, cycle or date');
   const source=JSON.stringify(tpl);
   const copy=C.cloneStateForProject(tpl.state,{
-    start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.4',today:'2026-11-09'
+    start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.5',today:'2026-11-09'
   });
   assert.equal(copy.project.start,'2026-11-02');
   assert.equal(copy.project.end>=copy.project.start,true);
-  assert.equal(copy.tasks.length,59);
+  assert.equal(copy.tasks.length,61);
   assert.equal(E.analyze(copy).errors,0,'network is still valid after a different calendar start');
-  assert.equal(copy.tasks.reduce((sum,x)=>sum+x.dependencies.length,0),99);
+  assert.equal(copy.tasks.reduce((sum,x)=>sum+x.dependencies.length,0),107);
   assert.equal(copy.project.planningAssumptions.fachplanerAlreadyCommissioned,false);
   assert.equal(JSON.stringify(tpl).includes('"projectNumber"'),false);
   assert.equal(JSON.stringify(tpl),source,'copy never mutates the Muster');
@@ -81,10 +88,10 @@ test('LPH3 v1.4 keeps 00–09 PSP, parallel multi-dependency gates and required 
 test('Already commissioned Fachplaner skip the procurement wait but not coordination or fictitious progress',()=>{
   const E=require('../terminplan-engine.js');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
-  const base={start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.4',today:'2026-11-09'};
+  const base={start:'2026-11-02',number:'2701',name:'Beispiel',phase:'LPH3',version:'1.5',today:'2026-11-09'};
   const ordinary=C.cloneStateForProject(tpl.state,base);
   const already=C.cloneStateForProject(tpl.state,{...base,fachplanerAlreadyCommissioned:true});
-  assert.equal(already.tasks.length,57);
+  assert.equal(already.tasks.length,59);
   assert.ok(!already.tasks.some(t=>['t051','t052'].includes(t.id)));
   assert.ok(already.project.end<ordinary.project.end,'no artificial procurement wait');
   assert.equal(already.project.planningAssumptions.fachplanerAlreadyCommissioned,true);
@@ -101,7 +108,7 @@ test('Bavarian holiday calendar is explicit and holiday starts are rejected',()=
     assert.ok(holidays.includes(date),date+' is a Bavarian statewide holiday');
   assert.ok(!holidays.includes('2027-08-08'),'city-specific Augsburg holiday is not assumed statewide');
   const tpl=JSON.parse(read('supabase/seed/terminplan-templates.json')).find(x=>x.phase==='LPH3');
-  const args={number:'2701',name:'Beispiel',phase:'LPH3',version:'1.4',today:'2026-11-09'};
+  const args={number:'2701',name:'Beispiel',phase:'LPH3',version:'1.5',today:'2026-11-09'};
   assert.throws(()=>C.cloneStateForProject(tpl.state,{...args,start:'2027-05-27'}),/Feiertag/);
   assert.throws(()=>C.cloneStateForProject(tpl.state,{...args,start:'2027-05-29'}),/Werktag/);
   const plan=C.cloneStateForProject(tpl.state,{...args,start:'2027-03-30'});

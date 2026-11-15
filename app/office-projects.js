@@ -107,7 +107,7 @@ function showPlans(){
   plannerNumber.textContent='LPH3 · MUSTER-PLANNER';
   const plannerTitle=document.createElement('h2');plannerTitle.textContent='Muster-Planner LPH 3';
   const plannerMeta=document.createElement('p');plannerMeta.className='office-project-meta';
-  plannerMeta.textContent='Entwurf v0.3.3 · 7 Abgabe-Buckets · 53 TBA-Aufgaben · schreibgeschützte Vorlage';
+  plannerMeta.textContent='Entwurf v0.3.4 · 7 Abgabe-Buckets · 53 TBA-Aufgaben · schreibgeschützte Vorlage';
   const plannerActions=document.createElement('div');plannerActions.className='office-project-actions';
   const plannerOpen=document.createElement('a');plannerOpen.href='../muster-planner.html';
   plannerOpen.textContent='Muster-Planner ansehen';plannerOpen.className='office-plan-library-link';
