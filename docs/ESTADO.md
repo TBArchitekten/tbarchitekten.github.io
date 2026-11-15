@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 15.11.2026 · Claude · Terminplan ohne Notizen:** kein Notizfeld im Vorgangsdialog, keine CSV-Spalte „Notiz“, Neuaufbau (PDF/KI) und Projektanlage ohne Notizen; Muster LPH 5 v0.3 und LPH 3 v1.6 ohne Notizen (Hinweise in `docs/LPH3-…` und `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md`).
+
 **Stand 15.11.2026 · Claude · Muster LPH 3 v1.6 + Bernried Revision 16:** Vorlage ohne Notizen (Hinweise in `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md`). Bernried: Übergabe integrierter Planstand 02 am 21.01.2027 nach der Koordination Runde 02, M06 28.01., M10 25.02.2027; Planner nachgeführt.
 
 **Stand 15.11.2026 · Claude · Bernried Revision 15:** Bauphysik in M00A und zwei BPH-Vorgänge (02.08, 05.06) ohne Terminverschiebung; Terminplan ohne Notizen. Planner: die 8 geänderten Karten auf Bibliothek v0.3.4 (`BTK.1` in A1). Bibliothek: `BTK.1` vor `PGF.1`.

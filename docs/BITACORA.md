@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-15 · Terminplan ohne Notizen: Editor, CSV, Neuaufbau, Projektanlage und Muster LPH 5 v0.3 · Claude
+- Qué cambió y por qué: Entscheidung Gari (15.11.2026), Folge von „ein Terminplan enthält keine Notizen“: (1) `terminplan.html`: Feld „Notiz / Lieferergebnis“ im Vorgangsdialog entfernt, Speichern setzt `note:''`, die Suche durchsucht keine Notizen mehr, CSV-Export ohne Spalte „Notiz“. (2) `terminplan-rebuild.js` (PDF-/KI-Neuaufbau und Planänderung) übernimmt keine Notizen mehr – weder aus der Quelle noch aus dem bisherigen Stand; eine alte Notiz erscheint im Vorschlag als Änderung, bevor bestätigt wird. (3) `office-core.js`: neue Projektpläne bekommen keine versteckte Projektnotiz mehr (`planningAssumptions.note`). (4) **Muster LPH 5 v0.3** ohne die 24 Vorgangsnotizen und `planningNotes`; Hinweise erhalten in `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md`. Das Datenfeld `note` bleibt im Modell (leer), damit ältere Dateien und Importe weiter lesbar sind.
+- Archivos: `terminplan.html` (`terminplan-rebuild.js?v=office40`), `terminplan-rebuild.js`, `office-core.js` (`index.html` `?v=5`, `app/index.html` `?v=office37`), `supabase/seed/terminplan-templates.json`, `supabase/migrations/20261115200000_office_lph5_template_v03.sql` (neu), `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md` (neu); Tests: `office-37-acceptance` (Neuaufbau ohne Notizen, neuer Test), `office-38-window-parity` (neuer Test: kein Notizfeld, keine CSV-Spalte), `office-core` (neuer Projektplan ohne Notizen), `office-lph5-v02` (v0.3; v0.2 historisch = v0.3 mit Notizen; Hinweise vollständig im Dokument).
+- Base de datos: migración `20261115200000_office_lph5_template_v03.sql` — aplicada en Supabase: siehe Nachtrag.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` 317/317; Chromium lokal 9/9 (App-Start, Muster-Planner, Termin-Abgleich).
+- Quedó pendiente o sin probar: Vorgangsdialog im echten Terminplan mit Anmeldung (Gari). Der KI-Assistent fragt im Antwortschema weiterhin ein Feld `note` ab; es wird jetzt verworfen.
+- Riesgos o decisiones que necesitan a Gari: —
+- PR: #104
+
+---
+
 ### 2026-11-15 · Muster LPH 3 v1.6 ohne Notizen; Bernried: Übergabe Planstand 02 nach der Koordination Runde 02 · Claude
 - Qué cambió y por qué: Entscheidungen Gari (15.11.2026). (1) **Ein Terminplan enthält keine Notizen:** Vorlage LPH 3 v1.6 ohne die 33 Vorgangsnotizen und ohne `planningNotes`; Vorgänge, Termine und Verknüpfungen unverändert. Die Hinweise sind als Planungswissen erhalten in `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md` (je PSP/ID). (2) **Bernried, Option 2:** Der Meilenstein „Integrierter Planstand 02 an Bauherren übergeben“ wartet jetzt auch auf die Koordination Runde 02 (03.05) → Übergabe 21.01.2027, Prüfphase 22.–28.01., M06 28.01.; 13 Vorgänge rücken eine Woche, M10 25.02.2027 (vorher 18.02.). Planner: 15 Aufgaben per Termin-Abgleich nachgeführt.
 - Archivos: `supabase/seed/terminplan-templates.json`, `supabase/migrations/20261115190000_office_lph3_template_v16.sql` (neu), `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md` (neu), `scripts/lph3-bibliothek/build.py` (Vorlage 1.6), `app/data/muster-planner-lph3-v0.3.json` (nur Verweis auf v1.6), `docs/LPH3-AUFGABENBIBLIOTHEK-v0.3.md`; Tests: `office-core` (neu: Vorlage ohne Notizen), `terminplan-planning` (v1.5 historisch, v1.6 = v1.5 ohne Notizen, Hinweise vollständig im Dokument; v1.6-Migration = Seed), `office-lph5-v02`, beide Muster-Planner-Tests.

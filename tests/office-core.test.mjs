@@ -81,6 +81,7 @@ test('LPH3 v1.6 keeps 00–09 PSP, parallel multi-dependency gates and required 
   assert.equal(copy.project.start,'2026-11-02');
   assert.equal(copy.project.end>=copy.project.start,true);
   assert.equal(copy.tasks.length,61);
+  assert.ok(copy.tasks.every(t=>!t.note)&&!('note' in copy.project.planningAssumptions),'neuer Projektplan ohne Notizen');
   assert.equal(E.analyze(copy).errors,0,'network is still valid after a different calendar start');
   assert.equal(copy.tasks.reduce((sum,x)=>sum+x.dependencies.length,0),107);
   assert.equal(copy.project.planningAssumptions.fachplanerAlreadyCommissioned,false);

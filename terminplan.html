@@ -705,7 +705,6 @@ body.read-only .editor-only{display:none!important}
         <select id="taskStatus"><option>Nicht begonnen</option><option>In Bearbeitung</option><option>Wartet auf Rückmeldung</option><option>Abgeschlossen</option></select>
       </div>
       <div class="field"><label><input type="checkbox" id="taskCritical"> Manuelle Risikomarkierung (nicht berechneter kritischer Pfad)</label></div>
-      <div class="field full"><label>Notiz / Lieferergebnis</label><textarea id="taskNote"></textarea></div>
     </div>
     <div class="modal-foot">
       <button type="button" class="btn danger" id="deleteTaskBtn">Löschen</button>
@@ -745,7 +744,7 @@ body.read-only .editor-only{display:none!important}
 <script src="./terminplan-planning.js?v=office2"></script>
 <script src="./terminplan-features.js?v=office1"></script>
 <script src="./terminplan-dialogue.js?v=office38"></script>
-<script src="./terminplan-rebuild.js?v=office39"></script>
+<script src="./terminplan-rebuild.js?v=office40"></script>
 <script>
 (function(){
   'use strict';
@@ -1149,12 +1148,12 @@ body.read-only .editor-only{display:none!important}
     rows=[];
     data.groups.sort((a,b)=>String(a.wbs).localeCompare(String(b.wbs),undefined,{numeric:true})).forEach(g=>{
       const gt=data.tasks.filter(t=>t.group===g.id);
-      const matches=!q||g.name.toLowerCase().includes(q)||gt.some(t=>(t.name+' '+t.owner+' '+t.note).toLowerCase().includes(q));
+      const matches=!q||g.name.toLowerCase().includes(q)||gt.some(t=>(t.name+' '+t.owner).toLowerCase().includes(q));
       if(!matches)return;
       rows.push({kind:'group',...g});
       if(!g.collapsed){
         gt.forEach((t,i)=>{
-          if(q&&!(t.name+' '+t.owner+' '+t.note).toLowerCase().includes(q)&&!g.name.toLowerCase().includes(q))return;
+          if(q&&!(t.name+' '+t.owner).toLowerCase().includes(q)&&!g.name.toLowerCase().includes(q))return;
           rows.push({kind:'task',wbs:g.wbs+'.'+String(i+1).padStart(2,'0'),...t});
         });
       }
@@ -2182,7 +2181,6 @@ body.read-only .editor-only{display:none!important}
     links.slice(1).forEach(dep=>appendExtraDep(dep,id));
     $('#taskStatus').value=t?.status||'Nicht begonnen';
     $('#taskCritical').checked=!!t?.critical;
-    $('#taskNote').value=t?.note||'';
     $('#deleteTaskBtn').style.visibility=t?'visible':'hidden';
     taskDialog.showModal();
   }
@@ -2218,7 +2216,7 @@ body.read-only .editor-only{display:none!important}
       pred:links[0]?.pred||'',rel:links[0]?.rel||'EA',dependencies:links,
       protectedDate:$('#taskProtectedDate').value||'',deadline:$('#taskDeadline').value||'',
       actualStart,actualEnd,effortHours,
-      status:$('#taskStatus').value,critical:$('#taskCritical').checked,note:$('#taskNote').value.trim()
+      status:$('#taskStatus').value,critical:$('#taskCritical').checked,note:'' // Ein Terminplan enthält keine Notizen (Entscheidung Gari, 15.11.2026)
     };
     if(!obj.name||!obj.start||!obj.end){toast('Name und Termine sind erforderlich.');return}
     if(obj.end<obj.start){toast('Der Endtermin liegt vor dem Anfangstermin.');return}
@@ -2656,7 +2654,7 @@ body.read-only .editor-only{display:none!important}
     download(stem+'.json',JSON.stringify(data,null,2),'application/json');
   }
   function exportCsv(){
-    const header=['PSP','Vorgang','Typ','Sammelvorgang','Verantwortlich','Anfang','Ende','Dauer_AT','Fortschritt','Status','Vorgänger','Manuelle_Risikomarkierung','Notiz',
+    const header=['PSP','Vorgang','Typ','Sammelvorgang','Verantwortlich','Anfang','Ende','Dauer_AT','Fortschritt','Status','Vorgänger','Manuelle_Risikomarkierung',
       'Deadline','Geschützter_Abgabetermin','Aufwand_h','Ist_Anfang','Ist_Ende','Gesamtpuffer_AT','Freier_Puffer_AT','Rechnerisch_kritisch','Basisplan','Basisplan_Anfang','Basisplan_Ende','Abweichung_Ende_KT'];
     const lines=[header];
     const planning=window.TBATerminplanPlanning;
@@ -2671,7 +2669,7 @@ body.read-only .editor-only{display:none!important}
         }).join(' | ');
         const info=network?.valid?network.byId[t.id]:null;
         const delta=variance[t.id];
-        lines.push([g.wbs+'.'+String(i+1).padStart(2,'0'),t.name,t.type||'task',g.name,t.owner,t.start,t.end,t.type==='milestone'?0:workDuration(t.start,t.end),t.progress,t.status,pred,t.critical?'Ja':'Nein',t.note,
+        lines.push([g.wbs+'.'+String(i+1).padStart(2,'0'),t.name,t.type||'task',g.name,t.owner,t.start,t.end,t.type==='milestone'?0:workDuration(t.start,t.end),t.progress,t.status,pred,t.critical?'Ja':'Nein',
           t.deadline||'',t.protectedDate||'',t.effortHours??'',t.actualStart||'',t.actualEnd||'',
           info?.totalFloatAT??'',info?.freeFloatAT??'',info?(info.critical?'Ja':'Nein'):'',
           baseline?.label||'',delta?.baselineStart||'',delta?.baselineFinish||'',delta?.finishDeltaKT??'']);

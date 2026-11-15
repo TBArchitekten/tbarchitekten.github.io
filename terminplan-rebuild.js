@@ -81,7 +81,7 @@
      owner:x.owner,category:x.category,
      progress:previous?.progress??0,status:previous?.status??"Nicht begonnen",
      critical:previous?.critical??false,
-     note:structural&&previous?previous.note||"":clean(x.note,1000),
+     note:"", // Ein Terminplan enthält keine Notizen (Gari, 15.11.2026): weder aus PDF/KI noch aus dem bisherigen Stand
      pred:"",rel:"EA",dependencies:[]};
   });
   const edges=new Map(tasks.map(x=>[x.id,[]]));
