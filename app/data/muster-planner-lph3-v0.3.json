@@ -929,6 +929,84 @@
      }
     },
     {
+     "id": "L3.BTK.1",
+     "title": "Aufbauvorgaben für die Bauphysik festlegen",
+     "result": "Aufbauvorgaben (Regelaufbauten) als Grundlage für den Bauteilkatalog der Bauphysik: Konstruktionsart, Schichtenfolge, Materialien, Oberflächen und angenommene Dicken bzw. Aufbauhöhen je Bauteil; bekannte Anforderungen",
+     "checks": [
+      "Regelaufbauten für alle raumabschließenden und tragenden Bauteile festgelegt: Konstruktionsart, Schichtenfolge, Materialien und angenommene Dicken (Gründung, Außenwand, Innenwand, Decke, Dach, Fenster/Fassade, Bodenaufbauten)",
+      "Materialien und Oberflächenqualitäten je Bauteil als gestalterische Vorgabe benannt",
+      "Bekannte Anforderungen je Bauteil mit Quelle vermerkt (z. B. Feuerwiderstand, energetischer Standard, Schallschutzniveau); die Bemessung bleibt bei der Bauphysik",
+      "Angenommene Aufbauhöhen und Wandstärken stimmen mit dem Teilstand der Grundrisse und Schnitte überein",
+      "Leitdetails im Prinzip skizziert: Sockel, Fensteranschluss, Attika/Traufe, Deckenanschluss",
+      "Jedes Bauteil einer Kostengruppe zugeordnet – in der Gliederung der späteren Kostenberechnung",
+      "Fragen an Bauphysik, Tragwerk und Brandschutz formuliert und dem Planungsgrundlagen-Paket beigefügt"
+     ],
+     "checkCodes": [
+      "L3.BTK.1-01",
+      "L3.BTK.1-02",
+      "L3.BTK.1-03",
+      "L3.BTK.1-04",
+      "L3.BTK.1-05",
+      "L3.BTK.1-06",
+      "L3.BTK.1-07"
+     ],
+     "checkBlocks": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "psp": [
+      "01.07"
+     ],
+     "scope": "Regelfall",
+     "owner": "Projektleitung oder erfahrene/r Mitarbeiter/in Architektur",
+     "review": "Büroleitung",
+     "participants": "Bauphysik (Empfänger); ggf. Tragwerk, Brandschutz",
+     "basis": "H: HOAI Anlage 10 LPH 3 a), b); Anlage 1 Nr. 1.2.2 Bauphysik (LPH 2 Besondere Leistung „Erstellen eines fachübergreifenden Bauteilkatalogs“, LPH 3 c) „Bemessen der Bauteile des Gebäudes“). I: Form der Aufbauvorgaben; Bauteilwissen steht in den Planungshilfen.",
+     "effortHours": null,
+     "effortDrivers": "Zahl unterschiedlicher Bauteile; Bauweise; energetischer Standard; Bestand",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "BTK.1"
+     ],
+     "requires": [
+      "PSV.1"
+     ],
+     "hoai": [
+      "a",
+      "b"
+     ],
+     "condition": null,
+     "doneWhen": "Vorgaben von der Büroleitung freigegeben und mit den Planungsgrundlagen (M01) an die Bauphysik übergeben. Den Bauteilkatalog erstellt die Bauphysik als Fachplanungsbeitrag Arbeitsstand 01 (M03); geprüft wird er in L3.KLA.1, übernommen in L3.BTK.2.",
+     "schedule": {
+      "executes": [],
+      "waitsFor": [],
+      "anchor": {
+       "taskId": "t012",
+       "edge": "end"
+      },
+      "templateStart": null,
+      "templateEnd": "2027-01-13",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [
+       "L3-ENT-02"
+      ],
+      "muster_v021": [
+       "L3-ENT-05"
+      ],
+      "chatgpt_v01": [],
+      "note": null
+     }
+    },
+    {
      "id": "L3.PGF.1",
      "title": "Planungsgrundlagen für die Fachplaner zusammenstellen",
      "result": "Planungsgrundlagen-Paket: Teilstand der Pläne (PDF und Austauschdatei), Grundlagen der LPH 2 und Fragenliste je Disziplin",
@@ -1171,84 +1249,6 @@
        "L3-016",
        "L3-006"
       ],
-      "note": null
-     }
-    },
-    {
-     "id": "L3.BTK.1",
-     "title": "Aufbauvorgaben für die Bauphysik festlegen",
-     "result": "Aufbauvorgaben (Regelaufbauten) als Grundlage für den Bauteilkatalog der Bauphysik: Konstruktionsart, Schichtenfolge, Materialien, Oberflächen und angenommene Dicken bzw. Aufbauhöhen je Bauteil; bekannte Anforderungen",
-     "checks": [
-      "Regelaufbauten für alle raumabschließenden und tragenden Bauteile festgelegt: Konstruktionsart, Schichtenfolge, Materialien und angenommene Dicken (Gründung, Außenwand, Innenwand, Decke, Dach, Fenster/Fassade, Bodenaufbauten)",
-      "Materialien und Oberflächenqualitäten je Bauteil als gestalterische Vorgabe benannt",
-      "Bekannte Anforderungen je Bauteil mit Quelle vermerkt (z. B. Feuerwiderstand, energetischer Standard, Schallschutzniveau); die Bemessung bleibt bei der Bauphysik",
-      "Angenommene Aufbauhöhen und Wandstärken stimmen mit dem Teilstand der Grundrisse und Schnitte überein",
-      "Leitdetails im Prinzip skizziert: Sockel, Fensteranschluss, Attika/Traufe, Deckenanschluss",
-      "Jedes Bauteil einer Kostengruppe zugeordnet – in der Gliederung der späteren Kostenberechnung",
-      "Fragen an Bauphysik, Tragwerk und Brandschutz formuliert und dem Planungsgrundlagen-Paket beigefügt"
-     ],
-     "checkCodes": [
-      "L3.BTK.1-01",
-      "L3.BTK.1-02",
-      "L3.BTK.1-03",
-      "L3.BTK.1-04",
-      "L3.BTK.1-05",
-      "L3.BTK.1-06",
-      "L3.BTK.1-07"
-     ],
-     "checkBlocks": [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-     ],
-     "psp": [
-      "01.07"
-     ],
-     "scope": "Regelfall",
-     "owner": "Projektleitung oder erfahrene/r Mitarbeiter/in Architektur",
-     "review": "Büroleitung",
-     "participants": "Bauphysik (Empfänger); ggf. Tragwerk, Brandschutz",
-     "basis": "H: HOAI Anlage 10 LPH 3 a), b); Anlage 1 Nr. 1.2.2 Bauphysik (LPH 2 Besondere Leistung „Erstellen eines fachübergreifenden Bauteilkatalogs“, LPH 3 c) „Bemessen der Bauteile des Gebäudes“). I: Form der Aufbauvorgaben; Bauteilwissen steht in den Planungshilfen.",
-     "effortHours": null,
-     "effortDrivers": "Zahl unterschiedlicher Bauteile; Bauweise; energetischer Standard; Bestand",
-     "sourceType": "TBA-eigene Arbeit",
-     "step": "Erarbeiten",
-     "labels": [],
-     "produces": [
-      "BTK.1"
-     ],
-     "requires": [
-      "PSV.1"
-     ],
-     "hoai": [
-      "a",
-      "b"
-     ],
-     "condition": null,
-     "doneWhen": "Vorgaben von der Büroleitung freigegeben und mit den Planungsgrundlagen (M01) an die Bauphysik übergeben. Den Bauteilkatalog erstellt die Bauphysik als Fachplanungsbeitrag Arbeitsstand 01 (M03); geprüft wird er in L3.KLA.1, übernommen in L3.BTK.2.",
-     "schedule": {
-      "executes": [],
-      "waitsFor": [],
-      "anchor": {
-       "taskId": "t012",
-       "edge": "end"
-      },
-      "templateStart": null,
-      "templateEnd": "2027-01-13",
-      "noOwnActivity": false
-     },
-     "origin": {
-      "claude_v01": [
-       "L3-ENT-02"
-      ],
-      "muster_v021": [
-       "L3-ENT-05"
-      ],
-      "chatgpt_v01": [],
       "note": null
      }
     }

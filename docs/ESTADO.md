@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 15.11.2026 · Claude · Bernried Revision 15:** Bauphysik in M00A und zwei BPH-Vorgänge (02.08, 05.06) ohne Terminverschiebung; Terminplan ohne Notizen. Planner: die 8 geänderten Karten auf Bibliothek v0.3.4 (`BTK.1` in A1). Bibliothek: `BTK.1` vor `PGF.1`.
+
 **Stand 15.11.2026 · Claude · Der Eingang ist keine Sackgasse mehr (PR #100):** `bandeja.js` ist aus Window portiert, auf Deutsch und nur mit dem Tab «Zu bestätigen» — `isabella-feed` und `isabella-ideas` gibt es im Office nicht. Vorher fehlte die Datei, obwohl `app.js`, `ahora.js` und `work.js` `window.MINDS_BANDEJA` rufen: der Bildschirm blieb auf der Ladezeile, und die Zeile «N zu bestätigen» in Heute erschien nie. Der Navigationseintrag bleibt verborgen; der Eingang taucht über Heute auf, sobald etwas darin liegt. Heute liegt nichts darin, und das stimmt: das Office hat **null Dokumente**, deshalb meldet die nächtliche Akte-Pflege `nothing_new`. App-Versionen: bandeja `office1`, work `office49`.
 
 **Stand 15.11.2026 · Claude · Muster LPH 3 v1.5 + Bibliothek v0.3.4:** Den Bauteilkatalog erstellt die Bauphysik: Vorlage v1.5 mit `t060` (BPH Arbeitsstand 01 · Bauteilkatalog, vor M03) und `t061` (BPH abgestimmter Beitrag · Endstand, vor M07, nach M06); keine Terminänderung. Bibliothek v0.3.4: `L3.BTK.1` Aufbauvorgaben der Architektur (A1, mit M01), Prüfung in `L3.KLA.1`, `L3.BTK.2` Katalog der Bauphysik prüfen und übernehmen, Endstand in `L3.KLA.3`. 53 Aufgaben, 355 Prüfpunkte. App: `office-projects.js?v=office50`.

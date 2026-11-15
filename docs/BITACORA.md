@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-15 · Bernried: Bauphysik im Terminplan, Planner-Karten auf v0.3.4, keine Notizen; BTK.1 vor PGF.1 · Claude
+- Qué cambió y por qué: (1) Bibliothek v0.3.4: `L3.BTK.1` steht in A1 jetzt vor `L3.PGF.1` statt hinter den Abgabe-Karten (Reihenfolge folgte der Definition in `lib.py`); Inhalt unverändert. (2) Garis Entscheidungen (15.11.2026) für Bernried: Bauphysik ist noch nicht beauftragt (Angebotsanfragen versandt) → M00A nennt jetzt „HLS, ELT, BPH; BRS sofern erforderlich“; zwei BPH-Vorgänge wie bei HLS (Arbeitsstand 01 · Bauteilkatalog, PSP 02.08; abgestimmter Beitrag · Endstand, PSP 05.06, nicht vor M06), an M03, Koordination 01, M07 und Mengenermittlung gebunden – ohne Terminverschiebung. „In einem Terminplan stehen keine Notizen“: alle 8 Notizen entfernt. Die 8 von v0.3.3 auf v0.3.4 geänderten Planner-Karten (`BTK.1` nach A1, `BTK.2`, `KLA.1`, `KLA.3`, `A5.ABS`, `A1.AUS`, `SCH.1`, `OBJ.1`) auf den neuen Text gebracht und neu verknüpft; `A5.AUS` behält den Bernried-Text.
+- Archivos: `scripts/lph3-bibliothek/lib.py` (nur Reihenfolge), `app/data/muster-planner-lph3-v0.3.json` (neu erzeugt), Bitácora/Estado.
+- Base de datos: keine Migration. Ein `DO`-Block (eine Transaktion) gegen das Live-Projekt: Sicherung „Vor Planänderung · 2026-11-15 · Revision 14“, Terminplan-Instanz Revision 14 → 15, 8 Zeilen `isabella_tasks` (Titel, Prüfpunkte, Notiz, Metadaten, Termine; `BTK.1` auch Bucket/Reihenfolge). Abbruch, falls eine Karte schon bearbeitet oder abgehakt war. Nichts gelöscht.
+- Deploy de funciones: ninguno.
+- Cómo se probó: Engine (`analyze` gültig, keine Terminänderung, Kaskaden ab den neuen Vorgängen ruhig); Trockenlauf gegen die Datenbank (md5 identisch, 0 Notizen, 47 PDF-Belege, Basisplan unverändert); danach md5 von Plan und Planner = Erwartung, Termin-Abgleich 53 verknüpft / 0 Änderungen; `build.py` alle Prüfungen OK; `node --test` grün.
+- Quedó pendiente o sin probar: Ansicht mit Anmeldung (Gari).
+- Riesgos o decisiones que necesitan a Gari: Die Vorlage (Muster v1.5) enthält noch Notizen; ob sie dort auch entfallen, entscheidet Gari.
+- PR: #101
+
+---
+
 ### 2026-11-15 · Der Eingang ist keine Sackgasse mehr · Claude
 - Qué cambió y por qué: `bandeja.js` wurde beim Port aus Window ausgelassen — mit einem Test, der die Auslassung festhielt. `app.js`, `ahora.js` und `work.js` rufen aber `window.MINDS_BANDEJA`: ohne die Datei blieb der Eingang auf seiner Ladezeile stehen, und die Zeile «N zu bestätigen» in Heute erschien nie, weil `lastCount()` `undefined` zurückgab statt einer Zahl. Jetzt portiert, auf Deutsch, **nur mit dem Tab «Zu bestätigen»**: `isabella-feed` und `isabella-ideas` gibt es im Office nicht, die beiden anderen Tabs bleiben verborgen und ihr Code kam nicht mit. Der Navigationseintrag bleibt ebenfalls verborgen — der Eingang ist im Office kein ständiges Ziel, sondern taucht über die Zeile in Heute auf, sobald etwas darin liegt. Nebenbei: in `cockpitParaTi` stand eine überfällige Aufgabe noch als «Vencida ·» da; jetzt «Überfällig ·».
 - Was der Eingang heute zeigt: nichts, und das ist richtig so. `minds_work_memory` hat null Zeilen, weil das Office **null Dokumente** hat (`office_project_files` = 0). Die nächtliche Akte-Pflege läuft und meldet `nothing_new` — sie hat nichts zu lesen. Der Bildschirm ist damit leer statt kaputt; gefüllt wird er, sobald Unterlagen im Office liegen.
