@@ -8,7 +8,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const planner=JSON.parse(read('app/data/muster-planner-lph3-v0.3.json'));
 const previous=JSON.parse(read('app/data/muster-planner-lph3-v0.2.json'));
 const templates=JSON.parse(read('supabase/seed/terminplan-templates.json'));
-const schedule=templates.find(x=>x.phase==='LPH3'&&x.version==='1.4').state;
+const schedule=templates.find(x=>x.phase==='LPH3'&&x.version==='1.5').state;
 const taskById=new Map(schedule.tasks.map(t=>[t.id,t]));
 const all=planner.buckets.flatMap(b=>b.tasks.map(t=>({bucket:b,task:t})));
 const pspOf=(()=>{const wbs=new Map(schedule.groups.map(g=>[g.id,g.wbs])),n={},m=new Map();
@@ -19,14 +19,14 @@ const origin=key=>{const m=new Map();for(const {bucket,task} of all)for(const o 
 test('LPH3 Musterplanner is draft only, with exactly seven delivery-linked Buckets and no transversal bucket',()=>{
   assert.equal(planner.phase,'LPH3');
   assert.equal(planner.draft,true);
-  assert.equal(planner.version,'0.3.3-draft');
+  assert.equal(planner.version,'0.3.4-draft');
   assert.equal(planner.buckets.length,7);
   assert.ok(planner.buckets.every(b=>b.kind==='Abgabe'&&b.gate&&b.tasks.length>0));
   assert.deepEqual(planner.buckets.map(b=>b.id),['A1','A2','A3','A4','A5','A6','A7']);
   assert.ok(!planner.buckets.some(b=>/ORG|Organisation/i.test(b.id)));
   assert.equal(all.length,53);
   assert.equal(new Set(all.map(x=>x.task.id)).size,53);
-  assert.equal(all.reduce((sum,x)=>sum+x.task.checks.length,0),350);
+  assert.equal(all.reduce((sum,x)=>sum+x.task.checks.length,0),355);
 });
 
 test('Every card has an assignable TBA role, documented result and checklist, and no invented effort hours',()=>{
@@ -38,7 +38,7 @@ test('Every card has an assignable TBA role, documented result and checklist, an
     assert.deepEqual(task.checkCodes,task.checks.map((_,i)=>task.id+'-'+String(i+1).padStart(2,'0')));
     assert.ok(Array.isArray(task.psp)&&task.psp.length);
     assert.equal(task.effortHours,null,task.id+' must not assert unsupported hours');
-    assert.ok(!/^(Auftraggeber|Bauherr|TWP|HLS|ELT|BRS|Fachplaner)$/.test(task.owner),
+    assert.ok(!/^(Auftraggeber|Bauherr|TWP|HLS|ELT|BRS|BPH|Fachplaner)$/.test(task.owner),
       task.id+' incorrectly makes a third-party delivery an internal TBA task');
   }
 });
@@ -56,7 +56,7 @@ test('Every Abgabe has one Ausgabe card (label Abgabe) and one Abschluss card, l
     assert.ok(absRefs.includes(done.taskId),b.id+' Abschluss bound to its Vorgang');
     for(const r of b.scheduleReferences){
       const v=taskById.get(r.taskId);
-      assert.ok(v,r.taskId+' exists in Muster-Terminplan v1.4');
+      assert.ok(v,r.taskId+' exists in Muster-Terminplan v1.5');
       assert.equal(r.name,v.name);assert.equal(r.psp,pspOf(r.taskId));
       if(v.type==='milestone')assert.equal(r.date,v.end);else assert.equal(r.dateEnd,v.end);
       assert.ok(b.gate.includes(pspOf(r.taskId)),b.id+' gate shows PSP '+pspOf(r.taskId));
@@ -82,7 +82,7 @@ test('Results are linked as one system: every requirement is produced once and i
   assert.ok(planner.validation.every(v=>v.result!=='FEHLER'));
 });
 
-test('Bemusterung Bucket uses the REAL v1.4 preparation, handover, Abstimmung and M06',()=>{
+test('Bemusterung Bucket uses the REAL v1.5 preparation, handover, Abstimmung and M06',()=>{
   const bm=planner.buckets.find(x=>x.id==='A5');
   assert.ok(bm);
   assert.equal(bm.tasks.length,11);
@@ -106,6 +106,24 @@ test('Bemusterung Bucket uses the REAL v1.4 preparation, handover, Abstimmung an
   const costs=taskById.get('t039'); // M08 Kostenbesprechung
   assert.ok(costs.name.includes('M08'));
   assert.ok(taskById.get('t030').end<costs.start,'Bemusterung precedes Muster Kostenbesprechung');
+});
+
+test('Bauteilkatalog: the architect gives Aufbauvorgaben, the Bauphysik delivers and updates the catalog (Gari, 15.11.2026)',()=>{
+  const card=id=>all.find(x=>x.task.id===id);
+  const b1=card('L3.BTK.1'),b2=card('L3.BTK.2'),k1=card('L3.KLA.1'),k3=card('L3.KLA.3'),abs=card('L3.A5.ABS'),aus1=card('L3.A1.AUS');
+  assert.equal(b1.bucket.id,'A1');
+  assert.equal(b1.task.title,'Aufbauvorgaben für die Bauphysik festlegen');
+  assert.deepEqual(b1.task.schedule.anchor,{taskId:'t012',edge:'end'},'ready with the Planungsgrundlagen (M01)');
+  assert.ok(b1.bucket.deliverables.includes('BTK.1')&&aus1.task.requires.includes('BTK.1'));
+  assert.match(b1.task.basis,/fachübergreifenden Bauteilkatalogs/);
+  assert.equal(taskById.get('t060').owner,'BPH');
+  assert.ok(k1.task.schedule.waitsFor.includes('t060'),'KLA.1 reviews the Bauphysik catalog');
+  assert.ok(k1.task.checks.some(c=>/^Bauphysik: Bauteilkatalog Arbeitsstand 01/.test(c)));
+  assert.equal(b2.task.title,'Bauteilkatalog der Bauphysik prüfen und übernehmen');
+  assert.ok(!abs.task.produces.includes('BTK.3'));
+  assert.ok(abs.task.checks.some(c=>/an die Bauphysik/.test(c)),'Bemusterung decisions go back to the Bauphysik');
+  assert.ok(k3.task.produces.includes('BTK.3')&&k3.task.schedule.waitsFor.includes('t061'));
+  assert.ok(!card('L3.A5.AUS').task.doneWhen.includes('t059'),'no internal Vorgangs-ID in card text');
 });
 
 test('Bemusterung includes distinct decisions, samples, bathroom plans, staircase, façade, light and cost inputs',()=>{

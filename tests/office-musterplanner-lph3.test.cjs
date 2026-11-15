@@ -10,11 +10,11 @@ const all=model.buckets.flatMap(bucket=>bucket.tasks.map(task=>({...task,bucket:
 const tasks=new Map(all.map(task=>[task.id,task]));
 const fromOld=id=>all.filter(t=>t.origin.muster_v021.includes(id));
 test('Masterplanner is a versioned, explicitly unapproved LPH3 draft',()=>{
- assert.equal(model.phase,'LPH3');assert.equal(model.draft,true);assert.equal(model.version,'0.3.3-draft');
+ assert.equal(model.phase,'LPH3');assert.equal(model.draft,true);assert.equal(model.version,'0.3.4-draft');
  assert.deepEqual(model.buckets.map(x=>x.id),['A1','A2','A3','A4','A5','A6','A7']);
- assert.equal(all.length,53);assert.equal(all.reduce((n,x)=>n+x.checks.length,0),350);
+ assert.equal(all.length,53);assert.equal(all.reduce((n,x)=>n+x.checks.length,0),355);
  assert.equal(tasks.size,all.length);
- assert.match(model.reference,/Muster-Terminplan LPH 3 v1\.4/);
+ assert.match(model.reference,/Muster-Terminplan LPH 3 v1\.5/);
  assert.match(model.status,/nicht freigegeben/);
 });
 test('Only TBA-owned work is represented, never Fachplaner deliveries or Bauherrn waiting as tasks',()=>{
@@ -24,10 +24,10 @@ test('Only TBA-owned work is represented, never Fachplaner deliveries or Bauherr
    assert.ok(task.checks.length>=1&&task.checks.length<=10,task.id+' checklist as long as needed, at most 10');
    assert.ok(task.psp.length>=1,task.id+' missing original Terminplan trace');
    assert.equal(task.effortHours,null,'no invented hours '+task.id);
-   assert.ok(task.owner&&task.owner!=='Auftraggeber'&&task.owner!=='TWP'&&task.owner!=='HLS'&&task.owner!=='ELT',task.id);
+   assert.ok(task.owner&&!['Auftraggeber','TWP','HLS','ELT','BRS','BPH'].includes(task.owner),task.id);
  }
  assert.ok(fromOld('L3-KOO-01').length&&fromOld('L3-KOS-02').length,'internal verification of external contributions is represented');
- assert.ok(!all.some(x=>/^\s*(TWP|HLS|ELT|BRS)\s*[·-]/.test(x.title)),'no external planner outputs copied as TBA tasks');
+ assert.ok(!all.some(x=>/^\s*(TWP|HLS|ELT|BRS|BPH)\s*[·-]/.test(x.title)),'no external planner outputs copied as TBA tasks');
 });
 test('Bemusterung has real research, alternatives, samples, documents, drawings and cost handoff',()=>{
  const b=model.buckets.find(b=>b.id==='A5');assert.equal(b.tasks.length,11);
