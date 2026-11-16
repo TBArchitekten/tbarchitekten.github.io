@@ -29,7 +29,7 @@ document.body.innerHTML = `
     <button class="lens-nav-item" data-nav="work" aria-label="Work"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.work}</span><span class="lens-copy"><strong>Work</strong><small>Projekte</small></span></button>
     <button class="lens-nav-item office-link" data-nav="tools" aria-label="Tools"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.tools}</span><span class="lens-copy"><strong>Tools</strong><small>Terminplan und Muster</small></span></button>
     <button class="lens-nav-item" data-nav="bandeja" aria-label="Eingang" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.bandeja}${bandejaBadge}</span><span class="lens-copy"><strong>Eingang</strong><small>Vorschläge</small></span></button>
-    <button class="lens-nav-item" data-nav="readings" aria-label="Lecturas" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.readings}</span><span class="lens-copy"><strong>Lecturas</strong><small></small></span></button>
+    <button class="lens-nav-item" data-nav="readings" aria-label="Lektüren" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.readings}</span><span class="lens-copy"><strong>Lecturas</strong><small></small></span></button>
     <button class="lens-nav-item" data-nav="thoughts" aria-label="Thoughts" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.thoughts}</span><span class="lens-copy"><strong>Thoughts</strong><small></small></span></button>
     <div class="minds-menu-slot lens-menu-slot" data-menu-slot="sidebar"></div>
     <div class="lenses-foot">Titus Bernhard Architekten</div>
@@ -168,7 +168,7 @@ document.body.innerHTML = `
       <div id="thoughtsHost" class="thoughts-host">
         <div id="thoughtsLoadStatus" class="thoughts-load-status" role="status">Abriendo Thoughts…</div>
         <div id="thoughtsFrameError" class="thoughts-load-error hidden" role="alert">
-          No pude cargar Thoughts. <a href="https://gari01234.github.io/architectures/dear_thoughts.html" target="_blank" rel="noopener noreferrer">Abrir la obra original</a>
+          Thoughts konnte nicht geladen werden. <a href="https://gari01234.github.io/architectures/dear_thoughts.html" target="_blank" rel="noopener noreferrer">Das Original öffnen</a>
         </div>
       </div>
     </section>
@@ -186,7 +186,7 @@ document.body.innerHTML = `
       <div id="feedThreadLog" class="feed-thread-log"></div>
     </div>
     <form id="feedThreadForm" class="feed-thread-form">
-      <textarea id="feedThreadInput" rows="1" placeholder="Preguntar sobre esto..."></textarea>
+      <textarea id="feedThreadInput" rows="1" placeholder="Dazu etwas fragen …"></textarea>
       <button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
     </form>
   </section>
@@ -203,7 +203,7 @@ document.body.innerHTML = `
       <div id="ideaWorkspaceThread" class="idea-workspace-thread"></div>
     </div>
     <form id="ideaWorkspaceForm" class="idea-workspace-form">
-      <textarea id="ideaWorkspaceInput" rows="1" placeholder="Seguir trabajando en esta idea..."></textarea>
+      <textarea id="ideaWorkspaceInput" rows="1" placeholder="An dieser Idee weiterarbeiten …"></textarea>
       <button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
     </form>
   </section>
