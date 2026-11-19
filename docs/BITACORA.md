@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-19 · Kostenberechnung LPH 3 · Ein Architektur-Zielbild statt Gesprächsversionen · ChatGPT
+- Qué cambió y por qué: Die abgestimmte fachliche Struktur der Kostenberechnung bis Ebene 3 und die spätere Archicad-26-Ergänzung in **einen** stabil benannten Entwicklungsvertrag konsolidiert. Acht Funktionsbereiche, Mengenquellen und Versionsvergleich, Kostenelemente/Preise, Living Documents, Termine/Aufgaben, Romy, Domänenidentitäten, RLS/Provenienz, Reuse-Prüfung und Gate G0–G6. Zwischen beschlossenen Zielen, technischen Vorschlägen und fachlich/lizenzrechtlich offenen Punkten unterschieden.
+- Archivos: neu `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md`, aktualisiert `docs/ESTADO.md` und `docs/BITACORA.md`.
+- Base de datos: migración — **ninguna**; angewendet — **nein, nicht anwendbar**. Keine Projekt-/Kostendaten verändert.
+- Deploy de funciones: ninguno. Keine Web-App-/Frontend-Änderung.
+- Cómo se probó: Dokument und GitHub-PR überprüft; CI-Status gesondert verfolgen. Keine Archicad-Live-Prüfung, keine DIN-Fachabnahme, keine produktiven Eingaben.
+- Quedó pendiente o sin probar: TBA-Abnahme des Zielvertrags, norm-/lizenzkonforme Kostengruppen, anonymisierter Referenzkostenstand und zwei Revisionen, Archicad-26-Auswertungen/Bridge-Test, Reuse-Spike (Open Calc/ BIT-Atelier / PR #107) und endgültige Tech-Wahl.
+- Riesgos o decisiones que necesitan a Gari: Norm-/Preis-Datenrechte, endgültige Rechen-/Freigaberegeln und Referenzfall. **PR #107 bleibt Draft/unverändert**; dieses Dokument autorisiert keine produktive Migration.
+- PR: #108 (Draft, nur Dokumentation).
+
 ### 2026-11-15 · Terminplan ohne Notizen: Editor, CSV, Neuaufbau, Projektanlage und Muster LPH 5 v0.3 · Claude
 - Qué cambió y por qué: Entscheidung Gari (15.11.2026), Folge von „ein Terminplan enthält keine Notizen“: (1) `terminplan.html`: Feld „Notiz / Lieferergebnis“ im Vorgangsdialog entfernt, Speichern setzt `note:''`, die Suche durchsucht keine Notizen mehr, CSV-Export ohne Spalte „Notiz“. (2) `terminplan-rebuild.js` (PDF-/KI-Neuaufbau und Planänderung) übernimmt keine Notizen mehr – weder aus der Quelle noch aus dem bisherigen Stand; eine alte Notiz erscheint im Vorschlag als Änderung, bevor bestätigt wird. (3) `office-core.js`: neue Projektpläne bekommen keine versteckte Projektnotiz mehr (`planningAssumptions.note`). (4) **Muster LPH 5 v0.3** ohne die 24 Vorgangsnotizen und `planningNotes`; Hinweise erhalten in `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md`. Das Datenfeld `note` bleibt im Modell (leer), damit ältere Dateien und Importe weiter lesbar sind.
 - Archivos: `terminplan.html` (`terminplan-rebuild.js?v=office40`), `terminplan-rebuild.js`, `office-core.js` (`index.html` `?v=5`, `app/index.html` `?v=office37`), `supabase/seed/terminplan-templates.json`, `supabase/migrations/20261115200000_office_lph5_template_v03.sql` (neu), `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md` (neu); Tests: `office-37-acceptance` (Neuaufbau ohne Notizen, neuer Test), `office-38-window-parity` (neuer Test: kein Notizfeld, keine CSV-Spalte), `office-core` (neuer Projektplan ohne Notizen), `office-lph5-v02` (v0.3; v0.2 historisch = v0.3 mit Notizen; Hinweise vollständig im Dokument).
