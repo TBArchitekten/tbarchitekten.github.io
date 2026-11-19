@@ -1,5 +1,8 @@
 # TBA Office · Estado actual
 
+**Stand 19.11.2026 · ChatGPT · Kostenberechnung LPH 3 – Architektur-Zielbild (Draft-PR #108, nicht produktiv):** Eine einzige fortschreibbare Sollbeschreibung liegt in `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md` (v1.0 als **fachlich zu prüfender Entwurf**). Konsolidiert DIN 276:2018-12 bis Ebene 3, acht Kernfunktionen, Mengenbuch aus Archicad 26 (Auswertungen/XLSX zuerst, Tapir erst nach Live-Test, IFC optional), Preis-/Kostenelemente, Office Living Documents, Terminplan/Planner und Romy sowie G0–G6-Abnahmetore. **Nur Dokumentation**, keine UI-/SQL-/Produktionsänderung. PR #107 bleibt separat und Draft; keine Festlegung auf Rechenkern/Open Source, Normnutzung/Lizenz und fachliche Referenz noch offen.
+
+
 **Stand 15.11.2026 · Claude · Terminplan ohne Notizen:** kein Notizfeld im Vorgangsdialog, keine CSV-Spalte „Notiz“, Neuaufbau (PDF/KI) und Projektanlage ohne Notizen; Muster LPH 5 v0.3 und LPH 3 v1.6 ohne Notizen (Hinweise in `docs/LPH3-…` und `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md`).
 
 **Stand 15.11.2026 · Claude · Muster LPH 3 v1.6 + Bernried Revision 16:** Vorlage ohne Notizen (Hinweise in `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md`). Bernried: Übergabe integrierter Planstand 02 am 21.01.2027 nach der Koordination Runde 02, M06 28.01., M10 25.02.2027; Planner nachgeführt.
