@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-19 · Kostenmodell v0.1 · Reiner Kern und Architekturvertrag · ChatGPT
+- Qué cambió y por qué: Nach Markt- und DIN/HOAI-Recherche den kleinsten überprüfbaren Kostenkern aufgebaut. Menge × Einheitspreis mit Dezimalstrings/BigInt und Rundung je Position; fehlende Quellen, Gruppen und Preise bleiben offen, kein erfundenes Nullbudget. Getrennter fachlicher Vertrag für DIN-Ausgabe, späteren Kostenstand, Dokumente, Produkte und Aufgaben.
+- Archivos: `app/office-kosten-core.js`, `tests/office-kosten-core.test.cjs`, `docs/OFFICE-KOSTENMODELL-v0.1.md`, `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: migración — **ninguna**; aplicada en Supabase: **no corresponde**. No hay nuevas tablas, RLS ni datos de costes.
+- Deploy de funciones: ninguno; ni frontend activo ni integración con Romy.
+- Cómo se probó: 11/11 pruebas de Node sintéticas locales PASS. La suite completa del repositorio y la CI GitHub siguen pendientes de comprobación en el Draft-PR; sin llamadas a producción.
+- Quedó pendiente o sin probar: lectura contractual de DIN 276 completa, licencia de clasificación, casos reales anonimizados, precisión y redondeos pactados, impuestos, Pauschalen, Doppelansätze, Fachplanerbeiträge, editor, RLS, X51 y E2E autenticado.
+- Riesgos o decisiones que necesitan a Gari: aprobación profesional del contrato con un caso de LPH 3 y dos revisiones antes de una migración o cualquier dato productivo. `ready` solo indica entrada formalmente completa, no DIN-Konformität.
+- PR: #107 (Draft, no fusionado).
+
 ### 2026-11-15 · Terminplan ohne Notizen: Editor, CSV, Neuaufbau, Projektanlage und Muster LPH 5 v0.3 · Claude
 - Qué cambió y por qué: Entscheidung Gari (15.11.2026), Folge von „ein Terminplan enthält keine Notizen“: (1) `terminplan.html`: Feld „Notiz / Lieferergebnis“ im Vorgangsdialog entfernt, Speichern setzt `note:''`, die Suche durchsucht keine Notizen mehr, CSV-Export ohne Spalte „Notiz“. (2) `terminplan-rebuild.js` (PDF-/KI-Neuaufbau und Planänderung) übernimmt keine Notizen mehr – weder aus der Quelle noch aus dem bisherigen Stand; eine alte Notiz erscheint im Vorschlag als Änderung, bevor bestätigt wird. (3) `office-core.js`: neue Projektpläne bekommen keine versteckte Projektnotiz mehr (`planningAssumptions.note`). (4) **Muster LPH 5 v0.3** ohne die 24 Vorgangsnotizen und `planningNotes`; Hinweise erhalten in `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md`. Das Datenfeld `note` bleibt im Modell (leer), damit ältere Dateien und Importe weiter lesbar sind.
 - Archivos: `terminplan.html` (`terminplan-rebuild.js?v=office40`), `terminplan-rebuild.js`, `office-core.js` (`index.html` `?v=5`, `app/index.html` `?v=office37`), `supabase/seed/terminplan-templates.json`, `supabase/migrations/20261115200000_office_lph5_template_v03.sql` (neu), `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md` (neu); Tests: `office-37-acceptance` (Neuaufbau ohne Notizen, neuer Test), `office-38-window-parity` (neuer Test: kein Notizfeld, keine CSV-Spalte), `office-core` (neuer Projektplan ohne Notizen), `office-lph5-v02` (v0.3; v0.2 historisch = v0.3 mit Notizen; Hinweise vollständig im Dokument).
