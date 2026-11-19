@@ -1,5 +1,8 @@
 # TBA Office · Estado actual
 
+**Stand 19.11.2026 · ChatGPT · Kostenmodell v0.1 (Draft-PR #107, nicht produktiv):** Reiner deterministischer Netto-Kostenkern `app/office-kosten-core.js` mit 11 isolierten synthetischen Tests und Architektur-/Validierungsvertrag `docs/OFFICE-KOSTENMODELL-v0.1.md`. Noch kein Editor, kein DIN-276-Katalog, keine HOAI-Kostenberechnung, kein Deployment und keine SQL-Migration. Keine Änderungen an Bernried, Aufgaben, Terminplan oder Office-Daten. Fachliche, norm-/lizenzrechtliche Validierung und vollständige GitHub-CI/Browser-Abnahme offen. `ready` im Kern bedeutet ausschließlich, dass seine Eingaben formal vollständig sind, **nicht** fachlich freigegeben.
+
+
 **Stand 15.11.2026 · Claude · Terminplan ohne Notizen:** kein Notizfeld im Vorgangsdialog, keine CSV-Spalte „Notiz“, Neuaufbau (PDF/KI) und Projektanlage ohne Notizen; Muster LPH 5 v0.3 und LPH 3 v1.6 ohne Notizen (Hinweise in `docs/LPH3-…` und `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md`).
 
 **Stand 15.11.2026 · Claude · Muster LPH 3 v1.6 + Bernried Revision 16:** Vorlage ohne Notizen (Hinweise in `docs/LPH3-MUSTER-TERMINPLAN-HINWEISE.md`). Bernried: Übergabe integrierter Planstand 02 am 21.01.2027 nach der Koordination Runde 02, M06 28.01., M10 25.02.2027; Planner nachgeführt.
