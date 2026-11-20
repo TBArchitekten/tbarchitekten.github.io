@@ -351,6 +351,12 @@ qs('#officeProjectsBack').addEventListener('click',()=>{
 });
 document.getElementById('officeToolsManage')?.addEventListener('click',openProjects);
 document.getElementById('officeToolsPlans')?.addEventListener('click',openPlans);
+// Projektstart: ein Blatt, kein Bildschirm der App. Es sagt, welche Information ein Projekt
+// braucht, damit Romy mitarbeiten kann, und enthält die vier Muster der LPH-3-Vorgänge, die sich
+// ohne Projektunterlagen vorbereiten lassen. Liegt neben terminplan-hilfe.html im Wurzelverzeichnis.
+document.getElementById('officeToolsStart')?.addEventListener('click',()=>{
+  window.location.href='../projektstart.html';
+});
 document.getElementById('officePlansBack')?.addEventListener('click',()=>{window.ISABELLA_APP?.show?.('tools');history.replaceState(null,'','#section=tools')});
 document.getElementById('officePlansDrawer')?.addEventListener('click',()=>{
   document.getElementById('closeDrawer')?.click();openPlans();

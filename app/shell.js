@@ -102,6 +102,11 @@ document.body.innerHTML = `
           <span><strong>Terminplan</strong><small>Projekt auswählen, LPH 3 oder LPH 5 als Muster instanziieren und fortschreiben.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
+        <button type="button" class="office-tools-card" id="officeToolsStart" aria-label="Projektstart öffnen">
+          <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
+          <span><strong>Projektstart</strong><small>Was ein Projekt an Information braucht, und vier Muster für LPH 3: Schnittstellen, Rückfragen, Entscheidungspunkt, Planliste.</small></span>
+          <span class="office-tools-arrow" aria-hidden="true">›</span>
+        </button>
         <button type="button" class="office-tools-card office-tools-projects" id="officeToolsManage" aria-label="Projekte öffnen">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
           <span><strong>Projekte</strong><small>Projekte anlegen, Mitglieder gemeinsam verwalten und Terminpläne verknüpfen.</small></span>
