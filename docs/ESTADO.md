@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 20.11.2026 · ChatGPT · Phase0 als UX-/Romy-Referenz in Kostenarchitektur (Draft-PR #108, nicht produktiv):** Auftraggeber legt besonderen Wert auf eine sehr gute, verständliche Kostenoberfläche und auf tief integrierte, kontextuelle KI-Unterstützung. `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md` ergänzt um Vorlagen-Einstieg, progressive Informationsdichte, wirtschaftliche Tabellenbearbeitung ohne Excel-Überfrachtung, praktische Nutzbarkeitstests sowie Vorschau-/Quellenbelege für Romy. Phase0 ist **Vorbild für Interaktion**, keine festgelegte Softwarebibliothek; dessen derzeitige KI konzentriert sich auf LVs, die im TBA-Scope **ausgeschlossen** bleiben. Nur Dokumentation, keine technische Umsetzung, kein Deploy.
+
 **Stand 19.11.2026 · ChatGPT · Kostenberechnung LPH 3 – Architektur-Zielbild (Draft-PR #108, nicht produktiv):** Eine einzige fortschreibbare Sollbeschreibung liegt in `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md` (v1.0 als **fachlich zu prüfender Entwurf**). Konsolidiert DIN 276:2018-12 bis Ebene 3, acht Kernfunktionen, Mengenbuch aus Archicad 26 (Auswertungen/XLSX zuerst, Tapir erst nach Live-Test, IFC optional), Preis-/Kostenelemente, Office Living Documents, Terminplan/Planner und Romy sowie G0–G6-Abnahmetore. **Nur Dokumentation**, keine UI-/SQL-/Produktionsänderung. PR #107 bleibt separat und Draft; keine Festlegung auf Rechenkern/Open Source, Normnutzung/Lizenz und fachliche Referenz noch offen.
 
 
