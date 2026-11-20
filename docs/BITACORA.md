@@ -17,6 +17,36 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-20 · Kostenberechnung · Gemeinsamer Claude/ChatGPT-Review vorbereitet · ChatGPT
+- Qué cambió y por qué: Architekturvertrag auf fachliche Trennung DIN 276:2018-12 dritte Ebene / HOAI §2 mindestens zweite Ebene geprüft und präzisiert; fehlende Archicad-Metadaten werden nicht mehr still angenommen, Importstand und Einzelmenge getrennt. G4 in zwei kleinere Abnahmeschritte geteilt. Neues Kapitel zur unabhängigen Kritik durch Claude, gemeinsamer GitHub-Quelle, Branch-Abstimmung und Entscheidungshoheit Gari.
+- Archivos: `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: keine Migration; nicht angewendet und nicht vorgesehen.
+- Deploy de funciones: keiner; Office-Produktion unverändert.
+- Cómo se probó: GitHub-Stand, AGENTS.md, PR #107/#108 und bestehende Architektur geprüft; HOAI §2/§4 mit offiziellen Quellen abgeglichen; dokumentarische Änderungen und PR-Dateien verifiziert. Keine funktionale E2E-/DIN-Fachprüfung.
+- Quedó pendiente o sin probar: unabhängiger Claude-Review, Gari-Abnahme, norm-/lizenzrechtliche Details, anonyme Kostenbeispiele, Archicad-26-Praxisprüfung, Reuse-Spike, tatsächliche UI/Backend-Entwicklung.
+- Riesgos o decisiones que necesitan a Gari: Gari entscheidet zwischen widersprüchlichen Empfehlungen und autorisiert spätere PRs; Claude erhält zunächst einen Prüfauftrag, keinen Produktionsauftrag. #107 unverändert.
+- PR: #108 (Draft; Dokumentation).
+
+### 2026-11-20 · Kostenberechnung · Phase0-UX und kontextuelle Romy-Hilfe · ChatGPT
+- Qué cambió y por qué: Auf Basis der Rückmeldung von Gari die verständliche, visuell sorgfältige Oberfläche als fachliche Produktanforderung präzisiert. Geordnete TBA-Vorlagen, progressive Tiefe, klare Tabellenbearbeitung ohne unnötige Excel-/AVA-Komplexität und echte Office-Nutzbarkeitstests. Der kontextuelle Kostenassistent soll quellenbasierte, direkt an der Zeile prüfbare Vorschläge und Vorher/Nachher-Ansichten liefern. Phase0 dient als Interaktionsreferenz, **nicht** als Open-Source-Baustein und nicht als Beleg einer LPH-3-KI-Kalkulation; LVs bleiben ausgeschlossen.
+- Archivos: `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: migración — keine; angewendet — nicht anwendbar.
+- Deploy de funciones: ninguno; keine Änderung an Office oder Romy in Produktion.
+- Cómo se probó: öffentliche Phase0-Dokumentation zu UI und AVA-KI geprüft; rein dokumentarische Änderung in Draft-PR #108, keine praktischen TBA-UI-Tests.
+- Quedó pendiente o sin probar: Mockups, Nutzerprüfung an echtem/anonymisiertem LPH-3-Kostenstand, konkrete KI-Routing- und Permission-Tests, endgültige SDK-Wahl und Kostenstand-Abnahme.
+- Riesgos o decisiones que necesitan a Gari: UI-Entwurf soll vereinfachen, ohne Quellen, Zustände und fachliche Tiefe zu verdecken; kein generischer LV-Agent.
+- PR: #108 (Draft, dokumentarisch).
+
+### 2026-11-19 · Kostenberechnung LPH 3 · Ein Architektur-Zielbild statt Gesprächsversionen · ChatGPT
+- Qué cambió y por qué: Die abgestimmte fachliche Struktur der Kostenberechnung bis Ebene 3 und die spätere Archicad-26-Ergänzung in **einen** stabil benannten Entwicklungsvertrag konsolidiert. Acht Funktionsbereiche, Mengenquellen und Versionsvergleich, Kostenelemente/Preise, Living Documents, Termine/Aufgaben, Romy, Domänenidentitäten, RLS/Provenienz, Reuse-Prüfung und Gate G0–G6. Zwischen beschlossenen Zielen, technischen Vorschlägen und fachlich/lizenzrechtlich offenen Punkten unterschieden.
+- Archivos: neu `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md`, aktualisiert `docs/ESTADO.md` und `docs/BITACORA.md`.
+- Base de datos: migración — **ninguna**; angewendet — **nein, nicht anwendbar**. Keine Projekt-/Kostendaten verändert.
+- Deploy de funciones: ninguno. Keine Web-App-/Frontend-Änderung.
+- Cómo se probó: Dokument und GitHub-PR überprüft; CI-Status gesondert verfolgen. Keine Archicad-Live-Prüfung, keine DIN-Fachabnahme, keine produktiven Eingaben.
+- Quedó pendiente o sin probar: TBA-Abnahme des Zielvertrags, norm-/lizenzkonforme Kostengruppen, anonymisierter Referenzkostenstand und zwei Revisionen, Archicad-26-Auswertungen/Bridge-Test, Reuse-Spike (Open Calc/ BIT-Atelier / PR #107) und endgültige Tech-Wahl.
+- Riesgos o decisiones que necesitan a Gari: Norm-/Preis-Datenrechte, endgültige Rechen-/Freigaberegeln und Referenzfall. **PR #107 bleibt Draft/unverändert**; dieses Dokument autorisiert keine produktive Migration.
+- PR: #108 (Draft, nur Dokumentation).
+
 ### 2026-11-15 · Terminplan ohne Notizen: Editor, CSV, Neuaufbau, Projektanlage und Muster LPH 5 v0.3 · Claude
 - Qué cambió y por qué: Entscheidung Gari (15.11.2026), Folge von „ein Terminplan enthält keine Notizen“: (1) `terminplan.html`: Feld „Notiz / Lieferergebnis“ im Vorgangsdialog entfernt, Speichern setzt `note:''`, die Suche durchsucht keine Notizen mehr, CSV-Export ohne Spalte „Notiz“. (2) `terminplan-rebuild.js` (PDF-/KI-Neuaufbau und Planänderung) übernimmt keine Notizen mehr – weder aus der Quelle noch aus dem bisherigen Stand; eine alte Notiz erscheint im Vorschlag als Änderung, bevor bestätigt wird. (3) `office-core.js`: neue Projektpläne bekommen keine versteckte Projektnotiz mehr (`planningAssumptions.note`). (4) **Muster LPH 5 v0.3** ohne die 24 Vorgangsnotizen und `planningNotes`; Hinweise erhalten in `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md`. Das Datenfeld `note` bleibt im Modell (leer), damit ältere Dateien und Importe weiter lesbar sind.
 - Archivos: `terminplan.html` (`terminplan-rebuild.js?v=office40`), `terminplan-rebuild.js`, `office-core.js` (`index.html` `?v=5`, `app/index.html` `?v=office37`), `supabase/seed/terminplan-templates.json`, `supabase/migrations/20261115200000_office_lph5_template_v03.sql` (neu), `docs/LPH5-MUSTER-TERMINPLAN-HINWEISE.md` (neu); Tests: `office-37-acceptance` (Neuaufbau ohne Notizen, neuer Test), `office-38-window-parity` (neuer Test: kein Notizfeld, keine CSV-Spalte), `office-core` (neuer Projektplan ohne Notizen), `office-lph5-v02` (v0.3; v0.2 historisch = v0.3 mit Notizen; Hinweise vollständig im Dokument).
