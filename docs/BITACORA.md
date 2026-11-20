@@ -4,6 +4,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ## Plantilla (copiar y llenar)
 ```
+### 2026-11-20 · Projektstart: was ein Projekt braucht, und vier Muster · Claude
+- Qué cambió y por qué: Gari teilt Bernried nächste Woche mit zwei Kolleginnen und füllt es mit Projektinformation. Seine Vorgabe: **nicht einfach vorbereiten, sondern sagen, welche Information gebraucht wird**, damit Romy ihr Potenzial erreicht. Neues Blatt `projektstart.html`, erreichbar über eine dritte Karte in den Werkzeugen. Kapitel 1 ist die Antwort darauf: drei Stufen, geordnet nach dem, **was jede freischaltet**, nicht nach Aufwand — Stufe 1 Dokumente / Beteiligte / Projektsteckbrief, Stufe 2 Entscheidungen mit Begründung / Verantwortliche / echte Fristen / gepflegter Terminplan, Stufe 3 Protokolle / Angebote / Planliste mit Indizes. Jede Zeile sagt auch, **wohin im Office** es gehört, und am Ende steht die Grenze: was Romy nicht bekommen soll.
+- Die vier Muster: **Schnittstellenmatrix LPH 3** (wer liefert wem was, wofür — die letzte Spalte ist die, die sonst fehlt), **Rückfragenkatalog** an alle Fachplanungen einzeln (TWP, HLS, ELT, BPH, BRS), **Entscheidungspunkt** in fünf Angaben, **Planliste und Dokumentenstruktur**. Sie sind als Muster geschrieben, nicht für Bernried: sie entsprechen den acht Vorgängen der LPH-3-Vorlage, die sich ohne Projektunterlagen vorbereiten lassen (`t-source-0003`, `0004`, `0005`, `0017`, `0023`, `0024`, `0026`, `0046`), fast alle im Bucket A3. Von den 57 Vorgängen haben 23 nichts vorzubereiten und 26 brauchen Unterlagen, die es im Office noch nicht gibt.
+- Archivos: neu `projektstart.html`, `app/shell.js` (`office47`, dritte Werkzeug-Karte), `app/office-projects.js` (`office51`), `app/index.html`, neu `tests/office-projektstart.test.mjs`.
+- Base de datos: keine Migration. Deploy de funciones: keiner.
+- Cómo se probó: 322 Tests, davon 5 neue — die Karte führt hin und zurück, das Blatt bleibt Muster statt Bernried-Dokument (höchstens zwei Erwähnungen), die drei Stufen sagen alle, wohin es im Office gehört, der Rückfragenkatalog deckt jede Fachplanung der Matrix ab, und es ist kein spanisches Wort übrig. 7 Chromium-Tests lokal grün.
+- Quedó pendiente o sin probar: fachliche Durchsicht durch Gari — das Blatt ist ein Vorschlag und sagt das auch von sich. Und der nächste Schritt, den es nur vorbereitet: dass **Romy selbst** sagt, was einem Projekt fehlt, statt dass man das Blatt liest (Issue #118).
+- Riesgos o decisiones que necesitan a Gari: ob die Muster fachlich so stehenbleiben. Sie sind bewusst knapp und ersetzen keine Bürostandards.
+- PR: #119
+
 ### AAAA-MM-DD · Título corto · Autor (ChatGPT / Claude / Gari)
 - Qué cambió y por qué:
 - Archivos:
