@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-20 · Kostenberechnung · Phase0-UX und kontextuelle Romy-Hilfe · ChatGPT
+- Qué cambió y por qué: Auf Basis der Rückmeldung von Gari die verständliche, visuell sorgfältige Oberfläche als fachliche Produktanforderung präzisiert. Geordnete TBA-Vorlagen, progressive Tiefe, klare Tabellenbearbeitung ohne unnötige Excel-/AVA-Komplexität und echte Office-Nutzbarkeitstests. Der kontextuelle Kostenassistent soll quellenbasierte, direkt an der Zeile prüfbare Vorschläge und Vorher/Nachher-Ansichten liefern. Phase0 dient als Interaktionsreferenz, **nicht** als Open-Source-Baustein und nicht als Beleg einer LPH-3-KI-Kalkulation; LVs bleiben ausgeschlossen.
+- Archivos: `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: migración — keine; angewendet — nicht anwendbar.
+- Deploy de funciones: ninguno; keine Änderung an Office oder Romy in Produktion.
+- Cómo se probó: öffentliche Phase0-Dokumentation zu UI und AVA-KI geprüft; rein dokumentarische Änderung in Draft-PR #108, keine praktischen TBA-UI-Tests.
+- Quedó pendiente o sin probar: Mockups, Nutzerprüfung an echtem/anonymisiertem LPH-3-Kostenstand, konkrete KI-Routing- und Permission-Tests, endgültige SDK-Wahl und Kostenstand-Abnahme.
+- Riesgos o decisiones que necesitan a Gari: UI-Entwurf soll vereinfachen, ohne Quellen, Zustände und fachliche Tiefe zu verdecken; kein generischer LV-Agent.
+- PR: #108 (Draft, dokumentarisch).
+
 ### 2026-11-19 · Kostenberechnung LPH 3 · Ein Architektur-Zielbild statt Gesprächsversionen · ChatGPT
 - Qué cambió y por qué: Die abgestimmte fachliche Struktur der Kostenberechnung bis Ebene 3 und die spätere Archicad-26-Ergänzung in **einen** stabil benannten Entwicklungsvertrag konsolidiert. Acht Funktionsbereiche, Mengenquellen und Versionsvergleich, Kostenelemente/Preise, Living Documents, Termine/Aufgaben, Romy, Domänenidentitäten, RLS/Provenienz, Reuse-Prüfung und Gate G0–G6. Zwischen beschlossenen Zielen, technischen Vorschlägen und fachlich/lizenzrechtlich offenen Punkten unterschieden.
 - Archivos: neu `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md`, aktualisiert `docs/ESTADO.md` und `docs/BITACORA.md`.
