@@ -17,6 +17,26 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-21 · Kostenberechnung: Tabelle wie im Büro-Excel, Elemente, Gewerke, volle Breite · Claude
+- Qué cambió y por qué: Gari (21.11., 17:00, mit Bildschirmfoto und dem Büro-Excel): (1) kein Leerraum an den Seiten; (2) Zeilen aufziehen wie in Excel, Produktnamen sind lang; (3) Spalten wie im Büro-Excel (KG · GW · Bezeichnung · Menge · EH · EP netto · Netto · Brutto · Kommentar), verglichen mit Phase0 und California; (4) unter jeder KG mehrere Elemente (Beispiel 335/336). Umgesetzt:
+  - volle Breite (`.kb-wrap` bis 2400 px statt 1240 px);
+  - «Positionen» als Tabelle mit KG · GW · Bezeichnung · Ort · Menge · EH · EP netto · Netto · Brutto · Quelle · Kommentar; Eingabe direkt in der Zeile, Enter springt wie in Excel in dieselbe Spalte der nächsten Zeile; Pauschalen als «1 psch»;
+  - **Elemente**: Gruppe von Positionen in einer KG der 3. Ebene, Summe am Element; «+ Position» und «+ Element» an jeder KG, «+ Position» im Element; auflösen oder mit Positionen löschen; Positionen duplizieren und verschieben;
+  - «Einzeilig» / «Ganzer Text» und ziehbare Breite von Bezeichnung und Kommentar (je Browser gemerkt);
+  - **Gewerke**: Spalte GW und eine zweite Sicht nach Gewerken mit Summen, Namen der Gewerke in «Quellen». Vorbild: Phase0 (jederzeit zwischen DIN 276 und Gewerken wechseln), ORCA (kostengruppen- und gewerkeorientiert, Vergabeeinheiten), California (Kostengruppen, Leistungsbereiche, Lokalitäten → Spalte Ort). Beide Sichten ergeben dieselbe Summe;
+  - Details rechts als Inspektor (die Tabelle rückt zur Seite), auf dem iPhone von unten;
+  - Übersicht mit Netto und Brutto nebeneinander, Anteil und €/m² BGF; der Umschalter netto/brutto entfällt;
+  - Bericht: Positionen wie im Excel mit Elementen und Brutto, Zusammenstellung nach Gewerken, Druck im Querformat.
+- Archivos: `kostenberechnung.js`, `kostenberechnung.css`, `kosten-rechnen.js` (Summen je Element und Gewerk, `gewerkKurz`), `kostenberechnung.html` (`office3`), `kostenberechnung-hilfe.html` und `anleitung.css` (`office2`, Teil II neu), `terminplan-hilfe.html` (nur Version des Stils), `tests/office-kostenberechnung.test.mjs`, `tests/browser/office-kostenberechnung.chromium.mjs`.
+- Base de datos: keine Migration. Der Stand bekommt die Felder `elemente`, `gewerke` und an der Position `gewerk`, `ort`, `element` (gleiches Schema v1; bestehende Stände bleiben gültig).
+- Deploy de funciones: ninguno.
+- Cómo se probó: 344 Tests (neu: Summen je Element und Gewerk, beide Sichten gleich; Spalten, Zeilenhöhe, volle Breite, Querformat). Chromium 7 Tests der Kostenberechnung (neu: Element mit zwei Positionen direkt in der Zeile, Enter, Details mit Quelle, Escape, Gewerke, einzeilig gemerkt, Bericht). Bildschirmfotos bei 1900 px, mit Details, nach Gewerken, einzeilig und auf dem iPhone, ohne Querscrollen.
+- Quedó pendiente o sin probar: KI-Assistent der Kostenberechnung (nächster PR). Sichtprüfung angemeldet auf Pages.
+- Riesgos o decisiones que necesitan a Gari: die Kürzel der Gewerke (GW) und ihre Namen im Büro; im Muster ist keine Liste vorgegeben, damit nichts Falsches drinsteht.
+- PR: #123
+
+---
+
 ### 2026-11-21 · Kostenberechnung bis zur 3. Ebene, Anleitung zur Kostenberechnung, Anleitung zum Terminplan überarbeitet · Claude
 - Qué cambió y por qué: Gari (21.11., 12:23): die Kostenberechnung muss bis zur 3. Ebene gehen und alle Positionen zeigen («für die KG 330 … 331 bis 339, und so für alle KG»); eine Anleitung zur Kostenberechnung im Office wie beim Terminplan, im Stil der Seite; die Anleitung zum Terminplan in Stil und Inhalt korrigieren. DIN 276:2018-12 verlangt für die Kostenberechnung die 3. Ebene (Bauprofessor, FORUM Verlag; die Regel «mindestens 2. Ebene» stammt aus der Fassung 2008).
 - Werkzeug: Jede KG des Musters ohne Unter-KG ist ein Blatt mit Stand (vollständig, offen, ohne Ansatz, entfällt, in Pauschale, optional). «Positionen» zeigt die ganze Gliederung: Köpfe der 2. Ebene mit Zwischensumme, darunter jede KG der 3. Ebene, auch leer. An der KG: Position anlegen (mit den Vorgaben des Musters), Entfällt mit Begründung, Pauschale für die ganze KG, «Übrige … ohne Ansatz: entfällt», Wieder aufnehmen. Vollständigkeit = geklärt / (geklärt + zu klären); «vorläufig», bis alles geklärt ist. «Was noch fehlt» meldet leere KG je Gruppe und mögliche Doppelzählung (Pauschale und Position darunter). Bericht mit «Kostenberechnung bis zur 3. Ebene».

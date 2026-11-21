@@ -88,13 +88,13 @@ test('Ablauf: anlegen, Mengen aus Archicad, Kennwert mit Herkunft, Vergleich, Be
     assert.equal(s.state.positionen.find(p=>p.id==='ac:DE-01:351').menge,'182.4');
 
     // Kennwert aus dem BKI-Buch: brutto, Fundstelle, Herkunftskette.
-    await page.click('.pos[data-id="ac:AW-01:331"]');
+    await page.click('.pos[data-id="ac:AW-01:331"] .mehr');
     const k='pos:ac:AW-01:331:';
-    await page.selectOption(`[data-key="${k}kennwert.art"]`,'bki');
-    await page.fill(`[data-key="${k}kennwert.wert"]`,'250');
+    await page.selectOption(`.panel [data-key="${k}kennwert.art"]`,'bki');
+    await page.fill(`.panel [data-key="${k}kennwert.wert"]`,'250');
     // Direkt auf den nächsten Knopf: der Klick darf nicht verloren gehen.
-    await page.click(`[data-key="${k}kennwert.fundstelle"]`);
-    await page.fill(`[data-key="${k}kennwert.fundstelle"]`,'BKI Bauelemente, S. 120');
+    await page.click(`.panel [data-key="${k}kennwert.fundstelle"]`);
+    await page.fill(`.panel [data-key="${k}kennwert.fundstelle"]`,'BKI Bauelemente, S. 120');
     await page.click('.tab[data-tab="quellen"]');
     assert.equal(await page.locator('.tab[aria-selected="true"]').textContent(),'Quellen','der erste Klick nach der Eingabe ging verloren');
     await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.find(p=>p.id==='ac:AW-01:331').kennwert.fundstelle==='BKI Bauelemente, S. 120');
@@ -125,7 +125,7 @@ test('Ablauf: anlegen, Mengen aus Archicad, Kennwert mit Herkunft, Vergleich, Be
     assert.equal(s.state.positionen.find(p=>p.id==='ac:AW-01:331').kennwert.wert,'250');
 
     // 238,75 m² × (250 ÷ 1,19 × 1,045 = 219,54 €/m²) = 52.415,18 €.
-    await page.click('.pos[data-id="ac:AW-01:331"]');
+    await page.click('.pos[data-id="ac:AW-01:331"] .mehr');
     const panel=page.locator('.panel');
     assert.match(await panel.textContent(),/238,75 m² × 219,54 € = 52\.415,18 € netto/);
     assert.match(await panel.textContent(),/Herkunft des KennwertsBKI-Buch/);
@@ -202,7 +202,7 @@ test('Kostengruppen klären: Position anlegen, entfällt, Pauschale, Rest entfä
     // KG 211: Position anlegen. Die Vorgabe des Musters für KG 200 ist «Betrag».
     await page.click('.tab[data-tab="positionen"]');
     await page.click('[data-act="filter"][data-kg="200"]');
-    await page.click('.pos[data-act="kg"][data-kg="211"]');
+    await page.click('.pos[data-act="kg"][data-kg="211"] .bez-link');
     assert.match(await page.locator('.panel').textContent(),/Ohne Ansatz: noch nicht entschieden/);
     await page.click('.panel [data-act="pos-neu"]');
     await page.fill('.panel input[data-key$=":betrag"]','12.500');
@@ -210,13 +210,13 @@ test('Kostengruppen klären: Position anlegen, entfällt, Pauschale, Rest entfä
     await page.selectOption('.panel select[data-key$=":kennwert.art"]','annahme');
     await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.some(p=>p.kg==='211'&&p.betrag==='12500'&&p.modus==='betrag'&&p.kennwert.art==='annahme'));
     // KG 212 entfällt, mit Begründung.
-    await page.click('.pos[data-act="kg"][data-kg="212"]');
+    await page.click('.pos[data-act="kg"][data-kg="212"] .bez-link');
     await page.click('.panel [data-act="kg-entfaellt"]');
     await page.fill('[data-key="gruppe:212:notiz"]','kein Abbruch');
     await page.press('[data-key="gruppe:212:notiz"]','Tab');
     await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.gruppen['212']?.notiz==='kein Abbruch');
     // Gruppe 210: die übrigen ohne Ansatz entfallen in einem Schritt; «Sonstiges» bleibt optional.
-    await page.click('.pos[data-act="kg"][data-kg="210"]');
+    await page.click('.pos[data-act="kg"][data-kg="210"] .bez-link');
     await page.click('.panel [data-act="kg-rest"]');
     await page.locator('.kb-banner',{hasText:'als «entfällt» markiert: 213, 214, 215, 216'}).waitFor();
     await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.gruppen['216']?.status==='entfaellt');
@@ -226,7 +226,7 @@ test('Kostengruppen klären: Position anlegen, entfällt, Pauschale, Rest entfä
     assert.match(await page.locator('.pos[data-kg="210"]').textContent(),/vollständig/);
     // KG 410 als Pauschale aus dem Kostenbeitrag: 411–419 gelten als enthalten.
     await page.click('[data-act="filter"][data-kg="400"]');
-    await page.click('.pos[data-act="kg"][data-kg="410"]');
+    await page.click('.pos[data-act="kg"][data-kg="410"] .bez-link');
     await page.click('.panel [data-act="pos-neu"]');
     assert.match(await page.locator('.panel').textContent(),/Gilt für die ganze KG 410/);
     await page.fill('.panel input[data-key$=":betrag"]','48.000');
@@ -269,9 +269,9 @@ test('Kostengruppen klären: Position anlegen, entfällt, Pauschale, Rest entfä
     await page.click('.tab[data-tab="uebersicht"]');
     assert.match(await page.locator('.row',{hasText:'Gruppe 600'}).first().textContent(),/entfällt/);
     assert.equal(await page.locator('.todo',{hasText:'KG 600'}).count(),0);
-    // brutto zeigt die Summe mit Umsatzsteuer.
-    await page.click('.seg [data-act="brutto"][data-wert="1"]');
-    assert.match(await page.locator('.sumrow').textContent(),/Summe brutto/);
+    // Netto und Brutto stehen nebeneinander wie im Büro-Excel; die Summe nennt beides.
+    assert.match(await page.locator('.row.head').first().textContent(),/Netto.*Brutto.*Anteil/);
+    assert.match(await page.locator('.sumrow').textContent(),/Summe netto.*brutto/);
     // Eine Gruppe der 2. Ebene führt zu ihren Kostengruppen.
     await page.click('[data-act="aufklappen"][data-kg="400"]');
     await page.click('.row.sub[data-kg="420"]');
@@ -290,7 +290,7 @@ test('Muster: nur Ansicht, ohne Import und ohne Speichern',async()=>{
     await page.locator('.kb-banner',{hasText:'Muster · nur Ansicht'}).waitFor();
     assert.equal(await page.locator('[data-act="import"]').count(),0);
     await page.click('.tab[data-tab="positionen"]');
-    await page.click('.pos[data-act="kg"][data-kg="392"]');
+    await page.click('.pos[data-act="kg"][data-kg="392"] .bez-link');
     assert.match(await page.locator('.panel').textContent(),/Gerüstfläche/);
     assert.equal(await page.locator('.panel [data-act="pos-neu"]').count(),0);
     assert.equal(await page.locator('.panel [data-act="kg-entfaellt"]').count(),0);
@@ -328,6 +328,67 @@ test('iPhone: Liste und Kostenberechnung ohne Querscrollen',async()=>{
       await page.click(`.tab[data-tab="${tab}"]`);
       assert.ok(await breit()<=1,tab+' breiter als der Bildschirm');
     }
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+test('Tabelle wie im Büro-Excel: Element mit Positionen, direkt in der Zeile, Enter, Gewerke, einzeilig, Details',async()=>{
+  // Gari, 21.11.: volle Breite; Zeilen aufziehen wie in Excel; Spalten wie im Büro; unter jeder KG mehrere Elemente.
+  const {ctx,page,fehler}=await oeffne({width:1900,height:1000});
+  try{
+    await anlegen(page);
+    await page.click('.tab[data-tab="positionen"]');
+    await page.click('[data-act="filter"][data-kg="330"]');
+    assert.match(await page.locator('.ktab .pos.kopf').textContent(),/KG.*GW.*Bezeichnung.*Ort.*Menge.*EH.*EP netto.*Netto.*Brutto.*Quelle.*Kommentar/);
+    // Kein Leerraum an den Seiten: die Tabelle nutzt die Breite.
+    const breite=await page.locator('.tabelle-karte').evaluate(el=>el.getBoundingClientRect().width);
+    assert.ok(breite>1700,'Tabelle nur '+breite+' px breit');
+    // Element in KG 335, darin zwei Positionen direkt in der Zeile.
+    await page.click('.pos.kgz[data-kg="335"] [data-act="el-neu"]');
+    await page.keyboard.type('WDVS Mineralwolle 160–200 mm + Putz');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.elemente?.[0]?.titel==='WDVS Mineralwolle 160–200 mm + Putz');
+    for(const [gw,bez,menge,ep] of [['wd','Wärmedämmung Mineralfaser 200 mm','638,94','130'],['PU','Putz Außenputz zweilagig, Besenstrich','638,94','150']]){
+      await page.locator('.pos.el').first().locator('[data-act="pos-neu"]').click();
+      await page.keyboard.type(bez);
+      const zeile=()=>page.locator('.pos.zeile.im-el').last();
+      for(const [feld,wert] of [['gewerk',gw],['menge',menge],['kennwert.wert',ep]]){
+        await zeile().locator(`[data-key$=":${feld}"]`).fill(wert);
+        await zeile().locator(`[data-key$=":${feld}"]`).press('Tab');
+        await page.waitForTimeout(60);
+      }
+    }
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.filter(p=>p.element).length===2&&
+      window.__fake.db.office_kosten_instances[0].state.positionen.some(p=>p.gewerk==='WD'&&p.menge==='638.94'&&p.kennwert.wert==='130'));
+    assert.match(await page.locator('.pos.el').first().textContent(),/178\.903,20/); // 83.062,20 + 95.841,00
+    assert.match(await page.locator('.pos.kgz[data-kg="335"]').textContent(),/178\.903,20/);
+    // Enter springt in dieselbe Spalte der nächsten Zeile.
+    const mengen=page.locator('.pos.zeile.im-el [data-key$=":menge"]');
+    await mengen.first().focus();
+    await page.keyboard.press('Enter');
+    const naechste=await mengen.nth(1).getAttribute('data-key');
+    await page.waitForFunction(k=>document.activeElement?.dataset?.key===k,naechste);
+    // Details zur Position: Quelle mit Fundstelle; Escape schließt.
+    await page.locator('.pos.zeile.im-el').first().locator('.mehr').click();
+    await page.selectOption('.panel select[data-key$=":kennwert.art"]','angebot');
+    await page.fill('.panel input[data-key$=":kennwert.fundstelle"]','Angabe Sto');
+    await page.press('.panel input[data-key$=":kennwert.fundstelle"]','Tab');
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.some(p=>p.kennwert?.fundstelle==='Angabe Sto'));
+    assert.match(await page.locator('.pos.zeile.im-el').first().locator('.chip.q').textContent(),/Angebot · Angabe Sto/);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.inspektor').count(),0);
+    // Dieselben Positionen nach Gewerken; die Summe bleibt dieselbe.
+    await page.click('[data-act="sicht"][data-wert="gewerke"]');
+    assert.match(await page.locator('.pos.grp',{hasText:'Gewerk WD'}).textContent(),/83\.062,20/);
+    assert.match(await page.locator('.pos.summe').textContent(),/178\.903,20/);
+    // Einzeilig wie in Excel; die Wahl bleibt im Browser.
+    await page.click('[data-act="zeilen"][data-wert="kompakt"]');
+    assert.equal(await page.locator('.ktab.einzeilig').count(),1);
+    assert.match(await page.evaluate(()=>localStorage.getItem('tba.office.kostenberechnung.ansicht')),/"zeilen":"kompakt"/);
+    // Bericht: Positionen mit GW, Element und Brutto; Zusammenstellung nach Gewerken.
+    await page.click('.tab[data-tab="bericht"]');
+    assert.match(await page.locator('.positionen-b').textContent(),/WDVS Mineralwolle 160–200 mm \+ Putz.*Wärmedämmung Mineralfaser 200 mm/);
+    assert.match(await page.locator('#kbBericht').textContent(),/Zusammenstellung nach Gewerken/);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

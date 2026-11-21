@@ -181,6 +181,8 @@ function position(pos,state){
 //   enthalten     in einer Pauschale der Eltern-KG enthalten (z. B. Kostenbeitrag für KG 410 im Ganzen)
 //   leer          noch nicht entschieden            frei       optional (im Katalog so markiert) und leer
 // Vollständig ist die Kostenberechnung erst, wenn kein Blatt mehr leer oder offen ist.
+// Kürzel eines Gewerks (GW) wie im Büro-Excel: BM, PU, MA …; leer heißt «ohne Gewerk».
+function gewerkKurz(x){return String(x??'').trim().toUpperCase().replace(/\s+/g,'').slice(0,8)}
 function kette(kg){const {e1,e2,e3}=eltern(kg);return [e1,e2,e3].filter((x,i,a)=>x&&a.indexOf(x)===i&&ebene(x)<=ebene(kg))}
 function liegtUnter(blatt,knoten){
   if(blatt===knoten)return false;
@@ -215,6 +217,17 @@ function berechne(state){
     anzahl++;if(r.status==='offen')offenPos++;
     if(r.betragCent!==null){bekannt+=r.betragCent;herkunft[art]=(herkunft[art]||0n)+r.betragCent}
   }
+  // Elemente (Gruppen von Positionen in einer KG, etwa «WDVS + Putz») und Gewerke (Kürzel der Vergabeeinheit, GW):
+  // nur Summen über dieselben Positionen. Die Gliederung nach DIN 276 bleibt die Rechengrundlage, beide Sichten ergeben dieselbe Summe.
+  const elementIds=new Set((state.elemente||[]).map(e=>e&&e.id).filter(Boolean));
+  const elemente=new Map(),gewerke=new Map();
+  const summeIn=(map,key)=>{if(!map.has(key))map.set(key,{bekanntCent:0n,anzahl:0,offen:0});return map.get(key)};
+  (state.positionen||[]).forEach((pos,i)=>{
+    const r=positionen[i];if(!r||!KG.test(r.kg)||r.ausgeschlossen)return;
+    r.element=elementIds.has(pos?.element)?pos.element:null;r.gewerk=gewerkKurz(pos?.gewerk);
+    const ziele=[summeIn(gewerke,r.gewerk)];if(r.element)ziele.push(summeIn(elemente,r.element));
+    for(const z of ziele){z.anzahl++;if(r.status==='offen')z.offen++;if(r.betragCent!==null)z.bekanntCent+=r.betragCent}
+  });
   // Blätter und ihr Stand.
   const hatKinder=new Set();
   for(const k of katalog){const e=ebene(k.kg);if(e>=2)hatKinder.add(k.kg[0]+'00');if(e===3)hatKinder.add(k.kg.slice(0,2)+'0')}
@@ -267,7 +280,7 @@ function berechne(state){
   if(!blaetter.size){erledigt=positionen.filter(p=>!p.ausgeschlossen&&p.status!=='offen').length;gesamtZahl=positionen.filter(p=>!p.ausgeschlossen).length}
   const ergebnis={
     schema:'tba.office.kostenberechnung.ergebnis.v1',
-    positionen,knoten,blaetter,
+    positionen,knoten,blaetter,elemente,gewerke,
     gesamt:{bekanntCent:bekannt,gesamtCent:vollstaendig?bekannt:null,offen:offenPos+leer.length,offenePositionen:offenPos,ohneAnsatz:leer.length,anzahl,vollstaendig},
     ustCent,bruttoCent:bekannt+ustCent,
     vollstaendigkeit:{erledigt,gesamt:gesamtZahl,prozent:gesamtZahl?Math.floor(erledigt*100/gesamtZahl):0,nachKg:blaetter.size>0},
@@ -381,5 +394,5 @@ function prozent(p,{vorzeichen=false}={}){
 }
 
 return Object.freeze({SCHEMA,ARTEN,MENGENQUELLEN,EINHEITEN,PAARE,dezimal,eingabe,mikro,textAusMikro,centAusMikro,teile,
-  ebene,eltern,kette,liegtUnter,katalogTitel,quartalIndex,quartalText,kennwertKette,position,berechne,rezeptVorschlag,euro,zahl,prozent});
+  ebene,eltern,kette,liegtUnter,gewerkKurz,katalogTitel,quartalIndex,quartalText,kennwertKette,position,berechne,rezeptVorschlag,euro,zahl,prozent});
 });
