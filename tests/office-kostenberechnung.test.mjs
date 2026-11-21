@@ -226,9 +226,10 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office3',
-    './kosten-import.js?v=office1','./kostenberechnung.js?v=office3','./kostenberechnung.css?v=office3'])
+    './kosten-import.js?v=office2','./kosten-assistent.js?v=office1','./kostenberechnung.js?v=office4','./kostenberechnung.css?v=office4'])
     assert.ok(seite.includes(s),'fehlt: '+s);
-  assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kostenberechnung.js?'));
+  assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
+    seite.indexOf('kosten-assistent.js')<seite.indexOf('kostenberechnung.js?'));
   // In der App ohne Sitzung: anmelden über die App, nicht im Browser umleiten.
   assert.match(ui,/WINDOW_NATIVE\.call\('session\.signIn'\)/);
   assert.match(ui,/must_change_password/);
@@ -276,13 +277,17 @@ test('öffentliches Repository: keine DIN-Titel, keine Projekte, keine Adressen'
   const dateien={'kosten-rechnen.js':read('kosten-rechnen.js'),'kosten-import.js':read('kosten-import.js'),'kostenberechnung.js':ui,
     'kostenberechnung.css':css,'kostenberechnung.html':seite,[MIGRATION]:sql,
     'kostenberechnung-hilfe.html':read('kostenberechnung-hilfe.html'),'terminplan-hilfe.html':read('terminplan-hilfe.html'),'anleitung.css':read('anleitung.css'),
+    'kosten-assistent.js':read('kosten-assistent.js'),'office-kosten-ai/core.mjs':read('supabase/functions/office-kosten-ai/core.mjs'),
+    'office-kosten-ai/index.ts':read('supabase/functions/office-kosten-ai/index.ts'),'Migration KI':read('supabase/migrations/20261121180000_office_kosten_ai_v1.sql'),
+    'Abnahme KI':read('tests/sql/office-kosten-ai-rls-acceptance.sql'),'Testersatz':read('tests/browser/fixtures/fake-supabase-kosten.js'),
     'fixture':readFileSync(url('tests/fixtures/kosten-archicad-beispiel.xlsx')).toString('latin1')};
   // Kennzeichnende Titel der 2. und 3. Ebene; die Gliederung kommt aus dem Muster in der Datenbank.
   const TITEL=/Tragende Außenwände|Nichttragende Außenwände|Außenwandöffnungen|Außenwandbekleidungen|Deckenkonstruktionen|Deckenbeläge|Deckenbekleidungen|Dachkonstruktionen|Dachbeläge|Dachbekleidungen|Baugrube|\bGründung\b|Herrichten und Erschließen|Elementierte Außenwandkonstruktionen/;
   for(const [name,txt] of Object.entries(dateien)){
     assert.ok(!TITEL.test(txt),'DIN-276-Titel in '+name+': '+(txt.match(TITEL)||[])[0]);
     assert.ok(!/Bernried|Schwarz/.test(txt),name+' nennt ein Projekt');
-    assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(txt.replace(/@supabase\/supabase-js@2\.57\.0/g,'')),name+' enthält eine E-Mail-Adresse');
+    // Testadressen unter .invalid (RFC 2606, nie zustellbar) sind erlaubt.
+    assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(txt.replace(/@supabase\/supabase-js@2\.57\.0/g,'').replace(/[\w.+-]+@[\w-]+\.invalid\b/g,'')),name+' enthält eine E-Mail-Adresse');
   }
   assert.match(read('kosten-rechnen.js'),/Die DIN-276-Gliederung kommt aus dem Stand \(Muster in der Datenbank\), nie aus diesem Code/);
 });
@@ -299,14 +304,19 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   const hilfe=read('kostenberechnung-hilfe.html'),tp=read('terminplan-hilfe.html'),stil=read('anleitung.css');
   for(const [name,html] of [['kostenberechnung-hilfe.html',hilfe],['terminplan-hilfe.html',tp]]){
     assert.match(html,/<html lang="de">/,name);
-    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office2">/,name);
+    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office3">/,name);
     assert.ok(!/<style[\s>]/.test(html),'Stil gehört in anleitung.css: '+name);
     assert.ok(!/\b(para|que|como|desde|proyecto|archivo|tarea|también|costos|cálculo|guardar)\b/i.test(html),'spanische Wörter in '+name);
   }
   // Erreichbar aus dem Werkzeug, so wie die Anleitung zum Terminplan aus den Terminplänen.
   assert.match(ui,/href="\.\/kostenberechnung-hilfe\.html"/);
   assert.match(read('app/office-projects.js'),/Anleitung zum Terminplan · Werkzeug, Assistent, LPH 3 und LPH 5/);
-  for(const id of ['ablauf','kostengruppen','archicad','kennwerte','bericht','quellen'])assert.match(hilfe,new RegExp('id="'+id+'"'));
+  for(const id of ['ablauf','kostengruppen','archicad','kennwerte','bericht','assistent','quellen'])assert.match(hilfe,new RegExp('id="'+id+'"'));
+  // Assistent (Teil VI): was er kann, prüfen und übernehmen, keine Preise ohne Herkunft, Daten und Grenzen.
+  for(const t of ['Teil VI · Assistent','Altes Büro-Excel übernehmen','Prüfen und übernehmen','Rückgängig','Kein Preis ohne Herkunft','«Annahme KI: …»',
+    'Höchstens 80 Positionen je Vorschlag','Höchstens 25 Anfragen am Tag je Person','sucht nicht im Internet'])
+    assert.ok(hilfe.includes(t),'fehlt im Kapitel Assistent: '+t);
+  assert.ok(!hilfe.includes('folgt als nächster Schritt'),'die Anleitung kündigt den Assistenten noch an');
   for(const t of ['3. Ebene','ohne Ansatz','in Pauschale','Entfällt','Rezept','Herkunftskette','219,54 €','52.415,18 €','5 % oder 10.000 €','Stand festhalten'])
     assert.ok(hilfe.includes(t),'fehlt in der Anleitung zur Kostenberechnung: '+t);
   // Terminplan: Assistent, Projektkalender mit Feiertagen, Muster-Planner v0.3.4, Weg zur Kostenberechnung.
