@@ -219,7 +219,8 @@ test('Migration: Verlauf und Kontingent mit RLS, nichts Destruktives; Abnahme l√
   assert.match(sql,/revoke all on function public\.office_kosten_ai_consume_request\(uuid\) from public, anon;/);
   assert.doesNotMatch(sql,/grant[^;]*(update|delete)[^;]*office_kosten_(dialogue_messages|ai_requests)/i);
   assert.match(abnahme,/^begin;$/m);assert.match(abnahme,/^rollback;$/m);
-  assert.match(abnahme,/B_schreibt=ok; B_liest=1; B_kontingent=t; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=f; C_liest=0; /);
+  assert.match(abnahme,/B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=false; C_liest=0; /);
+  assert.match(abnahme,/B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_limit=false; /);
   assert.match(abnahme,/example\.invalid/);
   const ci=read('.github/workflows/verify.yml');
   assert.ok(ci.includes('tests/sql/office-kosten-ai-rls-acceptance.sql'),'die Abnahme l√§uft nicht in der CI');

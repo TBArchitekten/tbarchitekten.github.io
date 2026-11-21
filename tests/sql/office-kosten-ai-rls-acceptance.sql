@@ -1,9 +1,9 @@
 -- Abnahme RLS · KI-Assistent der Kostenberechnung (Migration 20261121180000_office_kosten_ai_v1.sql), 21.11.2026.
 -- Erfundene Personen und Projekte; alles läuft in einer Transaktion, die am Ende zurückgerollt wird.
 -- A = Projektleitung von P, B = Team von P, C = Mitglied ohne Bezug zu P, D = kein Office-Mitglied.
--- Erwartet:
--- B_schreibt=ok; B_liest=1; B_kontingent=t; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=f; C_liest=0;
--- B_fremd=verweigert; D_kontingent=f; anon=verweigert; B_limit=f;
+-- Erwartet (Wahrheitswerte als «true»/«false»: so schreibt PL/pgSQL sie in Text):
+-- B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=false; C_liest=0;
+-- B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_limit=false;
 begin;
 insert into auth.users(id,aud,role,email,instance_id) values
  ('a1000000-0000-4000-8000-00000000000a','authenticated','authenticated','ka-a@example.invalid','00000000-0000-0000-0000-000000000000'),
@@ -23,8 +23,8 @@ insert into public.office_kosten_instances(id,project_id,template_version,projec
 do $test$
 declare
   r text := ''; n int; ok boolean;
-  erwartet constant text := 'B_schreibt=ok; B_liest=1; B_kontingent=t; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=f; C_liest=0; '
-    || 'B_fremd=verweigert; D_kontingent=f; anon=verweigert; B_limit=f; ';
+  erwartet constant text := 'B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=false; C_liest=0; '
+    || 'B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_limit=false; ';
   k constant uuid := 'f1000000-0000-4000-8000-0000000000f1';
 begin
   -- B (Team, Ersteller): schreibt und liest den eigenen Verlauf, verbraucht Kontingent.
