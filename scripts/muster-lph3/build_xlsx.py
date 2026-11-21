@@ -468,7 +468,7 @@ def koordination():
         ("ALLE", A, "Austausch", "Mit welchem Dateiformat, welchem Nullpunkt und welcher Layer- bzw. Modellstruktur arbeiten Sie?", "Austauschdateien (Planliste, Blatt Austausch)", "L3.PLI.1-06", "M02"),
         ("ALLE", A, "Behörden", "Welche Abstimmungen mit Behörden oder Versorgern sind aus Ihrer Sicht in der LPH 3 nötig?", "Genehmigungsfähigkeit (L3.GEN.1)", "HOAI Anl. 10 LPH 3 d); Anl. 14 LPH 3 f); Anl. 15 LPH 3 e)", "M03"),
         ("ALLE", A, "Leistungsumfang", "Halten Sie Besondere Leistungen für erforderlich, die nicht beauftragt sind? Wenn ja, welche und warum?", "Abgrenzung, Entscheidung des Auftraggebers", "L3.FPB.1-02, -04", "M02"),
-        ("ALLE", A, "Annahmen", "Welche Annahmen treffen Sie, die wir oder der Auftraggeber bestätigen müssen?", "Klärungsliste, Entscheidungsvorlage", "L3.KLA.1-07", "M03"),
+        ("ALLE", A, "Annahmen", "Welche Annahmen treffen Sie, die wir oder der Auftraggeber bestätigen müssen?", "Klärungsliste, Entscheidungsvorlage", "L3.KLA.1-07, -08", "M03"),
         ("TWP", A, "Tragsystem", "Welches Tragsystem schlagen Sie vor (Bauweise, Achsraster, Spannrichtungen), und welche Varianten halten Sie für wirtschaftlich?", "Grundrisse und Schnitte Stand 02, Kostenberechnung", "HOAI Anl. 14 LPH 3 a)", "M03"),
         ("TWP", A, "Bauteildicken", "Welche Decken-, Wand- und Stützenabmessungen sollen wir vorläufig führen?", "Grundrisse, Schnitte, Bauteilkatalog", "HOAI Anl. 14 LPH 3 b), c)", "M03"),
         ("TWP", A, "Unterzüge", "Wo sind Unterzüge, Überzüge oder Abfangungen unvermeidbar, und mit welcher Höhe ist zu rechnen?", "Raumhöhen, Trassenführung der Technik", "HOAI Anl. 14 LPH 3 c); L3.KLA.1-02", "M03"),
