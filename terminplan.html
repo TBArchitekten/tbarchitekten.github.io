@@ -570,7 +570,7 @@ body.read-only .editor-only{display:none!important}
       <button class="assistant-window-action" id="assistantClose" type="button" aria-label="Assistent schließen" title="Schließen">×</button>
     </div>
     <div id="assistantBody" class="assistant-body" hidden>
-      <p class="assistant-caveat">Geprüft werden ausschließlich eingetragene Vorgängerbeziehungen (EA / AA / EE / AE) mit Montag–Freitag als Arbeitstagen, ohne Feiertage oder Pufferzeiten. Nicht eingetragene fachliche Abhängigkeiten können nicht erkannt werden.</p>
+      <p class="assistant-caveat">Geprüft werden ausschließlich eingetragene Vorgängerbeziehungen (EA / AA / EE / AE) mit Montag–Freitag als Arbeitstagen, abzüglich der arbeitsfreien Tage des Projektkalenders (neue Terminpläne enthalten die gesetzlichen Feiertage in Bayern); Pufferzeiten werden nicht angesetzt. Nicht eingetragene fachliche Abhängigkeiten können nicht erkannt werden.</p>
       <div class="assistant-columns">
         <div>
           <h3>Abhängigkeiten und Hinweise</h3>
@@ -587,7 +587,7 @@ body.read-only .editor-only{display:none!important}
           <button class="assistant-apply" type="button" id="assistantApply" hidden>Änderung übernehmen</button>
           <div class="assistant-calendar">
             <h3>Projektkalender · zusätzliche arbeitsfreie Tage</h3>
-            <p class="dep-note">Nur ausdrücklich eingetragene Ausnahmen; keine automatisch angenommenen Feiertage.</p>
+            <p class="dep-note">Alle arbeitsfreien Tage außer Samstag und Sonntag. Neue Terminpläne enthalten die gesetzlichen Feiertage in Bayern für sechs Jahre; örtliche Feiertage und Betriebsferien hier ergänzen.</p>
             <textarea id="assistantNonWorkingDates" placeholder="YYYY-MM-DD, YYYY-MM-DD" rows="2" aria-label="Arbeitsfreie Kalendertage"></textarea>
             <button type="button" id="assistantSaveCalendar">Kalender übernehmen</button>
           </div>
@@ -655,7 +655,7 @@ body.read-only .editor-only{display:none!important}
   </div>
 
   <div class="print-footer">
-    <span>Arbeitstage Montag–Freitag · Regeltermine separat im Kalender / Besprechungsplan</span>
+    <span>Arbeitstage Montag–Freitag ohne die arbeitsfreien Tage des Projektkalenders · Regeltermine separat im Kalender / Besprechungsplan</span>
     <span id="printFooterState"></span>
   </div>
 </section>

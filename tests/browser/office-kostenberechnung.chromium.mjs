@@ -161,28 +161,88 @@ test('Ablauf: anlegen, Mengen aus Archicad, Kennwert mit Herkunft, Vergleich, Be
   }finally{await ctx.close()}
 });
 
-test('Positionen von Hand: anlegen, entfallen lassen, löschen; Index, Gruppen, brutto, Sprünge',async()=>{
+test('Jede Kostengruppe bis zur 3. Ebene steht in der Liste und im Bericht',async()=>{
   const {ctx,page,fehler}=await oeffne();
   try{
     await anlegen(page);
-    // Aus «Was noch fehlt» direkt zur Position.
-    await page.click('.todo-link[data-id="m:210"]');
-    assert.equal(await page.locator('.pos.sel').getAttribute('data-id'),'m:210');
-    await page.fill('[data-key="pos:m:210:betrag"]','12.500');
-    await page.press('[data-key="pos:m:210:betrag"]','Tab');
-    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.find(p=>p.id==='m:210').betrag==='12500');
-    // Neue Position in KG 300 über die Übersicht (Gruppe aufklappen → Position direkt).
     await page.click('.tab[data-tab="positionen"]');
+    // KG 330: alle Kostengruppen der 3. Ebene, auch ohne Position.
+    for(const kg of ['331','332','333','334','335','336','337','338','339'])
+      assert.equal(await page.locator('.pos[data-kg="'+kg+'"]').count(),1,'KG '+kg+' fehlt in der Liste');
+    assert.match(await page.locator('.pos[data-kg="339"]').textContent(),/optional/);
+    assert.match(await page.locator('.pos[data-kg="331"]').textContent(),/ohne Ansatz/);
+    // «Alle»: jedes Blatt der Gliederung als Zeile.
+    await page.click('[data-act="filter"][data-kg=""]');
+    const fehlend=await page.evaluate(()=>{
+      const kat=window.__fake.db.office_kosten_instances[0].state.katalog.map(k=>k.kg);
+      const hat=kg=>kat.some(x=>x!==kg&&((kg.endsWith('00')&&x[0]===kg[0])||(!kg.endsWith('00')&&kg.endsWith('0')&&x.slice(0,2)===kg.slice(0,2))));
+      return kat.filter(kg=>!document.querySelector('.pos[data-kg="'+kg+'"]')&&!hat(kg)).length+kat.filter(kg=>hat(kg)&&!document.querySelector('.pos[data-kg="'+kg+'"]')).length;
+    });
+    assert.equal(fehlend,0,'Kostengruppen fehlen in «Alle»');
+    // Übersicht: 330 aufklappen zeigt 331–339.
+    await page.click('.tab[data-tab="uebersicht"]');
+    await page.click('[data-act="aufklappen"][data-kg="330"]');
+    assert.equal(await page.locator('.row.sub2').count(),9);
+    // Bericht: Gliederung bis zur 3. Ebene, 370 entfällt ohne ihre Unter-KG.
+    await page.click('.kb-actions [data-tab="bericht"]');
+    const zeilen=await page.locator('#kbBericht table.gliederung tbody tr').allTextContents();
+    assert.ok(zeilen.some(z=>/^337Gruppe 337ohne Ansatz/.test(z)),'337 fehlt im Bericht');
+    assert.ok(zeilen.some(z=>/^370Gruppe 370entfällt/.test(z)));
+    assert.ok(!zeilen.some(z=>/^371/.test(z)),'Unter-KG einer entfallenden Gruppe im Bericht');
+    await foto(page,'10-bericht-ebene3');
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+test('Kostengruppen klären: Position anlegen, entfällt, Pauschale, Rest entfällt; Index, Gruppen, brutto',async()=>{
+  const {ctx,page,fehler}=await oeffne();
+  try{
+    await anlegen(page);
+    const db=()=>page.evaluate(()=>window.__fake.db.office_kosten_instances[0].state);
+    // KG 211: Position anlegen. Die Vorgabe des Musters für KG 200 ist «Betrag».
+    await page.click('.tab[data-tab="positionen"]');
+    await page.click('[data-act="filter"][data-kg="200"]');
+    await page.click('.pos[data-act="kg"][data-kg="211"]');
+    assert.match(await page.locator('.panel').textContent(),/Ohne Ansatz: noch nicht entschieden/);
+    await page.click('.panel [data-act="pos-neu"]');
+    await page.fill('.panel input[data-key$=":betrag"]','12.500');
+    await page.press('.panel input[data-key$=":betrag"]','Tab');
+    await page.selectOption('.panel select[data-key$=":kennwert.art"]','annahme');
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.some(p=>p.kg==='211'&&p.betrag==='12500'&&p.modus==='betrag'&&p.kennwert.art==='annahme'));
+    // KG 212 entfällt, mit Begründung.
+    await page.click('.pos[data-act="kg"][data-kg="212"]');
+    await page.click('.panel [data-act="kg-entfaellt"]');
+    await page.fill('[data-key="gruppe:212:notiz"]','kein Abbruch');
+    await page.press('[data-key="gruppe:212:notiz"]','Tab');
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.gruppen['212']?.notiz==='kein Abbruch');
+    // Gruppe 210: die übrigen ohne Ansatz entfallen in einem Schritt; «Sonstiges» bleibt optional.
+    await page.click('.pos[data-act="kg"][data-kg="210"]');
+    await page.click('.panel [data-act="kg-rest"]');
+    await page.locator('.kb-banner',{hasText:'als «entfällt» markiert: 213, 214, 215, 216'}).waitFor();
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.gruppen['216']?.status==='entfaellt');
+    let s=await db();
+    assert.deepEqual(['213','214','215','216'].map(k=>s.gruppen[k]?.status),['entfaellt','entfaellt','entfaellt','entfaellt']);
+    assert.equal(s.gruppen['219'],undefined);
+    assert.match(await page.locator('.pos[data-kg="210"]').textContent(),/vollständig/);
+    // KG 410 als Pauschale aus dem Kostenbeitrag: 411–419 gelten als enthalten.
+    await page.click('[data-act="filter"][data-kg="400"]');
+    await page.click('.pos[data-act="kg"][data-kg="410"]');
+    await page.click('.panel [data-act="pos-neu"]');
+    assert.match(await page.locator('.panel').textContent(),/Gilt für die ganze KG 410/);
+    await page.fill('.panel input[data-key$=":betrag"]','48.000');
+    await page.press('.panel input[data-key$=":betrag"]','Tab');
+    await page.fill('.panel input[data-key$=":kennwert.fundstelle"]','Kostenbeitrag HLS');
+    await page.press('.panel input[data-key$=":kennwert.fundstelle"]','Tab');
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.some(p=>p.kg==='410'&&p.betrag==='48000'&&p.kennwert.art==='fachplanung'));
+    assert.match(await page.locator('.pos[data-kg="411"]').textContent(),/in der Pauschale von KG 410/);
+    // Freie Position: ungültige Kostengruppe wird abgewiesen; entfällt, dann löschen.
     await page.click('.card-head [data-act="pos-neu"]');
-    const neu=await page.evaluate(()=>window.__fake.db.office_kosten_instances[0]?.state.positionen.length);
-    await page.fill('.panel input[data-key$=":kg"]','338');
-    await page.press('.panel input[data-key$=":kg"]','Tab');
-    await page.waitForFunction(n=>window.__fake.db.office_kosten_instances[0].state.positionen.length===n+1&&window.__fake.db.office_kosten_instances[0].state.positionen.some(p=>p.kg==='338'),neu);
-    // Eine ungültige Kostengruppe wird nicht übernommen.
     await page.fill('.panel input[data-key$=":kg"]','33');
     await page.press('.panel input[data-key$=":kg"]','Tab');
     await page.locator('.kb-banner',{hasText:'Die Kostengruppe hat drei Ziffern'}).waitFor();
-    // Entfällt, dann löschen (zweimal bestätigen).
+    await page.fill('.panel input[data-key$=":kg"]','338');
+    await page.press('.panel input[data-key$=":kg"]','Tab');
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.some(p=>p.kg==='338'));
     await page.click('.panel [data-act="entfaellt"]');
     assert.match(await page.locator('.panel [data-act="entfaellt"]').textContent(),/Wieder aufnehmen/);
     await page.click('.panel [data-act="loeschen"]');
@@ -199,20 +259,26 @@ test('Positionen von Hand: anlegen, entfallen lassen, löschen; Index, Gruppen, 
     const q0=await page.locator('[data-key="index:0:quartal"]').inputValue();
     await page.selectOption('[data-key="index:1:quartal"]',q0);
     await page.locator('.kb-banner',{hasText:'gibt es schon einen Wert'}).waitFor();
-    // KG 200 entfällt: zählt nicht mehr, und ihre Positionen nicht als offen.
-    await page.check('[data-key="gruppe:200:status"]');
-    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.gruppen['200']?.status==='entfaellt');
+    // In «Quellen» stehen die einzeln entfallenden Kostengruppen; eine wieder aufnehmen.
+    assert.equal(await page.locator('[data-act="kg-wieder"][data-kg="212"]').count(),1);
+    await page.click('[data-act="kg-wieder"][data-kg="216"]');
+    await page.waitForFunction(()=>!window.__fake.db.office_kosten_instances[0].state.gruppen['216']);
+    // KG 600 entfällt als Ganzes: zählt nicht mehr und nicht als offen.
+    await page.check('[data-key="gruppe:600:status"]');
+    await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.gruppen['600']?.status==='entfaellt');
     await page.click('.tab[data-tab="uebersicht"]');
-    assert.match(await page.locator('.row',{hasText:'Gruppe 200'}).first().textContent(),/entfällt/);
-    assert.equal(await page.locator('.todo',{hasText:'KG 220'}).count(),0);
+    assert.match(await page.locator('.row',{hasText:'Gruppe 600'}).first().textContent(),/entfällt/);
+    assert.equal(await page.locator('.todo',{hasText:'KG 600'}).count(),0);
     // brutto zeigt die Summe mit Umsatzsteuer.
     await page.click('.seg [data-act="brutto"][data-wert="1"]');
     assert.match(await page.locator('.sumrow').textContent(),/Summe brutto/);
-    // Eine Gruppe der 2. Ebene führt zu ihren Positionen.
+    // Eine Gruppe der 2. Ebene führt zu ihren Kostengruppen.
     await page.click('[data-act="aufklappen"][data-kg="400"]');
-    await page.click('.row.sub[data-kg="410"]');
+    await page.click('.row.sub[data-kg="420"]');
     assert.equal(await page.locator('.tab[aria-selected="true"]').textContent(),'Positionen');
-    assert.match(await page.locator('.card-head h2').first().textContent(),/KG 410/);
+    assert.match(await page.locator('.card-head h2').first().textContent(),/KG 420/);
+    assert.match(await page.locator('.panel h2').textContent(),/KG 420/);
+    await foto(page,'11-kg-panel');
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
@@ -224,9 +290,10 @@ test('Muster: nur Ansicht, ohne Import und ohne Speichern',async()=>{
     await page.locator('.kb-banner',{hasText:'Muster · nur Ansicht'}).waitFor();
     assert.equal(await page.locator('[data-act="import"]').count(),0);
     await page.click('.tab[data-tab="positionen"]');
-    await page.click('.pos[data-id="m:392"]');
-    assert.equal(await page.locator('.panel input[readonly]').count()>3,true);
-    assert.equal(await page.locator('.panel [data-act="loeschen"]').count(),0);
+    await page.click('.pos[data-act="kg"][data-kg="392"]');
+    assert.match(await page.locator('.panel').textContent(),/Gerüstfläche/);
+    assert.equal(await page.locator('.panel [data-act="pos-neu"]').count(),0);
+    assert.equal(await page.locator('.panel [data-act="kg-entfaellt"]').count(),0);
     assert.equal(await page.evaluate(()=>window.__fake.aufrufe.filter(a=>a.op!=='select').length),0);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}

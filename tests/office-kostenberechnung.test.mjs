@@ -115,6 +115,56 @@ test('was noch fehlt: Grundlagen einmal, Bekleidung, Bezugsfläche, Abweichung o
   assert.deepEqual(R.rezeptVorschlag('331').map(z=>z.kg),['331','335','336']);
 });
 
+test('3. Ebene: jede Kostengruppe hat einen Stand, «vorläufig» bis alle geklärt sind',()=>{
+  // Gliederung wie im Muster: 1. bis 3. Ebene; «Sonstiges zur KG …» ist optional.
+  const katalog=[['300','B'],['330','B3'],['331','a'],['332','b'],['333','c'],['339','So',true],['340','B4'],['341','d'],['349','So',true],
+    ['400','C'],['410','C1'],['411','e'],['412','f'],['419','So',true],['600','D'],['610','D1'],['620','D2']].map(([kg,titel,optional])=>({kg,titel,...(optional?{optional}:{})}));
+  const st={schema:R.SCHEMA,ustProzent:'19',katalog,gruppen:{'333':{status:'entfaellt',notiz:'keine Außenstützen'},'340':{status:'entfaellt'}},positionen:[
+    {id:'a',kg:'331',modus:'betrag',betrag:'1000',kennwert:{art:'annahme'}},
+    {id:'h',kg:'410',modus:'betrag',betrag:'5000',kennwert:{art:'fachplanung',fundstelle:'Kostenbeitrag HLS'}},
+    {id:'x',kg:'341',modus:'betrag',betrag:'99',kennwert:{art:'annahme'}}]};
+  let e=R.berechne(st);
+  assert.deepEqual(Object.fromEntries(e.blaetter),{'331':'vollstaendig','332':'leer','333':'entfaellt','339':'frei','341':'entfaellt','349':'entfaellt',
+    '411':'enthalten','412':'enthalten','419':'enthalten','610':'leer','620':'leer'});
+  // Was in einer entfallenden Gruppe steht, zählt nicht.
+  assert.equal(e.positionen.find(p=>p.id==='x').ausgeschlossen,true);
+  assert.equal(e.gesamt.bekanntCent,600000n);
+  assert.equal(e.knoten.get('330').zuKlaeren,1);assert.equal(e.knoten.get('330').status,'offen');
+  assert.equal(e.knoten.get('340').status,'entfaellt');assert.equal(e.knoten.get('410').status,'vollstaendig');
+  assert.deepEqual(e.vollstaendigkeit,{erledigt:7,gesamt:10,prozent:70,nachKg:true});
+  assert.equal(e.gesamt.vollstaendig,false);assert.equal(e.gesamt.ohneAnsatz,3);
+  // Offene Kostengruppen einmal je Eltern-KG, mit ihren Nummern.
+  const leer=e.fehlt.filter(f=>f.art==='leer');
+  assert.deepEqual(leer.map(f=>[f.kg,f.kgs]),[['330',['332']],['600',['610','620']]]);
+  assert.equal(leer[1].text,'KG 600 D: 610, 620 ohne Ansatz');
+  // Geklärt: 332 entfällt, 600 als Pauschale.
+  st.gruppen['332']={status:'entfaellt'};
+  st.positionen.push({id:'p6',kg:'600',modus:'betrag',betrag:'2000',kennwert:{art:'annahme'}});
+  e=R.berechne(st);
+  assert.equal(e.blaetter.get('610'),'enthalten');
+  assert.equal(e.gesamt.vollstaendig,true);
+  assert.equal(e.gesamt.gesamtCent,800000n);
+  // Pauschale und Einzelposition in derselben KG: Warnung «doppelt».
+  st.positionen.push({id:'d',kg:'411',modus:'betrag',betrag:'100',kennwert:{art:'annahme'}});
+  e=R.berechne(st);
+  assert.ok(e.fehlt.some(f=>f.art==='doppelt'&&f.kg==='410'));
+  assert.equal(e.blaetter.get('411'),'vollstaendig');
+  assert.deepEqual(R.kette('331'),['300','330','331']);
+  assert.ok(R.liegtUnter('331','300')&&R.liegtUnter('331','330')&&!R.liegtUnter('341','330')&&!R.liegtUnter('330','330'));
+});
+
+test('die Seite zeigt jede Kostengruppe der Gliederung, nicht nur solche mit Positionen',()=>{
+  // Gari, 21.11.: «para el KG 330 deben aparecer las posiciones del 331 … 339, lo mismo para todos los demás KG».
+  assert.match(ui,/function zeilenKnoten\(k,ergebnis,nurOffen,mitKopf\)\{\s*const kinder=kinderVon\(k\.kg\);/);
+  assert.match(ui,/for\(const c of kinder\)innen\+=zeilenKnoten\(c,ergebnis,nurOffen,R\.ebene\(c\.kg\)===2\);/);
+  assert.match(ui,/for\(const y of kinderVon\(x\.kg\)\)zeilen\+=zeileUebersicht\(y,'sub2'/);
+  assert.match(ui,/<h3>Kostenberechnung bis zur 3\. Ebene<\/h3>/);
+  for(const t of ['ohne Ansatz','in Pauschale','Übrige ','Pauschale für die ganze KG','Position anlegen','Wieder aufnehmen','Kostengruppen geklärt'])
+    assert.ok(ui.includes(t),'fehlt: '+t);
+  // Die Gliederung kommt aus dem Stand; im Code steht keine Liste von Kostengruppen.
+  assert.ok(!/['"]33[1-9]['"]\s*,\s*['"]33[1-9]['"]/.test(ui),'eine Liste von Kostengruppen im Code');
+});
+
 test('Archicad: der synthetische Export wird gelesen, summiert und mit Rezept verteilt',async()=>{
   const zeilen=await I.leseXlsx(readFileSync(url('tests/fixtures/kosten-archicad-beispiel.xlsx')));
   const spalten=I.erkenneSpalten(zeilen);
@@ -167,7 +217,7 @@ test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/NAV_ICONS\.kosten='<svg /);
   assert.match(projekte,/getElementById\('officeToolsKosten'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/kostenberechnung\.html';/);
   assert.match(index,/\.\/shell\.js\?v=office49/);
-  assert.match(index,/\.\/office-projects\.js\?v=office52/);
+  assert.match(index,/\.\/office-projects\.js\?v=office53/);
   assert.match(ui,/href="\.\/app\/#section=tools">‹ Werkzeuge/);
 });
 
@@ -175,8 +225,8 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<html lang="de">/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office1',
-    './kosten-import.js?v=office1','./kostenberechnung.js?v=office1','./kostenberechnung.css?v=office1'])
+  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office2',
+    './kosten-import.js?v=office1','./kostenberechnung.js?v=office2','./kostenberechnung.css?v=office2'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kostenberechnung.js?'));
   // In der App ohne Sitzung: anmelden über die App, nicht im Browser umleiten.
@@ -225,6 +275,7 @@ test('Migration: drei Tabellen mit RLS über die Office-Helfer, nichts Destrukti
 test('öffentliches Repository: keine DIN-Titel, keine Projekte, keine Adressen',()=>{
   const dateien={'kosten-rechnen.js':read('kosten-rechnen.js'),'kosten-import.js':read('kosten-import.js'),'kostenberechnung.js':ui,
     'kostenberechnung.css':css,'kostenberechnung.html':seite,[MIGRATION]:sql,
+    'kostenberechnung-hilfe.html':read('kostenberechnung-hilfe.html'),'terminplan-hilfe.html':read('terminplan-hilfe.html'),'anleitung.css':read('anleitung.css'),
     'fixture':readFileSync(url('tests/fixtures/kosten-archicad-beispiel.xlsx')).toString('latin1')};
   // Kennzeichnende Titel der 2. und 3. Ebene; die Gliederung kommt aus dem Muster in der Datenbank.
   const TITEL=/Tragende Außenwände|Nichttragende Außenwände|Außenwandöffnungen|Außenwandbekleidungen|Deckenkonstruktionen|Deckenbeläge|Deckenbekleidungen|Dachkonstruktionen|Dachbeläge|Dachbekleidungen|Baugrube|\bGründung\b|Herrichten und Erschließen|Elementierte Außenwandkonstruktionen/;
@@ -242,4 +293,30 @@ test('deutsch, und ohne spanische Reste',()=>{
   for(const t of ['Kostenberechnungen','Muster · nur Ansicht','Mengen aus Archicad','Bericht für die Kostenbesprechung','Was noch fehlt',
     'Herkunft des Kennwerts','Stand festhalten','Kostenschätzung und Kostenberechnung'])
     assert.ok(ui.includes(t),'fehlt in der Oberfläche: '+t);
+});
+
+test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil des Office',()=>{
+  const hilfe=read('kostenberechnung-hilfe.html'),tp=read('terminplan-hilfe.html'),stil=read('anleitung.css');
+  for(const [name,html] of [['kostenberechnung-hilfe.html',hilfe],['terminplan-hilfe.html',tp]]){
+    assert.match(html,/<html lang="de">/,name);
+    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office1">/,name);
+    assert.ok(!/<style[\s>]/.test(html),'Stil gehört in anleitung.css: '+name);
+    assert.ok(!/\b(para|que|como|desde|proyecto|archivo|tarea|también|costos|cálculo|guardar)\b/i.test(html),'spanische Wörter in '+name);
+  }
+  // Erreichbar aus dem Werkzeug, so wie die Anleitung zum Terminplan aus den Terminplänen.
+  assert.match(ui,/href="\.\/kostenberechnung-hilfe\.html"/);
+  assert.match(read('app/office-projects.js'),/Anleitung zum Terminplan · Werkzeug, Assistent, LPH 3 und LPH 5/);
+  for(const id of ['ablauf','kostengruppen','archicad','kennwerte','bericht','quellen'])assert.match(hilfe,new RegExp('id="'+id+'"'));
+  for(const t of ['3. Ebene','ohne Ansatz','in Pauschale','Entfällt','Rezept','Herkunftskette','219,54 €','52.415,18 €','5 % oder 10.000 €','Stand festhalten'])
+    assert.ok(hilfe.includes(t),'fehlt in der Anleitung zur Kostenberechnung: '+t);
+  // Terminplan: Assistent, Projektkalender mit Feiertagen, Muster-Planner v0.3.4, Weg zur Kostenberechnung.
+  for(const t of ['id="assistent"','Prüfen und übernehmen','Was-wäre-wenn','Projektkalender','fünf folgenden Jahre','keine Notizen',
+    'v0.3.4','53 Aufgaben','355 Prüfpunkte','Termine aus Terminplan','Bauteilkatalog','04.03','M08A','./kostenberechnung-hilfe.html','21.11.2026'])
+    assert.ok(tp.includes(t),'fehlt in der Anleitung zum Terminplan: '+t);
+  for(const alt of ['Masterplanner','jetzt <strong>vier','v0.2 umfasst','Behalten, Ändern, Streichen','Ein Predecessor','Handbuchstand: 12.11.2026'])
+    assert.ok(!tp.includes(alt),'veraltet in der Anleitung zum Terminplan: '+alt);
+  // Der Terminplan behauptet nicht mehr, er rechne ohne Feiertage.
+  assert.ok(!read('terminplan.html').includes('ohne Feiertage oder Pufferzeiten'));
+  assert.match(read('terminplan.html'),/abzüglich der arbeitsfreien Tage des Projektkalenders/);
+  assert.match(stil,/--a-link:#355d99/);
 });

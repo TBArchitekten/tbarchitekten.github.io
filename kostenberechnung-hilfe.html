@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kostenberechnung · Anleitung | TBA Office</title>
+<meta name="description" content="TBA Office Kostenberechnung: Ablauf, Kostengruppen bis zur 3. Ebene, Mengen aus Archicad, Kennwerte mit Herkunft, Vergleich und Bericht.">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="./anleitung.css?v=office1">
+</head>
+<body>
+<header class="a-top"><div class="a-top-in"><span class="a-brand">TBA Office · Anleitung</span><a class="a-back" href="./kostenberechnung.html">‹ Zur Kostenberechnung</a></div></header>
+<main class="a-wrap">
+<div class="a-hero">
+  <p class="kicker">Anleitung · Kostenberechnung LPH 3</p>
+  <h1>Kosten nachvollziehbar berechnen. Jede Kostengruppe, jede Zahl mit Herkunft.</h1>
+  <p class="lead">Die Kostenberechnung im Office führt die Gliederung nach DIN 276:2018-12 bis zur 3. Ebene, liest Mengen aus Archicad, rechnet Kennwerte mit sichtbarer Herkunft und vergleicht mit der Kostenschätzung. Diese Anleitung zeigt den Ablauf und die Regeln, nach denen das Werkzeug rechnet.</p>
+  <nav class="a-menu" aria-label="Kapitel" style="--a-spalten:5">
+    <a href="#ablauf"><span class="kicker">Teil I</span><strong>Ablauf</strong><small>Vom Anlegen bis zum Bericht in sieben Schritten.</small></a>
+    <a href="#kostengruppen"><span class="kicker">Teil II</span><strong>Kostengruppen klären</strong><small>Jede Kostengruppe der 3. Ebene: ansetzen, pauschal abdecken oder begründet streichen.</small></a>
+    <a href="#archicad"><span class="kicker">Teil III</span><strong>Mengen aus Archicad</strong><small>Klassifizierung, Bauteiltyp, Auswertung, Rezepte und erneutes Einlesen.</small></a>
+    <a href="#kennwerte"><span class="kicker">Teil IV</span><strong>Kennwerte und Quellen</strong><small>BKI, Heinze, eigene Projekte, Angebote, Fachplanung: was jede Quelle braucht.</small></a>
+    <a href="#bericht"><span class="kicker">Teil V</span><strong>Vergleich und Bericht</strong><small>Kostenschätzung, Kostenvorgabe, Bericht für die Kostenbesprechung und Stände.</small></a>
+  </nav>
+</div>
+
+<section class="kap" id="ablauf">
+  <p class="kicker">Teil I · Ablauf</p>
+  <h2>Von der leeren Gliederung zur belastbaren Kostenberechnung</h2>
+  <p>Die Kostenberechnung ist eine Grundleistung der Entwurfsplanung (LPH 3, HOAI Anlage 10) und wird mit der Kostenschätzung verglichen. Nach DIN 276:2018-12 werden ihre Kosten bis zur <strong>3. Ebene der Kostengliederung</strong> ermittelt; die Summen stehen zusätzlich in der 1. Ebene. Das Werkzeug ist darauf gebaut: Jede Kostengruppe der 3. Ebene steht in der Liste, auch wenn sie noch leer ist.</p>
+  <p>Oben steht die Antwort, darunter die Herleitung. Solange eine Kostengruppe nicht geklärt ist oder einer Position etwas fehlt, heißt die Summe <strong>vorläufig</strong>. Was fehlt, sammelt die Karte «Was noch fehlt»; ein Klick führt an die Stelle, an der es fehlt.</p>
+  <figure class="abb"><div class="flaeche"><div class="ui">
+    <div class="ui-sum">
+      <div class="ui-karte"><p class="l">Kostenberechnung <span class="chip chip-att">vorläufig</span></p><p class="g">1.284.600 €</p><p class="m">netto · brutto 1.528.674 €</p></div>
+      <div class="ui-karte"><p class="l">Kostenschätzung</p><p class="g">1.210.000 €</p><p class="m" style="color:var(--a-att);font-weight:600">+74.600 € · +6,2 %</p></div>
+      <div class="ui-karte"><p class="l">Kostenvorgabe</p><p class="g">1.300.000 €</p><p class="m" style="color:var(--a-ok);font-weight:600">unterschritten um 15.400 €</p></div>
+      <div class="ui-karte"><p class="l">Vollständigkeit</p><p class="g">71 %</p><p class="m">170 von 239 Kostengruppen geklärt</p></div>
+    </div>
+    <div class="ui-liste">
+      <div class="ui-zeile kopf"><span class="kg">300</span><span>Rohbau und Ausbau</span><span class="num">902.300 €</span><span class="num nb">70 %</span><span class="nb"><span class="chip chip-att">9 zu klären</span></span></div>
+      <div class="ui-zeile kind"><span class="kg">330</span><span>Wände außen</span><span class="num">281.900 €</span><span class="num nb">31 %</span><span class="nb"><span class="chip chip-att">2 zu klären</span></span></div>
+      <div class="ui-zeile kind"><span class="kg">350</span><span>Decken und Böden</span><span class="num">162.700 €</span><span class="num nb">18 %</span><span class="nb"><span class="chip chip-ok">vollständig</span></span></div>
+    </div>
+  </div></div><figcaption>Abbildung 1. Übersicht mit Beispieldaten: vier Antworten oben, darunter die Gliederung zum Aufklappen mit Betrag, Anteil und Stand. Die Bezeichnungen der Kostengruppen kommen im Werkzeug aus dem Muster; hier stehen Beispiele. Schematische Nachbildung, kein Projekt.</figcaption></figure>
+  <div class="schritte">
+    <div class="schritt"><span class="nr">1</span><div><h4>Anlegen</h4><p>Im Office unter Werkzeuge · Kostenberechnung «Kostenberechnung anlegen» wählen, dann Projekt, Muster «Kostenberechnung LPH 3» und Kostenstand (Quartal). Das Muster bleibt unverändert. Sehen und fortschreiben können die Kostenberechnung das Projektteam, die Projektleitung (auch Admins) und wer sie angelegt hat.</p></div></div>
+    <div class="schritt"><span class="nr">2</span><div><h4>Grundlagen eintragen</h4><p>In «Quellen»: Kostenstand und Umsatzsteuer, Bezugsgrößen nach DIN 277 (BGF, BRI, NUF, Außenanlagenfläche), die Kostenvorgabe des Bauherrn, den Regionalfaktor für BKI-Werte, den Zuschlag für Heinze-Preise und die Werte des Baupreisindex.</p></div></div>
+    <div class="schritt"><span class="nr">3</span><div><h4>Mengen aus Archicad einlesen</h4><p>Die Auswertung des Modells als Excel speichern und einlesen. Die Mengen landen als Positionen in den klassifizierten Kostengruppen (Teil III).</p></div></div>
+    <div class="schritt"><span class="nr">4</span><div><h4>Jede Kostengruppe klären</h4><p>In «Positionen» jede Kostengruppe der 3. Ebene durchgehen: ansetzen, als Pauschale abdecken oder mit Begründung «entfällt» setzen (Teil II).</p></div></div>
+    <div class="schritt"><span class="nr">5</span><div><h4>Kennwerte mit Quelle</h4><p>Zu jeder Menge einen Kennwert mit Quelle und Fundstelle; Beiträge der Fachplanung als Betrag mit Datum (Teil IV).</p></div></div>
+    <div class="schritt"><span class="nr">6</span><div><h4>«Was noch fehlt» abarbeiten</h4><p>Die Liste nennt zuerst, was die ganze Berechnung betrifft (doppelt gezählte Pauschalen, fehlender Regionalfaktor oder Index, Abweichungen ohne Ursache), dann unvollständige Positionen, dann Kostengruppen ohne Ansatz, zuletzt Hinweise.</p></div></div>
+    <div class="schritt"><span class="nr">7</span><div><h4>Vergleichen, berichten, festhalten</h4><p>Kostenschätzung eintragen und Abweichungen begründen, Bericht drucken oder als PDF sichern, einen Stand für die Kostenbesprechung festhalten (Teil V).</p></div></div>
+  </div>
+</section>
+
+<section class="kap" id="kostengruppen">
+  <p class="kicker">Teil II · Kostengruppen klären</p>
+  <h2>Jede Kostengruppe bis zur 3. Ebene hat einen Stand</h2>
+  <p>«Positionen» zeigt die ganze Gliederung: für jede Kostengruppe der 2. Ebene einen Kopf mit Zwischensumme, darunter jede Kostengruppe der 3. Ebene, auch die ohne Ansatz. Wo die Norm keine 3. Ebene vorsieht, ist die Kostengruppe der 2. Ebene selbst die Zeile. Hat eine Kostengruppe mehrere Positionen (etwa zwei Wandtypen), stehen sie eingerückt darunter.</p>
+  <div class="a-tab-wrap"><table class="a-tab"><thead><tr><th>Stand</th><th>Bedeutung</th><th>Was tun</th></tr></thead><tbody>
+    <tr><td><span class="chip chip-att">ohne Ansatz</span></td><td>Noch nicht entschieden.</td><td>Position anlegen oder «Entfällt» setzen.</td></tr>
+    <tr><td><span class="chip chip-att">offen</span></td><td>Es gibt Positionen, aber einer fehlt Menge, Kennwert, Quelle oder Fundstelle.</td><td>Die Position öffnen; das Feld rechts sagt, was fehlt.</td></tr>
+    <tr><td><span class="chip chip-ok">vollständig</span></td><td>Alle Positionen sind belegt.</td><td>Nichts.</td></tr>
+    <tr><td><span class="chip">entfällt</span></td><td>Bewusst ausgeschlossen, mit Begründung. Zählt weder zur Summe noch als offen.</td><td>Mit «Wieder aufnehmen» rückgängig machen.</td></tr>
+    <tr><td><span class="chip chip-src">in Pauschale</span></td><td>Durch einen Betrag der übergeordneten Kostengruppe gedeckt, etwa einen Kostenbeitrag der Fachplanung für eine ganze Kostengruppe der 2. Ebene.</td><td>Nichts, solange die Pauschale gilt.</td></tr>
+    <tr><td><span class="chip chip-mute">optional</span></td><td>«Sonstiges zur KG …». Bleibt sie leer, zählt sie nicht als offen.</td><td>Nur ansetzen, wenn etwas dazugehört.</td></tr>
+  </tbody></table></div>
+  <figure class="abb"><div class="flaeche"><div class="ui"><div class="ui-liste">
+    <div class="ui-zeile kopf"><span class="kg">330</span><span>Wände außen <small>6 von 8 geklärt</small></span><span class="num nb"></span><span class="num nb"></span><span class="num">281.900 €</span></div>
+    <div class="ui-zeile"><span class="kg">331</span><span>AW-01 · KS 17,5 + WDVS 16 <small>Archicad · BKI</small></span><span class="num nb">238,75 m²</span><span class="num nb">219,54 €</span><span class="num">52.415 €</span></div>
+    <div class="ui-zeile"><span class="kg">332</span><span>Noch keine Position <small>zu klären</small></span><span class="num nb">–</span><span class="nb"><span class="chip chip-att">ohne Ansatz</span></span><span class="num">–</span></div>
+    <div class="ui-zeile aus"><span class="kg">333</span><span>Entfällt <small>keine Stützen in der Fassade</small></span><span class="num nb">–</span><span class="nb"><span class="chip">entfällt</span></span><span class="num">entfällt</span></div>
+    <div class="ui-zeile"><span class="kg">334</span><span>FE-01 · Holz-Alu-Fenster <small>Kennwert fehlt</small></span><span class="num nb">48,60 m²</span><span class="nb"><span class="chip chip-att">1 offen</span></span><span class="num">offen</span></div>
+    <div class="ui-zeile"><span class="kg">339</span><span>Sonstiges <small>leer, zählt nicht als offen</small></span><span class="num nb">–</span><span class="nb"><span class="chip chip-mute">optional</span></span><span class="num">–</span></div>
+  </div></div></div><figcaption>Abbildung 2. Ausschnitt aus «Positionen» mit Beispieldaten; die übrigen Kostengruppen von 335 bis 338 sind hier ausgeblendet. Die Bezeichnungen der Kostengruppen kommen im Werkzeug aus dem Muster; hier stehen Beispiele.</figcaption></figure>
+  <h3>Was eine Kostengruppe anbietet</h3>
+  <p>Ein Klick auf eine Kostengruppe öffnet ihr Feld. Dort stehen ihr Stand, ein Hinweis aus dem Muster, falls es einen gibt, und diese Aktionen:</p>
+  <ul class="a-liste">
+    <li><strong>Position anlegen</strong> – mit den Vorgaben des Musters: in KG 400 etwa «Betrag» mit Quelle Fachplanung, in KG 300 «Menge × Kennwert» in m².</li>
+    <li><strong>Entfällt</strong> – mit Begründung. Die Begründung erscheint in der Liste und im Bericht.</li>
+    <li><strong>Pauschale für die ganze KG</strong> – an einer Kostengruppe der 1. oder 2. Ebene. Ihre Unterkostengruppen ohne eigene Position gelten dann als enthalten.</li>
+    <li><strong>Übrige … ohne Ansatz: entfällt</strong> – setzt in einem Schritt alle noch offenen Unterkostengruppen auf «entfällt» («nicht vorhanden»). Optionale Zeilen bleiben, wie sie sind.</li>
+  </ul>
+  <div class="hinweis blau"><strong>Im Muster vorbelegt:</strong> KG 100 und KG 800 entfallen, weil Grundstück und Finanzierung beim Bauherrn liegen. Acht Kostengruppen, die es im Hochbau in der Regel nicht gibt (314, 370, 385, 447, 458, 514, 537 und 538), sind als «entfällt» vorbelegt. Alle lassen sich wieder aufnehmen; ganze Gruppen der 1. Ebene in «Quellen», einzelne Kostengruppen an der Kostengruppe selbst.</div>
+  <h3>Zwei Prüfungen, die das Werkzeug selbst macht</h3>
+  <div class="beispiele">
+    <div class="beispiel"><strong>Doppelt gezählt?</strong>Steht an einer Kostengruppe eine Pauschale und zugleich eine Position in einer ihrer Unterkostengruppen, meldet «Was noch fehlt» eine mögliche Doppelzählung.</div>
+    <div class="beispiel"><strong>Bekleidung vergessen?</strong>Haben die Wände außen (331, 332) einen Betrag, ihre Bekleidungen (335, 336) aber weder Position noch Entscheidung, kommt ein Hinweis. Ebenso innen (341, 342 und 345) und beim Dach (361 sowie 363, 364).</div>
+  </div>
+</section>
+
+<section class="kap" id="archicad">
+  <p class="kicker">Teil III · Mengen aus Archicad</p>
+  <h2>Mengen aus dem Modell, ohne abzutippen</h2>
+  <p>Grundlage ist ein Modell, dessen Bauteile nach DIN 276 in der 3. Ebene klassifiziert sind, und die Eigenschaft <strong>«TBA Bauteiltyp»</strong>, die den Aufbau benennt (etwa AW-01 für einen Außenwandtyp). Die Interaktive Auswertung <strong>«TBA Kosten · Mengen»</strong> listet je Element Klassifizierung, Bauteiltyp, Aufbau, Anzahl, Fläche, Länge und Volumen. Wie das in Archicad 26 eingerichtet wird, beschreibt eine eigene, interne Anleitung zur Klassifizierung.</p>
+  <h3>Einlesen</h3>
+  <p>Die Auswertung als Excel (.xlsx) speichern; CSV geht auch, deutsche Zahlen wie «1.234,56» werden erkannt. In der Kostenberechnung «Mengen aus Archicad» wählen und die Datei angeben. Die Vorschau zeigt je Kostengruppe und Bauteiltyp die Menge, die Änderung gegenüber dem letzten Import und wie sie verteilt wird. Erst «Übernehmen» schreibt.</p>
+  <ul class="a-liste">
+    <li>Kennwerte bleiben beim erneuten Einlesen stehen; nur die Mengen werden aktualisiert.</li>
+    <li>Was im Modell nicht mehr vorkommt, wird markiert («nicht mehr im Modell»), nicht gelöscht.</li>
+    <li>Zeilen ohne Kostengruppe werden übersprungen und gezählt; Kostengruppen, die es in der Gliederung nicht gibt, meldet die Vorschau.</li>
+  </ul>
+  <h3>Rezepte: ein Bauteil, mehrere Kostengruppen</h3>
+  <p>Ein Wandtyp trägt oft mehr als eine Kostengruppe: die Wand selbst, die Bekleidung außen und die Bekleidung innen. Ein <strong>Rezept</strong> verteilt die Menge eines Bauteiltyps auf diese Kostengruppen. «Rezept vorschlagen» in «Quellen» schlägt die üblichen vor; Faktoren lassen sich ändern, Faktor 2 heißt beide Seiten. Ein Rezept wirkt beim nächsten Einlesen.</p>
+  <figure class="abb"><div class="flaeche"><div class="ui ui-fluss">
+    <div class="ui-kette"><div class="ui-schritt"><span>AW-01 · KS 17,5 + WDVS 16<small>Archicad, 2 Elemente</small></span><span class="num">238,75 m²</span></div></div>
+    <div class="ui-pfeil" aria-hidden="true">→</div>
+    <div class="ui-kette">
+      <div class="ui-schritt"><span>331 · Wand<small>Faktor 1</small></span><span class="num">238,75 m²</span></div>
+      <div class="ui-schritt"><span>335 · Bekleidung außen<small>Faktor 1</small></span><span class="num">238,75 m²</span></div>
+      <div class="ui-schritt"><span>336 · Bekleidung innen<small>Faktor 1</small></span><span class="num">238,75 m²</span></div>
+    </div>
+  </div></div><figcaption>Abbildung 3. Ein Rezept verteilt die Menge eines Bauteiltyps auf drei Kostengruppen. Beispieldaten.</figcaption></figure>
+  <div class="hinweis"><strong>Modellieren für brauchbare Mengen:</strong> Was eine eigene Kostengruppe trägt, als eigenes Element oder als eigene Schicht mit eigenem Bauteiltyp modellieren, etwa Fußbodenaufbau, abgehängte Decke, Dachdeckung und Dämmungen. BGF und BRI für die Kennzahlen kommen aus den Flächen nach DIN 277, nicht aus der Summe der Bauteile.</div>
+</section>
+
+<section class="kap" id="kennwerte">
+  <p class="kicker">Teil IV · Kennwerte und Quellen</p>
+  <h2>Jeder Kennwert sagt, woher er kommt</h2>
+  <p>Eine Position rechnet entweder <strong>Menge × Kennwert</strong> oder steht als <strong>Betrag</strong>. Jeder Kennwert braucht eine Quelle und, außer bei einer Annahme, eine Fundstelle. Was die Quelle üblicherweise enthält, stellt das Werkzeug als Vorgabe ein; jede Vorgabe lässt sich an der Position ändern.</p>
+  <div class="a-tab-wrap"><table class="a-tab"><thead><tr><th>Quelle</th><th>Enthält in der Regel</th><th>Das Werkzeug rechnet zusätzlich</th><th>Fundstelle</th></tr></thead><tbody>
+    <tr><td>BKI-Buch</td><td>Umsatzsteuer; Bundesdurchschnitt</td><td>÷ Umsatzsteuer, × Regionalfaktor</td><td>Band und Seite</td></tr>
+    <tr><td>Heinze Baupreisinfo</td><td>netto, ohne Gemeinkosten, Wagnis und Gewinn</td><td>× Zuschlag</td><td>Position oder Abrufdatum</td></tr>
+    <tr><td>Eigenes Projekt</td><td>abgerechnete Werte eines TBA-Projekts</td><td>–</td><td>Projekt und Gewerk</td></tr>
+    <tr><td>Angebot oder Richtpreis</td><td>netto</td><td>–</td><td>Firma und Datum</td></tr>
+    <tr><td>Fachplanung</td><td>Kostenbeitrag, netto</td><td>–</td><td>Kostenbeitrag mit Datum</td></tr>
+    <tr><td>Annahme TBA</td><td>Schätzung des Büros</td><td>–</td><td>keine; im Bericht als Annahme sichtbar</td></tr>
+  </tbody></table></div>
+  <p>Bei jeder Quelle gilt außerdem: Weicht der Kostenstand des Kennwerts vom Kostenstand der Kostenberechnung ab, rechnet der Baupreisindex ihn um. Jede dieser Annahmen lässt sich an der Position abschalten, etwa wenn ein BKI-Wert schon netto übernommen wurde («Wert enthält Umsatzsteuer», «Regionalfaktor anwenden», «Zuschlag für Gemeinkosten, Wagnis und Gewinn», «Mit dem Baupreisindex fortschreiben»).</p>
+  <h3>Die Herkunftskette</h3>
+  <p>Rechts an jeder Position steht, wie aus dem Wert der Quelle der Kennwert in der Kostenberechnung wird: ohne Umsatzsteuer, mit dem Baupreisindex vom Kostenstand des Kennwerts auf den Kostenstand der Kostenberechnung, mit Regionalfaktor und Zuschlag. Jeder Schritt zeigt Faktor und Ergebnis. Fehlt eine Grundlage, sagt es die Position, und «Was noch fehlt» nennt es einmal für alle betroffenen Positionen.</p>
+  <figure class="abb"><div class="flaeche"><div class="ui-kette">
+    <div class="ui-schritt"><span>BKI-Buch<small>Band Bauelemente, Seite der Fundstelle</small></span><span class="num">250,00 €</span></div>
+    <div class="ui-schritt"><span>ohne Umsatzsteuer</span><span class="num">÷ 1,19 = 210,08 €</span></div>
+    <div class="ui-schritt"><span>Regionalfaktor<small>Landkreis laut BKI</small></span><span class="num">× 1,045 = 219,54 €</span></div>
+    <div class="ui-schritt ende"><span>In der Kostenberechnung</span><span class="num">219,54 € netto</span></div>
+  </div></div><figcaption>Abbildung 4. Herkunftskette eines BKI-Kennwerts mit Beispieldaten; Kennwert und Kostenberechnung haben hier denselben Kostenstand, deshalb fehlt der Indexschritt. Mit 238,75 m² ergibt sich 52.415,18 € netto.</figcaption></figure>
+  <h3>Wie gerechnet wird</h3>
+  <ul class="a-liste">
+    <li>Auf den Cent genau und kaufmännisch gerundet. Eine fehlende Angabe ist nicht 0: die Position bleibt offen, die Summe vorläufig.</li>
+    <li>Zahlen werden deutsch eingegeben: «1.250» ist tausendzweihundertfünfzig, «1,045» ist eins Komma null vier fünf. Ein Regionalfaktor wie «1.045» würde 1045 bedeuten und wird deshalb abgewiesen.</li>
+    <li>Baupreisindex: die Werte von <a href="https://www.destatis.de/DE/Themen/Wirtschaft/Preise/Baupreise-Immobilienpreisindex/_inhalt.html" target="_blank" rel="noopener noreferrer">Destatis</a> vierteljährlich, für das Quartal des Kennwerts und für den Kostenstand. Fehlt einer, wird nicht fortgeschrieben, und es erscheint ein Hinweis.</li>
+  </ul>
+</section>
+
+<section class="kap" id="bericht">
+  <p class="kicker">Teil V · Vergleich und Bericht</p>
+  <h2>Für die Kostenbesprechung</h2>
+  <h3>Vergleich mit der Kostenschätzung</h3>
+  <p>In «Vergleich» die Werte der Kostenschätzung aus der LPH 2 je Kostengruppe der 1. Ebene eintragen, netto. Weicht eine Kostengruppe um 5 % oder 10.000 € und mehr ab, braucht sie eine Ursache; sie geht in den Bericht. Die Kostenvorgabe des Bauherrn steht netto in «Quellen»; die Übersicht zeigt, ob sie über- oder unterschritten ist.</p>
+  <h3>Der Bericht</h3>
+  <p>«Bericht für die Kostenbesprechung» setzt zusammen: Zusammenstellung der 1. Ebene mit Umsatzsteuer und Summe brutto, die Kostenberechnung bis zur 3. Ebene mit Betrag oder Stand jeder Kostengruppe, die Positionen mit Mengen, Kennwerten und Quellen, den Vergleich mit der Kostenschätzung, Annahmen und Erläuterungen, offene Punkte und das Quellenverzeichnis. «Drucken oder als PDF sichern» gibt ihn ohne Bedienelemente aus.</p>
+  <h3>Stände</h3>
+  <p>«Stand festhalten» speichert eine unveränderliche Fassung mit Bezeichnung, etwa «Kostenberechnung zur Kostenbesprechung». Die laufende Kostenberechnung geht danach weiter; der Stand bleibt, wie er war.</p>
+  <h3>Speichern und Zusammenarbeit</h3>
+  <p>Jede Änderung wird nach einem Augenblick gespeichert, und zwar nur auf den Stand, von dem sie ausging. Hat inzwischen jemand anderes gespeichert, überschreibt das Werkzeug nichts: Es meldet «Nicht gespeichert» und bietet an, die eigene Fassung als Datei zu sichern und neu zu laden.</p>
+  <div class="hinweis warm"><strong>Was das Werkzeug nicht tut:</strong> Es erfindet keine Preise und ersetzt weder die fachliche Prüfung noch Leistungsverzeichnisse oder die Vergabe. Der Text der DIN 276 ist nicht enthalten; das Muster führt nur die Nummern und Bezeichnungen der Kostengruppen. Ein Assistent, der Kennwerte und Rezepte mit Quelle vorschlägt, folgt als nächster Schritt.</div>
+</section>
+
+<section class="kap a-quellen" id="quellen">
+  <p class="kicker">Grundlagen</p>
+  <h2>Nachlesen</h2>
+  <p>Norm: <a href="https://www.dinmedia.de/de/norm/din-276/293154016" target="_blank" rel="noopener noreferrer">DIN 276:2018-12 Kosten im Bauwesen</a> (DIN Media). Leistungsbild: <a href="https://www.gesetze-im-internet.de/hoai_2013/anlage_10.html" target="_blank" rel="noopener noreferrer">HOAI Anlage 10, Gebäude und Innenräume</a>.</p>
+  <p>Gliederungstiefe der Kostenberechnung: <a href="https://www.bauprofessor.de/kostenberechnung-nach-din-276/" target="_blank" rel="noopener noreferrer">Bauprofessor, Kostenberechnung nach DIN 276</a> und <a href="https://forum-verlag.com/fachwissen/bau-und-gebaeudemanagement/din-276/" target="_blank" rel="noopener noreferrer">FORUM Verlag, Kostenberechnung nach DIN 276:2018-12</a>. Praxis: <a href="https://www.dabonline.de/recht/die-feinheiten-der-kostenberechnung" target="_blank" rel="noopener noreferrer">DAB, Die Feinheiten der Kostenberechnung</a>.</p>
+  <p>Kennwerte und Preise: <a href="https://www.bki.de" target="_blank" rel="noopener noreferrer">BKI Baukosteninformationszentrum</a>, <a href="https://www.heinze.de" target="_blank" rel="noopener noreferrer">Heinze</a>, <a href="https://www.destatis.de/DE/Themen/Wirtschaft/Preise/Baupreise-Immobilienpreisindex/_inhalt.html" target="_blank" rel="noopener noreferrer">Destatis, Baupreisindizes</a> (Datenlizenz Deutschland 2.0).</p>
+  <p class="meta">Die Gliederung im Muster ist gegen Tabelle 1 der DIN 276:2018-12 geprüft. Alle Abbildungen sind Schemata mit Beispieldaten, keine Projekte. Anleitungsstand: 21.11.2026.</p>
+</section>
+<footer class="a-fuss">TBA Office · Internes Arbeitsmittel · Siehe auch die <a href="./terminplan-hilfe.html">Anleitung zum Terminplan</a>.</footer>
+</main>
+</body>
+</html>
