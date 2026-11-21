@@ -48,8 +48,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .chip-att{background:var(--kb-att-bg);color:var(--kb-att)}
 .chip-ok{background:var(--kb-ok-bg);color:var(--kb-ok)}
 .chip-src{background:var(--kb-src-bg);color:var(--kb-src)}
+.chip-mute{background:#f4f5f6;color:#8a9099}
 button.chip{border:0;cursor:pointer;min-height:32px}
 button.chip[aria-pressed="true"]{background:#191919;color:#fff}
+button.chip.chip-aus{color:#9aa0a8}
+button.chip.chip-aus[aria-pressed="true"]{color:#fff}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px;margin-top:7px}
 .dot.hoch{background:var(--kb-att)}.dot.info{background:var(--kb-info)}
 .bar{display:block;height:6px;border-radius:999px;background:#eef0f2;overflow:hidden}
@@ -70,8 +73,10 @@ h2.kb-h2{font-size:17px;font-weight:700;letter-spacing:-.015em;margin:0}
 .row.head{border-top:0;padding-top:14px;padding-bottom:8px}
 .row.head span{font-size:12px;color:var(--kb-meta);font-weight:600}
 .row.sub{padding-left:52px;background:#fbfbfb}
-.row.sub.klick{cursor:pointer}
-.row.sub.klick:hover{background:#f4f6f9}
+.row.sub2{padding-left:84px;background:#fdfdfd}
+.row.sub2 .kg{font-weight:600}
+.row.klick{cursor:pointer}
+.row.klick:hover{background:#f4f6f9}
 .row.aus{color:var(--kb-meta)}
 .row .name{min-width:0}
 .kg{font-weight:650;font-variant-numeric:tabular-nums;margin-right:10px}
@@ -98,6 +103,18 @@ h2.kb-h2{font-size:17px;font-weight:700;letter-spacing:-.015em;margin:0}
 .pos .pname strong{display:block;font-size:15px;font-weight:600;line-height:1.35}
 .pos .pname small{display:block;font-size:12px;color:var(--kb-meta);line-height:1.45}
 .pos .offen{color:var(--kb-att);font-size:13px}
+/* Gliederung in «Positionen»: Kopf der 1. und 2. Ebene, Kostengruppe der 3. Ebene, Positionen darunter */
+.pos.grp1{background:#f4f5f7;border-top:1px solid var(--kb-line)}
+.pos.grp1 .pname strong{font-size:16px;font-weight:700}
+.pos.grp{background:#fafbfc}
+.pos.grp .pname strong{font-weight:700}
+.pos.grp:hover,.pos.grp1:hover{background:#f1f4f8}
+.pos.kind .pname{padding-left:14px;border-left:2px solid var(--kb-line)}
+.pos.kind .pname strong{font-size:14px;font-weight:500}
+.pos.leer-kg .pname strong{font-weight:500}
+.pos.leer-kg .num{color:#a3a9b1}
+.pos.head.summe span{font-size:15px;color:var(--kb-ink);font-weight:700}
+.pos.head.summe{border-top:1px solid var(--kb-line)}
 .leer{padding:26px 20px;color:var(--kb-meta)}
 /* Formulare */
 .form{display:grid;gap:12px}
@@ -115,6 +132,11 @@ h2.kb-h2{font-size:17px;font-weight:700;letter-spacing:-.015em;margin:0}
 .step.ende{border-top:1px solid #d9dfe5;font-weight:700}
 .panel{padding:20px 22px}
 .panel h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:8px 0 4px}
+.panel .hinweis{margin-top:8px;padding:9px 11px;border-radius:10px;background:#f6f7f9}
+.kg-akt{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.kg-kind{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:9px 0;border-top:1px solid var(--kb-line-soft);font-size:14px;cursor:pointer}
+.kg-kind:hover{color:var(--kb-link)}
+.kg-kind:focus-visible{outline:2px solid var(--kb-link);outline-offset:2px;border-radius:4px}
 .sec{margin:22px 0 4px;font-size:13px;font-weight:700}
 .grid-sec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .grid-sec .card{padding:18px 20px}
@@ -148,6 +170,11 @@ h2.kb-h2{font-size:17px;font-weight:700;letter-spacing:-.015em;margin:0}
 .report h3{font-size:15px;margin:22px 0 8px}
 .report .kb-table{font-size:13px}
 .report .kb-table td,.report .kb-table th{padding:6px 8px}
+.report .gliederung tr.r1 td{font-weight:700;background:#f4f5f7;border-top:1px solid var(--kb-line)}
+.report .gliederung tr.r2 td{font-weight:600}
+.report .gliederung tr.r2.blatt td{font-weight:500}
+.report .gliederung tr.r3 td:nth-child(2){padding-left:22px}
+.report .gliederung tr.r3 td{color:#2f343b}
 .report .titelblock{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:2px solid #191919;padding-bottom:12px;margin-bottom:6px}
 @media(max-width:900px){.sum{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-sec{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:700px){
@@ -159,6 +186,7 @@ h2.kb-h2{font-size:17px;font-weight:700;letter-spacing:-.015em;margin:0}
   .row{grid-template-columns:minmax(0,1fr) auto 36px;padding:13px 14px}
   .row .hide-s{display:none}
   .row.sub{padding-left:26px}
+  .row.sub2{padding-left:44px}
   .card-head{padding:16px 14px 6px}
   .sumrow{padding:16px 14px}
   .form .two,.form .three{grid-template-columns:minmax(0,1fr)}

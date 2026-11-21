@@ -6,23 +6,33 @@
   const KEY='tba_kosten_fake_db_v1';
   const session={access_token:'fake',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,
     user:{id:UID,email:'test@fixture.invalid',aud:'authenticated',role:'authenticated'}};
+  // Aufbau wie DIN 276:2018-12 (1. bis 3. Ebene, «Sonstiges zur KG» optional), Titel neutral.
+  const struktur={'100':[['110',0],['120',8],['130',2]],'200':[['210',6],['220',8],['230',0],['240',2],['250',2]],
+    '300':[['310',4],['320',6],['330',8],['340',7],['350',5],['360',6],['370',8],['380',7],['390',8]],
+    '400':[['410',3],['420',4],['430',4],['440',7],['450',8],['460',6],['470',8],['480',5],['490',8]],
+    '500':[['510',4],['520',5],['530',8],['540',8],['550',8],['560',3],['570',4],['580',3],['590',8]],
+    '600':[['610',0],['620',0],['630',0],['640',3],['690',0]],
+    '700':[['710',5],['720',5],['730',4],['740',8],['750',2],['760',6],['790',1]],
+    '800':[['810',0],['820',0],['830',0],['840',0],['890',0]]};
   const katalog=[];
-  for(const e of ['100','200','300','400','500','600','700','800']){
-    katalog.push({kg:e,titel:'Gruppe '+e});
-    for(let z=1;z<=(e==='300'||e==='400'?9:3);z++){const k=e[0]+z+'0';katalog.push({kg:k,titel:'Gruppe '+k});
-      if(e==='300')for(let d=1;d<=9;d++)katalog.push({kg:e[0]+z+d,titel:'Gruppe '+e[0]+z+d});}
+  for(const [e1,zweite] of Object.entries(struktur)){
+    katalog.push({kg:e1,titel:'Gruppe '+e1});
+    for(const [e2,n] of zweite){
+      katalog.push({kg:e2,titel:'Gruppe '+e2});
+      if(!n)continue;
+      for(let i=1;i<=n;i++)katalog.push({kg:e2.slice(0,2)+i,titel:'Gruppe '+e2.slice(0,2)+i});
+      katalog.push({kg:e2.slice(0,2)+'9',titel:'Sonstiges zur KG '+e2,optional:true});
+    }
   }
-  katalog.sort((a,b)=>a.kg.localeCompare(b.kg));
-  const betrag=(kg,art)=>({id:'m:'+kg,kg,titel:'Gruppe '+kg,modus:'betrag',betrag:null,kennwert:art?{art}:{}});
   const muster={schema:'tba.office.kostenberechnung.v1',norm:'DIN 276:2018-12',ebene:3,kostenstand:'',ustProzent:'19',
     bezug:{BGF:'',BRI:'',NUF:'',AF:''},bezugHerkunft:'',kostenvorgabe:'',kostenschaetzung:{},ursachen:{},
     regionalfaktor:{wert:'',fundstelle:''},zuschlag:{wert:'',notiz:'An eigenen Angeboten kalibrieren'},
     indexReihe:'Baupreisindex (Testreihe)',indizes:[],katalog,
-    gruppen:{'100':{status:'entfaellt',notiz:'trägt der Bauherr'},'800':{status:'entfaellt',notiz:'trägt der Bauherr'}},
-    positionen:[betrag('210'),betrag('220'),betrag('230'),betrag('391'),
-      {id:'m:392',kg:'392',titel:'Gruppe 392',modus:'menge',menge:null,einheit:'m²',mengenquelle:{art:'manuell',text:''},kennwert:{}},
-      ...['410','420','430','440','450','460','480'].map(k=>betrag(k,'fachplanung')),betrag('500'),betrag('600'),betrag('730'),betrag('740'),betrag('760')],
-    rezepte:{},importe:[],annahmen:''};
+    gruppen:{'100':{status:'entfaellt',notiz:'trägt der Bauherr'},'800':{status:'entfaellt',notiz:'trägt der Bauherr'},
+      '370':{status:'entfaellt',notiz:'im Hochbau in der Regel nicht (im Muster vorbelegt)'}},
+    vorlagen:{'200':{modus:'betrag'},'390':{modus:'betrag'},'392':{modus:'menge',einheit:'m²',hinweis:'Gerüstfläche'},
+      '400':{modus:'betrag',art:'fachplanung',hinweis:'Kostenbeitrag der Fachplanung'},'600':{modus:'betrag'},'700':{modus:'betrag'}},
+    positionen:[],rezepte:{},importe:[],annahmen:''};
   const jetzt=()=>new Date().toISOString();
   const start=()=>({
     office_members:[{user_id:UID,email:'test@fixture.invalid',display_name:'Test Leitung',role:'projektleiter',is_active:true,must_change_password:false}],

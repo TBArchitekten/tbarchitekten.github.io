@@ -175,42 +175,75 @@ function position(pos,state){
 }
 
 // ---------- Ganze Kostenberechnung ----------
+// Die Gliederung kommt aus dem Stand (Katalog). Jede KG ohne Unter-KG im Katalog ist ein Blatt und hat einen Stand:
+//   vollstaendig  Positionen vollständig belegt      offen      Positionen mit Lücken
+//   entfaellt     als «entfällt» markiert (auch über eine Eltern-KG) oder alle Positionen entfallen
+//   enthalten     in einer Pauschale der Eltern-KG enthalten (z. B. Kostenbeitrag für KG 410 im Ganzen)
+//   leer          noch nicht entschieden            frei       optional (im Katalog so markiert) und leer
+// Vollständig ist die Kostenberechnung erst, wenn kein Blatt mehr leer oder offen ist.
+function kette(kg){const {e1,e2,e3}=eltern(kg);return [e1,e2,e3].filter((x,i,a)=>x&&a.indexOf(x)===i&&ebene(x)<=ebene(kg))}
+function liegtUnter(blatt,knoten){
+  if(blatt===knoten)return false;
+  const e=ebene(knoten);
+  return e===1?blatt[0]===knoten[0]:e===2?ebene(blatt)===3&&blatt.slice(0,2)===knoten.slice(0,2):false;
+}
 function berechne(state){
   if(!state||state.schema!==SCHEMA)throw new TypeError('Unbekannter Stand der Kostenberechnung');
-  const gruppenStatus=state.gruppen||{};
-  const ersteEbene=(state.katalog||[]).filter(k=>ebene(k.kg)===1).map(k=>k.kg);
+  const markiert=state.gruppen||{};
+  const katalog=(state.katalog||[]).filter(k=>KG.test(String(k.kg)));
+  const ersteEbene=katalog.filter(k=>ebene(k.kg)===1).map(k=>k.kg);
   const knoten=new Map();
-  const knotenFuer=kg=>{if(!knoten.has(kg))knoten.set(kg,{kg,ebene:ebene(kg),bekanntCent:0n,offen:0,anzahl:0,entfaellt:0,herkunft:{}});return knoten.get(kg)};
-  for(const kg of ersteEbene)knotenFuer(kg);
+  const knotenFuer=kg=>{if(!knoten.has(kg))knoten.set(kg,{kg,ebene:ebene(kg),bekanntCent:0n,offen:0,anzahl:0,entfaellt:0,direkt:0,herkunft:{}});return knoten.get(kg)};
+  for(const k of katalog)knotenFuer(k.kg);
+  const entfaelltMarkiert=kg=>kette(kg).some(x=>markiert[x]?.status==='entfaellt');
   const positionen=[];
-  let bekannt=0n,offen=0,anzahl=0;
+  let bekannt=0n,offenPos=0,anzahl=0;
   const herkunft={};
   for(const pos of state.positionen||[]){
     const r=position(pos,state);positionen.push(r);
     if(!KG.test(r.kg))continue;
-    const {e1,e2,e3}=eltern(r.kg);
-    const ausgeschlossen=gruppenStatus[e1]?.status==='entfaellt';
-    r.ausgeschlossen=ausgeschlossen;
-    if(ausgeschlossen)continue;
-    for(const kg of [e1,e2,e3].filter((x,i,a)=>x&&a.indexOf(x)===i&&ebene(x)<=r.ebene)){
+    r.ausgeschlossen=entfaelltMarkiert(r.kg);
+    if(r.ausgeschlossen)continue;
+    const art=pos.kennwert?.art||'ohne';
+    for(const kg of kette(r.kg)){
       const k=knotenFuer(kg);k.anzahl++;
       if(r.status==='offen')k.offen++;
       if(r.status==='entfaellt')k.entfaellt++;
-      if(r.betragCent!==null){k.bekanntCent+=r.betragCent;
-        const a=pos.kennwert?.art||'ohne';
-        k.herkunft[a]=(k.herkunft[a]||0n)+r.betragCent;}
+      else if(kg===r.kg)k.direkt++;
+      if(r.betragCent!==null){k.bekanntCent+=r.betragCent;k.herkunft[art]=(k.herkunft[art]||0n)+r.betragCent}
     }
-    anzahl++;if(r.status==='offen')offen++;
-    if(r.betragCent!==null){bekannt+=r.betragCent;const a=pos.kennwert?.art||'ohne';herkunft[a]=(herkunft[a]||0n)+r.betragCent}
+    anzahl++;if(r.status==='offen')offenPos++;
+    if(r.betragCent!==null){bekannt+=r.betragCent;herkunft[art]=(herkunft[art]||0n)+r.betragCent}
   }
-  // Gruppen der 1. Ebene ohne Ansatz zählen als offen, außer sie entfallen.
-  const leer=[];
-  for(const kg of ersteEbene){
-    const k=knoten.get(kg);k.status=gruppenStatus[kg]?.status==='entfaellt'?'entfaellt':(k.anzahl===0?'leer':(k.offen?'offen':'vollstaendig'));
-    if(k.status==='leer')leer.push(kg);
+  // Blätter und ihr Stand.
+  const hatKinder=new Set();
+  for(const k of katalog){const e=ebene(k.kg);if(e>=2)hatKinder.add(k.kg[0]+'00');if(e===3)hatKinder.add(k.kg.slice(0,2)+'0')}
+  const optional=new Set(katalog.filter(k=>k.optional).map(k=>k.kg));
+  const pauschalDarueber=kg=>kette(kg).some(x=>x!==kg&&(knoten.get(x)?.direkt||0)>0);
+  const blaetter=new Map();
+  for(const k of katalog){
+    if(hatKinder.has(k.kg))continue;
+    const n=knoten.get(k.kg);let s;
+    if(entfaelltMarkiert(k.kg))s='entfaellt';
+    else if(n.anzahl>0)s=n.offen?'offen':(n.entfaellt===n.anzahl?'entfaellt':'vollstaendig');
+    else if(pauschalDarueber(k.kg))s='enthalten';
+    else s=optional.has(k.kg)?'frei':'leer';
+    blaetter.set(k.kg,s);
   }
-  for(const k of knoten.values())if(!k.status)k.status=k.offen?'offen':(k.anzahl?'vollstaendig':'leer');
-  const vollstaendig=offen===0&&leer.length===0&&anzahl>0;
+  const zaehle=s=>s==='frei'?[0,0,0]:(s==='leer'||s==='offen')?[1,0,1]:[1,1,0]; // [zählt, geklärt, zu klären]
+  for(const n of knoten.values()){
+    if(blaetter.has(n.kg)){
+      const [g,k,z]=zaehle(blaetter.get(n.kg));n.blatt=true;n.status=blaetter.get(n.kg);n.kgGesamt=g;n.geklaert=k;n.zuKlaeren=z;continue;
+    }
+    let g=0,k=0,z=0,entf=0;
+    for(const [b,s] of blaetter){if(!liegtUnter(b,n.kg))continue;const [a,c,d]=zaehle(s);g+=a;k+=c;z+=d;if(s==='entfaellt')entf++}
+    n.blatt=false;n.kgGesamt=g;n.geklaert=k;n.zuKlaeren=z;
+    n.status=markiert[n.kg]?.status==='entfaellt'||(g>0&&entf===g)?'entfaellt':(z||n.offen?'offen':(g||n.anzahl?'vollstaendig':'leer'));
+  }
+  const leer=[...blaetter].filter(([,s])=>s==='leer').map(([kg])=>kg);
+  let geklaert=0,zuKlaeren=0;
+  for(const s of blaetter.values()){const [,k,z]=zaehle(s);geklaert+=k;zuKlaeren+=z}
+  const vollstaendig=offenPos===0&&zuKlaeren===0&&(anzahl>0||geklaert>0);
   const ust=mikro(dezimal(state.ustProzent)??'19');
   const ustCent=teile(bekannt*ust,100n*MIKRO);
   // Kennzahlen: Bauwerk = KG 300 + KG 400.
@@ -224,19 +257,20 @@ function berechne(state){
     const kb=knoten.get(kg)?.bekanntCent||0n;
     const delta=ks===null?null:kb-ks;
     return {kg,ksCent:ks,kbCent:kb,deltaCent:delta,deltaProzent:(ks&&ks!==0n)?Number(teile(delta*10000n,ks))/100:null,
-      ursache:String(state.ursachen?.[kg]||''),entfaellt:gruppenStatus[kg]?.status==='entfaellt'};
+      ursache:String(state.ursachen?.[kg]||''),entfaellt:knoten.get(kg)?.status==='entfaellt'};
   });
   const ksSumme=vergleich.some(v=>v.ksCent!==null)?vergleich.reduce((s,v)=>s+(v.ksCent||0n),0n):null;
   const vorgabeText=dezimal(state.kostenvorgabe);
   const vorgabe=vorgabeText===null||vorgabeText===undefined?null:centAusMikro(mikro(vorgabeText));
-  const erledigt=positionen.filter(p=>!p.ausgeschlossen&&p.status!=='offen').length;
-  const gesamtZahl=positionen.filter(p=>!p.ausgeschlossen).length+leer.length;
+  // Fortschritt: geklärte Kostengruppen; ohne Katalog ersatzweise die Positionen.
+  let erledigt=geklaert,gesamtZahl=geklaert+zuKlaeren;
+  if(!blaetter.size){erledigt=positionen.filter(p=>!p.ausgeschlossen&&p.status!=='offen').length;gesamtZahl=positionen.filter(p=>!p.ausgeschlossen).length}
   const ergebnis={
     schema:'tba.office.kostenberechnung.ergebnis.v1',
-    positionen,knoten,
-    gesamt:{bekanntCent:bekannt,gesamtCent:vollstaendig?bekannt:null,offen:offen+leer.length,anzahl,vollstaendig},
+    positionen,knoten,blaetter,
+    gesamt:{bekanntCent:bekannt,gesamtCent:vollstaendig?bekannt:null,offen:offenPos+leer.length,offenePositionen:offenPos,ohneAnsatz:leer.length,anzahl,vollstaendig},
     ustCent,bruttoCent:bekannt+ustCent,
-    vollstaendigkeit:{erledigt,gesamt:gesamtZahl,prozent:gesamtZahl?Math.floor(erledigt*100/gesamtZahl):0},
+    vollstaendigkeit:{erledigt,gesamt:gesamtZahl,prozent:gesamtZahl?Math.floor(erledigt*100/gesamtZahl):0,nachKg:blaetter.size>0},
     kennzahlen:{bauwerkCent:bauwerk,jeBGF:je(bauwerk,bezug('BGF')),jeBRI:je(bauwerk,bezug('BRI'))},
     herkunft,
     vergleich,ksSummeCent:ksSumme,deltaSummeCent:ksSumme===null?null:bekannt-ksSumme,
@@ -271,7 +305,17 @@ const GRUNDLAGE=new Set(['index_fehlt','regionalfaktor_fehlt','zuschlag_fehlt'])
 function wasFehlt(state,e,leer){
   const liste=[],grundlagen=new Map();
   const name=kg=>'KG '+kg+(katalogTitel(state,kg)?' '+katalogTitel(state,kg):'');
-  for(const kg of leer)liste.push({art:'gruppe',schwere:'hoch',kg,text:name(kg)+' noch ohne Ansatz'});
+  // Kostengruppen ohne Ansatz, je Eltern-KG zusammengefasst.
+  const jeEltern=new Map();
+  for(const kg of leer){const p=ebene(kg)===3?kg.slice(0,2)+'0':kg[0]+'00';if(!jeEltern.has(p))jeEltern.set(p,[]);jeEltern.get(p).push(kg)}
+  for(const [p,kgs] of jeEltern)liste.push({art:'leer',schwere:'hoch',kg:p,kgs,
+    text:name(p)+': '+(kgs.length===1?'KG '+kgs[0]:kgs.join(', '))+' ohne Ansatz'});
+  // Pauschale und Einzelpositionen in derselben KG zugleich.
+  for(const k of e.knoten.values()){
+    if(k.ebene===3||!k.direkt)continue;
+    if(k.anzahl-k.entfaellt-k.direkt>0)liste.push({art:'doppelt',schwere:'hoch',kg:k.kg,
+      text:name(k.kg)+': Pauschale und Positionen in den Unter-Kostengruppen zugleich – doppelt gezählt?'});
+  }
   for(const p of e.positionen){
     if(p.ausgeschlossen)continue;
     const pos=(state.positionen||[]).find(x=>x.id===p.id)||{};
@@ -291,8 +335,9 @@ function wasFehlt(state,e,leer){
     text:HINWEIS_TEXT[h]+': betrifft '+n+(n===1?' Position':' Positionen')});
   const mitWert=new Set(e.positionen.filter(p=>!p.ausgeschlossen&&p.betragCent!==null&&p.status!=='entfaellt').map(p=>p.kg));
   const vorhanden=new Set(e.positionen.filter(p=>!p.ausgeschlossen).map(p=>p.kg));
+  const entschieden=kg=>{const s=e.knoten.get(kg)?.status;return s==='entfaellt'||s==='enthalten'};
   for(const paar of PAARE){
-    if(paar.wenn.some(k=>mitWert.has(k))&&!paar.dann.some(k=>vorhanden.has(k)))
+    if(paar.wenn.some(k=>mitWert.has(k))&&!paar.dann.some(k=>vorhanden.has(k)||entschieden(k)))
       liste.push({art:'paar',schwere:'info',kg:paar.dann[0],
         text:paar.wenn.filter(k=>mitWert.has(k)).map(k=>'KG '+k).join(' und ')+' ohne '+paar.dann.map(k=>'KG '+k).join(' oder ')+': Bekleidung vergessen?'});
   }
@@ -336,5 +381,5 @@ function prozent(p,{vorzeichen=false}={}){
 }
 
 return Object.freeze({SCHEMA,ARTEN,MENGENQUELLEN,EINHEITEN,PAARE,dezimal,eingabe,mikro,textAusMikro,centAusMikro,teile,
-  ebene,eltern,katalogTitel,quartalIndex,quartalText,kennwertKette,position,berechne,rezeptVorschlag,euro,zahl,prozent});
+  ebene,eltern,kette,liegtUnter,katalogTitel,quartalIndex,quartalText,kennwertKette,position,berechne,rezeptVorschlag,euro,zahl,prozent});
 });

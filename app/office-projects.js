@@ -96,7 +96,7 @@ function showPlans(){
       planner.href='../muster-planner.html';
       planner.textContent='Muster-Planner ansehen';
       planner.className='office-plan-library-link';
-      planner.title='Entwurf LPH 3 · nur Ansicht und lokale Review-Notizen';
+      planner.title='Entwurf v0.3.4 im Office Planner · nur Ansicht';
       actions.append(planner);
     }
     card.append(number,title,metadata,actions);templateHost.append(card);
@@ -149,7 +149,7 @@ function showPlans(){
   guide.href='../terminplan-hilfe.html';
   guide.target='_blank';
   guide.rel='noopener noreferrer';
-  guide.textContent='Terminplan-Handbuch · Werkzeug, LPH 3 und LPH 5';
+  guide.textContent='Anleitung zum Terminplan · Werkzeug, Assistent, LPH 3 und LPH 5';
   guide.className='office-plan-library-link';
   guide.style.display='inline-block';
   guide.style.margin='14px 0';
