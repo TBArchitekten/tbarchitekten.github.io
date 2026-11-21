@@ -386,7 +386,8 @@ function init(b){
   }
   function umschalten(){
     offen=!offen;
-    if(offen){auswahlMerken();b.schliesseDetails();void pruefeStatus();void ladeVerlauf()}
+    // Beim Öffnen: Bezug merken, Details schließen; die Verfügbarkeit neu prüfen, solange sie fehlte.
+    if(offen){auswahlMerken();b.schliesseDetails();if(!bereit)geprueft=false;void pruefeStatus();void ladeVerlauf()}
     b.render();
     if(offen)setTimeout(()=>text.focus(),0);
   }
