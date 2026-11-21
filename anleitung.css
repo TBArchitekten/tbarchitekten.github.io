@@ -76,6 +76,12 @@ table.a-tab{width:100%;border-collapse:collapse;font-size:14px}
 .ui-zeile .kg{font-weight:650;font-variant-numeric:tabular-nums}
 .ui-zeile small{display:block;font-size:11px;color:var(--a-meta);font-weight:400}
 .ui-zeile.aus{color:#8a9099}
+.ui-x .ui-zeile{grid-template-columns:40px 34px minmax(0,1fr) 92px 92px 104px}
+.ui-x .ui-zeile.spalten{font-size:11px;color:var(--a-meta);font-weight:600;background:#fafbfc}
+.ui-x .ui-zeile.kopf{background:#fafbfc}
+.ui-x .ui-zeile.element span:nth-child(3){padding-left:12px;font-weight:650}
+.ui-x .ui-zeile.kind2 span:nth-child(3){padding-left:26px}
+.ui-x .ui-zeile .chip{margin-left:6px;font-weight:400}
 .ui-kette{background:#fff;border:1px solid var(--a-line);border-radius:14px;padding:6px 16px;max-width:520px}
 .ui-schritt{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--a-line-soft);font-size:14px}
 .ui-schritt:first-child{border-top:0}.ui-schritt.ende{border-top:1px solid #d9dfe5;font-weight:700}
@@ -89,6 +95,8 @@ table.a-tab{width:100%;border-collapse:collapse;font-size:14px}
   .ui-sum{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ui-zeile{grid-template-columns:44px minmax(0,1fr) 92px}
   .ui-zeile .nb{display:none}
+  .ui-x .ui-zeile{grid-template-columns:36px minmax(0,1fr) 100px}
+  .ui-x .ui-zeile.kind2 span:nth-child(3){padding-left:14px}
   .ui-fluss{grid-template-columns:minmax(0,1fr)}
   .ui-pfeil{transform:rotate(90deg)}
 }

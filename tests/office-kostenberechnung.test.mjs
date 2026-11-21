@@ -225,8 +225,8 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<html lang="de">/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office2',
-    './kosten-import.js?v=office1','./kostenberechnung.js?v=office2','./kostenberechnung.css?v=office2'])
+  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office3',
+    './kosten-import.js?v=office1','./kostenberechnung.js?v=office3','./kostenberechnung.css?v=office3'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kostenberechnung.js?'));
   // In der App ohne Sitzung: anmelden über die App, nicht im Browser umleiten.
@@ -299,7 +299,7 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   const hilfe=read('kostenberechnung-hilfe.html'),tp=read('terminplan-hilfe.html'),stil=read('anleitung.css');
   for(const [name,html] of [['kostenberechnung-hilfe.html',hilfe],['terminplan-hilfe.html',tp]]){
     assert.match(html,/<html lang="de">/,name);
-    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office1">/,name);
+    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office2">/,name);
     assert.ok(!/<style[\s>]/.test(html),'Stil gehört in anleitung.css: '+name);
     assert.ok(!/\b(para|que|como|desde|proyecto|archivo|tarea|también|costos|cálculo|guardar)\b/i.test(html),'spanische Wörter in '+name);
   }
@@ -319,4 +319,46 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   assert.ok(!read('terminplan.html').includes('ohne Feiertage oder Pufferzeiten'));
   assert.match(read('terminplan.html'),/abzüglich der arbeitsfreien Tage des Projektkalenders/);
   assert.match(stil,/--a-link:#355d99/);
+});
+
+test('Elemente und Gewerke: Summen über dieselben Positionen, die DIN-Gliederung bleibt die Rechengrundlage',()=>{
+  // Gari, 21.11.: unter jeder KG mehrere Elemente wie im Büro-Excel (335: «WDVS Mineralwolle 160–200 mm + Putz» …), Spalte GW.
+  const st={schema:R.SCHEMA,ustProzent:'19',kostenstand:'2026-Q4',
+    katalog:[{kg:'300',titel:'A'},{kg:'330',titel:'B'},{kg:'335',titel:'C'},{kg:'336',titel:'D'},{kg:'600',titel:'E'},{kg:'610',titel:'F'}],
+    gruppen:{'600':{status:'entfaellt',notiz:'x'}},
+    elemente:[{id:'e:1',kg:'335',titel:'WDVS'}],
+    positionen:[
+      {id:'a',kg:'335',element:'e:1',gewerk:' wd ',modus:'menge',menge:'638.94',einheit:'m²',mengenquelle:{art:'manuell'},kennwert:{art:'angebot',wert:'130',fundstelle:'Sto'}},
+      {id:'b',kg:'335',element:'e:1',gewerk:'PU',modus:'betrag',betrag:'35000',kennwert:{art:'angebot',fundstelle:'Sto'}},
+      {id:'c',kg:'336',gewerk:'PU',modus:'menge',menge:'457.59',einheit:'m²',mengenquelle:{art:'manuell'},kennwert:{art:'eigen',wert:'40',fundstelle:'BV'}},
+      {id:'d',kg:'336',element:'e:weg',gewerk:'',modus:'menge',menge:'10',einheit:'m²',mengenquelle:{art:'manuell'},kennwert:{}},
+      {id:'f',kg:'610',gewerk:'PU',modus:'betrag',betrag:'999',kennwert:{art:'angebot',fundstelle:'x'}}]};
+  const r=R.berechne(st);
+  assert.equal(r.elemente.get('e:1').bekanntCent,11806220n); // 83.062,20 + 35.000,00
+  assert.equal(r.elemente.get('e:1').anzahl,2);
+  assert.equal(r.gewerke.get('WD').bekanntCent,8306220n);
+  assert.equal(r.gewerke.get('PU').bekanntCent,5330360n); // ohne die entfallende KG 610
+  assert.equal(r.gewerke.get('').offen,1);
+  assert.equal(r.positionen.find(x=>x.id==='d').element,null,'unbekanntes Element zählt als direkte Position');
+  const summeGewerke=[...r.gewerke.values()].reduce((s,x)=>s+x.bekanntCent,0n);
+  assert.equal(summeGewerke,r.gesamt.bekanntCent,'beide Sichten ergeben dieselbe Summe');
+  assert.equal(R.gewerkKurz(' ma '),'MA');
+});
+
+test('Tabelle wie im Büro-Excel: Spalten, Zeilenhöhe, Gewerke, Elemente, volle Breite',()=>{
+  // Gari, 21.11.: Platz an den Seiten nutzen; Zeilen aufziehen wie in Excel; Spalten wie im Büro (KG · GW · … · Netto · Brutto · Kommentar).
+  assert.match(ui,/const SPALTEN=\[\['kg','KG'\],\['gw','GW'\],\['bez','Bezeichnung'\],\['ort','Ort'\],\['menge','Menge'\],\['eh','EH'\],\['ep','EP netto'\],\['netto','Netto'\],\['brutto','Brutto'\],\['quelle','Quelle'\],\['kom','Kommentar'\]\];/);
+  for(const t of ['Einzeilig','Ganzer Text','Gewerke','data-act="el-neu"','Element anlegen','Position im Element','Element auflösen','Mit Positionen löschen','Duplizieren','Zusammenstellung nach Gewerken','Details schließen'])
+    assert.ok(ui.includes(t),'fehlt: '+t);
+  // Enter springt wie in Excel in dieselbe Spalte der nächsten Zeile; Spaltenbreite ziehen; Ansicht je Browser gemerkt, ohne Speicher kein Fehler.
+  assert.match(ui,/ev\.key==='Enter'&&!ev\.shiftKey/);
+  assert.match(ui,/data-zieh/);
+  assert.match(ui,/function ladePrefs\(\)\{try\{/);
+  assert.match(ui,/function merkePrefs\(\)\{try\{/);
+  assert.match(css,/\.kb-wrap\{max-width:2400px;margin:0 auto\}/);
+  assert.doesNotMatch(css,/\.kb-wrap\{max-width:1240px/);
+  assert.match(css,/\.ktab\.einzeilig textarea\.ci\{/);
+  assert.match(css,/@page\{size:A4 landscape;margin:12mm\}/);
+  // Netto und Brutto nebeneinander statt Umschalter.
+  assert.doesNotMatch(ui,/data-act="brutto" data-wert="1"/);
 });

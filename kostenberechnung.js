@@ -22,7 +22,13 @@ const TABS=[['uebersicht','Übersicht'],['positionen','Positionen'],['quellen','
 const KG_MUSTER=/^[1-8]\d\d$/;
 
 let nutzer=null,mitglied=null,doc=null,st=null,calc=null,baum=null,istMuster=false,kannBearbeiten=false;
-const ui={tab:'uebersicht',offen:new Set(['300']),filter:'300',auswahl:null,kgAuswahl:null,brutto:false,loeschen:null,staende:null,importVorschau:null,meldung:''};
+// Ansicht je Browser merken (Gliederung, Zeilenhöhe, Spaltenbreiten); fehlt der Speicher, gelten die Vorgaben.
+const PREFS_KEY='tba.office.kostenberechnung.ansicht';
+function ladePrefs(){try{return JSON.parse(localStorage.getItem(PREFS_KEY)||'{}')||{}}catch{return {}}}
+const PREFS=ladePrefs();
+const ui={tab:'uebersicht',offen:new Set(['300']),filter:'300',auswahl:null,kgAuswahl:null,elAuswahl:null,brutto:false,loeschen:null,staende:null,importVorschau:null,meldung:'',
+  sicht:PREFS.sicht==='gewerke'?'gewerke':'kg',zeilen:PREFS.zeilen==='kompakt'?'kompakt':'voll',breiteBez:Number(PREFS.bez)||null,breiteKom:Number(PREFS.kom)||null};
+function merkePrefs(){try{localStorage.setItem(PREFS_KEY,JSON.stringify({sicht:ui.sicht,zeilen:ui.zeilen,bez:ui.breiteBez,kom:ui.breiteKom}))}catch{}}
 let serverRevision=0,speichernTimer=null,laeuft=false,ausstehend=false,konflikt=false,speicherText='';
 
 function quartale(){
@@ -237,7 +243,8 @@ function render(){
   renderSpaeter=false;
   calc=R.berechne(st);baum=baueBaum();
   if(ui.kgAuswahl&&!calc.knoten.has(ui.kgAuswahl))ui.kgAuswahl=null;
-  const aktiv=document.activeElement?.dataset?.key||null;
+  if(ui.elAuswahl&&!(st.elemente||[]).some(e=>e.id===ui.elAuswahl))ui.elAuswahl=null;
+  const aktiv=document.activeElement?.dataset?.key||null,imInspektor=!!document.activeElement?.closest?.('.inspektor');
   const kopf='<a class="kb-back" href="./kostenberechnung.html">‹ Kostenberechnungen</a>'+
     '<header class="kb-head"><div class="kb-head-text"><p class="kicker">Office · Kostenberechnung'+(istMuster?' · Muster':'')+'</p>'+
     '<h1>'+esc(doc.project_name)+'</h1><p class="kb-intro">'+esc([doc.project_number!=='Muster'?doc.project_number:'',doc.phase==='LPH3'?'LPH 3':doc.phase,
@@ -253,9 +260,15 @@ function render(){
   if(ui.meldung)banner+='<div class="kb-banner info" role="status">'+esc(ui.meldung)+'</div>';
   const tabs='<nav class="tabs" role="tablist" aria-label="Ansichten">'+TABS.map(([k,t])=>'<button type="button" class="tab" role="tab" data-act="tab" data-tab="'+k+'" aria-selected="'+(ui.tab===k)+'">'+t+'</button>').join('')+'</nav>';
   const inhalt={uebersicht:tabUebersicht,positionen:tabPositionen,quellen:tabQuellen,vergleich:tabVergleich,bericht:tabBericht}[ui.tab]||tabUebersicht;
-  root.innerHTML='<div class="kb-wrap">'+kopf+banner+tabs+'<section id="kbBody">'+inhalt()+'</section></div>'+datalistKg();
+  root.innerHTML='<div class="kb-wrap">'+kopf+banner+tabs+'<section id="kbBody">'+inhalt()+'</section></div>'+datalistKg()+datalistGw();
+  root.classList.toggle('mit-inspektor',ui.tab==='positionen'&&!!root.querySelector('.inspektor'));
+  if(ui.tab==='positionen')hoehenAnpassen();
   zeigeSpeicherstatus();
-  if(aktiv){const el=root.querySelector('[data-key="'+CSS.escape(aktiv)+'"]');if(el){el.focus({preventScroll:true});if(el.select&&el.type==='text')try{el.setSelectionRange(el.value.length,el.value.length)}catch{}}}
+  if(aktiv){const el=(imInspektor&&root.querySelector('.inspektor')||root).querySelector('[data-key="'+CSS.escape(aktiv)+'"]');if(el){el.focus({preventScroll:true});if(el.select&&el.type==='text')try{el.setSelectionRange(el.value.length,el.value.length)}catch{}}}
+}
+function datalistGw(){
+  const codes=[...new Set([...(st.positionen||[]).map(p=>R.gewerkKurz(p.gewerk)).filter(Boolean),...Object.keys(st.gewerke||{})])].sort();
+  return '<datalist id="kbGwListe">'+codes.map(c=>'<option value="'+esc(c)+'">'+esc(st.gewerke?.[c]||'')+'</option>').join('')+'</datalist>';
 }
 function datalistKg(){return '<datalist id="kbKgListe">'+(st.katalog||[]).map(k=>'<option value="'+esc(k.kg)+'">'+esc(k.kg+' '+k.titel)+'</option>').join('')+'</datalist>'}
 
@@ -275,40 +288,38 @@ function tabUebersicht(){
     '<div class="card"><p class="sum-label">Vollständigkeit</p><p class="big">'+v.prozent+' %</p><span class="bar" style="margin:4px 0 10px"><span style="width:'+v.prozent+'%"></span></span>'+
       '<p class="meta">'+v.erledigt+' von '+v.gesamt+(v.nachKg?' Kostengruppen geklärt':' Positionen vollständig belegt')+'</p></div></section>';
   const erste=(st.katalog||[]).filter(k=>R.ebene(k.kg)===1);
-  const max=erste.reduce((m,k)=>{const b=calc.knoten.get(k.kg)?.bekanntCent||0n;return b>m?b:m},0n);
+  const bgf=R.dezimal(st.bezug?.BGF),mitBgf=!!(bgf&&Number(bgf)>0);
   const anteil=b=>g.bekanntCent>0n&&b>0n?R.prozent(Number(R.teile(b*1000n,g.bekanntCent))/10):'';
+  const jeBgf=b=>mitBgf&&b>0n?R.euro(R.teile(b*1000000n,R.mikro(bgf))):'';
   const chev=(kg,hat)=>hat?'<button type="button" class="chev" data-act="aufklappen" data-kg="'+esc(kg)+'" aria-expanded="'+ui.offen.has(kg)+'" aria-label="KG '+esc(kg)+(ui.offen.has(kg)?' zuklappen':' aufklappen')+'">›</button>':'<span class="chev" aria-hidden="true"></span>';
+  const werte=(b,aus,kn,fett)=>'<span class="num"'+(fett?' style="font-weight:650"':'')+'>'+(aus?'entfällt':(kn?.status==='enthalten'?'<span class="meta">in Pauschale</span>':R.euro(b)))+'</span>'+
+    '<span class="num hide-s">'+(aus||kn?.status==='enthalten'?'':R.euro(bruttoVon(b)))+'</span><span class="num hide-s meta">'+(aus?'':anteil(b))+'</span>'+(mitBgf?'<span class="num hide-s meta">'+(aus?'':jeBgf(b))+'</span>':'');
   let zeilen='';
   for(const k of erste){
     const kn=calc.knoten.get(k.kg),aus=kn?.status==='entfaellt',b=kn?.bekanntCent||0n;
-    zeilen+='<div class="row'+(aus?' aus':'')+'"><span class="name"><span class="kg">'+esc(k.kg)+'</span>'+esc(k.titel)+'</span>'+
-      '<span class="num"'+(k.kg==='300'?' style="font-weight:650"':'')+'>'+(aus?'entfällt':betrag(b))+'</span><span class="num hide-s meta">'+(aus?'':anteil(b))+'</span>'+
-      '<span class="hide-s">'+(aus?'':'<span class="bar"><span style="width:'+(max>0n?Number(R.teile(b*100n,max)):0)+'%"></span></span>')+'</span>'+
+    zeilen+='<div class="row'+(aus?' aus':'')+'"><span class="name"><span class="kg">'+esc(k.kg)+'</span>'+esc(k.titel)+'</span>'+werte(b,aus,null,k.kg==='300')+
       '<span class="hide-s">'+chipKg(kn)+'</span>'+chev(k.kg,kinderVon(k.kg).length>0)+'</div>';
     if(!ui.offen.has(k.kg))continue;
-    if(positionenIn(k.kg).length)zeilen+=zeileUebersicht({kg:k.kg,titel:'Pauschal für die ganze KG '+k.kg},'sub',null,anteil,chev);
+    if(positionenIn(k.kg).length)zeilen+=zeileUebersicht({kg:k.kg,titel:'Pauschal für die ganze KG '+k.kg},'sub',null,werte,chev);
     for(const x of kinderVon(k.kg)){
-      zeilen+=zeileUebersicht(x,'sub',calc.knoten.get(x.kg),anteil,chev);
+      zeilen+=zeileUebersicht(x,'sub',calc.knoten.get(x.kg),werte,chev);
       if(!ui.offen.has(x.kg))continue;
-      for(const y of kinderVon(x.kg))zeilen+=zeileUebersicht(y,'sub2',calc.knoten.get(y.kg),anteil,chev);
+      for(const y of kinderVon(x.kg))zeilen+=zeileUebersicht(y,'sub2',calc.knoten.get(y.kg),werte,chev);
     }
   }
-  const liste='<section class="card main" aria-label="Kosten nach Kostengruppen" style="overflow:hidden"><div class="card-head"><h2 class="kb-h2">Kosten nach Kostengruppen</h2>'+
-    '<div class="seg" role="group" aria-label="Beträge"><button type="button" data-act="brutto" data-wert="0" aria-pressed="'+!ui.brutto+'">netto</button><button type="button" data-act="brutto" data-wert="1" aria-pressed="'+ui.brutto+'">brutto</button></div></div>'+
-    '<div class="row head"><span>Kostengruppe</span><span class="num">Betrag</span><span class="num hide-s">Anteil</span><span class="hide-s"></span><span class="hide-s">Stand</span><span></span></div>'+zeilen+
-    '<div class="sumrow"><div><p style="margin:0;font-weight:700">Summe '+(ui.brutto?'brutto':'netto')+(g.vollstaendig?'':', vorläufig')+'</p>'+
-    '<p class="meta">'+(ui.brutto?'darin '+esc(R.zahl(st.ustProzent))+' % USt. '+R.euro(calc.ustCent):'zzgl. '+esc(R.zahl(st.ustProzent))+' % USt. '+R.euro(calc.ustCent)+' · brutto '+R.euro(calc.bruttoCent))+'</p></div>'+
-    '<p class="num" style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em">'+betrag(g.bekanntCent)+'</p></div></section>';
+  const liste='<section class="card main'+(mitBgf?' mit-bgf':'')+'" aria-label="Kosten nach Kostengruppen" style="overflow:hidden"><div class="card-head"><h2 class="kb-h2">Kosten nach Kostengruppen</h2></div>'+
+    '<div class="row head"><span>Kostengruppe</span><span class="num">Netto</span><span class="num hide-s">Brutto</span><span class="num hide-s">Anteil</span>'+(mitBgf?'<span class="num hide-s">€/m² BGF</span>':'')+'<span class="hide-s">Stand</span><span></span></div>'+zeilen+
+    '<div class="sumrow"><div><p style="margin:0;font-weight:700">Summe netto'+(g.vollstaendig?'':', vorläufig')+'</p>'+
+    '<p class="meta">zzgl. '+esc(R.zahl(st.ustProzent))+' % USt. '+R.euro(calc.ustCent)+' · brutto '+R.euro(calc.bruttoCent)+'</p></div>'+
+    '<p class="num" style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em">'+R.euro(g.bekanntCent)+'</p></div></section>';
   return karten+'<div class="cols">'+liste+'<aside class="side" aria-label="Was noch fehlt">'+karteFehlt()+karteArchicad()+karteHerkunft()+'</aside></div>';
 }
-function zeileUebersicht(k,klasse,kn,anteil,chev){
+function zeileUebersicht(k,klasse,kn,werte,chev){
   const pauschal=!kn,aus=kn?.status==='entfaellt';
   const b=pauschal?positionenIn(k.kg).reduce((s,p)=>{const r=calc.positionen.find(x=>x.id===p.id);return s+(r?.betragCent&&!r.ausgeschlossen?r.betragCent:0n)},0n):(kn.bekanntCent||0n);
-  const zu=pauschal?k.kg:k.kg;
-  return '<div class="row '+klasse+' klick'+(aus?' aus':'')+'" data-act="kg-gehe" data-kg="'+esc(zu)+'" role="button" tabindex="0">'+
+  return '<div class="row '+klasse+' klick'+(aus?' aus':'')+'" data-act="kg-gehe" data-kg="'+esc(k.kg)+'" role="button" tabindex="0">'+
     '<span class="name">'+(pauschal?'<span class="meta">'+esc(k.titel)+'</span>':'<span class="kg">'+esc(k.kg)+'</span>'+esc(k.titel))+'</span>'+
-    '<span class="num">'+(aus?'entfällt':(kn?.status==='enthalten'?'<span class="meta">in Pauschale</span>':betrag(b)))+'</span><span class="num hide-s meta">'+(aus?'':anteil(b))+'</span><span class="hide-s"></span>'+
-    '<span class="hide-s">'+(pauschal?'':chipKg(kn))+'</span>'+(pauschal?'<span class="chev" aria-hidden="true"></span>':chev(k.kg,kinderVon(k.kg).length>0))+'</div>';
+    werte(b,aus,kn,false)+'<span class="hide-s">'+(pauschal?'':chipKg(kn))+'</span>'+(pauschal?'<span class="chev" aria-hidden="true"></span>':chev(k.kg,kinderVon(k.kg).length>0))+'</div>';
 }
 // Was die ganze Kostenberechnung betrifft, zuerst; dann Positionen, offene Kostengruppen, zuletzt Hinweise.
 const RANG_FEHLT={doppelt:0,grundlage:1,ursache:2,position:3,leer:4,gruppe:5,paar:6,bezug:7,vergleich:8,hinweis:9};
@@ -349,48 +360,92 @@ function karteHerkunft(){
     '<div class="mini"><span>'+esc(R.ARTEN[art]?.label||'ohne Quelle')+'</span><span class="num">'+R.prozent(Number(R.teile(c*1000n,summe))/10)+'</span></div>').join('')+'</div></section>';
 }
 
-// Positionen: die Gliederung bis zur 3. Ebene, jede Kostengruppe als Zeile, ihre Positionen darunter.
+// Positionen: die Tabelle wie im Büro-Excel (Vergleich: Phase0, California, ORCA). Jede Kostengruppe bis zur 3. Ebene ist
+// eine Zeile, darunter ihre Positionen und Elemente (Gruppen von Positionen, etwa «WDVS Mineralwolle + Putz»).
+// Spalten KG · GW · Bezeichnung · Ort · Menge · EH · EP netto · Netto · Brutto · Quelle · Kommentar; Bearbeiten direkt in der
+// Zeile, alles Weitere (Herkunft, Fundstelle, Kostenstand) rechts in den Details. Dieselben Positionen lassen sich nach
+// Gewerken (GW) zeigen; beide Sichten ergeben dieselbe Summe.
+const SPALTEN=[['kg','KG'],['gw','GW'],['bez','Bezeichnung'],['ort','Ort'],['menge','Menge'],['eh','EH'],['ep','EP netto'],['netto','Netto'],['brutto','Brutto'],['quelle','Quelle'],['kom','Kommentar']];
+const ZAHL_SPALTEN=new Set(['menge','ep','netto','brutto']);
+const zelle=(k,inhalt)=>'<span class="c-'+k+(ZAHL_SPALTEN.has(k)?' num':'')+'" role="cell">'+inhalt+'</span>';
+const zelleMitte=inhalt=>'<span class="c-mitte" role="cell">'+inhalt+'</span>'; // Ort bis EP zusammen
+const euroGenau=c=>c===null||c===undefined?'–':R.euro(c,{nachkomma:true});
+// Preise in der Zeile wie im Excel mit zwei Nachkommastellen (130,00); mehr nur, wenn eingegeben.
+const preis=x=>{const d=R.dezimal(x);return d===null||d===undefined?'':new Intl.NumberFormat('de-DE',{minimumFractionDigits:2,maximumFractionDigits:4}).format(Number(d))};
+function bruttoVon(cent){return cent===null||cent===undefined?null:BigInt(cent)+ustVon(cent)}
+const elementeIn=kg=>(st.elemente||[]).filter(e=>e&&e.kg===kg);
 function chipFilter(kg,text,an,aus){return '<button type="button" class="chip'+(aus?' chip-aus':'')+'" data-act="filter" data-kg="'+esc(kg)+'" aria-pressed="'+an+'">'+esc(text)+'</button>'}
+// Eingabe direkt in der Zeile; ohne Schreibrecht nur Text.
+function textFeld(key,wert,{ph='',mehrzeilig=false,label='',zahl=false}={}){
+  if(!kannBearbeiten)return '<span class="ct'+(zahl?' num':'')+'">'+esc(wert||'')+'</span>';
+  const a=' data-key="'+esc(key)+'" aria-label="'+esc(label)+'"'+(ph?' placeholder="'+esc(ph)+'"':'');
+  return mehrzeilig?'<textarea class="ci" rows="1"'+a+'>'+esc(wert||'')+'</textarea>':
+    '<input class="ci'+(zahl?' num':'')+'" type="text"'+(zahl?' inputmode="decimal"':'')+a+' value="'+esc(wert??'')+'">';
+}
+function einheitFeld(key,wert){
+  if(!kannBearbeiten)return '<span class="ct">'+esc(wert||'')+'</span>';
+  return '<select class="ci" data-key="'+esc(key)+'" aria-label="Einheit">'+R.EINHEITEN.map(e=>'<option'+(e===(wert||'m²')?' selected':'')+'>'+esc(e)+'</option>').join('')+'</select>';
+}
+const mehrKnopf=(act,id,label)=>'<button type="button" class="mehr" data-act="'+act+'" data-id="'+esc(id)+'" aria-label="'+esc(label)+'">⋯</button>';
+function kopfTabelle(){
+  return '<div class="pos kopf" role="row">'+SPALTEN.map(([k,t])=>'<span class="c-'+k+(ZAHL_SPALTEN.has(k)?' num':'')+'" role="columnheader">'+t+
+    (k==='bez'||k==='kom'?'<span class="zieh" data-zieh="'+k+'" title="Spaltenbreite ziehen" aria-hidden="true"></span>':'')+'</span>').join('')+'</div>';
+}
 function tabPositionen(){
   const ergebnis=new Map(calc.positionen.map(r=>[r.id,r]));
-  const f=ui.filter,erste=(st.katalog||[]).filter(k=>R.ebene(k.kg)===1);
+  const gw=ui.sicht==='gewerke',f=gw?'':ui.filter,erste=(st.katalog||[]).filter(k=>R.ebene(k.kg)===1);
   const zuKlaeren=[...calc.blaetter.values()].filter(s=>s==='leer'||s==='offen').length;
-  let chips='<div class="filter" role="group" aria-label="Kostengruppen 1. Ebene">'+chipFilter('','Alle',!f)+chipFilter('offen','Zu klären · '+zuKlaeren,f==='offen')+
-    erste.map(k=>chipFilter(k.kg,k.kg,!!f&&f!=='offen'&&f[0]===k.kg[0],calc.knoten.get(k.kg)?.status==='entfaellt')).join('')+'</div>';
-  if(f&&f!=='offen'){
-    const e1=f[0]+'00',zweite=kinderVon(e1);
-    if(zweite.length)chips+='<div class="filter" role="group" aria-label="Kostengruppen 2. Ebene">'+chipFilter(e1,'Alle in '+e1,f===e1)+
-      zweite.map(k=>chipFilter(k.kg,k.kg+' '+k.titel,f===k.kg||(R.ebene(f)===3&&f.slice(0,2)===k.kg.slice(0,2)),calc.knoten.get(k.kg)?.status==='entfaellt')).join('')+'</div>';
+  let chips='';
+  if(!gw){
+    chips='<div class="filter" role="group" aria-label="Kostengruppen 1. Ebene">'+chipFilter('','Alle',!f)+chipFilter('offen','Zu klären · '+zuKlaeren,f==='offen')+
+      erste.map(k=>chipFilter(k.kg,k.kg,!!f&&f!=='offen'&&f[0]===k.kg[0],calc.knoten.get(k.kg)?.status==='entfaellt')).join('')+'</div>';
+    if(f&&f!=='offen'){
+      const e1=f[0]+'00',zweite=kinderVon(e1);
+      if(zweite.length)chips+='<div class="filter" role="group" aria-label="Kostengruppen 2. Ebene">'+chipFilter(e1,'Alle in '+e1,f===e1)+
+        zweite.map(k=>chipFilter(k.kg,k.kg+' '+k.titel,f===k.kg||(R.ebene(f)===3&&f.slice(0,2)===k.kg.slice(0,2)),calc.knoten.get(k.kg)?.status==='entfaellt')).join('')+'</div>';
+    }
   }
   const nurOffen=f==='offen';
   let zeilen='';
-  if(!f||nurOffen)for(const k of erste)zeilen+=zeilenKnoten(k,ergebnis,nurOffen,true);
+  if(gw)zeilen=zeilenGewerke(ergebnis);
+  else if(!f||nurOffen)for(const k of erste)zeilen+=zeilenKnoten(k,ergebnis,nurOffen,true);
   else{
     const e=R.ebene(f),k=baum.eintrag.get(f);
     if(k){
       if(e===3||!kinderVon(f).length)zeilen=zeilenBlatt(k,ergebnis,false);
       else{
-        zeilen=zeilenPauschal(f,ergebnis,false);
-        for(const c of kinderVon(f))zeilen+=zeilenKnoten(c,ergebnis,false,e===1);
+        zeilen=zeileKopf(k)+zeilenPauschal(f,ergebnis,false);
+        for(const c of kinderVon(f))zeilen+=zeilenKnoten(c,ergebnis,false,true);
       }
     }
   }
   const ohneKg=(st.positionen||[]).filter(p=>!baum.eintrag.has(String(p.kg||'')));
-  if((!f||nurOffen)&&ohneKg.length)zeilen+='<div class="pos grp"><span class="kg">–</span><span class="pname"><strong>Ohne gültige Kostengruppe</strong><small>Kostengruppe in der Position eintragen</small></span><span></span><span></span><span></span><span></span></div>'+
-    ohneKg.map(p=>zeilePosition(p,ergebnis.get(p.id),{kind:true})).join('');
-  const kopfZeile='<div class="pos head"><span>KG</span><span>Kostengruppe · Position</span><span class="num">Menge</span><span class="num">Kennwert</span><span class="num">Betrag</span><span>Stand · Herkunft</span></div>';
-  const summe=!f?calc.gesamt.bekanntCent:(nurOffen?null:(calc.knoten.get(f)?.bekanntCent??0n));
-  const kopfText=!f?'Alle Kostengruppen':nurOffen?'Zu klären':kgName(f);
-  const neuKg=ui.kgAuswahl&&calc.knoten.get(ui.kgAuswahl)?.blatt?ui.kgAuswahl:(R.ebene(f)===3?f:'');
-  const tabelle='<section class="card main" style="overflow:hidden" aria-label="Positionen"><div class="card-head"><h2 class="kb-h2">'+esc(kopfText)+'</h2>'+
-    (kannBearbeiten?'<button type="button" class="btn" data-act="pos-neu" data-kg="'+esc(neuKg)+'">'+ICON_PLUS+'Position</button>':'')+'</div>'+
-    '<div class="tbl">'+kopfZeile+(zeilen||'<p class="leer">'+(nurOffen?'Nichts zu klären. Jede Kostengruppe hat einen Ansatz, entfällt oder ist in einer Pauschale enthalten.':'Keine Kostengruppen in dieser Auswahl.')+'</p>')+
-    (summe!==null&&zeilen?'<div class="pos head summe"><span></span><span>Summe der Auswahl</span><span></span><span></span><span class="num">'+R.euro(summe)+'</span><span></span></div>':'')+
-    '</div></section>';
+  if(!gw&&(!f||nurOffen)&&ohneKg.length)zeilen+='<div class="pos grp" role="row">'+zelle('kg','–')+zelle('gw','')+
+    zelle('bez','<span class="bez-zeile"><strong>Ohne gültige Kostengruppe</strong></span><small>Kostengruppe in den Details eintragen</small>')+zelleMitte('')+zelle('netto','')+zelle('brutto','')+zelle('quelle','')+zelle('kom','')+'</div>'+
+    ohneKg.map(p=>zeilePosition(p,ergebnis.get(p.id),{mitKg:true})).join('');
+  const summe=gw||!f?calc.gesamt.bekanntCent:(nurOffen?null:(calc.knoten.get(f)?.bekanntCent??0n));
+  const kopfText=gw?'Nach Gewerken':!f?'Alle Kostengruppen':nurOffen?'Zu klären':kgName(f);
+  const neuKg=ui.kgAuswahl&&calc.knoten.get(ui.kgAuswahl)?.blatt?ui.kgAuswahl:(f&&f!=='offen'&&R.ebene(f)===3?f:'');
+  const werkzeuge='<div class="tbl-werkzeuge">'+
+    '<div class="seg" role="group" aria-label="Gliederung"><button type="button" data-act="sicht" data-wert="kg" aria-pressed="'+!gw+'">Kostengruppen</button><button type="button" data-act="sicht" data-wert="gewerke" aria-pressed="'+gw+'">Gewerke</button></div>'+
+    '<div class="seg" role="group" aria-label="Zeilenhöhe"><button type="button" data-act="zeilen" data-wert="kompakt" aria-pressed="'+(ui.zeilen==='kompakt')+'">Einzeilig</button><button type="button" data-act="zeilen" data-wert="voll" aria-pressed="'+(ui.zeilen!=='kompakt')+'">Ganzer Text</button></div>'+
+    (kannBearbeiten&&!gw?'<button type="button" class="btn" data-act="pos-neu" data-kg="'+esc(neuKg)+'">'+ICON_PLUS+'Position</button>':'')+'</div>';
+  const stil='--kb-bez:'+(Number(ui.breiteBez)||300)+'px;--kb-kom:'+(Number(ui.breiteKom)||210)+'px';
+  const tabelle='<section class="card tabelle-karte" aria-label="Positionen"><div class="card-head"><h2 class="kb-h2">'+esc(kopfText)+'</h2>'+werkzeuge+'</div>'+
+    '<div class="tbl"><div class="ktab '+(ui.zeilen==='kompakt'?'einzeilig':'voll')+'" role="table" aria-label="Kostenberechnung" style="'+stil+'">'+kopfTabelle()+
+    (zeilen||'<p class="leer">'+(nurOffen?'Nichts zu klären. Jede Kostengruppe hat einen Ansatz, entfällt oder ist in einer Pauschale enthalten.':'Keine Kostengruppen in dieser Auswahl.')+'</p>')+
+    (summe!==null&&zeilen?'<div class="pos summe" role="row">'+zelle('kg','')+zelle('gw','')+zelle('bez','Summe'+(gw||!f?(calc.gesamt.vollstaendig?'':', vorläufig'):' der Auswahl'))+zelleMitte('')+
+      zelle('netto',euroGenau(summe))+zelle('brutto',euroGenau(bruttoVon(summe)))+zelle('quelle','')+zelle('kom','')+'</div>':'')+
+    '</div></div></section>';
+  return chips+tabelle+inspektor(ergebnis);
+}
+// Details rechts: Position, Element oder Kostengruppe. Auf breiten Bildschirmen neben der Tabelle, sonst darüber.
+function inspektor(ergebnis){
   const pos=(st.positionen||[]).find(p=>p.id===ui.auswahl);
-  const panel=pos?panelPosition(pos,ergebnis.get(pos.id)):(ui.kgAuswahl?panelKg(ui.kgAuswahl):
-    '<section class="card panel"><p class="meta">Eine Kostengruppe oder Position wählen. Jede Kostengruppe bis zur 3. Ebene steht in der Liste: mit Ansatz, offen, in einer Pauschale enthalten oder entfällt.</p></section>');
-  return chips+'<div class="cols">'+tabelle+'<aside class="side">'+panel+'</aside></div>';
+  const el=!pos&&ui.elAuswahl?(st.elemente||[]).find(e=>e.id===ui.elAuswahl):null;
+  const inhalt=pos?panelPosition(pos,ergebnis.get(pos.id)):el?panelElement(el):(ui.kgAuswahl?panelKg(ui.kgAuswahl):'');
+  if(!inhalt)return '';
+  return '<aside class="inspektor" aria-label="Details"><div class="inspektor-kopf"><span class="meta">Details</span><button type="button" class="inspektor-zu" data-act="schliessen" aria-label="Details schließen">×</button></div>'+inhalt+'</aside>';
 }
 function istProblem(p,ergebnis){const r=ergebnis.get(p.id);return !!r&&!r.ausgeschlossen&&(r.status==='offen'||r.hinweise.length>0)}
 function zeilenKnoten(k,ergebnis,nurOffen,mitKopf){
@@ -402,64 +457,116 @@ function zeilenKnoten(k,ergebnis,nurOffen,mitKopf){
   return (mitKopf?zeileKopf(k):'')+innen;
 }
 function zeileKopf(k){
-  const n=calc.knoten.get(k.kg),e=R.ebene(k.kg),aus=n?.status==='entfaellt';
-  return '<button type="button" class="pos '+(e===1?'grp1':'grp')+(ui.kgAuswahl===k.kg?' sel':'')+(aus?' aus':'')+'" data-act="kg" data-kg="'+esc(k.kg)+'">'+
-    '<span class="kg">'+esc(k.kg)+'</span><span class="pname"><strong>'+esc(k.titel)+'</strong>'+(n?.kgGesamt?'<small>'+n.geklaert+' von '+n.kgGesamt+' geklärt</small>':'')+'</span>'+
-    '<span></span><span></span><span class="num">'+(aus?'entfällt':R.euro(n?.bekanntCent||0n))+'</span><span>'+chipKg(n)+'</span></button>';
+  const n=calc.knoten.get(k.kg),e=R.ebene(k.kg),aus=n?.status==='entfaellt',netto=n?.bekanntCent||0n;
+  return '<div class="pos '+(e===1?'grp1':'grp')+(ui.kgAuswahl===k.kg?' sel':'')+(aus?' aus':'')+'" role="row" data-act="kg" data-kg="'+esc(k.kg)+'">'+
+    zelle('kg',esc(k.kg))+zelle('gw','')+
+    zelle('bez','<span class="bez-zeile"><button type="button" class="bez-link" data-act="kg" data-kg="'+esc(k.kg)+'">'+esc(k.titel)+'</button>'+chipKg(n)+'</span>'+
+      (n?.kgGesamt?'<small>'+n.geklaert+' von '+n.kgGesamt+' geklärt</small>':''))+
+    zelleMitte('')+zelle('netto',aus?'entfällt':euroGenau(netto))+zelle('brutto',aus?'':euroGenau(bruttoVon(netto)))+zelle('quelle','')+
+    zelle('kom',aus?'<span class="ct">'+esc(st.gruppen?.[k.kg]?.notiz||'')+'</span>':'')+'</div>';
 }
 function zeilenPauschal(kg,ergebnis,nurOffen){
   const liste=positionenIn(kg).filter(p=>!nurOffen||istProblem(p,ergebnis));
-  return liste.map(p=>zeilePosition(p,ergebnis.get(p.id),{kind:true,pauschal:kg})).join('');
+  return liste.map(p=>zeilePosition(p,ergebnis.get(p.id),{pauschal:kg})).join('');
 }
+// Kostengruppe der 3. Ebene (oder Blatt der 2.): ihre Zeile, dann die Positionen ohne Element, dann jedes Element mit seinen Positionen.
 function zeilenBlatt(k,ergebnis,nurOffen){
-  const n=calc.knoten.get(k.kg),liste=positionenIn(k.kg);
-  if(nurOffen&&!(n?.status==='leer'||n?.status==='offen'||liste.some(p=>istProblem(p,ergebnis))))return '';
-  if(liste.length===1&&n?.status!=='entfaellt')return zeilePosition(liste[0],ergebnis.get(liste[0].id),{blatt:k});
-  const aus=n?.status==='entfaellt',eigenerHinweis=(st.vorlagen||{})[k.kg]?.hinweis||'';
-  const mit=entfaelltMit(k.kg),pau=n?.status==='enthalten'?pauschalIn(k.kg):'';
-  // Unter einer entfallenden Gruppe genügt der Verweis; die Begründung steht an der Gruppe.
-  const klein=aus?(mit?'Entfällt mit KG '+mit:'Entfällt'+(st.gruppen?.[k.kg]?.notiz?': '+st.gruppen[k.kg].notiz:'')):
-    pau?'in der Pauschale von KG '+pau:liste.length>1?liste.length+' Positionen':eigenerHinweis;
-  let html='<button type="button" class="pos kgz'+(ui.kgAuswahl===k.kg?' sel':'')+(aus?' aus':'')+(n?.status==='leer'?' leer-kg':'')+'" data-act="kg" data-kg="'+esc(k.kg)+'">'+
-    '<span class="kg">'+esc(k.kg)+'</span><span class="pname"><strong>'+esc(k.titel)+'</strong>'+(klein?'<small>'+esc(klein)+'</small>':'')+'</span>'+
-    '<span class="num">'+(liste.length>1?'':'–')+'</span><span class="num">'+(liste.length>1?'':'–')+'</span>'+
-    '<span class="num" style="font-weight:600">'+(aus?'entfällt':liste.length?R.euro(n?.bekanntCent||0n):'–')+'</span><span>'+chipKg(n)+'</span></button>';
-  if(liste.length>1||(aus&&liste.length))html+=liste.filter(p=>!nurOffen||istProblem(p,ergebnis)).map(p=>zeilePosition(p,ergebnis.get(p.id),{kind:true})).join('');
+  const n=calc.knoten.get(k.kg),alle=positionenIn(k.kg);
+  if(nurOffen&&!(n?.status==='leer'||n?.status==='offen'||alle.some(p=>istProblem(p,ergebnis))))return '';
+  const aus=n?.status==='entfaellt',mit=entfaelltMit(k.kg),pau=n?.status==='enthalten'?pauschalIn(k.kg):'';
+  const klein=aus?(mit?'Entfällt mit KG '+mit:''):pau?'in der Pauschale von KG '+pau:((st.vorlagen||{})[k.kg]?.hinweis||'');
+  const plus=kannBearbeiten&&!aus&&!nurOffen?'<span class="zeile-akt"><button type="button" class="zeile-plus" data-act="pos-neu" data-kg="'+esc(k.kg)+'" data-quelle="tabelle">'+ICON_PLUS+'Position</button>'+
+    '<button type="button" class="zeile-plus" data-act="el-neu" data-kg="'+esc(k.kg)+'">'+ICON_PLUS+'Element</button></span>':'';
+  let html='<div class="pos kgz'+(ui.kgAuswahl===k.kg?' sel':'')+(aus?' aus':'')+(n?.status==='leer'?' leer-kg':'')+'" role="row" data-act="kg" data-kg="'+esc(k.kg)+'">'+
+    zelle('kg',esc(k.kg))+zelle('gw','')+
+    zelle('bez','<span class="bez-zeile"><button type="button" class="bez-link" data-act="kg" data-kg="'+esc(k.kg)+'">'+esc(k.titel)+'</button>'+chipKg(n)+'</span>'+(klein?'<small>'+esc(klein)+'</small>':''))+
+    zelleMitte(plus)+zelle('netto',aus?'entfällt':(n?.anzahl?euroGenau(n.bekanntCent||0n):'–'))+zelle('brutto',aus||!n?.anzahl?'':euroGenau(bruttoVon(n.bekanntCent||0n)))+
+    zelle('quelle','')+zelle('kom',aus&&!mit?'<span class="ct">'+esc(st.gruppen?.[k.kg]?.notiz||'')+'</span>':'')+'</div>';
+  if(aus&&!alle.length)return html;
+  const ids=new Set(elementeIn(k.kg).map(e=>e.id));
+  const zeige=p=>!nurOffen||istProblem(p,ergebnis);
+  html+=alle.filter(p=>!ids.has(p.element)).filter(zeige).map(p=>zeilePosition(p,ergebnis.get(p.id))).join('');
+  for(const el of elementeIn(k.kg)){
+    const inEl=alle.filter(p=>p.element===el.id);
+    if(nurOffen&&!inEl.some(zeige))continue;
+    html+=zeileElement(el,aus)+inEl.filter(zeige).map(p=>zeilePosition(p,ergebnis.get(p.id),{imElement:true})).join('');
+  }
   return html;
 }
-function zeilePosition(p,r,{blatt=null,kind=false,pauschal=''}={}){
-  const aus=r.status==='entfaellt'||r.ausgeschlossen;
-  const art=R.ARTEN[p.kennwert?.art];
-  const herkunft=r.status==='entfaellt'?'<span class="chip">entfällt</span>':(art?'<span class="chip'+(p.kennwert.art==='annahme'?'':' chip-src')+'">'+esc(art.kurz)+'</span>':'<span class="chip chip-att">Quelle fehlt</span>');
-  const katTitel=titel(p.kg);
-  const eigen=p.titel&&p.titel!==katTitel?p.titel:'';
-  let gross,unter;
-  if(blatt){gross=blatt.titel;unter=[eigen,p.bauteiltyp,aufbauText(p),p.notiz]}
-  else if(pauschal){gross='Pauschal für KG '+pauschal+(eigen?' · '+eigen:'');unter=[p.notiz]}
-  else{gross=eigen||p.bauteiltyp||katTitel||'Ohne Bezeichnung';unter=[eigen?p.bauteiltyp:'',aufbauText(p),p.notiz]}
-  if(p.ausImportEntfernt)unter.push('nicht mehr im Modell');
-  if(r.status==='offen'&&!blatt)unter.push('offen');
-  const klein=unter.filter(Boolean).join(' · ');
-  return '<button type="button" class="pos'+(kind?' kind':'')+(ui.auswahl===p.id?' sel':'')+(aus?' aus':'')+'" data-act="waehle" data-id="'+esc(p.id)+'">'+
-    '<span class="kg">'+(kind?'':esc(p.kg||'–'))+'</span><span class="pname"><strong>'+esc(gross)+'</strong>'+(klein?'<small>'+esc(klein)+'</small>':'')+'</span>'+
-    '<span class="num">'+(p.modus==='betrag'?'<span class="meta">Betrag</span>':(R.dezimal(p.menge)?esc(R.zahl(p.menge,2)+' '+(p.einheit||'')):'–'))+'</span>'+
-    '<span class="num">'+(p.modus==='betrag'?'':(r.kennwertCent!==null?R.euro(r.kennwertCent,{nachkomma:true}):'–'))+'</span>'+
-    '<span class="num" style="font-weight:600">'+(r.status==='entfaellt'?'entfällt':(r.betragCent!==null?R.euro(r.betragCent):'<span class="offen">offen</span>'))+'</span>'+
-    '<span>'+herkunft+'</span></button>';
+function zeileElement(el,aus){
+  const s=calc.elemente?.get(el.id)||{bekanntCent:0n,anzahl:0,offen:0};
+  const plus=kannBearbeiten&&!aus?'<span class="zeile-akt"><button type="button" class="zeile-plus" data-act="pos-neu" data-kg="'+esc(el.kg)+'" data-el="'+esc(el.id)+'" data-quelle="tabelle">'+ICON_PLUS+'Position</button></span>':'';
+  return '<div class="pos el'+(ui.elAuswahl===el.id?' sel':'')+(aus?' aus':'')+'" role="row" data-act="el" data-id="'+esc(el.id)+'">'+
+    zelle('kg',mehrKnopf('el',el.id,'Details zum Element'))+zelle('gw','')+
+    zelle('bez',textFeld('el:'+el.id+':titel',el.titel,{ph:'Element, z. B. WDVS Mineralwolle + Putz',mehrzeilig:true,label:'Bezeichnung des Elements'}))+
+    zelleMitte(plus)+zelle('netto',s.anzahl?euroGenau(s.bekanntCent):'–')+zelle('brutto',s.anzahl?euroGenau(bruttoVon(s.bekanntCent)):'')+
+    zelle('quelle',s.offen?'<span class="chip chip-att">'+s.offen+' offen</span>':'')+
+    zelle('kom',textFeld('el:'+el.id+':notiz',el.notiz,{mehrzeilig:true,label:'Kommentar zum Element'}))+'</div>';
+}
+function kurz(t,n){t=String(t||'');return t.length>n?t.slice(0,n-1)+'…':t}
+function zeilePosition(p,r,{imElement=false,pauschal='',mitKg=false}={}){
+  const k='pos:'+p.id+':',kw=p.kennwert||{},betragModus=p.modus==='betrag';
+  const aus=r.status==='entfaellt'||r.ausgeschlossen,art=R.ARTEN[kw.art];
+  const katTitel=titel(p.kg),eigen=p.titel&&p.titel!==katTitel?p.titel:'';
+  const name=pauschal?eigen:(eigen||[p.bauteiltyp,aufbauText(p)].filter(Boolean).join(' · '));
+  const transformiert=!betragModus&&(r.kette?.schritte||[]).some(s=>s.art!=='start'&&s.art!=='ende');
+  const fehlt=r.fehlt.map(x=>({kg:'Kostengruppe',menge:'Menge',betrag:'Betrag',kennwert:'EP',mengenquelle:'Herkunft der Menge',quelle:'Quelle',fundstelle:'Fundstelle'}[x]||x)).join(', ');
+  const dot='<span class="stand '+(aus?'aus':r.status==='offen'?'offen':'ok')+'" title="'+esc(aus?'entfällt':r.status==='offen'?'offen: '+fehlt:'vollständig')+'"></span>';
+  let ep;
+  if(betragModus)ep=textFeld(k+'betrag',preis(p.betrag),{label:'Betrag netto',zahl:true});
+  else if(transformiert)ep='<button type="button" class="ep-kette" data-act="waehle" data-id="'+esc(p.id)+'" title="Herkunft des Einheitspreises">'+euroGenau(r.kennwertCent)+
+    '<small>aus '+esc(R.zahl(kw.wert,2))+' € '+esc(art?.kurz||'')+'</small></button>';
+  else ep=textFeld(k+'kennwert.wert',preis(kw.wert),{label:'Einheitspreis netto',zahl:true});
+  const fundFehlt=art?.fundstelle&&!String(kw.fundstelle||'').trim();
+  const quelle=art?'<button type="button" class="chip q'+(kw.art==='annahme'?'':' chip-src')+(fundFehlt?' chip-att':'')+'" data-act="waehle" data-id="'+esc(p.id)+'" title="'+esc(kw.fundstelle||'Fundstelle fehlt')+'">'+
+      esc(art.kurz)+(kw.fundstelle?' · '+esc(kurz(kw.fundstelle,16)):(fundFehlt?' · Fundstelle?':''))+'</button>':
+    '<button type="button" class="chip q chip-att" data-act="waehle" data-id="'+esc(p.id)+'">Quelle fehlt</button>';
+  return '<div class="pos zeile'+(imElement?' im-el':'')+(pauschal?' pauschal':'')+(ui.auswahl===p.id?' sel':'')+(aus?' aus':'')+'" role="row" data-act="waehle" data-id="'+esc(p.id)+'">'+
+    zelle('kg',mitKg?'<span class="ct">'+esc(p.kg||'–')+'</span>':mehrKnopf('waehle',p.id,'Details zur Position'))+
+    zelle('gw',textFeld(k+'gewerk',p.gewerk,{label:'Gewerk'}))+
+    zelle('bez','<span class="bez-pos">'+dot+textFeld(k+'titel',name,{ph:pauschal?'Pauschal für KG '+pauschal:'Bezeichnung',mehrzeilig:true,label:'Bezeichnung'})+'</span>'+
+      (p.ausImportEntfernt?'<small class="att">nicht mehr im Modell</small>':''))+
+    zelle('ort',textFeld(k+'ort',p.ort,{label:'Ort'}))+
+    zelle('menge',betragModus?'<span class="ct num">1</span>':textFeld(k+'menge',R.zahl(p.menge,3),{label:'Menge',zahl:true}))+
+    zelle('eh',betragModus?'<span class="ct">psch</span>':einheitFeld(k+'einheit',p.einheit))+
+    zelle('ep',ep)+
+    zelle('netto',aus?'entfällt':(r.betragCent!==null?euroGenau(r.betragCent):'<span class="offen">offen</span>'))+
+    zelle('brutto',aus||r.betragCent===null?'':euroGenau(bruttoVon(r.betragCent)))+
+    zelle('quelle',aus?'<span class="chip">entfällt</span>':quelle)+
+    zelle('kom',textFeld(k+'notiz',p.notiz,{mehrzeilig:true,label:'Kommentar'}))+'</div>';
+}
+// Dieselben Positionen nach Gewerken; das Kürzel steht in der Spalte GW.
+function zeilenGewerke(ergebnis){
+  const gruppen=new Map();
+  for(const p of st.positionen||[]){
+    const r=ergebnis.get(p.id);if(!r||r.ausgeschlossen||!baum.eintrag.has(String(p.kg||'')))continue;
+    const g=R.gewerkKurz(p.gewerk);if(!gruppen.has(g))gruppen.set(g,[]);gruppen.get(g).push(p);
+  }
+  const codes=[...gruppen.keys()].sort((a,b)=>(a===''?1:0)-(b===''?1:0)||a.localeCompare(b,'de'));
+  let html='';
+  for(const c of codes){
+    const s=calc.gewerke.get(c)||{bekanntCent:0n,anzahl:0,offen:0},name=c?(st.gewerke?.[c]||''):'Ohne Gewerk';
+    html+='<div class="pos grp" role="row">'+zelle('kg','')+zelle('gw','<strong>'+esc(c||'–')+'</strong>')+
+      zelle('bez','<span class="bez-zeile"><strong>'+esc(name||'Gewerk '+c)+'</strong>'+(s.offen?'<span class="chip chip-att">'+s.offen+' offen</span>':'')+'</span><small>'+s.anzahl+(s.anzahl===1?' Position':' Positionen')+'</small>')+
+      zelleMitte('')+zelle('netto',euroGenau(s.bekanntCent))+zelle('brutto',euroGenau(bruttoVon(s.bekanntCent)))+zelle('quelle','')+zelle('kom','')+'</div>';
+    html+=gruppen.get(c).sort((a,b)=>String(a.kg).localeCompare(String(b.kg))).map(p=>zeilePosition(p,ergebnis.get(p.id),{mitKg:true})).join('');
+  }
+  return html;
 }
 function panelKg(kg){
   const n=calc.knoten.get(kg);if(!n)return '';
   const kinder=kinderVon(kg),poss=positionenIn(kg),markiert=st.gruppen?.[kg]?.status==='entfaellt',mit=entfaelltMit(kg),v=vorlage(kg);
+  const els=elementeIn(kg),elIds=new Set(els.map(e=>e.id));
   const pau=n.status==='enthalten'?pauschalIn(kg):'';
   let stand;
   if(mit)stand='Entfällt mit KG '+mit+(st.gruppen[mit].notiz?': '+st.gruppen[mit].notiz:'')+'.';
   else if(markiert)stand='Entfällt. Was hier steht, zählt nicht zur Summe und nicht als offen.';
-  else if(n.blatt)stand={leer:'Ohne Ansatz: noch nicht entschieden. Eine Position anlegen oder «entfällt» setzen.',frei:'Optional. Bleibt sie leer, zählt sie nicht als offen.',
+  else if(n.blatt)stand={leer:'Ohne Ansatz: noch nicht entschieden. Eine Position oder ein Element anlegen oder «entfällt» setzen.',frei:'Optional. Bleibt sie leer, zählt sie nicht als offen.',
     enthalten:'In der Pauschale von KG '+pau+' enthalten.',offen:n.offen+(n.offen===1?' Position ist':' Positionen sind')+' noch nicht vollständig belegt.',
     vollstaendig:'Vollständig belegt.',entfaellt:'Alle Positionen entfallen.'}[n.status]||'';
   else stand=n.geklaert+' von '+n.kgGesamt+' Kostengruppen geklärt'+(n.zuKlaeren?', '+n.zuKlaeren+' zu klären':'')+'.';
   let html='<section class="card panel"><p class="kicker">Kostengruppe · '+['','1. Ebene','2. Ebene','3. Ebene'][R.ebene(kg)]+'</p><h2>'+esc(kgName(kg))+'</h2>'+
-    '<p class="meta">'+esc(stand)+(n.bekanntCent>0n?' <strong style="color:var(--kb-ink)">'+R.euro(n.bekanntCent)+'</strong> netto':'')+'</p>'+
+    '<p class="meta">'+esc(stand)+(n.bekanntCent>0n?' <strong style="color:var(--kb-ink)">'+R.euro(n.bekanntCent,{nachkomma:true})+'</strong> netto':'')+'</p>'+
     (v.hinweis?'<p class="meta hinweis">'+esc(v.hinweis)+'</p>':'');
   if(kannBearbeiten&&!mit){
     html+='<div class="kg-akt">';
@@ -467,7 +574,8 @@ function panelKg(kg){
       html+='<div class="form" style="width:100%">'+feld('Begründung','gruppe:'+kg+':notiz',st.gruppen[kg].notiz||'',{attr:'placeholder="z. B. nicht vorhanden"'})+'</div>'+
         '<button type="button" class="btn" data-act="kg-wieder" data-kg="'+esc(kg)+'">Wieder aufnehmen</button>';
     }else{
-      html+=(kinder.length?'':'<button type="button" class="btn btn-primary" data-act="pos-neu" data-kg="'+esc(kg)+'">'+ICON_PLUS+'Position anlegen</button>')+
+      html+=(kinder.length?'':'<button type="button" class="btn btn-primary" data-act="pos-neu" data-kg="'+esc(kg)+'">'+ICON_PLUS+'Position anlegen</button>'+
+        '<button type="button" class="btn" data-act="el-neu" data-kg="'+esc(kg)+'">'+ICON_PLUS+'Element anlegen</button>')+
         '<button type="button" class="btn" data-act="kg-entfaellt" data-kg="'+esc(kg)+'">Entfällt</button>';
       if(kinder.length){
         const rest=blaetterUnter(kg).filter(b=>calc.blaetter.get(b)==='leer');
@@ -477,9 +585,30 @@ function panelKg(kg){
     }
     html+='</div>';
   }
-  if(poss.length)html+='<p class="sec">'+(kinder.length?'Pauschale':'Positionen')+'</p>'+poss.map(p=>{const r=calc.positionen.find(x=>x.id===p.id);
-    return '<button type="button" class="kg-kind" data-act="waehle" data-id="'+esc(p.id)+'"><span>'+esc(p.bauteiltyp||(p.titel&&p.titel!==titel(p.kg)?p.titel:'Position'))+'</span><span class="num">'+(r?.betragCent!=null?R.euro(r.betragCent):'offen')+'</span></button>'}).join('');
+  if(!kinder.length&&!markiert&&!mit)html+='<p class="meta" style="margin-top:10px">Ein <strong>Element</strong> fasst mehrere Positionen zusammen, etwa «WDVS Mineralwolle 160–200 mm + Putz» mit Dämmung, Putz und Anschlüssen; die Summe steht am Element.</p>';
+  const posName=p=>p.titel&&p.titel!==titel(p.kg)?p.titel:(p.bauteiltyp||'Position');
+  const posZeile=p=>{const r=calc.positionen.find(x=>x.id===p.id);return '<button type="button" class="kg-kind" data-act="waehle" data-id="'+esc(p.id)+'"><span>'+esc(posName(p))+'</span><span class="num">'+(r?.betragCent!=null?R.euro(r.betragCent):'offen')+'</span></button>'};
+  const direkt=poss.filter(p=>!elIds.has(p.element));
+  if(direkt.length)html+='<p class="sec">'+(kinder.length?'Pauschale':'Positionen')+'</p>'+direkt.map(posZeile).join('');
+  if(els.length)html+='<p class="sec">Elemente</p>'+els.map(e=>{const s=calc.elemente?.get(e.id);
+    return '<button type="button" class="kg-kind" data-act="el" data-id="'+esc(e.id)+'"><span>'+esc(e.titel||'Element ohne Namen')+'</span><span class="num">'+(s?R.euro(s.bekanntCent):'–')+'</span></button>'}).join('');
   if(kinder.length)html+='<p class="sec">Kostengruppen</p>'+kinder.map(c=>'<button type="button" class="kg-kind" data-act="kg" data-kg="'+esc(c.kg)+'"><span><span class="kg">'+esc(c.kg)+'</span>'+esc(c.titel)+'</span>'+chipKg(calc.knoten.get(c.kg))+'</button>').join('');
+  return html+'</section>';
+}
+function panelElement(el){
+  const s=calc.elemente?.get(el.id)||{bekanntCent:0n,anzahl:0,offen:0};
+  const poss=(st.positionen||[]).filter(p=>p.element===el.id);
+  let html='<section class="card panel"><p class="kicker">Element · KG '+esc(el.kg)+'</p><h2>'+esc(el.titel||'Neues Element')+'</h2>'+
+    '<p class="meta">'+s.anzahl+(s.anzahl===1?' Position':' Positionen')+(s.offen?', '+s.offen+' offen':'')+' · <strong style="color:var(--kb-ink)">'+R.euro(s.bekanntCent,{nachkomma:true})+'</strong> netto</p>'+
+    '<p style="margin:8px 0 0"><button type="button" class="btn btn-quiet" style="padding:0;min-height:0" data-act="kg" data-kg="'+esc(el.kg)+'">Zur KG '+esc(el.kg)+'</button></p>'+
+    '<div class="form" style="margin-top:14px">'+feld('Bezeichnung','el:'+el.id+':titel',el.titel,{attr:'placeholder="z. B. WDVS Mineralwolle 160–200 mm + Putz"'})+
+    feld('Kommentar','el:'+el.id+':notiz',el.notiz,{attr:'placeholder="z. B. Angabe Hersteller"'})+'</div>';
+  if(kannBearbeiten)html+='<div class="kg-akt"><button type="button" class="btn btn-primary" data-act="pos-neu" data-kg="'+esc(el.kg)+'" data-el="'+esc(el.id)+'">'+ICON_PLUS+'Position im Element</button>'+
+    '<button type="button" class="btn" data-act="el-loesen" data-id="'+esc(el.id)+'">Element auflösen</button>'+
+    '<button type="button" class="btn btn-danger" data-act="el-weg" data-id="'+esc(el.id)+'">'+(ui.loeschen===el.id?'Wirklich löschen?':'Mit Positionen löschen')+'</button></div>'+
+    '<p class="meta" style="margin-top:8px">Auflösen lässt die Positionen in der KG stehen; Löschen entfernt das Element mit seinen Positionen.</p>';
+  if(poss.length)html+='<p class="sec">Positionen</p>'+poss.map(p=>{const r=calc.positionen.find(x=>x.id===p.id);
+    return '<button type="button" class="kg-kind" data-act="waehle" data-id="'+esc(p.id)+'"><span>'+esc(p.titel||'Position')+'</span><span class="num">'+(r?.betragCent!=null?R.euro(r.betragCent):'offen')+'</span></button>'}).join('');
   return html+'</section>';
 }
 function feld(label,key,wert,{attr='',typ='text',hinweis=''}={}){
@@ -495,15 +624,21 @@ function panelPosition(p,r){
   const artOpt=[['','Bitte wählen'],...Object.entries(R.ARTEN).map(([a,x])=>[a,x.label])];
   const qOpt=[['','wie die Kostenberechnung'],...quartale().map(q=>[q,R.quartalText(q)])];
   const gruppe=KG_MUSTER.test(String(p.kg||''))&&kinderVon(p.kg).length>0;
-  let html='<section class="card panel"><p class="kicker">'+(gruppe?'Pauschale':'Position')+'</p><h2>'+esc(kgName(p.kg)||'Neue Position')+'</h2>'+
+  const els=KG_MUSTER.test(String(p.kg||''))?elementeIn(p.kg):[];
+  const el=els.find(e=>e.id===p.element);
+  let html='<section class="card panel"><p class="kicker">'+(gruppe?'Pauschale':'Position')+(el?' · Element «'+esc(kurz(el.titel||'ohne Namen',40))+'»':'')+'</p><h2>'+esc(kgName(p.kg)||'Neue Position')+'</h2>'+
     '<p class="meta">'+(r.status==='entfaellt'?'entfällt':r.betragCent!==null?(p.modus==='betrag'?'Betrag ':esc(R.zahl(p.menge,2))+' '+esc(p.einheit||'')+' × '+R.euro(r.kennwertCent,{nachkomma:true})+' = ')+'<strong style="color:var(--kb-ink)">'+R.euro(r.betragCent,{nachkomma:true})+'</strong> netto':
       'Offen: '+esc(r.fehlt.map(f=>({kg:'Kostengruppe',menge:'Menge',betrag:'Betrag',kennwert:'Kennwert',mengenquelle:'Herkunft der Menge',quelle:'Quelle',fundstelle:'Fundstelle'}[f]||f)).join(', ')))+'</p>'+
     (gruppe?'<p class="meta hinweis">Gilt für die ganze KG '+esc(p.kg)+'. Ihre Unter-Kostengruppen ohne eigene Position gelten als enthalten.</p>':'')+
     (KG_MUSTER.test(String(p.kg||''))?'<p style="margin:8px 0 0"><button type="button" class="btn btn-quiet" style="padding:0;min-height:0" data-act="kg" data-kg="'+esc(p.kg)+'">Zur KG '+esc(p.kg)+'</button></p>':'')+
-    '<div class="form" style="margin-top:14px"><div class="two">'+feld('Kostengruppe',k+'kg',p.kg,{attr:'list="kbKgListe" inputmode="numeric" maxlength="3"'})+feld('Bezeichnung',k+'titel',p.titel)+'</div>'+
-    '<div class="two">'+feld('Bauteiltyp',k+'bauteiltyp',p.bauteiltyp,{attr:'placeholder="z. B. AW-01"'})+feld('Notiz',k+'notiz',p.notiz)+'</div>'+
-    '<div class="seg" role="group" aria-label="Berechnung"><button type="button" data-act="modus" data-id="'+esc(p.id)+'" data-wert="menge" aria-pressed="'+(p.modus!=='betrag')+'"'+(kannBearbeiten?'':' disabled')+'>Menge × Kennwert</button>'+
-    '<button type="button" data-act="modus" data-id="'+esc(p.id)+'" data-wert="betrag" aria-pressed="'+(p.modus==='betrag')+'"'+(kannBearbeiten?'':' disabled')+'>Betrag</button></div>';
+    '<div class="form" style="margin-top:14px"><div class="two">'+feld('Kostengruppe',k+'kg',p.kg,{attr:'list="kbKgListe" inputmode="numeric" maxlength="3"'})+feld('Gewerk (GW)',k+'gewerk',p.gewerk,{attr:'list="kbGwListe" maxlength="8" placeholder="z. B. BM"'})+'</div>'+
+    feld('Bezeichnung',k+'titel',p.titel&&p.titel!==titel(p.kg)?p.titel:'',{attr:'placeholder="'+esc(gruppe?'Pauschal für KG '+p.kg:'z. B. Wärmedämmung Mineralfaser 200 mm')+'"'})+
+    '<div class="two">'+feld('Ort',k+'ort',p.ort,{attr:'placeholder="z. B. EG / OG"'})+
+    (els.length?auswahl('Element',k+'element',p.element||'',[['','– kein Element –'],...els.map(e=>[e.id,e.titel||'Element ohne Namen'])]):feld('Bauteiltyp',k+'bauteiltyp',p.bauteiltyp,{attr:'placeholder="z. B. AW-01"'}))+'</div>'+
+    (els.length?feld('Bauteiltyp',k+'bauteiltyp',p.bauteiltyp,{attr:'placeholder="z. B. AW-01"'}):'')+
+    feld('Kommentar',k+'notiz',p.notiz)+
+    '<div class="seg" role="group" aria-label="Berechnung"><button type="button" data-act="modus" data-id="'+esc(p.id)+'" data-wert="menge" aria-pressed="'+(p.modus!=='betrag')+'"'+(kannBearbeiten?'':' disabled')+'>Menge × EP</button>'+
+    '<button type="button" data-act="modus" data-id="'+esc(p.id)+'" data-wert="betrag" aria-pressed="'+(p.modus==='betrag')+'"'+(kannBearbeiten?'':' disabled')+'>Pauschal</button></div>';
   if(p.modus==='betrag'){
     html+='<div class="two">'+feld('Betrag netto (€)',k+'betrag',R.zahl(p.betrag,2),{attr:'inputmode="decimal"'})+auswahl('Quelle',k+'kennwert.art',kw.art,artOpt)+'</div>'+
       feld('Fundstelle',k+'kennwert.fundstelle',kw.fundstelle,{attr:'placeholder="z. B. Kostenbeitrag HLS vom …"'});
@@ -512,7 +647,7 @@ function panelPosition(p,r){
       auswahl('Einheit',k+'einheit',p.einheit||'m²',R.EINHEITEN.map(e=>[e,e]))+'</div>'+
       auswahl('Herkunft der Menge',k+'mengenquelle.art',p.mengenquelle?.art||'',[['','Bitte wählen'],...Object.entries(R.MENGENQUELLEN)])+
       feld('Mengennachweis',k+'mengenquelle.text',p.mengenquelle?.text,{attr:'placeholder="z. B. Auswertung Archicad vom …"'})+
-      '<p class="sec">Kennwert</p><div class="two">'+feld('Kennwert (€ je '+(p.einheit||'Einheit')+')',k+'kennwert.wert',R.zahl(kw.wert,4),{attr:'inputmode="decimal"'})+auswahl('Quelle',k+'kennwert.art',kw.art,artOpt)+'</div>'+
+      '<p class="sec">Einheitspreis (Kennwert)</p><div class="two">'+feld('Wert laut Quelle (€ je '+(p.einheit||'Einheit')+')',k+'kennwert.wert',R.zahl(kw.wert,4),{attr:'inputmode="decimal"'})+auswahl('Quelle',k+'kennwert.art',kw.art,artOpt)+'</div>'+
       feld('Fundstelle',k+'kennwert.fundstelle',kw.fundstelle,{attr:'placeholder="z. B. BKI Bauelemente 2026, S. …"'})+
       auswahl('Kostenstand des Kennwerts',k+'kennwert.kostenstand',kw.kostenstand||'',qOpt)+
       '<div>'+haken('Wert enthält Umsatzsteuer (brutto)',k+'kennwert.brutto',schalterAn(kw,'brutto'))+haken('Regionalfaktor anwenden',k+'kennwert.regional',schalterAn(kw,'regional'))+
@@ -528,6 +663,9 @@ function panelPosition(p,r){
     }
   }
   if(kannBearbeiten)html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">'+
+    '<button type="button" class="btn" data-act="hoch" data-id="'+esc(p.id)+'" aria-label="Position nach oben">↑</button>'+
+    '<button type="button" class="btn" data-act="runter" data-id="'+esc(p.id)+'" aria-label="Position nach unten">↓</button>'+
+    '<button type="button" class="btn" data-act="kopie" data-id="'+esc(p.id)+'">Duplizieren</button>'+
     '<button type="button" class="btn" data-act="entfaellt" data-id="'+esc(p.id)+'">'+(p.status==='entfaellt'?'Wieder aufnehmen':'Entfällt')+'</button>'+
     '<button type="button" class="btn btn-danger" data-act="loeschen" data-id="'+esc(p.id)+'">'+(ui.loeschen===p.id?'Wirklich löschen?':'Löschen')+'</button></div>';
   return html+'</div></section>';
@@ -581,9 +719,17 @@ function tabQuellen(){
     '<section class="card" style="grid-column:1/-1"><h2 class="kb-h2">Kostengruppen, die entfallen</h2><p class="meta" style="margin:6px 0 8px">Was entfällt, zählt nicht zur Summe und nicht als offen. Ganze Gruppen der 1. Ebene hier; einzelne Kostengruppen in «Positionen» an der Kostengruppe.</p>'+
       '<div class="tbl"><table class="kb-table"><thead><tr><th>Kostengruppe</th><th></th><th>Begründung</th></tr></thead><tbody>'+gruppen+'</tbody></table></div>'+
       (weitere?'<div class="tbl"><table class="kb-table" style="margin-top:14px"><thead><tr><th>Weitere Kostengruppen</th><th>Begründung</th><th></th></tr></thead><tbody>'+weitere+'</tbody></table></div>':'')+'</section>'+
+    gewerkeKarte()+
     '<section class="card" style="grid-column:1/-1"><h2 class="kb-h2">Quellenverzeichnis</h2><p class="meta" style="margin:6px 0 8px">Aus den Fundstellen der Positionen zusammengestellt.</p>'+
       (quellen.length?'<div class="tbl"><table class="kb-table"><thead><tr><th>Quelle</th><th>Fundstelle</th></tr></thead><tbody>'+quellen.map(q=>'<tr><td>'+esc(R.ARTEN[q.a]?.label||q.a)+'</td><td>'+esc(q.f||'–')+'</td></tr>').join('')+'</tbody></table></div>':'<p class="meta">Noch keine Quellen.</p>')+'</section>'+
     '</div>';
+}
+function gewerkeKarte(){
+  const codes=[...new Set([...(st.positionen||[]).map(p=>R.gewerkKurz(p.gewerk)).filter(Boolean),...Object.keys(st.gewerke||{})])].sort((a,b)=>a.localeCompare(b,'de'));
+  return '<section class="card" style="grid-column:1/-1"><h2 class="kb-h2">Gewerke</h2><p class="meta" style="margin:6px 0 8px">Das Kürzel steht in der Spalte GW der Positionen, wie im Büro-Excel (etwa BM, PU, MA). Hier bekommt es seinen Namen. «Positionen · Gewerke» zeigt dieselben Positionen je Gewerk, etwa für die spätere Vergabe; die Summe bleibt dieselbe.</p>'+
+    (codes.length?'<div class="tbl"><table class="kb-table"><thead><tr><th>GW</th><th>Bezeichnung</th><th class="num">Netto</th></tr></thead><tbody>'+codes.map(c=>'<tr><td><strong>'+esc(c)+'</strong></td><td>'+
+      (kannBearbeiten?'<input data-key="gewerk:'+esc(c)+'" value="'+esc(st.gewerke?.[c]||'')+'" placeholder="Name des Gewerks" aria-label="Bezeichnung des Gewerks '+esc(c)+'">':esc(st.gewerke?.[c]||''))+
+      '</td><td class="num">'+R.euro(calc.gewerke.get(c)?.bekanntCent||0n)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="meta">Noch keine Kürzel vergeben.</p>')+'</section>';
 }
 function bauteiltypen(){
   const m=new Map();
@@ -662,12 +808,37 @@ function bericht(){
     }
   }
   const ebene3='<div class="tbl"><table class="kb-table gliederung"><thead><tr><th>KG</th><th>Bezeichnung</th><th class="num">Betrag netto</th><th class="num">Anteil</th></tr></thead><tbody>'+gl+'</tbody></table></div>';
-  const posListe=(st.positionen||[]).filter(p=>!calc.positionen.find(r=>r.id===p.id)?.ausgeschlossen).sort((a,b)=>String(a.kg).localeCompare(String(b.kg)));
+  // Positionen wie im Büro-Excel: je Kostengruppe, darin die Elemente mit Summe und ihre Positionen.
   const ergebnis=new Map(calc.positionen.map(r=>[r.id,r]));
-  const herleitung='<div class="tbl"><table class="kb-table"><thead><tr><th>KG</th><th>Position</th><th class="num">Menge</th><th class="num">Kennwert</th><th class="num">Betrag</th><th>Quelle</th></tr></thead><tbody>'+
-    posListe.map(p=>{const r=ergebnis.get(p.id);return '<tr><td>'+esc(p.kg)+'</td><td>'+esc(p.titel||titel(p.kg))+(p.bauteiltyp?' · '+esc(p.bauteiltyp):'')+'</td>'+
-      '<td class="num">'+(p.modus==='betrag'||!R.dezimal(p.menge)?'':esc(R.zahl(p.menge,2)+' '+(p.einheit||'')))+'</td><td class="num">'+(p.modus==='betrag'||r.kennwertCent===null?'':R.euro(r.kennwertCent,{nachkomma:true}))+'</td>'+
-      '<td class="num">'+(r.status==='entfaellt'?'entfällt':r.betragCent===null?'offen':R.euro(r.betragCent))+'</td><td>'+esc([R.ARTEN[p.kennwert?.art]?.kurz,p.kennwert?.fundstelle].filter(Boolean).join(' · '))+'</td></tr>'}).join('')+'</tbody></table></div>';
+  const posZeileB=(p,imEl)=>{const r=ergebnis.get(p.id),kw=p.kennwert||{},bet=p.modus==='betrag';
+    const name=(p.titel&&p.titel!==titel(p.kg)?p.titel:[p.bauteiltyp,aufbauText(p)].filter(Boolean).join(' · '))||'Position';
+    return '<tr class="'+(imEl?'p2':'p1')+'"><td></td><td>'+esc(p.gewerk||'')+'</td><td>'+esc(name)+'</td><td>'+esc(p.ort||'')+'</td>'+
+      '<td class="num">'+(bet?'1':(R.dezimal(p.menge)?esc(R.zahl(p.menge,2)):''))+'</td><td>'+(bet?'psch':esc(p.einheit||''))+'</td>'+
+      '<td class="num">'+(bet?euroGenau(r.betragCent):(r.kennwertCent===null?'':euroGenau(r.kennwertCent)))+'</td>'+
+      '<td class="num">'+(r.status==='entfaellt'?'entfällt':r.betragCent===null?'offen':euroGenau(r.betragCent))+'</td>'+
+      '<td class="num">'+(r.betragCent===null||r.status==='entfaellt'?'':euroGenau(bruttoVon(r.betragCent)))+'</td>'+
+      '<td>'+esc([[R.ARTEN[kw.art]?.kurz,kw.fundstelle].filter(Boolean).join(' · '),p.notiz].filter(Boolean).join(' · '))+'</td></tr>'};
+  const proKg=new Map();
+  for(const p of st.positionen||[]){const r=ergebnis.get(p.id);if(!r||r.ausgeschlossen||!baum.eintrag.has(String(p.kg||'')))continue;if(!proKg.has(p.kg))proKg.set(p.kg,[]);proKg.get(p.kg).push(p)}
+  let pz='';
+  for(const kg of [...proKg.keys()].sort()){
+    const n=calc.knoten.get(kg),liste=proKg.get(kg),els=elementeIn(kg),ids=new Set(els.map(e=>e.id)),b=n?.bekanntCent||0n;
+    pz+='<tr class="kgk"><td>'+esc(kg)+'</td><td></td><td>'+esc(titel(kg))+'</td><td></td><td></td><td></td><td></td><td class="num">'+euroGenau(b)+'</td><td class="num">'+euroGenau(bruttoVon(b))+'</td><td></td></tr>'+
+      liste.filter(p=>!ids.has(p.element)).map(p=>posZeileB(p,false)).join('');
+    for(const el of els){
+      const inEl=liste.filter(p=>p.element===el.id);if(!inEl.length)continue;const s=calc.elemente.get(el.id)?.bekanntCent||0n;
+      pz+='<tr class="elk"><td></td><td></td><td>'+esc(el.titel||'Element')+'</td><td></td><td></td><td></td><td></td><td class="num">'+euroGenau(s)+'</td><td class="num">'+euroGenau(bruttoVon(s))+'</td><td>'+esc(el.notiz||'')+'</td></tr>'+
+        inEl.map(p=>posZeileB(p,true)).join('');
+    }
+  }
+  const herleitung=pz?'<div class="tbl"><table class="kb-table positionen-b"><thead><tr><th>KG</th><th>GW</th><th>Bezeichnung</th><th>Ort</th><th class="num">Menge</th><th>EH</th><th class="num">EP netto</th><th class="num">Netto</th><th class="num">Brutto</th><th>Quelle · Kommentar</th></tr></thead><tbody>'+pz+'</tbody></table></div>':
+    '<p class="meta">Noch keine Positionen.</p>';
+  const gwListe=[...calc.gewerke.entries()].filter(([c,s])=>c&&s.anzahl).sort((x,y)=>x[0].localeCompare(y[0],'de'));
+  const ohneGw=calc.gewerke.get('');
+  const gewerkeTab=gwListe.length?'<h3>Zusammenstellung nach Gewerken</h3><div class="tbl"><table class="kb-table"><thead><tr><th>GW</th><th>Gewerk</th><th class="num">Netto</th><th class="num">Brutto</th></tr></thead><tbody>'+
+    gwListe.map(([c,s])=>'<tr><td>'+esc(c)+'</td><td>'+esc(st.gewerke?.[c]||'')+'</td><td class="num">'+euroGenau(s.bekanntCent)+'</td><td class="num">'+euroGenau(bruttoVon(s.bekanntCent))+'</td></tr>').join('')+
+    (ohneGw?.anzahl?'<tr><td>–</td><td>ohne Gewerk</td><td class="num">'+euroGenau(ohneGw.bekanntCent)+'</td><td class="num">'+euroGenau(bruttoVon(ohneGw.bekanntCent))+'</td></tr>':'')+
+    '</tbody><tfoot><tr><td></td><td>Summe</td><td class="num">'+euroGenau(g.bekanntCent)+'</td><td class="num">'+euroGenau(calc.bruttoCent)+'</td></tr></tfoot></table></div>':'';
   const vgl=calc.ksSummeCent===null?'<p class="meta">Keine Kostenschätzung eingetragen.</p>':'<div class="tbl"><table class="kb-table"><thead><tr><th>KG</th><th class="num">Kostenschätzung</th><th class="num">Kostenberechnung</th><th class="num">Abweichung</th><th>Ursache</th></tr></thead><tbody>'+
     calc.vergleich.filter(v=>!v.entfaellt).map(v=>'<tr><td>'+esc(v.kg)+'</td><td class="num">'+R.euro(v.ksCent)+'</td><td class="num">'+R.euro(v.kbCent)+'</td><td class="num">'+(v.deltaCent===null?'–':R.euro(v.deltaCent,{vorzeichen:true})+' · '+R.prozent(v.deltaProzent,{vorzeichen:true}))+'</td><td>'+esc(v.ursache)+'</td></tr>').join('')+'</tbody></table></div>';
   const offen=sortiereFehlt(calc.fehlt.filter(f=>f.schwere==='hoch'));
@@ -677,7 +848,7 @@ function bericht(){
     '<div style="text-align:right"><p class="meta">Summe netto'+(g.vollstaendig?'':', vorläufig')+'</p><p style="font-size:24px;font-weight:700;margin:2px 0" class="num">'+R.euro(g.bekanntCent)+'</p>'+
     (calc.kennzahlen.jeBGF!==null?'<p class="meta">Bauwerk (KG 300 + 400) '+R.euro(calc.kennzahlen.jeBGF)+'/m² BGF</p>':'')+'</div></div>'+
     (g.vollstaendig?'':'<p class="meta att" style="margin-top:10px">Vorläufig: '+calc.vollstaendigkeit.erledigt+' von '+calc.vollstaendigkeit.gesamt+' Kostengruppen geklärt; '+offen.length+' Punkte sind noch offen (Abschnitt «Offene Punkte»).</p>')+
-    '<h3>Zusammenstellung, 1. Ebene</h3>'+ebene1+'<h3>Kostenberechnung bis zur 3. Ebene</h3>'+ebene3+'<h3>Positionen: Mengen, Kennwerte und Quellen</h3>'+herleitung+
+    '<h3>Zusammenstellung, 1. Ebene</h3>'+ebene1+'<h3>Kostenberechnung bis zur 3. Ebene</h3>'+ebene3+'<h3>Positionen: Mengen, Kennwerte und Quellen</h3>'+herleitung+gewerkeTab+
     '<h3>Vergleich mit der Kostenschätzung</h3>'+vgl+
     (st.annahmen?'<h3>Annahmen und Erläuterungen</h3><p style="white-space:pre-line;font-size:13px">'+esc(st.annahmen)+'</p>':'')+
     (offen.length?'<h3>Offene Punkte</h3><ul style="font-size:13px;margin:0;padding-left:18px">'+offen.map(f=>'<li>'+esc(f.text)+'</li>').join('')+'</ul>':'')+
@@ -750,7 +921,9 @@ function aendereFeld(el){
     const ende=key.lastIndexOf(':');const id=key.slice(4,ende),pfad=key.slice(ende+1);
     const p=st.positionen.find(x=>x.id===id);if(!p)return;
     if(pfad==='kg'){if(wert&&!KG_MUSTER.test(wert)){ui.meldung='Die Kostengruppe hat drei Ziffern, zum Beispiel 331.';render();return}
-      if(!p.titel||p.titel===titel(p.kg))p.titel=titel(wert)||p.titel;p.kg=wert}
+      if(!p.titel||p.titel===titel(p.kg))p.titel=titel(wert)||p.titel;p.kg=wert;if(p.element&&!elementeIn(wert).some(e=>e.id===p.element))p.element=''}
+    else if(pfad==='gewerk')p.gewerk=R.gewerkKurz(wert);
+    else if(pfad==='element')p.element=elementeIn(p.kg).some(e=>e.id===wert)?wert:'';
     else if(pfad.startsWith('kennwert.')&&['brutto','regional','zuschlag','indexieren'].includes(pfad.slice(9))){p.kennwert=p.kennwert||{};p.kennwert[pfad.slice(9)]=!!wert}
     else{const v=zahlOderText(pfad,wert);if(v===undefined){render();return}setze(p,pfad,v===''?(ZAHLFELDER.has(pfad)?null:''):v)}
   }else if(key.startsWith('st:')){
@@ -767,6 +940,8 @@ function aendereFeld(el){
     if(feld==='kg'){if(!KG_MUSTER.test(wert)){ui.meldung='Die Kostengruppe hat drei Ziffern.';render();return}z.kg=wert}
     else{const d=R.eingabe(wert);if(!d||!(Number(d)>0&&Number(d)<=20)){ui.meldung='Der Faktor ist eine Zahl, zum Beispiel 1 oder 2.';render();return}z.faktor=d}
     ui.meldung='Rezept geändert. Es wirkt beim nächsten Import.'}
+  else if(key.startsWith('el:')){const ende=key.lastIndexOf(':');const id=key.slice(3,ende),feld=key.slice(ende+1);const e=(st.elemente||[]).find(x=>x.id===id);if(!e||!['titel','notiz'].includes(feld))return;e[feld]=wert}
+  else if(key.startsWith('gewerk:')){const c=R.gewerkKurz(key.slice(7));if(!c)return;st.gewerke=st.gewerke||{};if(wert)st.gewerke[c]=wert;else delete st.gewerke[c]}
   else if(key.startsWith('rezepteinheit:')){const typ=key.slice(14);if(st.rezepte?.[typ])st.rezepte[typ].einheit=wert}
   geaendert();
   spaeterRendern();
@@ -779,24 +954,40 @@ document.addEventListener('pointerdown',()=>{zeigerUnten=true},true);
 const zeigerLos=()=>{zeigerUnten=false;if(renderSpaeter)setTimeout(()=>{if(renderSpaeter)render()},0)};
 document.addEventListener('pointerup',zeigerLos,true);
 document.addEventListener('pointercancel',zeigerLos,true);
-// Neue Position in einer Kostengruppe; Rechenweise, Einheit und Quelle nach der Vorgabe des Musters.
-// In einer KG mit Unter-KG ist es eine Pauschale für die ganze KG.
-function neuePosition(kg){
-  const id='p:'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+// Neue Position in einer Kostengruppe (oder einem Element); Rechenweise, Einheit und Quelle nach der Vorgabe des Musters.
+// In einer KG mit Unter-KG ist es eine Pauschale für die ganze KG. Aus der Tabelle heraus geht es direkt in der Zeile weiter.
+function neueId(prefix){return prefix+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function filterZeigt(kg){return !ui.filter||ui.filter!=='offen'&&(kg===ui.filter||R.liegtUnter(kg,ui.filter)||(R.ebene(ui.filter)>1&&ui.filter.slice(0,2)===kg.slice(0,2)))}
+function neuePosition(kg,elementId='',inline=false){
+  const id=neueId('p:');
   const gueltig=KG_MUSTER.test(String(kg||''))?kg:'';
   const v=gueltig?vorlage(gueltig):{},gruppe=gueltig&&kinderVon(gueltig).length>0;
   const modus=gruppe?'betrag':(v.modus||'menge');
-  const p={id,kg:gueltig,titel:gueltig?titel(gueltig):'',bauteiltyp:'',notiz:'',modus,kennwert:v.art?{art:v.art}:{}};
+  const el=gueltig&&elementId&&elementeIn(gueltig).some(e=>e.id===elementId)?elementId:'';
+  const p={id,kg:gueltig,titel:'',gewerk:'',ort:'',element:el,bauteiltyp:'',notiz:'',modus,kennwert:v.art?{art:v.art}:{}};
   if(modus==='menge')Object.assign(p,{menge:null,einheit:v.einheit||'m²',mengenquelle:{art:'manuell',text:''}});else p.betrag=null;
-  st.positionen=st.positionen||[];st.positionen.push(p);
-  ui.auswahl=id;ui.kgAuswahl=null;ui.tab='positionen';ui.loeschen=null;
-  if(gueltig&&(ui.filter==='offen'||(ui.filter&&!(gueltig===ui.filter||R.liegtUnter(gueltig,ui.filter)||(R.ebene(ui.filter)>1&&ui.filter.slice(0,2)===gueltig.slice(0,2))))))ui.filter=gueltig[0]+'00';
+  st.positionen=st.positionen||[];
+  let nach=-1;st.positionen.forEach((x,i)=>{if(gueltig&&x.kg===gueltig&&(!el||x.element===el))nach=i});
+  if(nach>=0)st.positionen.splice(nach+1,0,p);else st.positionen.push(p);
+  ui.tab='positionen';ui.loeschen=null;ui.elAuswahl=null;ui.kgAuswahl=null;ui.auswahl=inline?null:id;
+  if(gueltig){ui.sicht='kg';if(!filterZeigt(gueltig))ui.filter=gueltig[0]+'00'}
   geaendert();render();
-  setTimeout(()=>root.querySelector('[data-key="pos:'+CSS.escape(id)+':'+(gueltig?(modus==='betrag'?'betrag':'menge'):'kg')+'"]')?.focus(),0);
+  const fokus='pos:'+id+':'+(inline?'titel':gueltig?(modus==='betrag'?'betrag':'menge'):'kg');
+  setTimeout(()=>root.querySelector('[data-key="'+CSS.escape(fokus)+'"]')?.focus(),0);
+}
+function neuesElement(kg){
+  if(!KG_MUSTER.test(String(kg||''))||kinderVon(kg).length)return;
+  const id=neueId('e:');
+  st.elemente=st.elemente||[];st.elemente.push({id,kg,titel:'',notiz:''});
+  ui.tab='positionen';ui.sicht='kg';ui.auswahl=null;ui.elAuswahl=null;ui.loeschen=null;
+  if(!filterZeigt(kg))ui.filter=kg[0]+'00';
+  geaendert();render();
+  setTimeout(()=>root.querySelector('[data-key="'+CSS.escape('el:'+id+':titel')+'"]')?.focus(),0);
 }
 function zweiteEbene(kg){return KG_MUSTER.test(String(kg||''))?(R.ebene(kg)===3?kg.slice(0,2)+'0':kg):''}
 function geheZu(d){
   const {art,kg,id}=d;
+  ui.sicht='kg';ui.elAuswahl=null;
   if(art==='position'||art==='hinweis'){ui.tab='positionen';ui.filter=zweiteEbene(kg);ui.auswahl=id||null;ui.kgAuswahl=null}
   else if(art==='leer'||art==='doppelt'||art==='gruppe'){ui.tab='positionen';ui.filter=kg||'';ui.auswahl=null;ui.kgAuswahl=kg||null}
   else if(art==='paar'){ui.tab='positionen';ui.filter=zweiteEbene(kg);ui.auswahl=null;ui.kgAuswahl=kg||null}
@@ -805,28 +996,41 @@ function geheZu(d){
   merkeTab();render();window.scrollTo({top:0,behavior:'smooth'});
 }
 function merkeTab(){if(doc&&!istMuster)history.replaceState(null,'',location.pathname+location.search+'#tab='+ui.tab)}
-function zeigePanel(){if(window.innerWidth<1000)setTimeout(()=>root.querySelector('.panel')?.scrollIntoView({behavior:'smooth',block:'start'}),0)}
+// Die Details stehen fest rechts (auf dem iPhone unten); nichts zu scrollen.
+function zeigePanel(){}
 
 root.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-act]');if(!b)return;
+  // In ein Feld der Zeile klicken heißt bearbeiten, nicht die Zeile wählen.
+  if(ev.target.closest('.ci')&&b.classList.contains('pos'))return;
   const act=b.dataset.act,d=b.dataset;
   if(act==='neu'){dialogNeu();return}
   if(!st)return;
   if(act==='tab'){ui.tab=d.tab;ui.meldung='';merkeTab();render();return}
   if(act==='aufklappen'){ui.offen.has(d.kg)?ui.offen.delete(d.kg):ui.offen.add(d.kg);render();return}
   if(act==='filter'){ui.tab='positionen';ui.filter=d.kg;ui.auswahl=null;ui.kgAuswahl=null;merkeTab();render();return}
-  if(act==='kg-gehe'){ui.tab='positionen';ui.filter=zweiteEbene(d.kg)||d.kg;ui.auswahl=null;ui.kgAuswahl=d.kg;merkeTab();render();zeigePanel();return}
-  if(act==='kg'){ui.kgAuswahl=d.kg;ui.auswahl=null;ui.loeschen=null;if(ui.tab!=='positionen'){ui.tab='positionen';ui.filter=zweiteEbene(d.kg)||d.kg;merkeTab()}render();zeigePanel();return}
+  if(act==='kg-gehe'){ui.sicht='kg';ui.elAuswahl=null;ui.tab='positionen';ui.filter=zweiteEbene(d.kg)||d.kg;ui.auswahl=null;ui.kgAuswahl=d.kg;merkeTab();render();zeigePanel();return}
+  if(act==='kg'){ui.kgAuswahl=d.kg;ui.auswahl=null;ui.elAuswahl=null;ui.loeschen=null;if(ui.sicht==='gewerke')ui.sicht='kg';if(ui.tab!=='positionen'){ui.tab='positionen';ui.filter=zweiteEbene(d.kg)||d.kg;merkeTab()}render();zeigePanel();return}
   if(act==='brutto'){ui.brutto=d.wert==='1';render();return}
+  if(act==='sicht'){ui.sicht=d.wert==='gewerke'?'gewerke':'kg';merkePrefs();render();return}
+  if(act==='zeilen'){ui.zeilen=d.wert==='kompakt'?'kompakt':'voll';merkePrefs();render();return}
+  if(act==='schliessen'){ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;render();return}
+  if(act==='el'){ui.elAuswahl=d.id;ui.auswahl=null;ui.kgAuswahl=null;ui.loeschen=null;render();return}
   if(act==='alle-fehlt'){ui.alleFehlt=!ui.alleFehlt;render();return}
-  if(act==='waehle'){ui.auswahl=d.id;ui.kgAuswahl=null;ui.loeschen=null;if(ui.tab!=='positionen'){ui.tab='positionen';merkeTab()}render();zeigePanel();return}
+  if(act==='waehle'){ui.auswahl=d.id;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;if(ui.tab!=='positionen'){ui.tab='positionen';merkeTab()}render();zeigePanel();return}
   if(act==='goto'){geheZu(d);return}
   if(act==='drucken'){if(ui.tab!=='bericht'){ui.tab='bericht';render()}setTimeout(()=>window.print(),50);return}
   if(act==='import'&&kannBearbeiten){dialogImport();return}
   if(act==='sichern'){sichernAlsDatei();return}
   if(act==='neuladen'){location.reload();return}
   if(!kannBearbeiten)return;
-  if(act==='pos-neu'){neuePosition(d.kg||'');return}
+  if(act==='pos-neu'){neuePosition(d.kg||'',d.el||'',d.quelle==='tabelle');return}
+  if(act==='el-neu'){neuesElement(d.kg);return}
+  const e=d.id?(st.elemente||[]).find(x=>x.id===d.id):null;
+  if(act==='el-loesen'&&e){for(const x of st.positionen||[])if(x.element===e.id)x.element='';st.elemente=st.elemente.filter(x=>x.id!==e.id);ui.elAuswahl=null;ui.kgAuswahl=e.kg;geaendert();render();return}
+  if(act==='el-weg'&&e){
+    if(ui.loeschen!==e.id){ui.loeschen=e.id;render();setTimeout(()=>{if(ui.loeschen===e.id){ui.loeschen=null;render()}},4000);return}
+    st.positionen=(st.positionen||[]).filter(x=>x.element!==e.id);st.elemente=st.elemente.filter(x=>x.id!==e.id);ui.elAuswahl=null;ui.loeschen=null;ui.kgAuswahl=e.kg;geaendert();render();return}
   if(act==='kg-entfaellt'){st.gruppen=st.gruppen||{};st.gruppen[d.kg]={status:'entfaellt',notiz:''};ui.kgAuswahl=d.kg;geaendert();render();
     setTimeout(()=>root.querySelector('[data-key="gruppe:'+CSS.escape(d.kg)+':notiz"]')?.focus(),0);return}
   if(act==='kg-wieder'){if(st.gruppen)delete st.gruppen[d.kg];geaendert();render();return}
@@ -837,6 +1041,12 @@ root.addEventListener('click',ev=>{
   const p=d.id?st.positionen.find(x=>x.id===d.id):null;
   if(act==='modus'&&p){p.modus=d.wert;geaendert();render();return}
   if(act==='entfaellt'&&p){p.status=p.status==='entfaellt'?'':'entfaellt';geaendert();render();return}
+  if(act==='kopie'&&p){const k=JSON.parse(JSON.stringify(p));k.id=neueId('p:');delete k.import;delete k.ausImportEntfernt;st.positionen.splice(st.positionen.indexOf(p)+1,0,k);ui.auswahl=k.id;geaendert();render();return}
+  if((act==='hoch'||act==='runter')&&p){
+    // Nur innerhalb derselben KG und desselben Elements tauschen, wie Zeilen in Excel verschieben.
+    const liste=st.positionen,i=liste.indexOf(p),gleich=x=>x.kg===p.kg&&(x.element||'')===(p.element||'');let j=i;
+    do{j+=act==='hoch'?-1:1}while(j>=0&&j<liste.length&&!gleich(liste[j]));
+    if(j<0||j>=liste.length)return;[liste[i],liste[j]]=[liste[j],liste[i]];geaendert();render();return}
   if(act==='loeschen'&&p){
     if(ui.loeschen!==p.id){ui.loeschen=p.id;render();setTimeout(()=>{if(ui.loeschen===p.id){ui.loeschen=null;render()}},4000);return}
     st.positionen=st.positionen.filter(x=>x.id!==p.id);ui.auswahl=null;ui.loeschen=null;ui.kgAuswahl=KG_MUSTER.test(String(p.kg||''))?p.kg:null;geaendert();render();return}
@@ -849,7 +1059,39 @@ root.addEventListener('click',ev=>{
   if(act==='rezept-weg'){const rz=st.rezepte?.[d.typ];if(rz){rz.zeilen.splice(Number(d.i),1);if(!rz.zeilen.length)delete st.rezepte[d.typ];geaendert();render()}return}
   if(act==='rezept-loesen'){delete st.rezepte[d.typ];geaendert();render();return}
 });
-root.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[role="button"][data-act]')){ev.preventDefault();ev.target.click()}});
+root.addEventListener('keydown',ev=>{
+  const el=ev.target;
+  if(ev.key==='Escape'&&ui.tab==='positionen'&&(ui.auswahl||ui.kgAuswahl||ui.elAuswahl)){ev.preventDefault();ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;render();return}
+  // Enter übernimmt und springt wie in Excel in dieselbe Spalte der nächsten Zeile; Umschalt+Enter macht eine neue Zeile im Text.
+  if(el.classList?.contains('ci')&&el.tagName!=='SELECT'&&ev.key==='Enter'&&!ev.shiftKey&&!ev.altKey&&!ev.isComposing){
+    ev.preventDefault();
+    const key=el.dataset.key||'',feld=key.slice(key.lastIndexOf(':')+1);
+    const alle=[...root.querySelectorAll('.ktab .ci')].filter(x=>(x.dataset.key||'').endsWith(':'+feld));
+    const ziel=alle[alle.indexOf(el)+1]?.dataset.key;
+    el.blur();
+    if(ziel)setTimeout(()=>root.querySelector('[data-key="'+CSS.escape(ziel)+'"]')?.focus(),0);
+    return;
+  }
+  if((ev.key==='Enter'||ev.key===' ')&&el.matches('[role="button"][data-act]')){ev.preventDefault();el.click()}
+});
+// Ganzer Text: Felder wachsen mit dem Inhalt; einzeilig klappt das Feld beim Bearbeiten auf.
+function hoehe(t){t.style.height='auto';t.style.height=Math.max(31,t.scrollHeight)+'px'}
+function hoehenAnpassen(){
+  const ts=[...root.querySelectorAll('.ktab.voll textarea.ci')];
+  ts.forEach(t=>{t.style.height='auto'});const hs=ts.map(t=>t.scrollHeight);ts.forEach((t,i)=>{t.style.height=Math.max(31,hs[i])+'px'});
+}
+root.addEventListener('input',ev=>{if(ev.target.matches?.('textarea.ci'))hoehe(ev.target)});
+root.addEventListener('focusin',ev=>{if(ev.target.matches?.('.einzeilig textarea.ci'))hoehe(ev.target)});
+root.addEventListener('focusout',ev=>{if(ev.target.matches?.('.einzeilig textarea.ci'))ev.target.style.height=''});
+// Spaltenbreite ziehen wie in Excel (Bezeichnung und Kommentar); gemerkt je Browser.
+root.addEventListener('pointerdown',ev=>{
+  const griff=ev.target.closest?.('.zieh');if(!griff)return;
+  ev.preventDefault();
+  const tab=griff.closest('.ktab'),spalte=griff.dataset.zieh,start=ev.clientX,breite=griff.parentElement.getBoundingClientRect().width;
+  const ziehen=e=>{const w=Math.round(Math.min(900,Math.max(120,breite+e.clientX-start)));tab.style.setProperty(spalte==='bez'?'--kb-bez':'--kb-kom',w+'px');if(spalte==='bez')ui.breiteBez=w;else ui.breiteKom=w};
+  const los=()=>{window.removeEventListener('pointermove',ziehen);window.removeEventListener('pointerup',los);merkePrefs()};
+  window.addEventListener('pointermove',ziehen);window.addEventListener('pointerup',los);
+});
 root.addEventListener('change',ev=>{const el=ev.target;if(el.matches('[data-key]'))aendereFeld(el)});
 root.addEventListener('submit',ev=>{
   if(ev.target.id!=='kbStand')return;ev.preventDefault();
