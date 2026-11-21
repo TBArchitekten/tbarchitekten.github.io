@@ -11,6 +11,8 @@ const NAV_ICONS = ({
 // TBA Office: Window's frame in German. Chat, Eingang, Lecturas and Thoughts stay in the page (the copied code
 // expects their elements) but are hidden until the office has an assistant. Tools links to the office tools.
 NAV_ICONS.tools='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+// Kostenberechnung: Rechner, im Strich der übrigen Symbole.
+NAV_ICONS.kosten='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>';
 // Only «Zu bestätigen» carries a number; the web and the iPhone show the same count.
 const bandejaBadge='<span class="nav-badge hidden" data-bandeja-badge aria-hidden="true"></span>';
 
@@ -100,6 +102,11 @@ document.body.innerHTML = `
         <button type="button" class="office-tools-card" id="officeToolsPlans" aria-label="Terminplan öffnen">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.tools}</span>
           <span><strong>Terminplan</strong><small>Projekt auswählen, LPH 3 oder LPH 5 als Muster instanziieren und fortschreiben.</small></span>
+          <span class="office-tools-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="office-tools-card" id="officeToolsKosten" aria-label="Kostenberechnung öffnen">
+          <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.kosten}</span>
+          <span><strong>Kostenberechnung</strong><small>Nach DIN 276 bis zur 3. Ebene: Mengen aus Archicad, Kennwerte mit Herkunft, Vergleich mit der Kostenschätzung und Bericht für die Kostenbesprechung.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
         <button type="button" class="office-tools-card" id="officeToolsStart" aria-label="Projektstart öffnen">
