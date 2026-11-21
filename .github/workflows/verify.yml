@@ -5,6 +5,8 @@ on:
       - 'supabase/migrations/**'
       - 'supabase/config.toml'
       - 'tests/sql/office-romy-*.sql'
+      - 'tests/sql/office-kostenberechnung-*.sql'
+      - 'tests/office-kostenberechnung.test.mjs'
       - 'tests/office-romy-*.test.mjs'
       - '.github/workflows/verify.yml'
   workflow_dispatch:
@@ -79,6 +81,11 @@ jobs:
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < tests/sql/office-task-assignees-acceptance.sql
+      - name: Verify Kostenberechnung RLS (creator, project lead and team only; outsiders and anon denied)
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-kostenberechnung-rls-acceptance.sql
       - name: Verify no generated fixtures persist in the ephemeral database
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)

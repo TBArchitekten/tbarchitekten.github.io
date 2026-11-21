@@ -32,3 +32,7 @@ jobs:
         env:
           CI: 'true'
         run: node --test tests/browser/office-musterplanner.chromium.mjs tests/browser/office-planner-terminplan-sync.chromium.mjs
+      - name: Exercise Kostenberechnung (Archicad import, revision conflict, iPhone width) with a synthetic Supabase
+        env:
+          CI: 'true'
+        run: node --test tests/browser/office-kostenberechnung.chromium.mjs

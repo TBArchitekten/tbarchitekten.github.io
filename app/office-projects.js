@@ -357,6 +357,11 @@ document.getElementById('officeToolsPlans')?.addEventListener('click',openPlans)
 document.getElementById('officeToolsStart')?.addEventListener('click',()=>{
   window.location.href='../projektstart.html';
 });
+// Kostenberechnung: eigene Seite wie der Projektstart (kostenberechnung.html im Wurzelverzeichnis):
+// Muster und Projekt-Kostenberechnungen, Mengen aus Archicad, Vergleich und Bericht.
+document.getElementById('officeToolsKosten')?.addEventListener('click',()=>{
+  window.location.href='../kostenberechnung.html';
+});
 document.getElementById('officePlansBack')?.addEventListener('click',()=>{window.ISABELLA_APP?.show?.('tools');history.replaceState(null,'','#section=tools')});
 document.getElementById('officePlansDrawer')?.addEventListener('click',()=>{
   document.getElementById('closeDrawer')?.click();openPlans();

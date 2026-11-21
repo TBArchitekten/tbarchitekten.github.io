@@ -1,0 +1,340 @@
+/* TBA Office · Kostenberechnung · Rechenkern (21.11.2026, Claude).
+   Rein und ohne DOM: rechnet einen Stand `tba.office.kostenberechnung.v1` und sagt, was fehlt.
+   Gleiche Regeln wie der Rechenkern aus PR #107 (ChatGPT), damit beide austauschbar bleiben:
+   Beträge in Cent als BigInt, kaufmännisch gerundet; eine fehlende Angabe ist nicht 0;
+   eine Summe mit offenen Positionen ist «vorläufig», nie vollständig.
+   Neu gegenüber #107: die Herkunftskette eines Kennwerts (Umsatzsteuer, Baupreisindex,
+   Regionalfaktor, Zuschlag) als sichtbare Schritte.
+   Die DIN-276-Gliederung kommt aus dem Stand (Muster in der Datenbank), nie aus diesem Code. */
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  if(root)root.TBA_KOSTEN_RECHNEN=api;
+})(typeof globalThis!=='undefined'?globalThis:null,function(){
+'use strict';
+
+const SCHEMA='tba.office.kostenberechnung.v1';
+const MIKRO=1000000n;          // Faktoren, Mengen und Kennwerte in Millionsteln
+const MIKRO_JE_CENT=10000n;
+
+// Herkunftsarten eines Kennwerts und was ihre Werte üblicherweise enthalten.
+const ARTEN=Object.freeze({
+  bki:{label:'BKI-Buch',kurz:'BKI',brutto:true,regional:true,zuschlag:false,fundstelle:true},
+  heinze:{label:'Heinze Baupreisinfo',kurz:'Heinze',brutto:false,regional:false,zuschlag:true,fundstelle:true},
+  eigen:{label:'Eigenes Projekt',kurz:'Eigenes Projekt',brutto:false,regional:false,zuschlag:false,fundstelle:true},
+  angebot:{label:'Angebot oder Richtpreis',kurz:'Angebot',brutto:false,regional:false,zuschlag:false,fundstelle:true},
+  fachplanung:{label:'Fachplanung',kurz:'Fachplanung',brutto:false,regional:false,zuschlag:false,fundstelle:true},
+  annahme:{label:'Annahme TBA',kurz:'Annahme',brutto:false,regional:false,zuschlag:false,fundstelle:false}
+});
+const MENGENQUELLEN=Object.freeze({archicad:'Archicad',fachplanung:'Fachplanung',manuell:'Handermittlung'});
+const EINHEITEN=Object.freeze(['m²','m','m³','St','psch','kg','t']);
+
+// ---------- Dezimalzahlen ----------
+// Ergebnis immer kanonischer Text mit Punkt («1234.56»), null für leer, undefined für ungültig.
+// dezimal(): gespeicherte Werte und Excel-Zahlen. Ein einzelner Punkt ist das Dezimalzeichen («1.045» = 1,045);
+//   ein Komma heißt deutsche Schreibweise («1.234,56»).
+// eingabe(): was jemand ins Feld tippt, deutsch gelesen: «1.250» ist 1250, «1,045» ist 1,045.
+function dezimal(wert){return lese(wert,false)}
+function eingabe(wert){return lese(wert,true)}
+function lese(wert,deutsch){
+  if(wert===null||wert===undefined)return null;
+  if(typeof wert==='number'){
+    if(!Number.isFinite(wert))return undefined;
+    return kanonisch(String(wert).includes('e')?wert.toFixed(6):String(wert));
+  }
+  let s=String(wert).replace(/[\s\u00a0\u202f€%]/g,'').replace(/m²|m³|m2|m3|stk|st|psch/gi,'');
+  if(s==='')return null;
+  if(s.includes(',')){s=s.replace(/\./g,'').replace(',','.');}
+  else{
+    const punkte=(s.match(/\./g)||[]).length;
+    if(punkte>1)s=s.replace(/\./g,'');
+    else if(deutsch&&punkte===1&&/^-?\d{1,3}\.\d{3}$/.test(s))s=s.replace('.','');
+  }
+  if(/^-?\./.test(s))s=s.replace('.','0.');
+  if(!/^-?\d+(\.\d+)?$/.test(s))return undefined;
+  return kanonisch(s);
+}
+function kanonisch(s){
+  let neg=s.startsWith('-');if(neg)s=s.slice(1);
+  let [ganz,teil='']=s.split('.');
+  ganz=ganz.replace(/^0+(?=\d)/,'');teil=teil.replace(/0+$/,'');
+  const out=teil?ganz+'.'+teil:ganz;
+  return (neg&&out!=='0')?'-'+out:out;
+}
+function mikro(text){ // kanonischer Text → BigInt in Millionsteln, kaufmännisch gerundet
+  if(text===null||text===undefined)return null;
+  const s=String(text);const neg=s.startsWith('-');const t=neg?s.slice(1):s;
+  const [ganz,teil='']=t.split('.');
+  const sechs=(teil+'0000000').slice(0,7);
+  let v=BigInt(ganz||'0')*MIKRO+BigInt(sechs.slice(0,6));
+  if(Number(sechs[6])>=5)v+=1n;
+  return neg?-v:v;
+}
+function teile(a,b){ // a/b, kaufmännisch gerundet, b>0
+  if(b===0n)throw new RangeError('Division durch null');
+  const neg=(a<0n)!==(b<0n);const x=a<0n?-a:a,y=b<0n?-b:b;
+  const q=(x*2n+y)/(2n*y);
+  return neg?-q:q;
+}
+const mal=(a,b)=>teile(a*b,MIKRO);           // Mikro × Mikro → Mikro
+const durch=(a,b)=>teile(a*MIKRO,b);         // Mikro ÷ Mikro → Mikro
+const centAusMikro=m=>teile(m,MIKRO_JE_CENT);
+const mikroAusCent=c=>c*MIKRO_JE_CENT;
+const textAusMikro=(m,stellen=6)=>{ // kaufmännisch auf `stellen` Nachkommastellen gerundet
+  const schritt=10n**BigInt(6-stellen);const r=teile(m,schritt);
+  const neg=r<0n;const x=neg?-r:r;const basis=10n**BigInt(stellen);
+  const ganz=x/basis;const rest=stellen?String(x%basis).padStart(stellen,'0').replace(/0+$/,''):'';
+  return (neg?'-':'')+ganz+(rest?'.'+rest:'');
+};
+
+// ---------- Kostengruppen ----------
+const KG=/^[1-8]\d\d$/;
+function ebene(kg){if(!KG.test(String(kg)))return 0;return kg.endsWith('00')?1:kg.endsWith('0')?2:3}
+function eltern(kg){const s=String(kg);return {e1:s[0]+'00',e2:s.slice(0,2)+'0',e3:ebene(s)===3?s:null}}
+function katalogTitel(state,kg){
+  const k=(state?.katalog||[]).find(x=>x.kg===String(kg));
+  return k?.titel||'';
+}
+
+// ---------- Quartale (Kostenstand) ----------
+const QUARTAL=/^(\d{4})-Q([1-4])$/;
+function quartalIndex(q){const m=QUARTAL.exec(String(q||''));return m?Number(m[1])*4+Number(m[2])-1:null}
+function quartalText(q){const m=QUARTAL.exec(String(q||''));return m?m[2]+'. Quartal '+m[1]:''}
+
+// ---------- Kennwert und Herkunftskette ----------
+function schalter(kw,name){const art=ARTEN[kw?.art];if(typeof kw?.[name]==='boolean')return kw[name];return !!art?.[name]}
+function kennwertKette(kw,state){
+  const schritte=[],hinweise=[];
+  const wert=dezimal(kw?.wert);
+  if(wert===undefined){hinweise.push('kennwert_ungueltig');return {nettoCent:null,schritte,hinweise}}
+  if(wert===null){hinweise.push('kennwert_fehlt');return {nettoCent:null,schritte,hinweise}}
+  let m=mikro(wert);
+  const art=ARTEN[kw.art];
+  schritte.push({art:'start',text:(art?.label||'Kennwert'),detail:kw.fundstelle||'',ergebnis:m});
+  if(schalter(kw,'brutto')){
+    const ust=mikro(dezimal(state?.ustProzent)??'19');
+    const f=MIKRO+teile(ust,100n);
+    m=durch(m,f);
+    schritte.push({art:'ust',text:'ohne Umsatzsteuer',op:'÷',faktor:f,ergebnis:m});
+  }
+  const ziel=state?.kostenstand||'',von=kw.kostenstand||'';
+  if(von&&ziel&&von!==ziel&&kw.indexieren!==false){
+    const reihe=new Map((state?.indizes||[]).map(x=>[x.quartal,dezimal(x.wert)]));
+    const alt=reihe.get(von),neu=reihe.get(ziel);
+    if(alt&&neu&&mikro(alt)>0n){
+      const f=durch(mikro(neu),mikro(alt));
+      m=mal(m,f);
+      schritte.push({art:'index',text:'Baupreisindex '+quartalText(von)+' → '+quartalText(ziel),op:'×',faktor:f,ergebnis:m});
+    }else hinweise.push('index_fehlt');
+  }
+  if(schalter(kw,'regional')){
+    const rf=dezimal(state?.regionalfaktor?.wert);
+    if(rf&&mikro(rf)>0n){
+      const f=mikro(rf);m=mal(m,f);
+      schritte.push({art:'region',text:'Regionalfaktor',detail:state.regionalfaktor.fundstelle||'',op:'×',faktor:f,ergebnis:m});
+    }else hinweise.push('regionalfaktor_fehlt');
+  }
+  if(schalter(kw,'zuschlag')){
+    const z=dezimal(state?.zuschlag?.wert);
+    if(z!==null&&z!==undefined){
+      const f=MIKRO+teile(mikro(z),100n);m=mal(m,f);
+      schritte.push({art:'zuschlag',text:'Zuschlag Gemeinkosten, Wagnis und Gewinn',detail:state.zuschlag.notiz||'',op:'×',faktor:f,ergebnis:m});
+    }else hinweise.push('zuschlag_fehlt');
+  }
+  const nettoCent=centAusMikro(m);
+  schritte.push({art:'ende',text:'In der Kostenberechnung',ergebnis:mikroAusCent(nettoCent)});
+  return {nettoCent,schritte,hinweise};
+}
+
+// ---------- Position ----------
+function position(pos,state){
+  const kg=String(pos?.kg||'');
+  const r={id:pos?.id,kg,ebene:ebene(kg),status:'offen',betragCent:null,kennwertCent:null,kette:null,fehlt:[],hinweise:[]};
+  if(!KG.test(kg))r.fehlt.push('kg');
+  if(pos?.status==='entfaellt'){r.status='entfaellt';r.betragCent=0n;return r}
+  const kw=pos?.kennwert||{};
+  const art=ARTEN[kw.art];
+  if(!art)r.fehlt.push('quelle');
+  else if(art.fundstelle&&!String(kw.fundstelle||'').trim())r.fehlt.push('fundstelle');
+  if(pos?.modus==='betrag'){
+    const b=dezimal(pos.betrag);
+    if(b===null||b===undefined)r.fehlt.push('betrag');
+    else r.betragCent=centAusMikro(mikro(b));
+  }else{
+    const menge=dezimal(pos?.menge);
+    if(menge===null||menge===undefined)r.fehlt.push('menge');
+    if(!MENGENQUELLEN[pos?.mengenquelle?.art])r.fehlt.push('mengenquelle');
+    const kette=kennwertKette(kw,state);r.kette=kette;r.kennwertCent=kette.nettoCent;
+    r.hinweise.push(...kette.hinweise.filter(h=>Object.prototype.hasOwnProperty.call(HINWEIS_TEXT,h)));
+    if(kette.nettoCent===null)r.fehlt.push('kennwert');
+    if(menge!==null&&menge!==undefined&&kette.nettoCent!==null)r.betragCent=teile(mikro(menge)*kette.nettoCent,MIKRO);
+  }
+  if(pos?.ausImportEntfernt)r.hinweise.push('nicht_mehr_im_modell');
+  r.status=r.fehlt.length?'offen':'vollstaendig';
+  return r;
+}
+
+// ---------- Ganze Kostenberechnung ----------
+function berechne(state){
+  if(!state||state.schema!==SCHEMA)throw new TypeError('Unbekannter Stand der Kostenberechnung');
+  const gruppenStatus=state.gruppen||{};
+  const ersteEbene=(state.katalog||[]).filter(k=>ebene(k.kg)===1).map(k=>k.kg);
+  const knoten=new Map();
+  const knotenFuer=kg=>{if(!knoten.has(kg))knoten.set(kg,{kg,ebene:ebene(kg),bekanntCent:0n,offen:0,anzahl:0,entfaellt:0,herkunft:{}});return knoten.get(kg)};
+  for(const kg of ersteEbene)knotenFuer(kg);
+  const positionen=[];
+  let bekannt=0n,offen=0,anzahl=0;
+  const herkunft={};
+  for(const pos of state.positionen||[]){
+    const r=position(pos,state);positionen.push(r);
+    if(!KG.test(r.kg))continue;
+    const {e1,e2,e3}=eltern(r.kg);
+    const ausgeschlossen=gruppenStatus[e1]?.status==='entfaellt';
+    r.ausgeschlossen=ausgeschlossen;
+    if(ausgeschlossen)continue;
+    for(const kg of [e1,e2,e3].filter((x,i,a)=>x&&a.indexOf(x)===i&&ebene(x)<=r.ebene)){
+      const k=knotenFuer(kg);k.anzahl++;
+      if(r.status==='offen')k.offen++;
+      if(r.status==='entfaellt')k.entfaellt++;
+      if(r.betragCent!==null){k.bekanntCent+=r.betragCent;
+        const a=pos.kennwert?.art||'ohne';
+        k.herkunft[a]=(k.herkunft[a]||0n)+r.betragCent;}
+    }
+    anzahl++;if(r.status==='offen')offen++;
+    if(r.betragCent!==null){bekannt+=r.betragCent;const a=pos.kennwert?.art||'ohne';herkunft[a]=(herkunft[a]||0n)+r.betragCent}
+  }
+  // Gruppen der 1. Ebene ohne Ansatz zählen als offen, außer sie entfallen.
+  const leer=[];
+  for(const kg of ersteEbene){
+    const k=knoten.get(kg);k.status=gruppenStatus[kg]?.status==='entfaellt'?'entfaellt':(k.anzahl===0?'leer':(k.offen?'offen':'vollstaendig'));
+    if(k.status==='leer')leer.push(kg);
+  }
+  for(const k of knoten.values())if(!k.status)k.status=k.offen?'offen':(k.anzahl?'vollstaendig':'leer');
+  const vollstaendig=offen===0&&leer.length===0&&anzahl>0;
+  const ust=mikro(dezimal(state.ustProzent)??'19');
+  const ustCent=teile(bekannt*ust,100n*MIKRO);
+  // Kennzahlen: Bauwerk = KG 300 + KG 400.
+  const bauwerk=(knoten.get('300')?.bekanntCent||0n)+(knoten.get('400')?.bekanntCent||0n);
+  const bezug=name=>{const d=dezimal(state.bezug?.[name]);return d&&mikro(d)>0n?mikro(d):null};
+  const je=(cent,m)=>m?teile(cent*MIKRO,m):null;
+  // Vergleich mit der Kostenschätzung, je KG der 1. Ebene.
+  const vergleich=ersteEbene.map(kg=>{
+    const ksText=dezimal(state.kostenschaetzung?.[kg]);
+    const ks=ksText===null||ksText===undefined?null:centAusMikro(mikro(ksText));
+    const kb=knoten.get(kg)?.bekanntCent||0n;
+    const delta=ks===null?null:kb-ks;
+    return {kg,ksCent:ks,kbCent:kb,deltaCent:delta,deltaProzent:(ks&&ks!==0n)?Number(teile(delta*10000n,ks))/100:null,
+      ursache:String(state.ursachen?.[kg]||''),entfaellt:gruppenStatus[kg]?.status==='entfaellt'};
+  });
+  const ksSumme=vergleich.some(v=>v.ksCent!==null)?vergleich.reduce((s,v)=>s+(v.ksCent||0n),0n):null;
+  const vorgabeText=dezimal(state.kostenvorgabe);
+  const vorgabe=vorgabeText===null||vorgabeText===undefined?null:centAusMikro(mikro(vorgabeText));
+  const erledigt=positionen.filter(p=>!p.ausgeschlossen&&p.status!=='offen').length;
+  const gesamtZahl=positionen.filter(p=>!p.ausgeschlossen).length+leer.length;
+  const ergebnis={
+    schema:'tba.office.kostenberechnung.ergebnis.v1',
+    positionen,knoten,
+    gesamt:{bekanntCent:bekannt,gesamtCent:vollstaendig?bekannt:null,offen:offen+leer.length,anzahl,vollstaendig},
+    ustCent,bruttoCent:bekannt+ustCent,
+    vollstaendigkeit:{erledigt,gesamt:gesamtZahl,prozent:gesamtZahl?Math.floor(erledigt*100/gesamtZahl):0},
+    kennzahlen:{bauwerkCent:bauwerk,jeBGF:je(bauwerk,bezug('BGF')),jeBRI:je(bauwerk,bezug('BRI'))},
+    herkunft,
+    vergleich,ksSummeCent:ksSumme,deltaSummeCent:ksSumme===null?null:bekannt-ksSumme,
+    vorgabe:{cent:vorgabe,differenzCent:vorgabe===null?null:bekannt-vorgabe}
+  };
+  ergebnis.fehlt=wasFehlt(state,ergebnis,leer);
+  return ergebnis;
+}
+
+// Paare, bei denen die Bekleidung meist im Aufbau steckt und leicht vergessen wird.
+const PAARE=Object.freeze([
+  {wenn:['331','332'],dann:['335','336']},
+  {wenn:['341','342'],dann:['345']},
+  {wenn:['361'],dann:['363','364']}
+]);
+const HINWEIS_TEXT=Object.freeze({
+  index_fehlt:'Baupreisindex für einen Kostenstand fehlt',
+  regionalfaktor_fehlt:'Regionalfaktor fehlt (BKI-Werte sind Bundesdurchschnitt)',
+  zuschlag_fehlt:'Zuschlag für Gemeinkosten, Wagnis und Gewinn fehlt',
+  nicht_mehr_im_modell:'nicht mehr im Archicad-Modell'
+});
+const FEHLT_TEXT=Object.freeze({kg:'Kostengruppe',quelle:'Quelle',fundstelle:'Fundstelle',betrag:'Betrag',menge:'Menge',
+  mengenquelle:'Herkunft der Menge',kennwert:'Kennwert'});
+
+const FEHLT_REIHE=['kg','menge','betrag','kennwert','mengenquelle','quelle','fundstelle'];
+function fehltText(fehlt){
+  const t=[...fehlt].sort((a,b)=>FEHLT_REIHE.indexOf(a)-FEHLT_REIHE.indexOf(b)).map(f=>FEHLT_TEXT[f]||f);
+  if(t.length===1)return t[0]+' fehlt';
+  return t.slice(0,-1).join(', ')+' und '+t[t.length-1]+' fehlen';
+}
+const GRUNDLAGE=new Set(['index_fehlt','regionalfaktor_fehlt','zuschlag_fehlt']);
+function wasFehlt(state,e,leer){
+  const liste=[],grundlagen=new Map();
+  const name=kg=>'KG '+kg+(katalogTitel(state,kg)?' '+katalogTitel(state,kg):'');
+  for(const kg of leer)liste.push({art:'gruppe',schwere:'hoch',kg,text:name(kg)+' noch ohne Ansatz'});
+  for(const p of e.positionen){
+    if(p.ausgeschlossen)continue;
+    const pos=(state.positionen||[]).find(x=>x.id===p.id)||{};
+    const titel=pos.titel||katalogTitel(state,p.kg)||'';
+    if(p.status==='offen'){
+      liste.push({art:'position',schwere:'hoch',kg:p.kg,positionId:p.id,
+        text:'KG '+p.kg+(titel?' '+titel:'')+(pos.bauteiltyp?' · '+pos.bauteiltyp:'')+': '+fehltText(p.fehlt)});
+    }
+    for(const h of [...new Set(p.hinweise)]){
+      if(GRUNDLAGE.has(h)){grundlagen.set(h,(grundlagen.get(h)||0)+1);continue}
+      liste.push({art:'hinweis',schwere:'info',kg:p.kg,positionId:p.id,code:h,
+        text:'KG '+p.kg+(pos.bauteiltyp?' · '+pos.bauteiltyp:'')+': '+(HINWEIS_TEXT[h]||h)});
+    }
+  }
+  // Fehlende Grundlagen (Index, Regionalfaktor, Zuschlag) einmal nennen, mit der Zahl der betroffenen Positionen.
+  for(const [h,n] of grundlagen)liste.push({art:'grundlage',schwere:'hoch',code:h,anzahl:n,
+    text:HINWEIS_TEXT[h]+': betrifft '+n+(n===1?' Position':' Positionen')});
+  const mitWert=new Set(e.positionen.filter(p=>!p.ausgeschlossen&&p.betragCent!==null&&p.status!=='entfaellt').map(p=>p.kg));
+  const vorhanden=new Set(e.positionen.filter(p=>!p.ausgeschlossen).map(p=>p.kg));
+  for(const paar of PAARE){
+    if(paar.wenn.some(k=>mitWert.has(k))&&!paar.dann.some(k=>vorhanden.has(k)))
+      liste.push({art:'paar',schwere:'info',kg:paar.dann[0],
+        text:paar.wenn.filter(k=>mitWert.has(k)).map(k=>'KG '+k).join(' und ')+' ohne '+paar.dann.map(k=>'KG '+k).join(' oder ')+': Bekleidung vergessen?'});
+  }
+  if(!dezimal(state.bezug?.BGF))liste.push({art:'bezug',schwere:'info',text:'BGF fehlt: ohne sie keine Kennzahl €/m² BGF'});
+  if(e.ksSummeCent===null)liste.push({art:'vergleich',schwere:'info',text:'Kostenschätzung zum Vergleich fehlt'});
+  for(const v of e.vergleich){
+    if(v.entfaellt||v.deltaCent===null)continue;
+    const abs=v.deltaCent<0n?-v.deltaCent:v.deltaCent;
+    if((Math.abs(v.deltaProzent??0)>=5||abs>=1000000n)&&!v.ursache.trim())
+      liste.push({art:'ursache',schwere:'hoch',kg:v.kg,text:name(v.kg)+': Abweichung zur Kostenschätzung ohne Ursache'});
+  }
+  return liste;
+}
+
+// Vorschlag für ein Aufbau-Rezept: welche KG der 3. Ebene eine Archicad-Menge meist mitträgt.
+function rezeptVorschlag(kg){
+  const s=String(kg);
+  const map={'331':[['331','1'],['335','1'],['336','1']],'332':[['332','1'],['335','1'],['336','1']],
+    '341':[['341','1'],['345','2']],'342':[['342','1'],['345','2']],'361':[['361','1'],['363','1'],['364','1']]};
+  return (map[s]||[[s,'1']]).map(([k,faktor])=>({kg:k,faktor}));
+}
+
+// ---------- Anzeige ----------
+const fmt0=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0});
+function euro(cent,{nachkomma=false,vorzeichen=false}={}){
+  if(cent===null||cent===undefined)return '–';
+  const c=BigInt(cent);const neg=c<0n;const x=neg?-c:c;
+  let txt;
+  if(nachkomma){txt=fmt0.format(Number(x/100n))+','+String(x%100n).padStart(2,'0')}
+  else txt=fmt0.format(Number(teile(x,100n)));
+  return (neg?'−':(vorzeichen&&c>0n?'+':''))+txt+' €';
+}
+function zahl(text,stellen=2){
+  const d=typeof text==='bigint'?textAusMikro(text):dezimal(text);
+  if(d===null||d===undefined)return '';
+  return new Intl.NumberFormat('de-DE',{maximumFractionDigits:stellen}).format(Number(d));
+}
+function prozent(p,{vorzeichen=false}={}){
+  if(p===null||p===undefined||!Number.isFinite(p))return '–';
+  return (p<0?'−':(vorzeichen&&p>0?'+':''))+new Intl.NumberFormat('de-DE',{maximumFractionDigits:1}).format(Math.abs(p))+' %';
+}
+
+return Object.freeze({SCHEMA,ARTEN,MENGENQUELLEN,EINHEITEN,PAARE,dezimal,eingabe,mikro,textAusMikro,centAusMikro,teile,
+  ebene,eltern,katalogTitel,quartalIndex,quartalText,kennwertKette,position,berechne,rezeptVorschlag,euro,zahl,prozent});
+});

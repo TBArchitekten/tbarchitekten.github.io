@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TBA Office · Kostenberechnung</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="./kostenberechnung.css?v=office1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
+<script src="./office-config.js?v=1"></script>
+<!-- In der Window-App (Konto Office) leiht sich dieser Client die Sitzung der App; im Browser ist es der übliche Office-Client. -->
+<script src="./shared/supabase-client.js?v=office3"></script>
+</head>
+<body>
+<main id="kb" class="kb"><div class="kb-wrap"><p class="meta">Kostenberechnung wird geladen …</p></div></main>
+<dialog id="kbDialog" class="kb-dialog" aria-label="Kostenberechnung"></dialog>
+<script src="./kosten-rechnen.js?v=office1"></script>
+<script src="./kosten-import.js?v=office1"></script>
+<script src="./kostenberechnung.js?v=office1"></script>
+</body>
+</html>
