@@ -133,6 +133,10 @@ function vorschau(v,st,R){
   const zeilen=r.neu.map(id=>{const p=kopie.positionen.find(x=>x.id===id);const e=ergebnis.get(id)||{};
     return {id,kg:p.kg,element:(kopie.elemente||[]).find(x=>x.id===p.element)?.titel||'',titel:p.titel,modus:p.modus,menge:p.menge,einheit:p.einheit,
       ep:p.kennwert?.wert||'',quelle:p.kennwert?.art||'',fundstelle:p.kennwert?.fundstelle||'',betragCent:e.betragCent??null,offen:e.status==='offen',fehlt:e.fehlt||[]}});
+  // Zur Anzeige je KG und Element beisammen, in der Reihenfolge des ersten Auftretens.
+  const ersteKg=new Map(),ersteEl=new Map();
+  zeilen.forEach((z,i)=>{if(!ersteKg.has(z.kg))ersteKg.set(z.kg,i);const k=z.kg+'|'+z.element;if(!ersteEl.has(k))ersteEl.set(k,i)});
+  zeilen.sort((a,b)=>ersteKg.get(a.kg)-ersteKg.get(b.kg)||ersteEl.get(a.kg+'|'+a.element)-ersteEl.get(b.kg+'|'+b.element));
   return {...r,deltaCent:nachher.gesamt.bekanntCent-vorher.gesamt.bekanntCent,offen:zeilen.filter(z=>z.offen).length,zeilen,
     summeCent:nachher.gesamt.bekanntCent};
 }
