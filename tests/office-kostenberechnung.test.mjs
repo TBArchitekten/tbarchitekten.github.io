@@ -213,10 +213,13 @@ test('Migration: drei Tabellen mit RLS über die Office-Helfer, nichts Destrukti
   assert.match(sql,/server_revision bigint not null default 1 check \(server_revision > 0\)/);
   assert.match(sql,/raise exception 'Projekt und Ersteller einer Kostenberechnung sind unveränderlich'/);
   assert.ok(!/\b(drop|truncate)\b|\bdelete\s+from\b/i.test(sql.replace(/--.*$/gm,'')),'destruktives SQL in der Migration');
-  // Die Abnahme läuft nur in einer Transaktion, die zurückgerollt wird, und nennt ihr Ergebnis.
-  assert.match(abnahme,/NUR in einer Transaktion, die zurückgerollt wird/);
-  assert.match(abnahme,/C_sieht=0; C_update=0; C_delete=0; C_versions=0;/);
-  assert.match(abnahme,/raise exception 'ERGEBNIS: %'/);
+  // Die Abnahme läuft in einer Transaktion, die zurückgerollt wird, prüft ihr Ergebnis selbst und läuft im CI.
+  assert.match(abnahme,/^-- [^\n]*\n(?:--[^\n]*\n)*begin;\n/);
+  assert.match(abnahme,/\nrollback;\n/);
+  assert.match(abnahme,/C_sieht=0; C_update=0; C_delete=0; C_versions=0; '/);
+  assert.match(abnahme,/raise exception 'RLS Kostenberechnung weicht ab/);
+  assert.match(abnahme,/Testdaten der Kostenberechnung sind nach dem Zurückrollen geblieben/);
+  assert.match(read('.github/workflows/verify.yml'),/< tests\/sql\/office-kostenberechnung-rls-acceptance\.sql/);
 });
 
 test('öffentliches Repository: keine DIN-Titel, keine Projekte, keine Adressen',()=>{
