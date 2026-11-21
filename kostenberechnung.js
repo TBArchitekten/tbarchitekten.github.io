@@ -5,7 +5,7 @@
    Speichern über server_revision) → Stände. Rechnen: kosten-rechnen.js. Archicad-Import: kosten-import.js. */
 (()=>{
 'use strict';
-const R=window.TBA_KOSTEN_RECHNEN,I=window.TBA_KOSTEN_IMPORT,OFFICE=window.TBA_OFFICE_CONFIG;
+const R=window.TBA_KOSTEN_RECHNEN,I=window.TBA_KOSTEN_IMPORT,A=window.TBA_KOSTEN_ASSISTENT,OFFICE=window.TBA_OFFICE_CONFIG;
 const sb=window.MINDS_SUPABASE||(window.supabase&&OFFICE?window.supabase.createClient(OFFICE.url,OFFICE.key,
   {auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}):null);
 const inApp=!!window.WINDOW_NATIVE?.available;
@@ -17,6 +17,7 @@ const datum=iso=>{const d=new Date(iso);return Number.isFinite(d.getTime())?d.to
 const heuteIso=()=>new Date().toISOString().slice(0,10);
 const ICON_IMPORT='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
 const ICON_PLUS='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
+const ICON_KI='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M11 3.5l1.9 5.1 5.1 1.9-5.1 1.9L11 17.5l-1.9-5.1-5.1-1.9 5.1-1.9z"/><path d="M18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>';
 const ANLEITUNG='<a class="btn btn-quiet" href="./kostenberechnung-hilfe.html" target="_blank" rel="noopener noreferrer">Anleitung</a>';
 const TABS=[['uebersicht','Übersicht'],['positionen','Positionen'],['quellen','Quellen'],['vergleich','Vergleich'],['bericht','Bericht']];
 const KG_MUSTER=/^[1-8]\d\d$/;
@@ -26,7 +27,7 @@ let nutzer=null,mitglied=null,doc=null,st=null,calc=null,baum=null,istMuster=fal
 const PREFS_KEY='tba.office.kostenberechnung.ansicht';
 function ladePrefs(){try{return JSON.parse(localStorage.getItem(PREFS_KEY)||'{}')||{}}catch{return {}}}
 const PREFS=ladePrefs();
-const ui={tab:'uebersicht',offen:new Set(['300']),filter:'300',auswahl:null,kgAuswahl:null,elAuswahl:null,brutto:false,loeschen:null,staende:null,importVorschau:null,meldung:'',
+const ui={tab:'uebersicht',offen:new Set(['300']),filter:'300',auswahl:null,kgAuswahl:null,elAuswahl:null,brutto:false,loeschen:null,staende:null,importVorschau:null,meldung:'',markiert:new Set(),
   sicht:PREFS.sicht==='gewerke'?'gewerke':'kg',zeilen:PREFS.zeilen==='kompakt'?'kompakt':'voll',breiteBez:Number(PREFS.bez)||null,breiteKom:Number(PREFS.kom)||null};
 function merkePrefs(){try{localStorage.setItem(PREFS_KEY,JSON.stringify({sicht:ui.sicht,zeilen:ui.zeilen,bez:ui.breiteBez,kom:ui.breiteKom}))}catch{}}
 let serverRevision=0,speichernTimer=null,laeuft=false,ausstehend=false,konflikt=false,speicherText='';
@@ -249,7 +250,8 @@ function render(){
     '<header class="kb-head"><div class="kb-head-text"><p class="kicker">Office · Kostenberechnung'+(istMuster?' · Muster':'')+'</p>'+
     '<h1>'+esc(doc.project_name)+'</h1><p class="kb-intro">'+esc([doc.project_number!=='Muster'?doc.project_number:'',doc.phase==='LPH3'?'LPH 3':doc.phase,
       (st.norm||'DIN 276')+' bis zur 3. Ebene','Kostenstand '+(R.quartalText(st.kostenstand)||'offen'),istMuster?'Version '+doc.version:'Stand '+datum(doc.updated_at)].filter(Boolean).join(' · '))+'</p></div>'+
-    '<div class="kb-actions">'+ANLEITUNG+(kannBearbeiten?'<button type="button" class="btn" data-act="import">'+ICON_IMPORT+'Mengen aus Archicad</button>':'')+
+    '<div class="kb-actions">'+ANLEITUNG+(assistent&&!istMuster?'<button type="button" class="btn'+(assistent.offen()?' aktiv':'')+'" data-act="assistent" aria-pressed="'+assistent.offen()+'">'+ICON_KI+'Assistent</button>':'')+
+    (kannBearbeiten?'<button type="button" class="btn" data-act="import">'+ICON_IMPORT+'Mengen aus Archicad</button>':'')+
     '<button type="button" class="btn btn-primary" data-act="tab" data-tab="bericht">Bericht für die Kostenbesprechung</button></div></header>'+
     '<p class="kb-save meta" id="kbSave"></p>';
   let banner='';
@@ -263,6 +265,7 @@ function render(){
   root.innerHTML='<div class="kb-wrap">'+kopf+banner+tabs+'<section id="kbBody">'+inhalt()+'</section></div>'+datalistKg()+datalistGw();
   root.classList.toggle('mit-inspektor',ui.tab==='positionen'&&!!root.querySelector('.inspektor'));
   if(ui.tab==='positionen')hoehenAnpassen();
+  assistent?.sync();
   zeigeSpeicherstatus();
   if(aktiv){const el=(imInspektor&&root.querySelector('.inspektor')||root).querySelector('[data-key="'+CSS.escape(aktiv)+'"]');if(el){el.focus({preventScroll:true});if(el.select&&el.type==='text')try{el.setSelectionRange(el.value.length,el.value.length)}catch{}}}
 }
@@ -521,7 +524,7 @@ function zeilePosition(p,r,{imElement=false,pauschal='',mitKg=false}={}){
   const quelle=art?'<button type="button" class="chip q'+(kw.art==='annahme'?'':' chip-src')+(fundFehlt?' chip-att':'')+'" data-act="waehle" data-id="'+esc(p.id)+'" title="'+esc(kw.fundstelle||'Fundstelle fehlt')+'">'+
       esc(art.kurz)+(kw.fundstelle?' · '+esc(kurz(kw.fundstelle,16)):(fundFehlt?' · Fundstelle?':''))+'</button>':
     '<button type="button" class="chip q chip-att" data-act="waehle" data-id="'+esc(p.id)+'">Quelle fehlt</button>';
-  return '<div class="pos zeile'+(imElement?' im-el':'')+(pauschal?' pauschal':'')+(ui.auswahl===p.id?' sel':'')+(aus?' aus':'')+'" role="row" data-act="waehle" data-id="'+esc(p.id)+'">'+
+  return '<div class="pos zeile'+(imElement?' im-el':'')+(pauschal?' pauschal':'')+(ui.auswahl===p.id?' sel':'')+(aus?' aus':'')+(ui.markiert.has(p.id)?' neu':'')+'" role="row" data-act="waehle" data-id="'+esc(p.id)+'">'+
     zelle('kg',mitKg?'<span class="ct">'+esc(p.kg||'–')+'</span>':mehrKnopf('waehle',p.id,'Details zur Position'))+
     zelle('gw',textFeld(k+'gewerk',p.gewerk,{label:'Gewerk'}))+
     zelle('bez','<span class="bez-pos">'+dot+textFeld(k+'titel',name,{ph:pauschal?'Pauschal für KG '+pauschal:'Bezeichnung',mehrzeilig:true,label:'Bezeichnung'})+'</span>'+
@@ -630,6 +633,7 @@ function panelPosition(p,r){
     '<p class="meta">'+(r.status==='entfaellt'?'entfällt':r.betragCent!==null?(p.modus==='betrag'?'Betrag ':esc(R.zahl(p.menge,2))+' '+esc(p.einheit||'')+' × '+R.euro(r.kennwertCent,{nachkomma:true})+' = ')+'<strong style="color:var(--kb-ink)">'+R.euro(r.betragCent,{nachkomma:true})+'</strong> netto':
       'Offen: '+esc(r.fehlt.map(f=>({kg:'Kostengruppe',menge:'Menge',betrag:'Betrag',kennwert:'Kennwert',mengenquelle:'Herkunft der Menge',quelle:'Quelle',fundstelle:'Fundstelle'}[f]||f)).join(', ')))+'</p>'+
     (gruppe?'<p class="meta hinweis">Gilt für die ganze KG '+esc(p.kg)+'. Ihre Unter-Kostengruppen ohne eigene Position gelten als enthalten.</p>':'')+
+    (p.assistent?'<p class="meta">Vom Assistenten vorgeschlagen, übernommen am '+esc(datum(p.assistent))+'.</p>':'')+
     (KG_MUSTER.test(String(p.kg||''))?'<p style="margin:8px 0 0"><button type="button" class="btn btn-quiet" style="padding:0;min-height:0" data-act="kg" data-kg="'+esc(p.kg)+'">Zur KG '+esc(p.kg)+'</button></p>':'')+
     '<div class="form" style="margin-top:14px"><div class="two">'+feld('Kostengruppe',k+'kg',p.kg,{attr:'list="kbKgListe" inputmode="numeric" maxlength="3"'})+feld('Gewerk (GW)',k+'gewerk',p.gewerk,{attr:'list="kbGwListe" maxlength="8" placeholder="z. B. BM"'})+'</div>'+
     feld('Bezeichnung',k+'titel',p.titel&&p.titel!==titel(p.kg)?p.titel:'',{attr:'placeholder="'+esc(gruppe?'Pauschal für KG '+p.kg:'z. B. Wärmedämmung Mineralfaser 200 mm')+'"'})+
@@ -1000,6 +1004,7 @@ function merkeTab(){if(doc&&!istMuster)history.replaceState(null,'',location.pat
 function zeigePanel(){}
 
 root.addEventListener('click',ev=>{
+  if(ui.markiert.size)ui.markiert=new Set();
   const b=ev.target.closest('[data-act]');if(!b)return;
   // In ein Feld der Zeile klicken heißt bearbeiten, nicht die Zeile wählen.
   if(ev.target.closest('.ci')&&b.classList.contains('pos'))return;
@@ -1007,6 +1012,7 @@ root.addEventListener('click',ev=>{
   if(act==='neu'){dialogNeu();return}
   if(!st)return;
   if(act==='tab'){ui.tab=d.tab;ui.meldung='';merkeTab();render();return}
+  if(act==='assistent'){assistent?.umschalten();return}
   if(act==='aufklappen'){ui.offen.has(d.kg)?ui.offen.delete(d.kg):ui.offen.add(d.kg);render();return}
   if(act==='filter'){ui.tab='positionen';ui.filter=d.kg;ui.auswahl=null;ui.kgAuswahl=null;merkeTab();render();return}
   if(act==='kg-gehe'){ui.sicht='kg';ui.elAuswahl=null;ui.tab='positionen';ui.filter=zweiteEbene(d.kg)||d.kg;ui.auswahl=null;ui.kgAuswahl=d.kg;merkeTab();render();zeigePanel();return}
@@ -1041,7 +1047,7 @@ root.addEventListener('click',ev=>{
   const p=d.id?st.positionen.find(x=>x.id===d.id):null;
   if(act==='modus'&&p){p.modus=d.wert;geaendert();render();return}
   if(act==='entfaellt'&&p){p.status=p.status==='entfaellt'?'':'entfaellt';geaendert();render();return}
-  if(act==='kopie'&&p){const k=JSON.parse(JSON.stringify(p));k.id=neueId('p:');delete k.import;delete k.ausImportEntfernt;st.positionen.splice(st.positionen.indexOf(p)+1,0,k);ui.auswahl=k.id;geaendert();render();return}
+  if(act==='kopie'&&p){const k=JSON.parse(JSON.stringify(p));k.id=neueId('p:');delete k.import;delete k.ausImportEntfernt;delete k.assistent;st.positionen.splice(st.positionen.indexOf(p)+1,0,k);ui.auswahl=k.id;geaendert();render();return}
   if((act==='hoch'||act==='runter')&&p){
     // Nur innerhalb derselben KG und desselben Elements tauschen, wie Zeilen in Excel verschieben.
     const liste=st.positionen,i=liste.indexOf(p),gleich=x=>x.kg===p.kg&&(x.element||'')===(p.element||'');let j=i;
@@ -1059,9 +1065,14 @@ root.addEventListener('click',ev=>{
   if(act==='rezept-weg'){const rz=st.rezepte?.[d.typ];if(rz){rz.zeilen.splice(Number(d.i),1);if(!rz.zeilen.length)delete st.rezepte[d.typ];geaendert();render()}return}
   if(act==='rezept-loesen'){delete st.rezepte[d.typ];geaendert();render();return}
 });
+// Escape schließt die Details, wo der Fokus auch ist (nach dem Neuzeichnen steht er oft auf der Seite); nicht im Dialog
+// und nicht im Assistenten, der sein eigenes Escape hat.
+document.addEventListener('keydown',ev=>{
+  if(ev.key!=='Escape'||ev.isComposing||dialog.open||ev.target?.closest?.('#kbAssistent'))return;
+  if(st&&ui.tab==='positionen'&&(ui.auswahl||ui.kgAuswahl||ui.elAuswahl)){ev.preventDefault();ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;render()}
+});
 root.addEventListener('keydown',ev=>{
   const el=ev.target;
-  if(ev.key==='Escape'&&ui.tab==='positionen'&&(ui.auswahl||ui.kgAuswahl||ui.elAuswahl)){ev.preventDefault();ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;render();return}
   // Enter übernimmt und springt wie in Excel in dieselbe Spalte der nächsten Zeile; Umschalt+Enter macht eine neue Zeile im Text.
   if(el.classList?.contains('ci')&&el.tagName!=='SELECT'&&ev.key==='Enter'&&!ev.shiftKey&&!ev.altKey&&!ev.isComposing){
     ev.preventDefault();
@@ -1100,6 +1111,23 @@ root.addEventListener('submit',ev=>{
 dialog.addEventListener('click',ev=>{if(ev.target.closest('[data-dlg="zu"]')||ev.target===dialog)dialog.close()});
 function tabAusHash(){const t=new URLSearchParams(location.hash.slice(1)).get('tab');return TABS.some(([k])=>k===t)?t:null}
 window.addEventListener('hashchange',()=>{const t=tabAusHash();if(t&&t!==ui.tab&&st){ui.tab=t;render()}});
+
+// KI-Assistent (kosten-assistent.js): eigenes Fenster rechts, an der Stelle der Details. Er liest den Stand,
+// schlägt vor und übernimmt erst nach «Prüfen und übernehmen»; gespeichert wird wie jede Änderung (geaendert()).
+const assistent=A?.init({sb,R,I,esc,root,
+  stand:()=>st,setzeStand:neu=>{st=neu},doc:()=>doc,revision:()=>serverRevision,nutzerId:()=>nutzer?.id||'',
+  darfBearbeiten:()=>kannBearbeiten&&!istMuster,konflikt:()=>konflikt,tabPositionen:()=>ui.tab==='positionen',
+  auswahl:()=>{
+    const p=(st?.positionen||[]).find(x=>x.id===ui.auswahl);if(p)return {kg:p.kg,position:p.id,titel:p.titel};
+    const e=ui.elAuswahl?(st?.elemente||[]).find(x=>x.id===ui.elAuswahl):null;if(e)return {kg:e.kg};
+    return ui.kgAuswahl?{kg:ui.kgAuswahl}:null;
+  },
+  schliesseDetails:()=>{ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null},
+  speichernJetzt,geaendert,render,neueId,heute:heuteIso,kgName,
+  zeige:(ids,kg)=>{ui.markiert=new Set(ids);ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;
+    if(kg){ui.tab='positionen';ui.sicht='kg';ui.filter=kg[0]+'00';merkeTab()}render();
+    if(ids.length)setTimeout(()=>root.querySelector('.ktab .pos.zeile.neu')?.scrollIntoView({block:'center'}),0)}
+})||null;
 
 void start();
 })();

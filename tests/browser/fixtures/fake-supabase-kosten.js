@@ -41,14 +41,33 @@
     office_project_members:[],
     office_kosten_templates:[{id:TID,title:'Kostenberechnung LPH 3',description:'Synthetisches Muster für den Browsertest.',norm:'DIN 276:2018-12',
       version:'1.0',status:'Entwurf',is_active:true,state:muster,updated_at:jetzt()}],
-    office_kosten_instances:[],office_kosten_versions:[]
+    office_kosten_instances:[],office_kosten_versions:[],office_kosten_dialogue_messages:[]
   });
   let db=null;try{db=JSON.parse(sessionStorage.getItem(KEY)||'null')}catch{}
   if(!db)db=start();
   const sichern=()=>{try{sessionStorage.setItem(KEY,JSON.stringify(db))}catch{}};
   sichern();
   const kopie=x=>JSON.parse(JSON.stringify(x));
-  window.__fake={get db(){return db},sichern,aufrufe:[],fehler:null,PID,TID,UID};
+  window.__fake={get db(){return db},sichern,aufrufe:[],fehler:null,PID,TID,UID,ki:null,anfragen:[]};
+  // KI-Assistent: Status «bereit» und ein fester Vorschlag (Element mit zwei Positionen in KG 335, eine ohne Preis,
+  // dazu «entfällt» für KG 394). Ein Test kann window.__fake.ki ersetzen.
+  const vorschlagStandard=body=>({version:'office-kosten-ai-v1',authority:'none',model:'test-modell',base_revision:body.expected_revision,can_edit:true,quellen:[],
+    result:{kind:'vorschlag',text:'Aus dem Angebot: ein Element mit zwei Positionen; der Oberputz hat noch keinen Preis.',fragen:[],
+      hinweise:['Position «Oberputz»: Preis ohne Quelle und Fundstelle nicht übernommen.'],
+      vorschlag:{elemente:[{ref:'E1',kg:'335',titel:'WDVS Mineralwolle 160 mm + Putz',notiz:''}],
+        positionen:[
+          {kg:'335',element:'E1',gewerk:'PU',titel:'Dämmung Mineralwolle 160 mm',ort:'',modus:'menge',menge:'412.5',einheit:'m²',mengenquelle:'manuell',
+            ep:'128',betrag:'',quelle:'angebot',fundstelle:'Angebot Test, Pos. 1',kostenstand:'',brutto:false,notiz:''},
+          {kg:'335',element:'E1',gewerk:'PU',titel:'Oberputz',ort:'',modus:'menge',menge:'412.5',einheit:'m²',mengenquelle:'manuell',
+            ep:'',betrag:'',quelle:'',fundstelle:'',kostenstand:'',brutto:false,notiz:''}],
+        aenderungen:[],entfallen:[{kg:'394',begruendung:'kein Bedarf laut Test'}]}}});
+  async function invoke(name,{body}={}){
+    window.__fake.anfragen.push({name,body:kopie(body||{})});
+    if(window.__fake.ki)return window.__fake.ki(name,body);
+    if(name!=='office-kosten-ai')return {data:null,error:{message:'unbekannte Funktion'}};
+    if(body?.action==='status')return {data:{ready:true,version:'office-kosten-ai-v1',model:'test-modell',can_edit:true},error:null};
+    return {data:vorschlagStandard(body),error:null};
+  }
   function builder(table){
     const filter=[];let op='select',daten=null,einzeln=false,zurueck=false,sort=null,grenze=null;
     const q={
@@ -87,7 +106,7 @@
   const client={
     auth:{getSession:async()=>({data:{session},error:null}),getUser:async()=>({data:{user:session.user},error:null}),
       onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({error:null})},
-    from:t=>builder(t),rpc:async()=>({data:null,error:null})
+    from:t=>builder(t),rpc:async()=>({data:null,error:null}),functions:{invoke}
   };
   window.supabase={createClient:()=>client};
 })();

@@ -59,11 +59,15 @@ function geteilteTexte(xml){
   return [...xml.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m=>[...m[1].matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map(t=>xmlText(t[1])).join(''));
 }
 function spalteIndex(ref){let n=0;for(const c of String(ref).replace(/\d+$/,''))n=n*26+(c.charCodeAt(0)-64);return n-1}
+// Jede Zeile trägt ihre Nummer im Blatt (nr), damit eine Fundstelle «Zeile 12» im Excel wiederzufinden ist.
+// Leere Zeilen stehen oft als <row …/> im Blatt (nur Höhe oder Format); sie zählen mit, haben aber keine Zellen.
 function zeilenAusBlatt(xml,texte){
   const zeilen=[];
-  for(const z of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)){
+  for(const z of xml.matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)){
+    if(z[2]===undefined)continue;
+    const nr=Number(/\br="(\d+)"/.exec(z[1])?.[1])||zeilen.length+1;
     const zeile=[];
-    for(const c of z[1].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+    for(const c of z[2].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
       const attr=c[1],inhalt=c[2]||'';
       const ref=/\br="([A-Z]+\d+)"/.exec(attr)?.[1];const typ=/\bt="(\w+)"/.exec(attr)?.[1]||'n';
       let wert='';
@@ -74,7 +78,8 @@ function zeilenAusBlatt(xml,texte){
       const i=ref?spalteIndex(ref):zeile.length;
       zeile[i]=String(wert);
     }
-    zeilen.push(Array.from(zeile,x=>x??''));
+    const fertig=Array.from(zeile,x=>x??'');fertig.nr=nr;
+    zeilen.push(fertig);
   }
   return zeilen;
 }
@@ -93,20 +98,38 @@ async function leseXlsx(buffer){
   if(!xml)throw new Error('Das erste Tabellenblatt fehlt');
   return zeilenAusBlatt(xml,texte);
 }
+// Alle sichtbaren Blätter einer Mappe mit Namen (für den Assistenten: das alte Büro-Excel hat oft mehrere).
+async function leseXlsxBlaetter(buffer,{max=12}={}){
+  const zip=await zipDateien(buffer);
+  const texte=geteilteTexte(await zip.text('xl/sharedStrings.xml'));
+  const wb=await zip.text('xl/workbook.xml')||'',rels=await zip.text('xl/_rels/workbook.xml.rels')||'';
+  const ziele=new Map([...rels.matchAll(/<Relationship\b([^>]*)\/?>/g)].map(m=>[/\bId="([^"]+)"/.exec(m[1])?.[1],/\bTarget="([^"]+)"/.exec(m[1])?.[1]]));
+  const blaetter=[];
+  for(const m of wb.matchAll(/<sheet\b([^>]*)\/?>/g)){
+    if(blaetter.length>=max)break;
+    if(/\bstate="(hidden|veryHidden)"/.test(m[1]))continue;
+    const ziel=ziele.get(/\br:id="([^"]+)"/.exec(m[1])?.[1]);if(!ziel)continue;
+    const xml=await zip.text(ziel.startsWith('/')?ziel.slice(1):'xl/'+ziel.replace(/^\.\//,''));if(!xml)continue;
+    blaetter.push({name:xmlText(/\bname="([^"]*)"/.exec(m[1])?.[1]||''),zeilen:zeilenAusBlatt(xml,texte)});
+  }
+  if(!blaetter.length)blaetter.push({name:'',zeilen:await leseXlsx(buffer)});
+  return blaetter;
+}
 function leseCsv(text){
   const t=String(text).replace(/^﻿/,'');
   const erste=t.split(/\r?\n/,1)[0]||'';
   const trenner=[';','\t',','].map(z=>[z,erste.split(z).length]).sort((a,b)=>b[1]-a[1])[0][0];
   const zeilen=[];let zeile=[],feld='',zitat=false;
+  const fertig=()=>{zeile.nr=zeilen.length+1;zeilen.push(zeile);zeile=[]};
   for(let i=0;i<t.length;i++){
     const c=t[i];
     if(zitat){if(c==='"'){if(t[i+1]==='"'){feld+='"';i++}else zitat=false}else feld+=c;continue}
     if(c==='"')zitat=true;
     else if(c===trenner){zeile.push(feld);feld=''}
-    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;zeile.push(feld);zeilen.push(zeile);zeile=[];feld=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;zeile.push(feld);fertig();feld=''}
     else feld+=c;
   }
-  if(feld!==''||zeile.length){zeile.push(feld);zeilen.push(zeile)}
+  if(feld!==''||zeile.length){zeile.push(feld);fertig()}
   return zeilen.filter(z=>z.some(x=>String(x).trim()!==''));
 }
 async function leseDatei(datei){
@@ -248,5 +271,5 @@ function anwenden(state,gruppen,meta={}){
   return {state:st,bericht:{neu,aktualisiert,entfernt}};
 }
 
-return Object.freeze({zipDateien,leseXlsx,leseCsv,leseDatei,zeilenAusBlatt,geteilteTexte,erkenneSpalten,gruppiere,vergleiche,anwenden,hauptmass,EINHEIT_ZU_MASS,MASS_ZU_EINHEIT});
+return Object.freeze({zipDateien,leseXlsx,leseXlsxBlaetter,leseCsv,leseDatei,zeilenAusBlatt,geteilteTexte,erkenneSpalten,gruppiere,vergleiche,anwenden,hauptmass,EINHEIT_ZU_MASS,MASS_ZU_EINHEIT});
 });

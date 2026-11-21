@@ -380,7 +380,7 @@ test('Tabelle wie im Büro-Excel: Element mit Positionen, direkt in der Zeile, E
     await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.positionen.some(p=>p.kennwert?.fundstelle==='Angabe Sto'));
     assert.match(await page.locator('.pos.zeile.im-el').first().locator('.chip.q').textContent(),/Angebot · Angabe Sto/);
     await page.keyboard.press('Escape');
-    assert.equal(await page.locator('.inspektor').count(),0);
+    assert.equal(await page.locator('.inspektor:not(.assistent)').count(),0);
     // Dieselben Positionen nach Gewerken; die Summe bleibt dieselbe.
     await page.click('[data-act="sicht"][data-wert="gewerke"]');
     assert.match(await page.locator('.pos.grp',{hasText:'Gewerk WD'}).textContent(),/83\.062,20/);
@@ -393,6 +393,118 @@ test('Tabelle wie im Büro-Excel: Element mit Positionen, direkt in der Zeile, E
     await page.click('.tab[data-tab="bericht"]');
     assert.match(await page.locator('.positionen-b').textContent(),/WDVS Mineralwolle 160–200 mm \+ Putz.*Wärmedämmung Mineralfaser 200 mm/);
     assert.match(await page.locator('#kbBericht').textContent(),/Zusammenstellung nach Gewerken/);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+test('Assistent: Vorschlag aus einem Angebot prüfen, übernehmen und rückgängig machen; Details gehen vor',async()=>{
+  // Gari, 21.11.: «Falta agregar el asistente (de Inteligencia artificial, como en el Terminplan …)». Die KI ist hier
+  // ein Testersatz (fake-supabase-kosten.js): Status bereit, ein fester Vorschlag mit Element, zwei Positionen und «entfällt».
+  const {ctx,page,fehler}=await oeffne();
+  try{
+    await anlegen(page);
+    await page.click('.kb-actions [data-act="assistent"]');
+    const as=page.locator('#kbAssistent');
+    await as.waitFor({state:'visible'});
+    await page.waitForFunction(()=>/test-modell/.test(document.getElementById('asModell')?.textContent||''));
+    assert.equal(await page.locator('.kb-actions [data-act="assistent"]').getAttribute('aria-pressed'),'true');
+    assert.ok(await page.evaluate(()=>document.getElementById('kb').classList.contains('mit-inspektor')),'die Seite rückt nicht zur Seite');
+    assert.equal(await as.locator('.as-start').count(),5);
+    // Ein Angebot als PDF anhängen (synthetisch) und fragen.
+    await page.setInputFiles('#asDatei',{name:'angebot-test.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n% Test\n')});
+    await as.locator('.as-chip',{hasText:'angebot-test.pdf'}).waitFor();
+    await page.fill('#asText','Werte das Angebot aus.');
+    await page.click('#asSenden');
+    const karte=as.locator('.as-karte');
+    await karte.waitFor();
+    const text=await karte.textContent();
+    assert.match(text,/\+ 52\.800,00\s€/);                        // 412,5 m² × 128,00 €
+    assert.match(text,/2 Positionen \(1 offen\) · 1 Element · 1 Kostengruppe entfällt/);
+    assert.match(text,/WDVS Mineralwolle 160 mm \+ Putz/);
+    assert.match(await as.locator('.as-hinweise summary').textContent(),/1 Hinweis der Prüfung/);
+    // Die Anfrage: erwartete Revision, Anhang als data:-URL, keine Tabelle, nichts geschrieben.
+    const anfrage=await page.evaluate(()=>window.__fake.anfragen.find(a=>a.body.action==='frage').body);
+    assert.equal(anfrage.expected_revision,(await stand(page)).server_revision);
+    assert.equal(anfrage.attachments.length,1);
+    assert.match(anfrage.attachments[0].data,/^data:application\/pdf;base64,/);
+    assert.equal(anfrage.tabelle,null);
+    assert.equal((await stand(page)).state.positionen.length,0);
+    // Prüfen und übernehmen: gespeichert wie jede Änderung, mit Quelle und Fundstelle.
+    await karte.locator('[data-as="uebernehmen"]').click();
+    await as.locator('.as-msg.ok',{hasText:'Übernommen: 2 Positionen, 1 Element, 1 Kostengruppe entfällt'}).waitFor();
+    await gespeichert(page);
+    const s=(await stand(page)).state;
+    const neu=s.positionen.filter(p=>p.assistent);
+    assert.equal(neu.length,2);
+    assert.equal(s.elemente.length,1);
+    assert.ok(neu.every(p=>p.element===s.elemente[0].id&&p.kg==='335'&&p.gewerk==='PU'));
+    assert.deepEqual(neu[0].kennwert,{art:'angebot',wert:'128',fundstelle:'Angebot Test, Pos. 1'});
+    assert.deepEqual(neu[1].kennwert,{});
+    assert.equal(s.gruppen['394'].status,'entfaellt');
+    await page.locator('.ktab .pos.el',{hasText:'WDVS Mineralwolle 160 mm + Putz'}).waitFor();
+    assert.match(await page.locator('.ktab .pos.el').textContent(),/52\.800,00/);
+    assert.equal(await page.locator('.ktab .pos.zeile.neu').count(),2,'übernommene Zeilen sind nicht hervorgehoben');
+    // Details gehen vor: die Position öffnen zeigt die Details; Escape bringt den Assistenten zurück.
+    await page.locator('.ktab .pos.zeile.im-el').first().locator('.mehr').click();
+    await page.locator('.inspektor:not(.assistent) .panel').waitFor();
+    assert.ok(await as.isHidden());
+    assert.match(await page.locator('.inspektor:not(.assistent) .panel').textContent(),/Vom Assistenten vorgeschlagen, übernommen am/);
+    await page.keyboard.press('Escape');
+    await as.waitFor({state:'visible'});
+    assert.match(await as.locator('#asBezug').textContent(),/Bezug: Position «Dämmung Mineralwolle 160 mm»/);
+    // Rückgängig, solange nichts anderes geändert wurde.
+    await as.locator('[data-as="rueckgaengig"]').click();
+    await as.locator('.as-msg.ok',{hasText:'Rückgängig gemacht'}).waitFor();
+    await gespeichert(page);
+    const z=(await stand(page)).state;
+    assert.equal(z.positionen.length,0);
+    assert.equal((z.elemente||[]).length,0);
+    assert.ok(!z.gruppen['394']);
+    // Verlauf je Person und Kostenberechnung.
+    const verlauf=await page.evaluate(()=>window.__fake.db.office_kosten_dialogue_messages.map(m=>m.role+':'+m.event_kind));
+    assert.deepEqual(verlauf,['user:question','assistant:proposal','assistant:receipt','assistant:receipt']);
+    // Schließen: die Tabelle hat wieder die volle Breite.
+    await as.locator('[data-as="zu"]').click();
+    assert.ok(await as.isHidden());
+    assert.ok(!(await page.evaluate(()=>document.getElementById('kb').classList.contains('mit-inspektor'))));
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+test('Assistent: altes Büro-Excel als Tabelle mit Zeilennummern; Fehler der KI ändern nichts',async()=>{
+  const {ctx,page,fehler}=await oeffne();
+  try{
+    await anlegen(page);
+    await page.evaluate(()=>{window.__fake.ki=async(name,body)=>body.action==='status'?{data:{ready:true,version:'office-kosten-ai-v1',model:'test-modell'},error:null}:
+      {data:{error:'daily_ai_limit_reached'},error:{message:'429'}}});
+    await page.click('.kb-actions [data-act="assistent"]');
+    await page.waitForFunction(()=>/test-modell/.test(document.getElementById('asModell')?.textContent||''));
+    const csv='KG;Bezeichnung;Menge;EH;EP;Kommentar\n\n335;Dämmung;412,5;m²;128;BKI\n';
+    const [wahl]=await Promise.all([page.waitForEvent('filechooser'),page.click('[data-as="start"][data-start="excel"]')]);
+    await wahl.setFiles({name:'altes-buero-excel.csv',mimeType:'text/csv',buffer:Buffer.from(csv,'utf8')});
+    await page.locator('#kbAssistent .as-chip',{hasText:'altes-buero-excel.csv · 2 Zeilen'}).waitFor();
+    assert.match(await page.inputValue('#asText'),/Übernimm die Positionen aus dem Büro-Excel/);
+    await page.click('#asSenden');
+    await page.locator('#kbAssistent .as-msg.warn',{hasText:'25 Anfragen aufgebraucht'}).waitFor();
+    const anfrage=await page.evaluate(()=>window.__fake.anfragen.filter(a=>a.body.action==='frage').pop().body);
+    assert.equal(anfrage.tabelle.name,'altes-buero-excel.csv');
+    assert.equal(anfrage.tabelle.text,'1\tKG\tBezeichnung\tMenge\tEH\tEP\tKommentar\n3\t335\tDämmung\t412,5\tm²\t128\tBKI');
+    assert.equal(await page.locator('#kbAssistent .as-karte').count(),0);
+    assert.equal((await stand(page)).state.positionen.length,0);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+test('Assistent auf dem iPhone: von unten, ohne Querscrollen',async()=>{
+  const {ctx,page,fehler}=await oeffne({width:390,height:844});
+  try{
+    await anlegen(page);
+    await page.click('.kb-actions [data-act="assistent"]');
+    const as=page.locator('#kbAssistent');
+    await as.waitFor({state:'visible'});
+    const box=await as.boundingBox();
+    assert.ok(box.width<=390&&box.y>40,'kein Blatt von unten: '+JSON.stringify(box));
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'Querscrollen');
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
