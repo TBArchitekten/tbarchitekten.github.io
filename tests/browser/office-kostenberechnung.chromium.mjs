@@ -345,11 +345,15 @@ test('Tabelle wie im Büro-Excel: Element mit Positionen, direkt in der Zeile, E
     assert.ok(breite>1700,'Tabelle nur '+breite+' px breit');
     // Element in KG 335, darin zwei Positionen direkt in der Zeile.
     await page.click('.pos.kgz[data-kg="335"] [data-act="el-neu"]');
+    // Das neue Feld bekommt den Fokus nach dem Neuzeichnen; erst dann tippen (im CI ist der Rechner langsamer).
+    await page.waitForFunction(()=>/^el:.*:titel$/.test(document.activeElement?.dataset?.key||''));
     await page.keyboard.type('WDVS Mineralwolle 160–200 mm + Putz');
     await page.keyboard.press('Enter');
     await page.waitForFunction(()=>window.__fake.db.office_kosten_instances[0].state.elemente?.[0]?.titel==='WDVS Mineralwolle 160–200 mm + Putz');
     for(const [gw,bez,menge,ep] of [['wd','Wärmedämmung Mineralfaser 200 mm','638,94','130'],['PU','Putz Außenputz zweilagig, Besenstrich','638,94','150']]){
+      const vorher=await page.locator('.pos.zeile.im-el').count();
       await page.locator('.pos.el').first().locator('[data-act="pos-neu"]').click();
+      await page.waitForFunction(n=>document.querySelectorAll('.pos.zeile.im-el').length===n+1&&/^pos:.*:titel$/.test(document.activeElement?.dataset?.key||''),vorher);
       await page.keyboard.type(bez);
       const zeile=()=>page.locator('.pos.zeile.im-el').last();
       for(const [feld,wert] of [['gewerk',gw],['menge',menge],['kennwert.wert',ep]]){
