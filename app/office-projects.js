@@ -352,8 +352,8 @@ qs('#officeProjectsBack').addEventListener('click',()=>{
 document.getElementById('officeToolsManage')?.addEventListener('click',openProjects);
 document.getElementById('officeToolsPlans')?.addEventListener('click',openPlans);
 // Projektstart: ein Blatt, kein Bildschirm der App. Es sagt, welche Information ein Projekt
-// braucht, damit Romy mitarbeiten kann, und enthält die vier Muster der LPH-3-Vorgänge, die sich
-// ohne Projektunterlagen vorbereiten lassen. Liegt neben terminplan-hilfe.html im Wurzelverzeichnis.
+// braucht, damit Romy mitarbeiten kann, und führt zu den fünf Bürovorlagen LPH 3 (muster/lph3/).
+// Liegt neben terminplan-hilfe.html im Wurzelverzeichnis.
 document.getElementById('officeToolsStart')?.addEventListener('click',()=>{
   window.location.href='../projektstart.html';
 });
