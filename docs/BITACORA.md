@@ -17,6 +17,23 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-22 · KI-Assistenten: Kosten-Assistent freier, kein Tageslimit für Terminplan und Kosten · Claude
+- Qué cambió y por qué: Gari (22.11., 07:23) preguntó por qué el asistente de costes tenía reglas, límite y nada de internet, «¿No sería mejor un asistente más libre?». Respuesta honesta: el límite de 25 lo copié del Terminplan sin preguntar (y el 04.11 se le quitó a Romy un límite no aprobado), la falta de búsqueda web lo hacía más estricto que el Terminplan, y el tono era seco. Propuesta aceptada a las 10:16: «Sí cámbialo así», y «quita la regla en Terminplan de solo 25 consultas por persona al día. Sin límite para ambos.»
+  - **Kein Tageslimit** für den Terminplan-Assistenten und den Kosten-Assistenten: `office_ai_consume_request` und `office_kosten_ai_consume_request` prüfen weiter Anmeldung, Office-Mitgliedschaft und Sichtbarkeit und zählen jede Anfrage, begrenzen aber nicht mehr (wie Romy seit dem 04.11). Die Edge Function des Terminplans bleibt unverändert; ihr 429-Zweig wird damit nicht mehr erreicht.
+  - **Kosten-Assistent v2** (`office-kosten-ai-v2`): freies Gespräch wie mit einem Kollegen, in der Sprache der Nachricht (Deutsch oder Spanisch), über die Kostenberechnung hinaus; **Websuche** wie beim Terminplan (ohne Anhänge; allgemeine Suchbegriffe, nie Projektname oder -nummer), Quellen als Links unter der Antwort (vom Modell und aus den Zitaten der Suche). «Keine Rechtsberatung» und «knapp» sind weg.
+  - **Preise mit Herkunft statt Verwerfen:** im Gespräch frei; im Vorschlag mit Quelle und Fundstelle (auch eine Webadresse) oder als **«Annahme KI»**. Ein Preis ohne Quelle oder mit behaupteter Quelle ohne Fundstelle wird nicht mehr verworfen, sondern «Annahme KI» (die behauptete Quelle steht im Kommentar); ein geänderter Preis ohne neue Fundstelle ebenso, weil die alte Fundstelle ihn nicht belegt.
+  - Zwei neue Quellen im Rechenkern (`R.ARTEN`): **Internet** (Hersteller, Händler, Index; Fundstelle = Adresse) und **Annahme KI (Assistent)**; sie erscheinen in der Auswahl, in der Tabelle, im Bericht und in «Herkunft der Beträge».
+  - Was bleibt: der Assistent schreibt nie selbst (Vorschlag, «Prüfen und übernehmen», «Rückgängig»), nur KG aus der Gliederung, Elemente nur in der 3. Ebene, «entfällt» nie über Positionen, höchstens 80 Positionen je Vorschlag (Laufzeit), nur Ansicht ohne Vorschläge.
+- Archivos: `supabase/migrations/20261122100000_office_ki_ohne_tageslimit.sql` (neu), `supabase/functions/office-kosten-ai/` (`core.mjs`, `index.ts`, Kopie des Rechenkerns), `kosten-rechnen.js` (`office4`), `kosten-assistent.js` (`office2`), `kostenberechnung.css` (`office5`), `kostenberechnung.html`, `kostenberechnung-hilfe.html` (Teil IV: zwei Quellen; Teil VI neu), `tests/sql/office-kosten-ai-rls-acceptance.sql`, `tests/sql/office-terminplan-ai-ohne-limit-acceptance.sql` (neu, in `verify.yml`), `tests/office-kosten-assistent.test.mjs`, `tests/office-kostenberechnung.test.mjs`, `tests/browser/office-kostenberechnung.chromium.mjs`, `tests/browser/fixtures/fake-supabase-kosten.js`.
+- Base de datos: migración `20261122100000_office_ki_ohne_tageslimit.sql` (ersetzt nur die beiden Funktionen; Tabellen, Zeilen, Rechte und Policies bleiben; nichts Destruktives) — aplicada en Supabase: ver PR.
+- Deploy de funciones: `office-kosten-ai` (Workflow nach dem Merge). `office-terminplan-ai` unverändert.
+- Cómo se probó: 353 Tests; Chromium 10 Tests der Kostenberechnung (Quellen-Links, neuer Fehlerfall); Edge Function lokal mit Deno gegen Ersatz von Supabase und OpenAI (Websuche nur ohne Anhänge, Zitate als Links, Preise als «Annahme KI», 403 statt 429); RLS-Abnahmen in der CI: 31 Anfragen an die Kosten und 30 an den Terminplan an einem Tag, alle gezählt.
+- Quedó pendiente o sin probar: ein echter Lauf gegen das Modell mit Websuche, angemeldet.
+- Riesgos o decisiones que necesitan a Gari: ohne Tageslimit hängen die Kosten des KI-Anbieters nur noch an der Nutzung; jede Anfrage bleibt in `office_terminplan_ai_requests` bzw. `office_kosten_ai_requests` gezählt.
+- PR: #126
+
+---
+
 ### 2026-11-21 · Kostenberechnung: KI-Assistent für die Kosten · Claude
 - Qué cambió y por qué: Gari (21.11., 17:00, punto 5): «Falta agregar el asistente (de Inteligencia artificial, como en el Terminplan pero este asistente sería para los costos)». Umgesetzt wie beim Terminplan (Edge Function, Tageskontingent, Verlauf je Person, Vorschlag erst nach «Prüfen und übernehmen»):
   - Knopf «Assistent» im Kopf der Kostenberechnung; das Gespräch steht rechts an der Stelle der Details (Details gehen vor), auf dem iPhone von unten;

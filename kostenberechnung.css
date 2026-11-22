@@ -342,3 +342,8 @@ select.ci{padding:4px 2px}
   .report h3{break-after:avoid}
   a{color:inherit}
 }
+/* Quellen einer Antwort (Websuche): als ruhige Links unter der Blase. */
+.as-links{display:flex;flex-wrap:wrap;gap:4px 10px;margin:8px 0 0!important;font-size:12px;white-space:normal!important}
+.as-links span{color:var(--kb-meta);font-weight:600}
+.as-links a{color:var(--kb-link);text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.as-links a:hover{text-decoration:underline}

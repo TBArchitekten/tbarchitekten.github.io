@@ -51,8 +51,9 @@
   window.__fake={get db(){return db},sichern,aufrufe:[],fehler:null,PID,TID,UID,ki:null,anfragen:[]};
   // KI-Assistent: Status «bereit» und ein fester Vorschlag (Element mit zwei Positionen in KG 335, eine ohne Preis,
   // dazu «entfällt» für KG 394). Ein Test kann window.__fake.ki ersetzen.
-  const vorschlagStandard=body=>({version:'office-kosten-ai-v1',authority:'none',model:'test-modell',base_revision:body.expected_revision,can_edit:true,quellen:[],
+  const vorschlagStandard=body=>({version:'office-kosten-ai-v2',authority:'none',model:'test-modell',base_revision:body.expected_revision,can_edit:true,quellen:[],
     result:{kind:'vorschlag',text:'Aus dem Angebot: ein Element mit zwei Positionen; der Oberputz hat noch keinen Preis.',fragen:[],
+      links:[{titel:'Hersteller Beispiel',url:'https://hersteller.example/wdvs'}],
       hinweise:['Position «Oberputz»: Preis ohne Quelle und Fundstelle nicht übernommen.'],
       vorschlag:{elemente:[{ref:'E1',kg:'335',titel:'WDVS Mineralwolle 160 mm + Putz',notiz:''}],
         positionen:[
@@ -65,7 +66,7 @@
     window.__fake.anfragen.push({name,body:kopie(body||{})});
     if(window.__fake.ki)return window.__fake.ki(name,body);
     if(name!=='office-kosten-ai')return {data:null,error:{message:'unbekannte Funktion'}};
-    if(body?.action==='status')return {data:{ready:true,version:'office-kosten-ai-v1',model:'test-modell',can_edit:true},error:null};
+    if(body?.action==='status')return {data:{ready:true,version:'office-kosten-ai-v2',model:'test-modell',can_edit:true},error:null};
     return {data:vorschlagStandard(body),error:null};
   }
   function builder(table){

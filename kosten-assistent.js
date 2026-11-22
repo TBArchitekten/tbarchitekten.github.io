@@ -4,6 +4,8 @@
    und Kostenbeiträge auswerten, Elemente vorschlagen. Die KI (Edge Function office-kosten-ai) schlägt nur vor;
    übernommen wird erst mit «Prüfen und übernehmen», gespeichert wie jede andere Änderung (bedingt auf die
    Revision), und rückgängig, solange danach nichts anderes geändert wurde.
+   v2, 22.11.2026 (Gari: ein freierer Assistent, ohne Tageslimit): freies Gespräch auf Deutsch oder Spanisch,
+   Websuche mit Links zu den Quellen; jeder Preis im Vorschlag zeigt seine Herkunft, Schätzungen als «Annahme KI».
    Rein und getestet: tabelleText, bestesBlatt, pruefeVorschlag, wendeAn, vorschau. Die Oberfläche: init(). */
 (function(root,factory){
   const api=factory(root);
@@ -11,7 +13,7 @@
   if(root)root.TBA_KOSTEN_ASSISTENT=api;
 })(typeof globalThis!=='undefined'?globalThis:null,function(root){
 'use strict';
-const VERSION='office-kosten-ai-v1';
+const VERSION='office-kosten-ai-v2';
 const FUNKTION='office-kosten-ai';
 const MAX_DATEI=8*1024*1024,MAX_GESAMT=12*1024*1024,MAX_TABELLE=200000;
 const MIME={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'};
@@ -132,7 +134,7 @@ function vorschau(v,st,R){
   const ergebnis=new Map(nachher.positionen.map(x=>[x.id,x]));
   const zeilen=r.neu.map(id=>{const p=kopie.positionen.find(x=>x.id===id);const e=ergebnis.get(id)||{};
     return {id,kg:p.kg,element:(kopie.elemente||[]).find(x=>x.id===p.element)?.titel||'',titel:p.titel,modus:p.modus,menge:p.menge,einheit:p.einheit,
-      ep:p.kennwert?.wert||'',quelle:p.kennwert?.art||'',fundstelle:p.kennwert?.fundstelle||'',betragCent:e.betragCent??null,offen:e.status==='offen',fehlt:e.fehlt||[]}});
+      ep:p.kennwert?.wert||'',quelle:p.kennwert?.art||'',fundstelle:p.kennwert?.fundstelle||'',notiz:p.notiz||'',betragCent:e.betragCent??null,offen:e.status==='offen',fehlt:e.fehlt||[]}});
   // Zur Anzeige je KG und Element beisammen, in der Reihenfolge des ersten Auftretens.
   const ersteKg=new Map(),ersteEl=new Map();
   zeilen.forEach((z,i)=>{if(!ersteKg.has(z.kg))ersteKg.set(z.kg,i);const k=z.kg+'|'+z.element;if(!ersteEl.has(k))ersteEl.set(k,i)});
@@ -152,8 +154,9 @@ function init(b){
   aside.id='kbAssistent';aside.className='inspektor assistent';aside.hidden=true;aside.setAttribute('aria-label','Assistent');
   aside.innerHTML='<div class="inspektor-kopf as-kopf"><div class="as-titel"><strong>Assistent</strong><span class="meta" id="asModell">KI · schlägt vor, du entscheidest</span></div>'+
     '<button type="button" class="inspektor-zu" data-as="zu" aria-label="Assistent schließen">×</button></div>'+
-    '<div class="as-body" id="asBody"><div class="as-leer" id="asLeer"><p class="as-lead">Frag nach der Kostenberechnung, oder gib dem Assistenten ein Angebot, einen Kostenbeitrag der Fachplanung oder das alte Büro-Excel. '+
-    'Er schlägt Positionen mit Quelle und Fundstelle vor; Preise ohne Fundstelle übernimmt er nicht. In die Kostenberechnung kommt nur, was du prüfst und übernimmst.</p>'+
+    '<div class="as-body" id="asBody"><div class="as-leer" id="asLeer"><p class="as-lead">Frag, was du willst, auf Deutsch oder Spanisch: zu dieser Kostenberechnung, zu DIN 276 und HOAI, zu Bauteilen, Produkten und Preisen. '+
+    'Für Aktuelles sucht der Assistent im Internet und nennt die Quellen. Er wertet Angebote, Kostenbeiträge und das alte Büro-Excel aus und schlägt Positionen vor; '+
+    'jeder Preis zeigt, woher er kommt, Schätzungen stehen als «Annahme KI» da. In die Kostenberechnung kommt nur, was du übernimmst.</p>'+
     '<div class="as-starts">'+[['fehlt','Was fehlt noch?'],['excel','Altes Büro-Excel übernehmen'],['angebot','Angebot oder Kostenbeitrag auswerten'],
       ['vergleich','Abweichung zur Kostenschätzung erklären'],['elemente','Elemente für die Auswahl vorschlagen']]
       .map(([k,t])=>'<button type="button" class="as-start" data-as="start" data-start="'+k+'">'+t+'</button>').join('')+'</div></div>'+
@@ -162,7 +165,7 @@ function init(b){
     '<div class="as-zeile"><button type="button" class="as-plus" data-as="datei" aria-label="Datei anhängen" title="PDF, Foto, Excel (.xlsx) oder CSV anhängen">+</button>'+
     '<textarea id="asText" rows="1" maxlength="2000" aria-label="Nachricht an den Assistenten" placeholder="Nachricht an den Assistenten"></textarea>'+
     '<button type="submit" class="as-senden" id="asSenden" aria-label="Senden"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button></div>'+
-    '<p class="meta as-fuss">Mit jeder Anfrage gehen die Kostenberechnung und die angehängten Dateien an den KI-Anbieter des Office. Höchstens 25 Anfragen am Tag.</p>'+
+    '<p class="meta as-fuss">Mit jeder Anfrage gehen die Kostenberechnung und die angehängten Dateien an den KI-Anbieter des Office; ins Internet gehen nur allgemeine Suchbegriffe, nie der Projektname.</p>'+
     '<input type="file" id="asDatei" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.csv,.tsv,.txt,application/pdf,image/png,image/jpeg,image/webp"></form>';
   d.body.append(aside);
   const $=s=>aside.querySelector(s);
@@ -176,7 +179,8 @@ function init(b){
       .eq('instance_id',b.doc().id).eq('user_id',b.nutzerId()).order('created_at',{ascending:false}).limit(40);
     if(error){console.warn('Assistent: Verlauf nicht lesbar',error.message);return}
     verlauf=[...(data||[]).reverse().map(x=>({role:x.role,body:x.body,kind:x.event_kind,
-      hinweise:Array.isArray(x.event_data?.hinweise)?x.event_data.hinweise:[],fragen:Array.isArray(x.event_data?.fragen)?x.event_data.fragen:[]})),...verlauf];
+      hinweise:Array.isArray(x.event_data?.hinweise)?x.event_data.hinweise:[],fragen:Array.isArray(x.event_data?.fragen)?x.event_data.fragen:[],
+      links:Array.isArray(x.event_data?.links)?x.event_data.links:[]})),...verlauf];
     zeigeVerlauf();
   }
   function merke(m){
@@ -184,7 +188,7 @@ function init(b){
     zeigeVerlauf();
     if(!b.doc()?.id||!b.nutzerId())return;
     void sb.from('office_kosten_dialogue_messages').insert({instance_id:b.doc().id,user_id:b.nutzerId(),role:m.role,body:String(m.body||'').slice(0,4000),
-      event_kind:m.kind||'answer',event_data:{quelle:VERSION,hinweise:(m.hinweise||[]).slice(0,20),fragen:(m.fragen||[]).slice(0,4)}})
+      event_kind:m.kind||'answer',event_data:{quelle:VERSION,hinweise:(m.hinweise||[]).slice(0,20),fragen:(m.fragen||[]).slice(0,4),links:(m.links||[]).slice(0,8)}})
       .then(({error})=>{if(error)console.warn('Assistent: Verlauf nicht gespeichert',error.message)});
   }
   async function pruefeStatus(){
@@ -205,6 +209,8 @@ function init(b){
       if(m.role==='user')return '<div class="as-msg ich"><p>'+esc(m.body)+'</p></div>';
       let extra='';
       if(m.fragen?.length)extra+='<ul class="as-fragen">'+m.fragen.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>';
+      const links=(m.links||[]).filter(l=>/^https?:\/\//i.test(String(l?.url||'')));
+      if(links.length)extra+='<p class="as-links"><span>Quellen</span>'+links.map(l=>'<a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer">'+esc(l.titel||l.url)+'</a>').join('')+'</p>';
       if(m.hinweise?.length)extra+='<details class="as-hinweise"><summary>'+m.hinweise.length+(m.hinweise.length===1?' Hinweis der Prüfung':' Hinweise der Prüfung')+'</summary><ul>'+
         m.hinweise.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul></details>';
       if(m.undo&&rueckgaengig?.id===m.undo&&unveraendert())extra+='<button type="button" class="btn as-undo" data-as="rueckgaengig">Rückgängig</button>';
@@ -233,7 +239,7 @@ function init(b){
       const rechnung=z.modus==='betrag'?'pauschal':(z.menge?esc(R.zahl(z.menge,3))+' '+esc(z.einheit||'')+(z.ep?' × '+esc(preis(z.ep))+' €':''):'');
       liste+='<div class="as-pos'+(z.element?' im-el':'')+'"><span class="t">'+esc(z.titel)+(rechnung?'<small>'+rechnung+'</small>':'')+'</span>'+
         '<span class="num">'+(z.betragCent!==null?R.euro(z.betragCent,{nachkomma:true}):'<span class="chip chip-att">offen</span>')+'</span>'+
-        (z.quelle?'<span class="chip chip-src" title="'+esc(z.fundstelle)+'">'+esc(quelleKurz(z.quelle))+'</span>':'<span></span>')+'</div>';
+        (z.quelle?'<span class="chip '+(z.quelle==='ki'?'chip-att':'chip-src')+'" title="'+esc(z.fundstelle||z.notiz||'')+'">'+esc(quelleKurz(z.quelle))+'</span>':'<span></span>')+'</div>';
     }
     const st=b.stand();
     for(const a of vorschlag.result.vorschlag.aenderungen||[]){
@@ -309,7 +315,7 @@ function init(b){
   }
 
   // ---------- Senden ----------
-  const FEHLER={daily_ai_limit_reached:'Für heute sind die 25 Anfragen aufgebraucht. Morgen geht es weiter.',
+  const FEHLER={ai_request_not_allowed:'Für diese Kostenberechnung ist keine Anfrage möglich (nicht angemeldet oder nicht freigegeben).',
     revision_changed:'Die Kostenberechnung wurde inzwischen geändert. Bitte die Seite neu laden und noch einmal fragen.',
     ai_timeout_or_network:'Die Anfrage hat zu lange gedauert. Mit weniger oder kleineren Anhängen geht es schneller; bei langen Tabellen mit «weiter» fortsetzen.',
     invalid_attachments:'Ein Anhang ist nicht lesbar (PDF, JPEG, PNG oder WebP, höchstens 8 MB).',invalid_table:'Die Tabelle ist nicht lesbar oder zu lang.',
@@ -340,7 +346,7 @@ function init(b){
       let v=null;
       if(r.vorschlag){try{v=vorschau(r.vorschlag,b.stand(),R)}catch(e){console.warn('Assistent: Vorschau',e)}}
       const brauchbar=v&&(v.positionen||v.elemente||v.aenderungen||v.entfallen);
-      merke({role:'assistant',kind:brauchbar?'proposal':'answer',body:r.text,hinweise:r.hinweise||[],fragen:r.fragen||[]});
+      merke({role:'assistant',kind:brauchbar?'proposal':'answer',body:r.text,hinweise:r.hinweise||[],fragen:r.fragen||[],links:Array.isArray(r.links)?r.links:[]});
       if(brauchbar)vorschlag={result:r,vorschau:v};
     }catch(e){
       console.error('Assistent',e);

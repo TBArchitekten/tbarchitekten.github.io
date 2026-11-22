@@ -1,9 +1,10 @@
--- Abnahme RLS · KI-Assistent der Kostenberechnung (Migration 20261121180000_office_kosten_ai_v1.sql), 21.11.2026.
+-- Abnahme RLS · KI-Assistent der Kostenberechnung (Migrationen 20261121180000_office_kosten_ai_v1.sql und
+-- 20261122100000_office_ki_ohne_tageslimit.sql: kein Tageslimit, jede Anfrage wird gezählt), 21./22.11.2026.
 -- Erfundene Personen und Projekte; alles läuft in einer Transaktion, die am Ende zurückgerollt wird.
 -- A = Projektleitung von P, B = Team von P, C = Mitglied ohne Bezug zu P, D = kein Office-Mitglied.
 -- Erwartet (Wahrheitswerte als «true»/«false»: so schreibt PL/pgSQL sie in Text):
 -- B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=false; C_liest=0;
--- B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_limit=false;
+-- B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=31;
 begin;
 insert into auth.users(id,aud,role,email,instance_id) values
  ('a1000000-0000-4000-8000-00000000000a','authenticated','authenticated','ka-a@example.invalid','00000000-0000-0000-0000-000000000000'),
@@ -24,7 +25,7 @@ do $test$
 declare
   r text := ''; n int; ok boolean;
   erwartet constant text := 'B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=false; C_liest=0; '
-    || 'B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_limit=false; ';
+    || 'B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=31; ';
   k constant uuid := 'f1000000-0000-4000-8000-0000000000f1';
 begin
   -- B (Team, Ersteller): schreibt und liest den eigenen Verlauf, verbraucht Kontingent.
@@ -75,11 +76,12 @@ begin
   exception when others then r := r || 'anon=verweigert; ';
   end;
   execute 'reset role';
-  -- Höchstens 25 Anfragen je Tag: nach 24 weiteren ist Schluss.
+  -- Kein Tageslimit (Entscheidung Gari, 22.11.2026): auch nach 29 weiteren Anfragen geht es, und alle sind gezählt.
   perform set_config('request.jwt.claims', '{"sub":"b1000000-0000-4000-8000-00000000000b","role":"authenticated"}', true);
   execute 'set local role authenticated';
-  for i in 1..24 loop perform public.office_kosten_ai_consume_request(k); end loop;
-  select public.office_kosten_ai_consume_request(k) into ok; r := r || 'B_limit=' || ok || '; ';
+  for i in 1..29 loop perform public.office_kosten_ai_consume_request(k); end loop;
+  select public.office_kosten_ai_consume_request(k) into ok; r := r || 'B_ohne_limit=' || ok || '; ';
+  select count(*) into n from public.office_kosten_ai_requests where instance_id=k; r := r || 'B_gezaehlt=' || n || '; ';
   execute 'reset role';
   if r <> erwartet then raise exception 'RLS KI-Assistent Kostenberechnung weicht ab: % (erwartet: %)', r, erwartet; end if;
   raise notice 'RLS KI-Assistent Kostenberechnung: %', r;

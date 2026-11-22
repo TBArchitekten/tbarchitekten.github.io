@@ -1,7 +1,8 @@
-// TBA Office · KI-Assistent der Kostenberechnung (21.11.2026, Claude). Wie office-terminplan-ai:
+// TBA Office · KI-Assistent der Kostenberechnung (21.11.2026, Claude; v2 22.11.2026). Wie office-terminplan-ai:
 // Anmeldung und Office-Mitgliedschaft prüfen, die Kostenberechnung unter RLS mit der Sitzung der Person lesen,
-// Tageskontingent vor jedem bezahlten Aufruf, Antwort nach festem Schema. Der Assistent schreibt nie in die
-// Kostenberechnung: er liefert einen Vorschlag, den der Client erst nach «Prüfen und übernehmen» speichert.
+// jede Anfrage zählen (kein Tageslimit, Entscheidung Gari 22.11.2026), Websuche ohne Anhänge wie beim Terminplan,
+// Antwort nach festem Schema. Der Assistent schreibt nie in die Kostenberechnung: er liefert einen Vorschlag,
+// den der Client erst nach «Prüfen und übernehmen» speichert.
 import {createClient} from "npm:@supabase/supabase-js@2.57.0";
 import "./kosten-rechnen.js"; // derselbe Rechenkern wie im Werkzeug (Kopie, per Test gleich gehalten)
 import {MODEL,VERSION,SCHEMA,anweisungen,validId,validMessage,validRevision,pruefeTabelle,pruefeAuswahl,toContext,pruefeAntwort} from "./core.mjs";
@@ -28,6 +29,17 @@ function outputText(payload:any){
     for(const content of item.content||[])if(content.type==="output_text"&&typeof content.text==="string")result.push(content.text);
   }
   return result.join("").trim()||null;
+}
+// Quellen der Websuche, wie der Anbieter sie an den Text hängt (url_citation).
+// deno-lint-ignore no-explicit-any
+function zitate(payload:any){
+  const result:{title:string,url:string}[]=[];
+  for(const item of payload?.output||[]){
+    if(item.type!=="message")continue;
+    for(const content of item.content||[])for(const a of content?.annotations||[])
+      if(a?.type==="url_citation"&&typeof a.url==="string")result.push({title:String(a.title||""),url:a.url});
+  }
+  return result;
 }
 
 Deno.serve(async req=>{
@@ -82,10 +94,10 @@ Deno.serve(async req=>{
   let context;
   try{context=toContext(inst.state,R,{projekt:[inst.project_number,inst.project_name].filter(Boolean).join(" · "),auswahl,darfBearbeiten:canEdit})}
   catch{return respond(422,{error:"kostenberechnung_context_unavailable"})}
-  // Kontingent je Person und Tag, atomar vor dem bezahlten Modellaufruf.
+  // Jede Anfrage wird vor dem bezahlten Modellaufruf gezählt (Nutzung nachvollziehbar); ein Tageslimit gibt es nicht.
   const {data:allowed,error:quotaError}=await sb.rpc("office_kosten_ai_consume_request",{p_instance_id:instanceId});
   if(quotaError)return respond(503,{error:"office_ai_quota_unavailable"});
-  if(allowed!==true)return respond(429,{error:"daily_ai_limit_reached"});
+  if(allowed!==true)return respond(403,{error:"ai_request_not_allowed"});
   // Verlauf nur der eigenen Nachrichten zu dieser Kostenberechnung (RLS); Gesprächsdaten, keine Anweisungen.
   const {data:previous,error:historyError}=await sb.from("office_kosten_dialogue_messages")
     .select("role,body,event_kind,created_at").eq("user_id",auth.user.id).eq("instance_id",instanceId)
@@ -102,7 +114,8 @@ Deno.serve(async req=>{
   // Die Tabelle als eigener Textteil: Zeilennummer, Tabulator, Zellen wie im Blatt.
   if(tabelle)content.push({type:"input_text",text:"anhang_tabelle «"+tabelle.name+"» (Zeilennummer, dann die Zellen, getrennt durch Tabulatoren):\n"+tabelle.text});
   const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),gross?135000:80000);
+  // Mit Anhängen liest das Modell die Dateien (ohne Websuche, wie beim Terminplan); sonst darf es im Netz suchen.
+  const timeout=setTimeout(()=>controller.abort(),gross?135000:120000);
   // deno-lint-ignore no-explicit-any
   let provider:any;
   try{
@@ -110,10 +123,10 @@ Deno.serve(async req=>{
       method:"POST",signal:controller.signal,
       headers:{"Authorization":"Bearer "+secret,"Content-Type":"application/json"},
       body:JSON.stringify({
-        model:MODEL,store:false,max_output_tokens:gross?12000:6000,reasoning:{effort:gross?"low":"medium"},
+        model:MODEL,store:false,max_output_tokens:gross?12000:8000,reasoning:{effort:gross?"low":"medium"},
         instructions:anweisungen(),
         input:[{role:"user",content:[...content,...anhaenge.parts]}],
-        tools:[],
+        tools:gross?[]:[{type:"web_search",search_context_size:"medium"}],
         text:{format:{type:"json_schema",name:"office_kosten_assistent_v1",strict:true,schema:SCHEMA}}
       })
     });
@@ -126,7 +139,7 @@ Deno.serve(async req=>{
   const text=outputText(provider);
   if(!text)return respond(502,{error:"ai_incomplete"});
   let result;
-  try{result=pruefeAntwort(JSON.parse(text),inst.state,R,{darfBearbeiten:canEdit})}
+  try{result=pruefeAntwort(JSON.parse(text),inst.state,R,{darfBearbeiten:canEdit,zitate:zitate(provider)})}
   catch{return respond(502,{error:"ai_invalid_response"})}
   return respond(200,{version:VERSION,authority:"none",model:MODEL,base_revision:inst.server_revision,can_edit:canEdit,
     quellen:[...anhaenge.sources.map(x=>x.name),...(tabelle?[tabelle.name]:[])],result});
