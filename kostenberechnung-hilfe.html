@@ -138,7 +138,9 @@
     <tr><td>Eigenes Projekt</td><td>abgerechnete Werte eines TBA-Projekts</td><td>–</td><td>Projekt und Gewerk</td></tr>
     <tr><td>Angebot oder Richtpreis</td><td>netto</td><td>–</td><td>Firma und Datum</td></tr>
     <tr><td>Fachplanung</td><td>Kostenbeitrag, netto</td><td>–</td><td>Kostenbeitrag mit Datum</td></tr>
+    <tr><td>Internet</td><td>Listen- oder Händlerpreis, Herstellerangabe, Index; Händlerpreise oft mit Umsatzsteuer</td><td>–</td><td>Adresse der Seite und Abrufdatum</td></tr>
     <tr><td>Annahme TBA</td><td>Schätzung des Büros</td><td>–</td><td>keine; im Bericht als Annahme sichtbar</td></tr>
+    <tr><td>Annahme KI</td><td>Schätzung des Assistenten, mit Begründung im Kommentar</td><td>–</td><td>keine; in Tabelle, Übersicht und Bericht als «Annahme KI» sichtbar</td></tr>
   </tbody></table></div>
   <p>Bei jeder Quelle gilt außerdem: Weicht der Kostenstand des Kennwerts vom Kostenstand der Kostenberechnung ab, rechnet der Baupreisindex ihn um. Jede dieser Annahmen lässt sich an der Position abschalten, etwa wenn ein BKI-Wert schon netto übernommen wurde («Wert enthält Umsatzsteuer», «Regionalfaktor anwenden», «Zuschlag für Gemeinkosten, Wagnis und Gewinn», «Mit dem Baupreisindex fortschreiben»).</p>
   <h3>Die Herkunftskette</h3>
@@ -174,7 +176,7 @@
 <section class="kap" id="assistent">
   <p class="kicker">Teil VI · Assistent</p>
   <h2>Fragen, Angebote und das alte Büro-Excel</h2>
-  <p>«Assistent» oben neben der Anleitung öffnet das Gespräch rechts, an der Stelle der Details; auf dem iPhone kommt es von unten. Der Assistent kennt die Kostenberechnung: Gliederung, Positionen mit Quelle, Summen, Vergleich und was noch fehlt. Er beantwortet Fragen, wertet angehängte Dateien aus und schlägt Positionen und Elemente vor. In die Kostenberechnung kommt nur, was du prüfst und übernimmst.</p>
+  <p>«Assistent» oben neben der Anleitung öffnet das Gespräch rechts, an der Stelle der Details; auf dem iPhone kommt es von unten. Du sprichst mit ihm wie mit einem Kollegen, auf Deutsch oder Spanisch, über diese Kostenberechnung und alles darum herum: DIN 276 und HOAI, Bauteile, Produkte, Preise, Alternativen. Er kennt die offene Kostenberechnung (Gliederung, Positionen mit Quelle, Summen, Vergleich, was noch fehlt), sucht für Aktuelles im Internet und nennt die Quellen als Links. In die Kostenberechnung kommt nur, was du prüfst und übernimmst.</p>
   <figure class="abb"><div class="flaeche"><div class="ui-chat">
     <div class="ui-blase ich">Werte das Angebot aus und schlage Positionen vor.<small>Anhänge: Angebot Fassade.pdf</small></div>
     <div class="ui-blase ki">Aus dem Angebot: ein Element mit zwei Positionen; der Oberputz hat noch keinen Preis.<small>1 Hinweis der Prüfung</small></div>
@@ -187,29 +189,32 @@
       <div class="ui-vp"><span>Oberputz<small>412,5 m²</small></span><span></span><span class="chip chip-att">offen</span></div>
       <p class="ui-vb"><span class="ui-knopf">Prüfen und übernehmen</span><span class="ui-knopf leise">Verwerfen</span></p>
     </div>
-  </div></div><figcaption>Abbildung 5. Das Gespräch mit einem Vorschlag aus einem Angebot (Beispieldaten). Der Preis des Oberputzes stand nicht im Angebot; die Position bleibt offen, statt einen Preis zu erfinden. Schematische Nachbildung, kein Projekt.</figcaption></figure>
+  </div></div><figcaption>Abbildung 5. Das Gespräch mit einem Vorschlag aus einem Angebot (Beispieldaten). Der Oberputz steht im Angebot ohne Preis; er bleibt offen, bis du eine Quelle hast oder den Assistenten um eine Schätzung bittest, die dann als «Annahme KI» kommt. Schematische Nachbildung, kein Projekt.</figcaption></figure>
   <h3>Was er kann</h3>
   <div class="a-tab-wrap"><table class="a-tab"><thead><tr><th>Auftrag</th><th>Was du anhängst</th><th>Was zurückkommt</th></tr></thead><tbody>
     <tr><td>Altes Büro-Excel übernehmen</td><td>Die Mappe als .xlsx oder CSV. Hat sie mehrere Blätter, liest der Assistent das mit den meisten Kostengruppen.</td><td>Positionen in ihren Kostengruppen, Zwischenüberschriften als Elemente, «nicht vorhanden» als «entfällt». Fundstelle ist die Zeile im Excel.</td></tr>
     <tr><td>Angebot oder Kostenbeitrag auswerten</td><td>PDF oder Foto, bis zu drei Dateien, je höchstens 8 MB</td><td>Positionen mit Menge, Einheit, Einheitspreis und Fundstelle (Firma, Datum, Position); ein Kostenbeitrag für eine ganze Kostengruppe als Pauschale.</td></tr>
+    <tr><td>Fragen zu Preisen, Produkten, Normen</td><td>–</td><td>Eine Antwort mit Begründung; Aktuelles (Baupreisindex, Herstellerangaben, Listenpreise) aus dem Internet, mit Links zu den Quellen.</td></tr>
     <tr><td>Was fehlt noch?</td><td>–</td><td>Die offenen Punkte nach Wichtigkeit, mit Kostengruppen und Beträgen.</td></tr>
     <tr><td>Abweichung zur Kostenschätzung erklären</td><td>–</td><td>Die Abweichungen je Kostengruppe und wodurch sie entstehen.</td></tr>
-    <tr><td>Elemente für die Auswahl vorschlagen</td><td>Vorher in der Tabelle eine Kostengruppe der 3. Ebene wählen, etwa 335</td><td>Elemente mit ihren Positionen wie im Büro-Excel, ohne Preise, wenn keine Quelle vorliegt.</td></tr>
+    <tr><td>Elemente für die Auswahl vorschlagen</td><td>Vorher in der Tabelle eine Kostengruppe der 3. Ebene wählen, etwa 335</td><td>Elemente mit ihren Positionen wie im Büro-Excel; Preise mit Quelle, sonst als «Annahme KI» oder leer.</td></tr>
   </tbody></table></div>
   <p>Gewählte Kostengruppen und Positionen gelten als Bezug der Frage («Bezug: KG 335»); das × daneben hebt ihn auf. Mit Enter wird gesendet, mit Umschalt und Enter beginnt eine neue Zeile.</p>
   <h3>Prüfen und übernehmen</h3>
   <p>Ein Vorschlag erscheint als Karte: was er an der Summe ändert, wie viele Positionen, Elemente und Änderungen er enthält, und jede Position mit Rechnung und Quelle. «Prüfen und übernehmen» gleicht ihn mit dem aktuellen Stand ab (was nicht mehr passt, fällt heraus und wird gezählt), trägt ihn ein und speichert wie jede andere Änderung. Die neuen Zeilen sind hinterlegt, bis du weiterarbeitest; in den Details steht «Vom Assistenten vorgeschlagen, übernommen am …». «Rückgängig» stellt den Stand vor der Übernahme wieder her, solange danach nichts anderes geändert wurde. «Verwerfen» ändert nichts.</p>
-  <h3>Regeln, die der Assistent nicht umgehen kann</h3>
-  <p>Jede Antwort wird geprüft, bevor sie erscheint; was gegen diese Regeln verstößt, fällt heraus und steht unter «Hinweise der Prüfung».</p>
+  <h3>Woher die Zahlen kommen</h3>
+  <p>Im Gespräch nennt der Assistent Preise, Spannen und Schätzungen frei und sagt, worauf sie beruhen. In der Tabelle zeigt jeder Preis seine Herkunft: eine Quelle mit Fundstelle (Buch und Seite, Angebot und Position, Zeile im Excel oder die Adresse einer Webseite) oder «Annahme KI», die Schätzung des Assistenten, mit einem Satz Begründung im Kommentar. Behauptet er eine Quelle, ohne sie belegen zu können, kommt der Preis als «Annahme KI», nicht als BKI oder Angebot; die genannte Quelle steht im Kommentar. Ändert er einen Preis ohne neue Fundstelle, wird auch die Herkunft «Annahme KI». Wie viel der Summe auf Annahmen beruht, zeigt die Übersicht in der Karte «Herkunft der Beträge».</p>
+  <h3>Was immer gilt</h3>
+  <p>Jede Antwort wird geprüft, bevor sie erscheint; was nicht in die Tabelle passt, steht unter «Hinweise der Prüfung».</p>
   <ul class="a-liste">
-    <li><strong>Kein Preis ohne Herkunft.</strong> Ein Einheitspreis oder Betrag ohne Quelle und Fundstelle wird nicht übernommen; die Position bleibt offen. Nur wenn du ausdrücklich eine Schätzung verlangst, kommt sie mit der Quelle «Annahme» und dem Kommentar «Annahme KI: …».</li>
+    <li>Er schreibt nie selbst in die Kostenberechnung: alles kommt als Vorschlag, den du übernimmst oder verwirfst.</li>
     <li>Nur Kostengruppen aus der Gliederung; Elemente nur in Kostengruppen der 3. Ebene; ein Betrag für eine Kostengruppe der 2. Ebene wird eine Pauschale.</li>
     <li>«Entfällt» nur für Kostengruppen ohne Positionen. Änderungen nur an Positionen, die es gibt, und passend zur Rechenweise.</li>
-    <li>Höchstens 80 Positionen je Vorschlag. Bei langen Tabellen «weiter» schreiben; die Datei bleibt angehängt, bis du sie entfernst.</li>
+    <li>Höchstens 80 Positionen je Vorschlag, damit eine Anfrage in der Zeit bleibt. Bei langen Tabellen «weiter» schreiben; die Datei bleibt angehängt, bis du sie entfernst.</li>
     <li>Wer die Kostenberechnung nur ansehen darf, bekommt Antworten, aber keine Vorschläge.</li>
   </ul>
-  <h3>Daten und Grenzen</h3>
-  <p>Vor jeder Anfrage wird gespeichert; dann gehen der gespeicherte Stand der Kostenberechnung und die angehängten Dateien an den KI-Anbieter des Office. Die Dateien werden nicht im Office abgelegt. Den Gesprächsverlauf sieht nur, wer ihn geführt hat, je Kostenberechnung. Höchstens 25 Anfragen am Tag je Person. Der Assistent sucht nicht im Internet: BKI-Kennwerte und Heinze-Preise kommen aus den Büchern und Datenbanken des Büros (Teil IV), oder als Angebot, das du anhängst.</p>
+  <h3>Daten</h3>
+  <p>Vor jeder Anfrage wird gespeichert; dann gehen der gespeicherte Stand der Kostenberechnung und die angehängten Dateien an den KI-Anbieter des Office. Ins Internet gehen nur allgemeine Suchbegriffe, nie der Projektname, die Projektnummer, Namen oder Inhalte der Kostenberechnung; mit Anhängen sucht er nicht im Netz. Die Dateien werden nicht im Office abgelegt. Den Gesprächsverlauf sieht nur, wer ihn geführt hat, je Kostenberechnung. Ein Tageslimit gibt es nicht; jede Anfrage wird gezählt.</p>
 </section>
 
 <section class="kap a-quellen" id="quellen">

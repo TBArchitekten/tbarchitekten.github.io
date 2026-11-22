@@ -422,6 +422,10 @@ test('Assistent: Vorschlag aus einem Angebot prüfen, übernehmen und rückgäng
     assert.match(text,/2 Positionen \(1 offen\) · 1 Element · 1 Kostengruppe entfällt/);
     assert.match(text,/WDVS Mineralwolle 160 mm \+ Putz/);
     assert.match(await as.locator('.as-hinweise summary').textContent(),/1 Hinweis der Prüfung/);
+    // Quellen der Antwort als Links, die in einem neuen Fenster aufgehen.
+    const link=as.locator('.as-links a',{hasText:'Hersteller Beispiel'});
+    assert.equal(await link.getAttribute('href'),'https://hersteller.example/wdvs');
+    assert.equal(await link.getAttribute('rel'),'noopener noreferrer');
     // Die Anfrage: erwartete Revision, Anhang als data:-URL, keine Tabelle, nichts geschrieben.
     const anfrage=await page.evaluate(()=>window.__fake.anfragen.find(a=>a.body.action==='frage').body);
     assert.equal(anfrage.expected_revision,(await stand(page)).server_revision);
@@ -475,8 +479,8 @@ test('Assistent: altes Büro-Excel als Tabelle mit Zeilennummern; Fehler der KI 
   const {ctx,page,fehler}=await oeffne();
   try{
     await anlegen(page);
-    await page.evaluate(()=>{window.__fake.ki=async(name,body)=>body.action==='status'?{data:{ready:true,version:'office-kosten-ai-v1',model:'test-modell'},error:null}:
-      {data:{error:'daily_ai_limit_reached'},error:{message:'429'}}});
+    await page.evaluate(()=>{window.__fake.ki=async(name,body)=>body.action==='status'?{data:{ready:true,version:'office-kosten-ai-v2',model:'test-modell'},error:null}:
+      {data:{error:'ai_timeout_or_network'},error:{message:'504'}}});
     await page.click('.kb-actions [data-act="assistent"]');
     await page.waitForFunction(()=>/test-modell/.test(document.getElementById('asModell')?.textContent||''));
     const csv='KG;Bezeichnung;Menge;EH;EP;Kommentar\n\n335;Dämmung;412,5;m²;128;BKI\n';
@@ -485,7 +489,7 @@ test('Assistent: altes Büro-Excel als Tabelle mit Zeilennummern; Fehler der KI 
     await page.locator('#kbAssistent .as-chip',{hasText:'altes-buero-excel.csv · 2 Zeilen'}).waitFor();
     assert.match(await page.inputValue('#asText'),/Übernimm die Positionen aus dem Büro-Excel/);
     await page.click('#asSenden');
-    await page.locator('#kbAssistent .as-msg.warn',{hasText:'25 Anfragen aufgebraucht'}).waitFor();
+    await page.locator('#kbAssistent .as-msg.warn',{hasText:'Die Anfrage hat zu lange gedauert'}).waitFor();
     const anfrage=await page.evaluate(()=>window.__fake.anfragen.filter(a=>a.body.action==='frage').pop().body);
     assert.equal(anfrage.tabelle.name,'altes-buero-excel.csv');
     assert.equal(anfrage.tabelle.text,'1\tKG\tBezeichnung\tMenge\tEH\tEP\tKommentar\n3\t335\tDämmung\t412,5\tm²\t128\tBKI');

@@ -24,7 +24,11 @@ const ARTEN=Object.freeze({
   eigen:{label:'Eigenes Projekt',kurz:'Eigenes Projekt',brutto:false,regional:false,zuschlag:false,fundstelle:true},
   angebot:{label:'Angebot oder Richtpreis',kurz:'Angebot',brutto:false,regional:false,zuschlag:false,fundstelle:true},
   fachplanung:{label:'Fachplanung',kurz:'Fachplanung',brutto:false,regional:false,zuschlag:false,fundstelle:true},
-  annahme:{label:'Annahme TBA',kurz:'Annahme',brutto:false,regional:false,zuschlag:false,fundstelle:false}
+  // 22.11.2026: Preise aus dem Internet (Hersteller, Händler, Index; Fundstelle = Adresse) und Schätzungen des
+  // Assistenten («Annahme KI»), damit jeder Preis seine Herkunft zeigt, auch wenn er nicht aus einem Buch kommt.
+  internet:{label:'Internet (Hersteller, Händler, Index)',kurz:'Internet',brutto:false,regional:false,zuschlag:false,fundstelle:true},
+  annahme:{label:'Annahme TBA',kurz:'Annahme',brutto:false,regional:false,zuschlag:false,fundstelle:false},
+  ki:{label:'Annahme KI (Assistent)',kurz:'Annahme KI',brutto:false,regional:false,zuschlag:false,fundstelle:false}
 });
 const MENGENQUELLEN=Object.freeze({archicad:'Archicad',fachplanung:'Fachplanung',manuell:'Handermittlung'});
 const EINHEITEN=Object.freeze(['m²','m','m³','St','psch','kg','t']);

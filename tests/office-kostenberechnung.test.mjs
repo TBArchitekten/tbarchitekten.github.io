@@ -225,8 +225,8 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<html lang="de">/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office3',
-    './kosten-import.js?v=office2','./kosten-assistent.js?v=office1','./kostenberechnung.js?v=office4','./kostenberechnung.css?v=office4'])
+  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office4',
+    './kosten-import.js?v=office2','./kosten-assistent.js?v=office2','./kostenberechnung.js?v=office4','./kostenberechnung.css?v=office5'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
     seite.indexOf('kosten-assistent.js')<seite.indexOf('kostenberechnung.js?'));
@@ -313,9 +313,12 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   assert.match(read('app/office-projects.js'),/Anleitung zum Terminplan · Werkzeug, Assistent, LPH 3 und LPH 5/);
   for(const id of ['ablauf','kostengruppen','archicad','kennwerte','bericht','assistent','quellen'])assert.match(hilfe,new RegExp('id="'+id+'"'));
   // Assistent (Teil VI): was er kann, prüfen und übernehmen, keine Preise ohne Herkunft, Daten und Grenzen.
-  for(const t of ['Teil VI · Assistent','Altes Büro-Excel übernehmen','Prüfen und übernehmen','Rückgängig','Kein Preis ohne Herkunft','«Annahme KI: …»',
-    'Höchstens 80 Positionen je Vorschlag','Höchstens 25 Anfragen am Tag je Person','sucht nicht im Internet'])
+  for(const t of ['Teil VI · Assistent','Altes Büro-Excel übernehmen','Prüfen und übernehmen','Rückgängig','auf Deutsch oder Spanisch',
+    'Woher die Zahlen kommen','kommt der Preis als «Annahme KI», nicht als BKI oder Angebot','Er schreibt nie selbst in die Kostenberechnung',
+    'Höchstens 80 Positionen je Vorschlag','nie der Projektname','Ein Tageslimit gibt es nicht; jede Anfrage wird gezählt.',
+    '<tr><td>Internet</td>','<tr><td>Annahme KI</td>'])
     assert.ok(hilfe.includes(t),'fehlt im Kapitel Assistent: '+t);
+  for(const t of ['25 Anfragen','sucht nicht im Internet','Regeln, die der Assistent nicht umgehen kann'])assert.ok(!hilfe.includes(t),'veraltet: '+t);
   assert.ok(!hilfe.includes('folgt als nächster Schritt'),'die Anleitung kündigt den Assistenten noch an');
   for(const t of ['3. Ebene','ohne Ansatz','in Pauschale','Entfällt','Rezept','Herkunftskette','219,54 €','52.415,18 €','5 % oder 10.000 €','Stand festhalten'])
     assert.ok(hilfe.includes(t),'fehlt in der Anleitung zur Kostenberechnung: '+t);
