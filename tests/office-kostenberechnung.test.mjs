@@ -211,6 +211,45 @@ test('Archicad als CSV: deutsche Zahlen werden erkannt',()=>{
   assert.throws(()=>I.gruppiere([['Name','Fläche']],I.erkenneSpalten([['Name','Fläche']])),/keine Spalte mit der Kostengruppe/);
 });
 
+test('Archicad: die Spaltenköpfe der Anleitung (Teil III) werden erkannt',()=>{
+  // Felder der Auswertung «TBA Kosten · Mengen», wie Archicad sie in die Kopfzeile schreibt; die ARCHICAD-Klassifizierung daneben stört nicht.
+  const kopf=['ARCHICAD-Klassifizierung','DIN 276:2018-12 (TBA)','Bauteiltyp','Baustoff/Mehrschichtiger Aufbau/Profil','Elementtyp','Ausgangsgeschoss','Anzahl','Wandfläche netto','Oberfläche','Länge','Volumen netto'];
+  const zeilen=[kopf,['Wand','331','AW-01','AW-01 KS 17,5 + WDVS 16','Wand','EG','2','120.5','','24','21.1'],['Rohbaudecke','351','DE-01','Stahlbeton 22','Decke','EG','1','','80','','17.6']];
+  const s=I.erkenneSpalten(zeilen);
+  assert.deepEqual([s.kg,s.bauteiltyp,s.aufbau,s.elementtyp,s.geschoss,s.anzahl,s.flaeche,s.laenge,s.volumen],[1,2,3,4,5,6,[7,8],9,10]);
+  const g=I.gruppiere(zeilen,s).gruppen;
+  assert.deepEqual(g.map(x=>[x.kg,x.bauteiltyp,x.mengen.flaeche]),[['331','AW-01','120.5'],['351','DE-01','80']]);
+});
+
+test('Klassifizierung für Archicad: Format des Klassifizierungs-Managers, Gliederung aus dem Stand',()=>{
+  // Erfundene Bezeichnungen: die echten kommen aus dem Muster in der Datenbank.
+  const katalog=[{kg:'100',titel:'Gruppe 100'},{kg:'200',titel:'Gruppe 200'},{kg:'210',titel:'Gruppe 210'},{kg:'212',titel:'Gruppe 212'},
+    {kg:'300',titel:'Gruppe 300'},{kg:'330',titel:'Gruppe 330'},{kg:'331',titel:'Gruppe 331 & <Test>'},{kg:'335',titel:'Gruppe 335'},
+    {kg:'349',titel:'Gruppe 349 ohne 340'},{kg:'600',titel:'Gruppe 600'},{kg:'700',titel:'Gruppe 700'},{kg:'800',titel:'Gruppe 800'},{kg:'331',titel:'doppelt'}];
+  const xml=I.klassifizierungXml(katalog);
+  assert.match(xml,/^<\?xml version="1\.0" encoding="UTF-8" standalone="no" \?>\n<BuildingInformation>\n\t<Classification>\n\t\t<System>\n\t\t\t<Name>DIN 276:2018-12 \(TBA\)<\/Name>/);
+  assert.match(xml,/<EditionVersion>2018-12<\/EditionVersion>/);
+  assert.equal(I.SYSTEM_NAME,'DIN 276:2018-12 (TBA)');
+  // Nur 200 bis 600, jede Nummer einmal, in der Reihenfolge der Gliederung.
+  assert.deepEqual([...xml.matchAll(/<ID>(\d+)<\/ID>/g)].map(m=>m[1]),['200','210','212','300','330','331','335','349','600']);
+  assert.ok(xml.includes('<Name>Gruppe 331 &amp; &lt;Test&gt;</Name>'));
+  assert.ok(!xml.includes('doppelt'));
+  // Verschachtelt: 331 und 335 unter 330 unter 300; 349 ohne 340 hängt an 300; Blätter haben <Children/>.
+  const block=kg=>{const i=xml.indexOf('<ID>'+kg+'</ID>');return xml.slice(xml.lastIndexOf('<Item>',i))};
+  assert.match(block('330'),/^<Item>\n\t+<ID>330<\/ID>\n\t+<Name>Gruppe 330<\/Name>\n\t+<Description\/>\n\t+<Availability>ModelElement<\/Availability>\n\t+<Children>\n\t+<Item>\n\t+<ID>331<\/ID>/);
+  const tiefe=kg=>xml.split('\n').find(l=>l.trim()==='<ID>'+kg+'</ID>').match(/^\t*/)[0].length-1;
+  assert.deepEqual(['300','330','331','349'].map(tiefe),[4,6,8,6]);
+  assert.match(block('335'),/^<Item>\n\t+<ID>335<\/ID>[\s\S]*?<Children\/>/);
+  assert.equal((xml.match(/<Item>/g)||[]).length,(xml.match(/<\/Item>/g)||[]).length);
+  assert.match(xml,/<\/Items>\n\t\t<\/System>\n\t<\/Classification>\n<\/BuildingInformation>\n$/);
+  assert.throws(()=>I.klassifizierungXml([{kg:'100',titel:'nur 100'}]),/keine Gliederung/);
+  // Die Oberfläche bietet die Datei an, auch nur zum Ansehen, und nennt die Anleitung.
+  assert.match(ui,/data-act="klassifizierung">Klassifizierung für Archicad \(\.xml\)</);
+  assert.match(ui,/if\(act==='klassifizierung'\)\{klassifizierungLaden\(\);return\}\n  if\(act==='neuladen'\)/);
+  assert.match(ui,/a\.download='DIN276-2018_TBA_Archicad-Klassifizierung\.xml'/);
+  assert.match(ui,/href="\.\/kostenberechnung-hilfe\.html#archicad"/);
+});
+
 test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/id="officeToolsKosten" aria-label="Kostenberechnung öffnen"/);
   assert.match(shell,/<strong>Kostenberechnung<\/strong><small>Nach DIN 276 bis zur 3\. Ebene/);
@@ -226,7 +265,7 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office4',
-    './kosten-import.js?v=office2','./kosten-assistent.js?v=office2','./kostenberechnung.js?v=office4','./kostenberechnung.css?v=office5'])
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kostenberechnung.js?v=office5','./kostenberechnung.css?v=office6'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
     seite.indexOf('kosten-assistent.js')<seite.indexOf('kostenberechnung.js?'));
@@ -304,7 +343,7 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   const hilfe=read('kostenberechnung-hilfe.html'),tp=read('terminplan-hilfe.html'),stil=read('anleitung.css');
   for(const [name,html] of [['kostenberechnung-hilfe.html',hilfe],['terminplan-hilfe.html',tp]]){
     assert.match(html,/<html lang="de">/,name);
-    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office3">/,name);
+    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office4">/,name);
     assert.ok(!/<style[\s>]/.test(html),'Stil gehört in anleitung.css: '+name);
     assert.ok(!/\b(para|que|como|desde|proyecto|archivo|tarea|también|costos|cálculo|guardar)\b/i.test(html),'spanische Wörter in '+name);
   }
@@ -322,6 +361,30 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   assert.ok(!hilfe.includes('folgt als nächster Schritt'),'die Anleitung kündigt den Assistenten noch an');
   for(const t of ['3. Ebene','ohne Ansatz','in Pauschale','Entfällt','Rezept','Herkunftskette','219,54 €','52.415,18 €','5 % oder 10.000 €','Stand festhalten'])
     assert.ok(hilfe.includes(t),'fehlt in der Anleitung zur Kostenberechnung: '+t);
+  // Archicad (Teil III): eine einzige Anleitung zum Modellieren und Einlesen (Gari, 22.11.2026), mit Seitenangaben der
+  // Graphisoft-Richtlinien, eigenen Schemata statt Ausschnitten und der Klassifizierung als Datei aus dem Werkzeug.
+  const teil3=hilfe.slice(hilfe.indexOf('id="archicad"'),hilfe.indexOf('id="kennwerte"'));
+  for(const t of ['Teil III · Archicad','Drei Regeln','Welches Bauteil in welche Kostengruppe','Modellieren nach den Richtlinien','Flächen nach DIN 277',
+    'Einrichten in Archicad 26 und Teamwork','Die zwei Auswertungen','«TBA Kosten · Mengen»','«TBA Kosten · Flächen DIN 277»','Erkannt am Spaltenkopf',
+    'Klassifizierung für Archicad (.xml)','«DIN 276:2018-12 (TBA)»','«TBA Kosten»','Erster Test: ein Testmodell in 30 Minuten','Rezepte: ein Bauteil, mehrere Kostengruppen',
+    'Fußbodenaufbau 353 (auf der Sohlplatte 324)','(S. 12)','(S. 17, 18)','(S. 30)','(S. 31)'])
+    assert.ok(teil3.includes(t),'fehlt in Teil III: '+t);
+  for(const id of ['ac-regeln','ac-zuordnung','ac-modellieren','ac-flaechen','ac-einrichten','ac-auswertungen','ac-einlesen','ac-rezepte','ac-test'])
+    assert.ok(teil3.includes('id="'+id+'"')&&teil3.includes('href="#'+id+'"'),'Sprungmarke fehlt: '+id);
+  assert.ok(!hilfe.includes('eigene, interne Anleitung'),'Teil III verweist noch auf eine zweite Anleitung');
+  // Sechs eigene Schemata (SVG), keine Bilder oder Ausschnitte aus den Richtlinien.
+  assert.equal((teil3.match(/<div class="abb-scroll"><svg viewBox="0 0 1000 \d+" role="img" aria-label="[^"]+">/g)||[]).length,6);
+  assert.ok(!/<img\b|data:image|<image\b/.test(hilfe),'die Anleitung bettet Bilder ein');
+  assert.equal((teil3.match(/Eigenes Schema nach Graphisoft, S\. /g)||[]).length,6);
+  assert.deepEqual([...hilfe.matchAll(/Abbildung (\d+)\./g)].map(m=>Number(m[1])),[1,2,3,4,5,6,7,8,9,10,11]);
+  assert.match(hilfe,/href="https:\/\/pub\.graphisoft\.de\/gsmucftp\/bim-modellierungsrichtlinien\/GRAPHISOFT-Literatur-BIM-Modellierungsrichtlinien-fur-ARCHICAD-28\.pdf"/);
+  assert.match(hilfe,/Stand 09\/2023 \(GRA223294\)/);
+  assert.match(hilfe,/CC BY-NC-SA 4\.0/);
+  // Jede Kostengruppe in der Zuordnung gibt es in der Gliederung (3. Ebene, 2. Ebene bei 400 und 600).
+  const kgs=[...teil3.matchAll(/<td class="kg">([^<]*)/g)].flatMap(m=>m[1].match(/\d{3}/g)||[]);
+  assert.ok(kgs.length>=30);
+  for(const kg of kgs)assert.match(kg,/^(3[2-9][1-9]|[46][1-9]0)$/,'KG '+kg);
+  assert.match(stil,/\.a-sprung\{/);assert.match(stil,/@media\(max-width:760px\)\{\.abb-scroll svg\{min-width:720px\}\}/);
   // Terminplan: Assistent, Projektkalender mit Feiertagen, Muster-Planner v0.3.4, Weg zur Kostenberechnung.
   for(const t of ['id="assistent"','Prüfen und übernehmen','Was-wäre-wenn','Projektkalender','fünf folgenden Jahre','keine Notizen',
     'v0.3.4','53 Aufgaben','355 Prüfpunkte','Termine aus Terminplan','Bauteilkatalog','04.03','M08A','./kostenberechnung-hilfe.html','21.11.2026'])

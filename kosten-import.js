@@ -271,5 +271,37 @@ function anwenden(state,gruppen,meta={}){
   return {state:st,bericht:{neu,aktualisiert,entfernt}};
 }
 
-return Object.freeze({zipDateien,leseXlsx,leseXlsxBlaetter,leseCsv,leseDatei,zeilenAusBlatt,geteilteTexte,erkenneSpalten,gruppiere,vergleiche,anwenden,hauptmass,EINHEIT_ZU_MASS,MASS_ZU_EINHEIT});
+// ---------- Klassifizierung für Archicad ----------
+// Datei für den Klassifizierungs-Manager von Archicad (Importieren …), im Format seines Exports:
+// BuildingInformation › Classification › System › Items, je Kostengruppe ein Item mit ID, Name und Children.
+// Nummern und Bezeichnungen kommen aus dem Katalog der Kostenberechnung (Muster in der Datenbank), nie aus
+// diesem Code. Nur KG 200 bis 600: was als Bauteil, Objekt oder Abbruch im Modell vorkommen kann.
+const SYSTEM_NAME='DIN 276:2018-12 (TBA)';
+const XML_ZEICHEN={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'};
+const xmlSchreiben=s=>String(s??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>XML_ZEICHEN[c]);
+function klassifizierungXml(katalog){
+  const eintraege=new Map();
+  for(const k of katalog||[]){const kg=String(k?.kg||'');if(/^[2-6]\d\d$/.test(kg)&&!eintraege.has(kg))eintraege.set(kg,String(k.titel||'').trim())}
+  if(!eintraege.size)throw new Error('Die Kostenberechnung hat keine Gliederung für die Klassifizierung.');
+  const kinder=new Map(),wurzeln=[];
+  // Eltern ist die nächste vorhandene Ebene darüber; fehlt die 2. Ebene, hängt die 3. an der 1.
+  for(const kg of [...eintraege.keys()].sort()){
+    const e=R.ebene(kg),kette=[e===3?kg.slice(0,2)+'0':null,e>=2?kg[0]+'00':null].filter(x=>x&&x!==kg&&eintraege.has(x));
+    if(!kette.length){wurzeln.push(kg);continue}
+    if(!kinder.has(kette[0]))kinder.set(kette[0],[]);kinder.get(kette[0]).push(kg);
+  }
+  const item=(kg,tiefe)=>{
+    const t='\t'.repeat(tiefe),unter=kinder.get(kg)||[];
+    return [t+'<Item>',t+'\t<ID>'+kg+'</ID>',t+'\t<Name>'+xmlSchreiben(eintraege.get(kg)||'KG '+kg)+'</Name>',t+'\t<Description/>',
+      t+'\t<Availability>ModelElement</Availability>',
+      ...(unter.length?[t+'\t<Children>',...unter.flatMap(u=>item(u,tiefe+2)),t+'\t</Children>']:[t+'\t<Children/>']),t+'</Item>'];
+  };
+  return ['<?xml version="1.0" encoding="UTF-8" standalone="no" ?>','<BuildingInformation>','\t<Classification>','\t\t<System>',
+    '\t\t\t<Name>'+SYSTEM_NAME+'</Name>','\t\t\t<EditionVersion>2018-12</EditionVersion>',
+    '\t\t\t<EditionDate>','\t\t\t\t<Year>2018</Year>','\t\t\t\t<Month>12</Month>','\t\t\t\t<Day>1</Day>','\t\t\t</EditionDate>',
+    '\t\t\t<Description>Kostengliederung für die Kostenberechnung in TBA Office. Jedes Bauteil in der 3. Ebene nach seiner tragenden bzw. Hauptschicht klassifizieren; Schichten des Aufbaus kommen über die Eigenschaft Bauteiltyp (Gruppe TBA Kosten) und das Rezept. Nur zur Verwendung im Büro.</Description>',
+    '\t\t\t<Source>TBA Office</Source>','\t\t\t<Items>',...wurzeln.flatMap(kg=>item(kg,4)),'\t\t\t</Items>','\t\t</System>','\t</Classification>','</BuildingInformation>',''].join('\n');
+}
+
+return Object.freeze({zipDateien,leseXlsx,leseXlsxBlaetter,leseCsv,leseDatei,zeilenAusBlatt,geteilteTexte,erkenneSpalten,gruppiere,vergleiche,anwenden,hauptmass,klassifizierungXml,SYSTEM_NAME,EINHEIT_ZU_MASS,MASS_ZU_EINHEIT});
 });

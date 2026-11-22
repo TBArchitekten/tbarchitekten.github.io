@@ -19,6 +19,8 @@ const ICON_IMPORT='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 const ICON_PLUS='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
 const ICON_KI='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M11 3.5l1.9 5.1 5.1 1.9-5.1 1.9L11 17.5l-1.9-5.1-5.1-1.9 5.1-1.9z"/><path d="M18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>';
 const ANLEITUNG='<a class="btn btn-quiet" href="./kostenberechnung-hilfe.html" target="_blank" rel="noopener noreferrer">Anleitung</a>';
+// Klassifizierung für den Klassifizierungs-Manager von Archicad, aus der Gliederung dieser Kostenberechnung (Anleitung, Teil III).
+const KNOPF_KLASSIFIZIERUNG='<button type="button" class="btn btn-quiet" data-act="klassifizierung">Klassifizierung für Archicad (.xml)</button>';
 const TABS=[['uebersicht','Übersicht'],['positionen','Positionen'],['quellen','Quellen'],['vergleich','Vergleich'],['bericht','Bericht']];
 const KG_MUSTER=/^[1-8]\d\d$/;
 
@@ -186,6 +188,15 @@ function sichernAlsDatei(){
   document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
 }
 
+// Lesen genügt: wer die Kostenberechnung sehen darf, bekommt ihre Gliederung als Datei für Archicad.
+function klassifizierungLaden(){
+  let xml;
+  try{xml=I.klassifizierungXml(st.katalog)}catch(e){ui.meldung=e?.message||'Die Klassifizierung konnte nicht erzeugt werden.';render();return}
+  const blob=new Blob([xml],{type:'application/xml;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DIN276-2018_TBA_Archicad-Klassifizierung.xml';
+  document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+}
+
 // ---------- Stände ----------
 async function ladeStaende(){
   if(!doc||istMuster)return;
@@ -346,14 +357,15 @@ function karteFehlt(){
 }
 function karteArchicad(){
   const imp=st.importe||[];
-  if(!imp.length)return '<section class="card" style="padding:18px 20px"><h2 class="kb-h2">Mengen aus Archicad</h2><p class="meta" style="margin:6px 0 12px">Noch kein Import. Die Interaktive Auswertung «TBA Kosten · Mengen» als Excel speichern und hier einlesen.</p>'+
-    (kannBearbeiten?'<button type="button" class="btn" data-act="import">'+ICON_IMPORT+'Mengen einlesen</button>':'')+'</section>';
+  if(!imp.length)return '<section class="card" style="padding:18px 20px"><h2 class="kb-h2">Mengen aus Archicad</h2><p class="meta" style="margin:6px 0 12px">Noch kein Import. Die Interaktive Auswertung «TBA Kosten · Mengen» als Excel speichern und hier einlesen. Wie das Modell dafür klassifiziert wird, steht in der Anleitung, Teil III.</p>'+
+    '<div class="kb-xml-zeile">'+(kannBearbeiten?'<button type="button" class="btn" data-act="import">'+ICON_IMPORT+'Mengen einlesen</button>':'')+KNOPF_KLASSIFIZIERUNG+'</div></section>';
   const letzter=imp[0],aend=I.vergleiche(imp[1]?.gruppen||null,letzter.gruppen).filter(x=>x.art!=='gleich');
   const typen=new Set(letzter.gruppen.map(g=>g.bauteiltyp).filter(Boolean)).size;
   return '<section class="card" style="padding:18px 20px"><h2 class="kb-h2">Mengen aus Archicad</h2><p class="meta" style="margin:4px 0 10px">Letzter Import '+esc(datum(letzter.datum))+(letzter.datei?' · '+esc(letzter.datei):'')+' · '+typen+' Bauteiltypen · '+letzter.gruppen.length+' Gruppen</p>'+
     (imp.length>1?'<p style="margin:10px 0 4px;font-size:13px;font-weight:600">Seit dem Import vom '+esc(datum(imp[1].datum))+'</p>'+
       (aend.length?aend.slice(0,6).map(x=>'<div class="mini"><span>'+esc((x.bauteiltyp||'ohne Typ')+' · KG '+x.kg)+'</span><span class="num">'+
-        (x.art==='neu'?'neu':x.art==='entfernt'?'entfernt':esc((x.delta.startsWith('-')?'−'+R.zahl(x.delta.slice(1)):'+'+R.zahl(x.delta))+' '+x.einheit))+'</span></div>').join(''):'<p class="meta">keine Änderungen</p>'):'')+'</section>';
+        (x.art==='neu'?'neu':x.art==='entfernt'?'entfernt':esc((x.delta.startsWith('-')?'−'+R.zahl(x.delta.slice(1)):'+'+R.zahl(x.delta))+' '+x.einheit))+'</span></div>').join(''):'<p class="meta">keine Änderungen</p>'):'')+
+    '<div class="kb-xml-zeile">'+KNOPF_KLASSIFIZIERUNG+'</div></section>';
 }
 function karteHerkunft(){
   const h=Object.entries(calc.herkunft).filter(([,c])=>c>0n).sort((a,b)=>(b[1]>a[1]?1:-1));
@@ -864,7 +876,7 @@ function bericht(){
 function dialogImport(){
   ui.importVorschau=null;
   dialog.innerHTML='<div class="dlg"><h2>Mengen aus Archicad einlesen</h2>'+
-    '<p class="meta">Die Interaktive Auswertung «TBA Kosten · Mengen» als Excel (.xlsx) oder CSV speichern und hier wählen. Erkannt werden die Spalten KG (Klassifizierung DIN 276), Bauteiltyp, Aufbau, Anzahl, Fläche, Länge und Volumen.</p>'+
+    '<p class="meta">Die Interaktive Auswertung «TBA Kosten · Mengen» als Excel (.xlsx) oder CSV speichern und hier wählen. Erkannt werden die Spalten KG (Klassifizierung DIN 276), Bauteiltyp, Aufbau, Anzahl, Fläche, Länge und Volumen. Wie das Modell dafür klassifiziert wird: <a href="./kostenberechnung-hilfe.html#archicad" target="_blank" rel="noopener noreferrer">Anleitung, Teil III</a>.</p>'+
     '<div class="kb-datei-zeile"><label class="btn">'+ICON_IMPORT+'Datei wählen<input type="file" id="kbDatei" class="kb-datei" accept=".xlsx,.csv,.txt"></label>'+
     '<span class="meta" id="kbDateiName">Keine Datei gewählt</span></div><div id="kbVorschau"></div>'+
     '<div class="dlg-actions"><button type="button" class="btn" data-dlg="zu">Abbrechen</button><button type="button" class="btn btn-primary" id="kbUebernehmen" disabled>Übernehmen</button></div></div>';
@@ -1028,6 +1040,7 @@ root.addEventListener('click',ev=>{
   if(act==='drucken'){if(ui.tab!=='bericht'){ui.tab='bericht';render()}setTimeout(()=>window.print(),50);return}
   if(act==='import'&&kannBearbeiten){dialogImport();return}
   if(act==='sichern'){sichernAlsDatei();return}
+  if(act==='klassifizierung'){klassifizierungLaden();return}
   if(act==='neuladen'){location.reload();return}
   if(!kannBearbeiten)return;
   if(act==='pos-neu'){neuePosition(d.kg||'',d.el||'',d.quelle==='tabelle');return}

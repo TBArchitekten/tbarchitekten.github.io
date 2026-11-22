@@ -1,4 +1,4 @@
-/* TBA Office · Anleitungen (Terminplan, Kostenberechnung), 21.11.2026.
+/* TBA Office · Anleitungen (Terminplan, Kostenberechnung), 21.11.2026; Teil III Archicad 22.11.2026.
    Gleiche Sprache wie die Werkzeuge: Systemschrift, Hintergrund #fafafa, weiße Karten mit 17 px Radius,
    Hauptaktion schwarz, Links #355d99, ruhige Grautöne. Abbildungen sind Schemata, keine Screenshots. */
 :root{
@@ -61,6 +61,18 @@ table.a-tab{width:100%;border-collapse:collapse;font-size:14px}
 .chip-src{background:var(--a-src-bg);color:var(--a-src)}.chip-mute{background:#f4f5f6;color:#8a9099}
 .a-quellen p{font-size:15px}
 .a-fuss{border-top:1px solid var(--a-line);margin-top:64px;padding-top:22px;color:var(--a-meta);font-size:13px}
+/* Teil III der Kostenberechnung: Sprungmarken, Zwischenüberschriften, Zuordnungstabelle */
+.a-sprung{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 8px;max-width:1000px}
+.a-sprung a{font-size:13px;line-height:1.2;padding:8px 13px;border-radius:999px;background:var(--a-card);border:1px solid var(--a-line);color:#2b3036}
+.a-sprung a:hover{text-decoration:none;border-color:#c6cdd6}
+section.kap h3[id]{scroll-margin-top:70px}
+h4.a-h4{font-size:17px;letter-spacing:-.01em;line-height:1.35;margin:26px 0 8px;max-width:860px}
+.a-tab td small{display:block;font-size:12px;line-height:1.4;color:var(--a-meta);margin-top:2px;font-weight:400}
+.a-tab td.kg{font-weight:650;font-variant-numeric:tabular-nums;min-width:96px}
+.a-tab-ac td:first-child{min-width:190px}
+/* Schemata mit Beschriftung: auf dem iPhone seitlich schieben statt unlesbar klein */
+.abb-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:760px){.abb-scroll svg{min-width:720px}}
 /* Kleine Nachbildungen der Oberfläche für Abbildungen (Beispieldaten) */
 .ui{background:#fafafa;border-radius:14px;font-size:14px;color:var(--a-ink)}
 .ui-sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -120,5 +132,6 @@ table.a-tab{width:100%;border-collapse:collapse;font-size:14px}
   .a-top{position:static;background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}
   .a-back,.a-menu{display:none}
   figure.abb,.hinweis,.a-tab-wrap{break-inside:avoid}
-  h3{break-after:avoid}
+  h3,h4.a-h4{break-after:avoid}
+  .a-sprung{display:none}
 }
