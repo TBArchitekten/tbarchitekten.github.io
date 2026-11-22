@@ -96,7 +96,7 @@ function showPlans(){
       planner.href='../muster-planner.html';
       planner.textContent='Muster-Planner ansehen';
       planner.className='office-plan-library-link';
-      planner.title='Entwurf LPH 3 · nur Ansicht und lokale Review-Notizen';
+      planner.title='Entwurf v0.3.4 im Office Planner · nur Ansicht';
       actions.append(planner);
     }
     card.append(number,title,metadata,actions);templateHost.append(card);
@@ -149,7 +149,7 @@ function showPlans(){
   guide.href='../terminplan-hilfe.html';
   guide.target='_blank';
   guide.rel='noopener noreferrer';
-  guide.textContent='Terminplan-Handbuch · Werkzeug, LPH 3 und LPH 5';
+  guide.textContent='Anleitung zum Terminplan · Werkzeug, Assistent, LPH 3 und LPH 5';
   guide.className='office-plan-library-link';
   guide.style.display='inline-block';
   guide.style.margin='14px 0';
@@ -351,6 +351,17 @@ qs('#officeProjectsBack').addEventListener('click',()=>{
 });
 document.getElementById('officeToolsManage')?.addEventListener('click',openProjects);
 document.getElementById('officeToolsPlans')?.addEventListener('click',openPlans);
+// Projektstart: ein Blatt, kein Bildschirm der App. Es sagt, welche Information ein Projekt
+// braucht, damit Romy mitarbeiten kann, und führt zu den fünf Bürovorlagen LPH 3 (muster/lph3/).
+// Liegt neben terminplan-hilfe.html im Wurzelverzeichnis.
+document.getElementById('officeToolsStart')?.addEventListener('click',()=>{
+  window.location.href='../projektstart.html';
+});
+// Kostenberechnung: eigene Seite wie der Projektstart (kostenberechnung.html im Wurzelverzeichnis):
+// Muster und Projekt-Kostenberechnungen, Mengen aus Archicad, Vergleich und Bericht.
+document.getElementById('officeToolsKosten')?.addEventListener('click',()=>{
+  window.location.href='../kostenberechnung.html';
+});
 document.getElementById('officePlansBack')?.addEventListener('click',()=>{window.ISABELLA_APP?.show?.('tools');history.replaceState(null,'','#section=tools')});
 document.getElementById('officePlansDrawer')?.addEventListener('click',()=>{
   document.getElementById('closeDrawer')?.click();openPlans();

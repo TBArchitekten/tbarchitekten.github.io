@@ -11,6 +11,8 @@ const NAV_ICONS = ({
 // TBA Office: Window's frame in German. Chat, Eingang, Lecturas and Thoughts stay in the page (the copied code
 // expects their elements) but are hidden until the office has an assistant. Tools links to the office tools.
 NAV_ICONS.tools='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+// Kostenberechnung: Rechner, im Strich der übrigen Symbole.
+NAV_ICONS.kosten='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>';
 // Only «Zu bestätigen» carries a number; the web and the iPhone show the same count.
 const bandejaBadge='<span class="nav-badge hidden" data-bandeja-badge aria-hidden="true"></span>';
 
@@ -29,7 +31,7 @@ document.body.innerHTML = `
     <button class="lens-nav-item" data-nav="work" aria-label="Work"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.work}</span><span class="lens-copy"><strong>Work</strong><small>Projekte</small></span></button>
     <button class="lens-nav-item office-link" data-nav="tools" aria-label="Tools"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.tools}</span><span class="lens-copy"><strong>Tools</strong><small>Terminplan und Muster</small></span></button>
     <button class="lens-nav-item" data-nav="bandeja" aria-label="Eingang" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.bandeja}${bandejaBadge}</span><span class="lens-copy"><strong>Eingang</strong><small>Vorschläge</small></span></button>
-    <button class="lens-nav-item" data-nav="readings" aria-label="Lecturas" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.readings}</span><span class="lens-copy"><strong>Lecturas</strong><small></small></span></button>
+    <button class="lens-nav-item" data-nav="readings" aria-label="Lektüren" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.readings}</span><span class="lens-copy"><strong>Lecturas</strong><small></small></span></button>
     <button class="lens-nav-item" data-nav="thoughts" aria-label="Thoughts" hidden><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.thoughts}</span><span class="lens-copy"><strong>Thoughts</strong><small></small></span></button>
     <div class="minds-menu-slot lens-menu-slot" data-menu-slot="sidebar"></div>
     <div class="lenses-foot">Titus Bernhard Architekten</div>
@@ -102,6 +104,16 @@ document.body.innerHTML = `
           <span><strong>Terminplan</strong><small>Projekt auswählen, LPH 3 oder LPH 5 als Muster instanziieren und fortschreiben.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
+        <button type="button" class="office-tools-card" id="officeToolsKosten" aria-label="Kostenberechnung öffnen">
+          <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.kosten}</span>
+          <span><strong>Kostenberechnung</strong><small>Nach DIN 276 bis zur 3. Ebene: Mengen aus Archicad, Kennwerte mit Herkunft, Vergleich mit der Kostenschätzung und Bericht für die Kostenbesprechung.</small></span>
+          <span class="office-tools-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="office-tools-card" id="officeToolsStart" aria-label="Projektstart öffnen">
+          <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
+          <span><strong>Projektstart</strong><small>Was ein Projekt an Information braucht, und fünf Bürovorlagen für die LPH 3 in Word und Excel: Projektstart, Planliste, Koordination, Kick-off, Entscheidungsvorlage.</small></span>
+          <span class="office-tools-arrow" aria-hidden="true">›</span>
+        </button>
         <button type="button" class="office-tools-card office-tools-projects" id="officeToolsManage" aria-label="Projekte öffnen">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
           <span><strong>Projekte</strong><small>Projekte anlegen, Mitglieder gemeinsam verwalten und Terminpläne verknüpfen.</small></span>
@@ -168,7 +180,7 @@ document.body.innerHTML = `
       <div id="thoughtsHost" class="thoughts-host">
         <div id="thoughtsLoadStatus" class="thoughts-load-status" role="status">Abriendo Thoughts…</div>
         <div id="thoughtsFrameError" class="thoughts-load-error hidden" role="alert">
-          No pude cargar Thoughts. <a href="https://gari01234.github.io/architectures/dear_thoughts.html" target="_blank" rel="noopener noreferrer">Abrir la obra original</a>
+          Thoughts konnte nicht geladen werden. <a href="https://gari01234.github.io/architectures/dear_thoughts.html" target="_blank" rel="noopener noreferrer">Das Original öffnen</a>
         </div>
       </div>
     </section>
@@ -186,7 +198,7 @@ document.body.innerHTML = `
       <div id="feedThreadLog" class="feed-thread-log"></div>
     </div>
     <form id="feedThreadForm" class="feed-thread-form">
-      <textarea id="feedThreadInput" rows="1" placeholder="Preguntar sobre esto..."></textarea>
+      <textarea id="feedThreadInput" rows="1" placeholder="Dazu etwas fragen …"></textarea>
       <button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
     </form>
   </section>
@@ -203,7 +215,7 @@ document.body.innerHTML = `
       <div id="ideaWorkspaceThread" class="idea-workspace-thread"></div>
     </div>
     <form id="ideaWorkspaceForm" class="idea-workspace-form">
-      <textarea id="ideaWorkspaceInput" rows="1" placeholder="Seguir trabajando en esta idea..."></textarea>
+      <textarea id="ideaWorkspaceInput" rows="1" placeholder="An dieser Idee weiterarbeiten …"></textarea>
       <button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
     </form>
   </section>
