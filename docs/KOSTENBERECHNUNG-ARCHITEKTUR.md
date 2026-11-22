@@ -1,12 +1,36 @@
 # TBA Office · Kostenberechnung LPH 3 · Architektur und Entwicklungsvertrag
 
-**Stand:** 20.11.2026 · Review-Stand für Claude  
-**Dokumentstatus:** Konsolidiertes **Zielbild v1.0**, zur fachlichen und technischen Prüfung. Es beschreibt die angestrebte Anwendung, **nicht** eine bereits implementierte oder normativ freigegebene Lösung.  
+**Stand:** 22.11.2026 · Implementierungsabgleich mit `main` und fünf GitHub-Issues  
+**Dokumentstatus:** Konsolidiertes **Zielbild v1.1 / Draft** mit überprüftem Ist-Stand vom 22.11.2026. Dieses Dokument unterscheidet **umgesetzte Funktionen**, **nachgewiesene Tests**, **fachlich offene Abnahmen** und **zukünftige Ziele**. Die Implementierung ist real und auf GitHub Pages ausgeliefert; sie ist **nicht** als fachlich freigegebene Kostenberechnung von TBA nachgewiesen.  
 **Geltungsbereich:** TBA Office, interne Kostenberechnung der Leistungsphase 3, DIN 276:2018-12 bis zur dritten Ebene.  
 **Dokumentverantwortung:** TBA; Änderungen über überprüfbare GitHub-PRs.  
 **Eine maßgebliche Quelle:** Nach Annahme dieses PRs wird **diese Datei** die zentrale produktbezogene Sollbeschreibung. Ihr Dateiname bleibt auch bei Revisionen stabil. Frühere Gespräche und der technische Entwurf in PR #107 sind Quellen bzw. Experimente, keine konkurrierenden Soll-Versionen.
 
 > **Leitidee:** Ein Kostenstand ist keine isolierte Tabelle. Er ist eine editierbare, prüfbare und versionierte wirtschaftliche Sicht auf das Architekturprojekt. Archicad liefert modellbasierte Mengen; Office verbindet Mengen, Kosten, technische Entscheidungen, Produkte, Dokumente, Aufgaben und Termine. Verbindliche Änderungen bleiben überprüfbar und werden nicht stillschweigend propagiert.
+
+
+## Aktueller Implementierungsstand · 22.11.2026 (kein zweites Zielbild)
+
+**Geprüfte Quellen:** `main` Commit `6df5037feb63985c11c0c3821c80dd31c4cb5d34`, gemergte PRs **#121–#128** (Kostenberechnung, Ebene 3, Editor, KI-Assistent, Archicad-Anleitung), `docs/ESTADO.md`, Code und synthetische Tests. Die GitHub-Pages-Auslieferung des Commits ist erfolgreich. Supabase Office enthält die aktive Vorlage **`Kostenberechnung LPH 3` v1.1** mit **326 Katalogeinträgen**; die fünf Kosten-Tabellen haben RLS, die Edge Function `office-kosten-ai` ist in Version **2** aktiv. Zum Prüfzeitpunkt lagen **0** Kostenberechnungsinstanzen, **0** eingefrorene Stände und **0** KI-Dialoge vor. Das ist ein Nachweis technischer Bereitstellung, **kein authentifizierter Produktionstest einer realen Kostenberechnung**.
+
+| Domänenbereich | Vorhandenes im aktuellen `main` | Noch nicht erreicht / Nachweis offen |
+| --- | --- | --- |
+| **DIN-276-Struktur / Editor** | Vollständige Musterhierarchie bis Ebene 3; KG- und Gewerke-Sichten, direkt editierbare Positionen und lokale Elementgruppen. | Rechts-/Nutzungsrechte an Klassifikationsbezeichnungen, fachliche Gegenprüfung, Freigabe. **#133** |
+| **Deterministische Berechnung** | `kosten-rechnen.js`: dezimale BigInt-Berechnung, bekannte/vorläufige Summen, Netto/Brutto, Kennwertkette (USt, Index, Region, Zuschlag), Prüfhilfen. | Rechnerische Vollständigkeit nicht mit fachlich bestätigter Eignung gleichsetzen; KI-Annahmen und fehlende Grundlagen. **#130** |
+| **Mengenbuch / Archicad 26** | `kosten-import.js`: Archicad-XLSX/CSV einlesen, nach `KG + Bauteiltyp` zusammenfassen, Rezepte zuordnen und Gruppenrevisionen vergleichen; Klassifizierungs-XML erzeugen. | Keine unveränderliche Rohmengenschicht, GUID-/Komponentenidentität, Datei-Hash, dokumentierte Messregeln oder vollständige Modellrevisionskette. Echttest mit Archicad 26 offen. **#129** |
+| **Kostenelemente** | Projektbezogene **Elementgruppen** aus Positionen, mit Summen. | Keine eigene, versionierte projektübergreifende **Kostenelement-Bibliothek** mit Leistungsgrenzen/Komponenten und Quellen. **#132** |
+| **Preisreferenzen / Produktdaten** | Preis- und Quelltypen `bki`, `heinze`, `eigen`, `angebot`, `fachplanung`, `internet`, `annahme`, `ki`; Fundstellen in Ansatzdaten. | **Keine gemeinsame Preisdatenbank** und kein eigenständiges Produkt-/Preis-/Leistungsabdeckungsmodell mit Rechts- und Prüfstatus. **#132**, zusätzlich **#130** |
+| **Kostenvergleich / Versionsstände** | Vergleich mit Kostenschätzung; `office_kosten_versions` hält JSON-Stände; bedingtes Speichern per `server_revision`. | Kein vollwertiger Freigabe-Workflow; `on delete cascade` kann Instanzversionsgeschichte entfernen; echte Abgabequalität ungetestet. **#131** |
+| **Dokumentausgabe** | Bericht / Druck via Browser, JSON-Sicherung, Archicad-XML. | Strukturierter **XLSX-Kostenberechnungs-Export** und verbindliche/reproduzierbare PDF-Abgabe offen. **#131** |
+| **Romy im Kosteneditor** | Kontextbezogener KI-Assistent mit Dialog, Vorschau/Bestätigung, Belegtypen, Websuche und dokumentierter Schätzung `Annahme KI`. Deployment v2 aktiv. | Keine echte eingeloggte Abnahme des Modell-/Websuchpfades; Quellenvalidität, Prüf-/Freigabeunterschied und Kosten der unlimitierten Nutzung prüfen. **#130** |
+| **Office Living Documents** | Projektbindung und bestehende Office-Anmeldung/Berechtigungen. | Noch keine operativen, typisierten, bidirektionalen Links zu Planliste, Bemusterung, Produktregister, Planner oder Terminplan. **#132** |
+
+**Korrektur zur früheren Produktplanung:** Das Produkt besitzt **bereits einen eigenen Kosten-Rechenkern im `main`** (`kosten-rechnen.js`), einen produktiven Editor und einen deployten KI-Endpunkt. Daher geht es in G2 **nicht mehr um Entwicklung ab null** oder das parallele Anlegen eines konkurrierenden Editors, sondern um die begründete Weiterverwendung/Verbesserung des bestehenden Moduls und den Vergleich einzelner wiederverwendbarer Bibliotheken. PR **#107** bleibt ein nicht gemergter Versuch und darf nicht versehentlich als einziger Rechenkern angesehen werden.
+
+**Grenze der Befundlage:** GitHub-CI und Chromium haben synthetische Tests bestanden; eine tatsächliche, angemeldete Kostenberechnung an einem realen/anonymisierten TBA-Projekt, die Ausgabequalität und das Importverhalten in **Archicad 26** wurden in dieser Prüfung **nicht** fachlich freigegeben. Die neue Archicad-Anleitung aus #128 wurde im Repository geprüft, nicht durch Import der XML-Datei in Archicad 26 verifiziert.
+
+**Nachverfolgung der fünf Abweichungen (keine stillen Änderungen):** [#129 Archicad-Mengen / Herkunft](https://github.com/TBArchitekten/tbarchitekten.github.io/issues/129) · [#130 KI-Preis-/Prüfstatus](https://github.com/TBArchitekten/tbarchitekten.github.io/issues/130) · [#131 Snapshots und XLSX/PDF](https://github.com/TBArchitekten/tbarchitekten.github.io/issues/131) · [#132 Living Documents und Preisdatenbank](https://github.com/TBArchitekten/tbarchitekten.github.io/issues/132) · [#133 DIN-Lizenz](https://github.com/TBArchitekten/tbarchitekten.github.io/issues/133). **Die Issues sind Aufgaben und Prüfpunkte, nicht bereits abgeschlossene Entscheidungen.**
+
 
 ## 1. Entscheidungsstand und Grenzen
 
@@ -212,7 +236,7 @@ Der technische Unterbau ist ausdrücklich **nicht entschieden**. Der Entwurf aus
 | **G6 · Romy-Kostenassistent** | Kontextuelle, quellenbezogene Analyse und vorbereitete Berichte/Vorschläge. | Berechtigungen, nachvollziehbare Belege, Quellen-Staleness und Bestätigung für Änderungen; keine unautorisierten Writes oder Sendungen. |
 | **Optionale Gates** | Tapir-Live-Bridge, IFC, Preis-API, Varianten und weitere Interoperabilität. | Nur nach nachgewiesenem Nutzen im Arbeitsablauf und separater TBA-Freigabe. |
 
-G2 darf parallel zur fachlichen Vorbereitung von G1 untersucht werden, **nicht** aber die Anforderungen still ersetzen. Die praktische Archicad-Prüfung erfordert eine echte Archicad-26-Installation; aus GitHub-Code oder Graphisoft-Hilfetexten allein kann kein bestandenes TBA-E2E behauptet werden.
+**Fortschritt nach der Implementierung durch Claude:** G4a ist als **technische Erstfassung** umgesetzt (nicht durch TBA fachlich abgenommen); G3 ist **teilweise** mit produktiven Tabellen und RLS erfüllt, jedoch ohne unveränderliche Abgabe-/Importquellen; G6 besitzt bereits einen live geschalteten Assistenten, dessen reale Nutzung und fachliche Vorschläge noch nicht abgenommen sind. G4b und G5 sind ausdrücklich offen. G0/G1 (Architektur-, Muster-, Norm- und Lizenzfreigabe) bleiben fachlich offen. Der Nachweis aus gemergten PRs ersetzt keines dieser Gates. G2 darf parallel zur fachlichen Vorbereitung von G1 untersucht werden, **nicht** aber die Anforderungen still ersetzen. Die praktische Archicad-Prüfung erfordert eine echte Archicad-26-Installation; aus GitHub-Code oder Graphisoft-Hilfetexten allein kann kein bestandenes TBA-E2E behauptet werden.
 
 **Minimale fachliche Abnahmefälle:** vollständiger und unvollständiger Kostenstand; Nullwert/nicht anwendbar/unbekannt; Einheit/Umrechnung; gleiche Leistung doppelt über Kennwert und Detailansatz; manuelle und Modellmenge; veränderte und gelöschte GUIDs; unzuordenbare Mengen; zwei Preisstände; übernommener Fachplanerbetrag; Kostenschätzung mit gröberer Gliederung; zwei Revisionen; eingefrorene PDF/XLSX-Ausgabe; fremdes Projekt; unerlaubte Freigabe; Quellenänderung nach Abgabe. Die Ergebnisse müssen maschinell bzw. fachlich unabhängig überprüft werden.
 
@@ -235,7 +259,7 @@ Diese Punkte sind **nicht** stillschweigend entschieden, auch wenn spätere Impl
 
 **Änderungsregel:** Neue Produktanforderungen, Invarianten und fachliche Abnahmeentscheidungen werden **in dieser Datei** aktualisiert, mit PR, Datum, Begründung und Auswirkungen auf bestehenden Code/Tests. Keine neuen konkurrierenden `Kostenberechnung-v2/v3`-Spezifikationen als parallele Wahrheit. Implementierungsnotizen und Rechercheberichte bleiben nachgeordnete Belege. Änderungen der Konzepte werden ausdrücklich freigegeben; eine Änderung der UI allein ist keine Änderung dieses fachlichen Vertrags.
 
-**Status der Implementierung am 19.11.2026:** Kein produktiver Kosteneditor, keine Kostentabellen und keine Archicad-Kopplung in Office. Der experimentelle Rechenkern in **Draft-PR #107** ist nicht gemergt. Die Architektur in diesem Dokument stellt **keine** Datenbankmigration, Veröffentlichung oder Annahme einer Kostenberechnung dar.
+**Aktueller Status am 22.11.2026:** Der Kosteneditor, sein eigener Rechenkern, die projektgebundenen Kosten-Tabellen und der KI-Assistent sind auf `main` vorhanden und ausgeliefert (PR #121–#128; Statusmatrix am Dokumentanfang). **Es gab noch keine reale Kostenberechnung in den Instanzdaten.** Dieses Architektur-PR enthält ausschließlich Dokumentationsänderungen und keine weitere Datenbankmigration oder Veröffentlichung. PR **#107** bleibt ein getrenntes Draft-Experiment. **Vor dem Merge von PR #108** muss die Branch mit dem zwischenzeitlich stark fortgeschrittenen `main` einschließlich `ESTADO.md`/`BITACORA.md` sauber abgeglichen werden; alte Statuszeilen dürfen nicht zurückgespielt werden.
 
 **Referenzdokumentation im Repository:** `docs/ESTADO.md` (Live-Entwicklungsstatus), `docs/BITACORA.md` (Change Log), `docs/LPH3-AUFGABENBIBLIOTHEK-v0.3.md` (Aufgaben/Ergebnisregister), `docs/TERMINPLAN-PLANNER-INTEGRATION-v0.1.md` (historisches Integrationskonzept) und `docs/OFFICE-KOSTENMODELL-v0.1.md` **nur im ungemergten PR #107** (technischer Versuch). Externe, lizenzierte bzw. beschränkte Quellen werden nicht in dieses öffentliche Repo übernommen.
 
@@ -249,6 +273,7 @@ Diese Punkte sind **nicht** stillschweigend entschieden, auch wenn spätere Impl
 | 20.11.2026 | Review für Claude vorbereitet: importbezogene Metadaten präzisiert, G4 in zwei überprüfbare Inkremente geteilt, unabhängiger Review und Zusammenarbeit über GitHub definiert. |
 | 20.11.2026 | Ergänzung aus TBA-Rückmeldung: **Bedienbarkeit, visuelle Klarheit und gute Vorlagen** sind verbindliche UX-Ziele; Phase0 als Referenz für die Integration von kontextueller KI, ausdrücklich **ohne** LV-Funktionen. Umsetzung und konkrete Oberfläche müssen an TBA-Arbeitsfällen geprüft werden. |
 | 19.11.2026 | Dieser Konsolidierungsstand v1.0 als **Dokument zur fachlichen Prüfung**, noch nicht als freigegebene Implementierungsspezifikation. |
+| 22.11.2026 | **Ist-Abgleich** gegen bereits ausgerollte PR #121–#128, Office-Supabase-Tabellen, Browser- und CI-Tests; fehlende Archicad-Mengenprovenienz, KI-Validierung, Snapshots/Exporte, Living Documents/Preisdatenbank und DIN-Lizenz in Issues #129–#133 erfasst. PR #108 bleibt Draft. |
 
 ## 15. Zusammenarbeit mit Claude und ChatGPT · Übergabeprotokoll
 
@@ -256,7 +281,11 @@ Diese Punkte sind **nicht** stillschweigend entschieden, auch wenn spätere Impl
 
 **Gemeinsame Quelle und Änderungsdisziplin:** Nach Annahme ist **diese eine Datei** der fachliche Vertrag; `docs/ESTADO.md` dokumentiert den tatsächlichen Systemstand, `docs/BITACORA.md` die Änderungen. Vor jeder Arbeit `AGENTS.md` lesen, aktuellen HEAD und PR-Stände prüfen. PR **#108** enthält das Architektur-Draft; PR **#107** enthält nur einen getrennten technischen Rechenkern-Versuch. Nicht voreilig zusammenführen. Keine zweite parallele Architekturfassung anlegen. Repository ist öffentlich: keine echten Projektmengen, Archicad-Modelle, Preisdaten, Angebote oder Kundendokumente hier einchecken.
 
-### Erster Auftrag an Claude: unabhängiges fachlich-technisches Review, **noch kein Code**
+### Historischer Erstauftrag an Claude (20.11.2026; seither bereits umgesetzt)
+
+**Dieser Auftrag ist als Übergabegeschichte erhalten, nicht als aktueller Arbeitsauftrag.** Seit dem 21.–22.11.2026 hat Claude die PRs #121–#128 mit produktivem Editor, KI und Archicad-Anleitung umgesetzt. Die nächste koordinierte Aufgabe ist die fachliche Gegenprüfung der bereits vorhandenen Anwendung und die fünf offenen Issues #129–#133; keine parallele zweite Implementierung ohne Zustimmung Gari.
+
+**Ursprünglicher Prüfauftrag vom 20.11.2026:**
 
 Das Dokument ohne Zustimmungspflicht gegen den wirklichen Office-Repository-/Runtime-Stand prüfen. Insbesondere **DIN 276 bis 3. Ebene versus HOAI**, Kostenansatz- und Mengenobjekte, unterschiedliche Mengenquellen aus **Archicad 26**, Modellrevisionen, Einheiten-/Rundungsregeln, Doppelansatzschutz, Preisprovenienz und Datenlizenz, Änderungs- und Freigaberechte mit projektbezogener RLS, Verbindungen zu Planner/Terminplan/Bemusterung/Produktregister, UX-Prinzipien nach Phase0 und die **tatsächliche** Wiederverwendbarkeit von Open Calc Studio, BIT-Atelier und Tapir beurteilen. Die technischen Alternativen offen vergleichen; keine Wahl aufgrund von Marketing oder Lizenzetikett allein.
 
@@ -266,3 +295,61 @@ Das Dokument ohne Zustimmungspflicht gegen den wirklichen Office-Repository-/Run
 
 **Kommunikation:** Claude- und ChatGPT-Chats synchronisieren sich nicht automatisch. Gari bzw. GitHub-Kommentare/PRs transportieren neue Erkenntnisse; keiner der beiden Assistenten darf einen direkten Austausch oder eine gegenseitige Freigabe behaupten, wenn beides nicht stattgefunden hat.
 
+## 16. Preisdatenbank TBA · fachliches Zielbild und Recherche (22.11.2026, noch zu genehmigen)
+
+**Ziel ist keine unlizenzierte Kopie von BKI/SIRADOS/DBD und keine LV-Plattform.** Die Preisdatenbank ist eine **wiederverwendbare, nachvollziehbare wirtschaftliche Wissensbasis für LPH 3**. Sie liefert passende Quellen und Preisspannen zu Kostenansätzen und Kostenelementen; die Preisentscheidung bleibt beim zuständigen TBA-Bearbeitenden. Das Konzept ist innerhalb von Issue **#132** zu validieren, bevor SQL, Migration oder automatisierte Datenübernahmen beginnen.
+
+### 16.1 Vier Gegenstände konsequent trennen
+
+| Objekt | Bedeutung | Negativabgrenzung |
+| --- | --- | --- |
+| **Leistung / Kostengegenstand** | Was wirtschaftlich bewertet wird: Produkt-/Materiallieferung, **fertig eingebaute Leistung**, zusammengesetztes Bauteil/Kostenelement oder Gebäudekennwert. Mit genauer Leistungsabdeckung. | KG-Code allein ist **keine** hinreichende Vergleichbarkeit; Materialeinkaufspreis ist nicht Einbaupreis. |
+| **Preisbeobachtung / Preisquelle** | Ein einzelner belegbarer Wert oder eine explizit publizierte Statistik aus Angebot, Auftrag, Schlussrechnung, Herstellerinformation, BKI/SIRADOS/DBD, Fachplanung oder Büroannahme. | Nicht jede Beobachtung ist wiederverwendbar; Drittpreise sind nicht ohne Nutzungsrecht importierbar. |
+| **Preisinterpretation / Herleitung** | Gewählte Mengen-/Leistungsabdeckung, Umrechnungen (Einheit, netto/brutto), Preisstand, regionale Faktoren, Index, Vergleich und Unsicherheit; dokumentiert als nachvollziehbare Rechenkette. | Berechneter Preis ist **keine beobachtete Marktzahl**; Indexierung darf keinen neuen Quellpreis vortäuschen. |
+| **Projektbezogener Kostenansatz / Snapshot** | Bewusste Verwendung einer **bestimmten Version** einer Preisreferenz, mit konkreter Menge, KG, Modell-/Dokumentstand und Entscheidung. | Eine spätere Aktualisierung des zentralen Preisregisters verändert **niemals** unbemerkt die damalige Kostenberechnung. |
+
+**Unterscheidung der Evidenzklassen:** vorläufige KI-Schätzung; eigene offene Annahme; veröffentlichter Orientierungs-/Kennwert; schriftlicher Richt-/Angebotspreis; beauftragter Preis; **tatsächlich abgerechneter** Preis. Angebotspreise, Vertragspreise und Schlussabrechnungen dürfen nicht in einer unmarkierten Statistik gemischt werden. Zahlen mit wenigen Belegen erhalten keine erfundene „Sicherheit“. Zusätzlich können statistische Preisbänder *einer Quelle* mit ihrer vorhandenen Methodik gespeichert werden (nicht selbst erfinden).
+
+### 16.2 Minimaler Datenvertrag (Domänenfelder, noch **keine** SQL-Tabellen)
+
+`Leistung`: stabile ID, kurze Beschreibung, Leistungsgrenzen (inkludiert/exkludiert), technischer Aufbau/Eigenschaften, benötigte und enthaltene Montage-/Nebenleistungen, Maß- und Mengendefinition, Bezugs-Einheit (m²/m³/m/St/psch/€/m² BGF), mögliche KG- und Gewerkbezüge. Beziehung zu Kostenelementen und Produktregister ist separat typisiert.
+
+`Preisbeobachtung`: stabile ID, Leistungs-ID, originaler Geldwert / gegebenenfalls Herstellerband, Währung, Net-/Bruttostatus und Steuersatz (falls bekannt), Originaleinheit und Mengendefinition, Werttyp (**Angebot, Vergabe, Abrechnung, Kennwert, kalkuliertes Modell, Schätzung**), Preis-/Leistungsstand, Beobachtungs-/Dokument-/Abrufzeitpunkt, Region, Objekttyp und relevante Mengenklasse, genaue Quelle/Fundstelle und optional privat gespeicherte Quelldatei, Berechtigungs- und Verwendungsrechte, Qualität, Verantwortliche und Prüfstatus. Zeitstempel sind keine gleichbedeutenden `created_at`-Felder.
+
+`Preisableitung`: Referenz auf die Originalbeobachtung, zugrunde liegende Indexserie mit Stand und Bezugsquartal, optionaler fachlich begründeter Regionalfaktor, Steuer-/Einheitenumrechnung, Annahmen, Formelversion und Ergebnis. **Ableitung nie als Rohbeobachtung überschreiben.**
+
+`Preisverwendung`: Kostenstand/Ansatz-ID, ausgewählte Preis- und Ableitungsversion, fachlicher Entscheid, Zeitpunkt, Bearbeitender und festgehaltener Geldbetrag. Zentraler Datenbankeintrag und Projektverwendung haben unterschiedliche Änderungsrechte.
+
+`Quellrecht`: Erlaubnis für Lesen, projectbezogene Ablage, Wiederverwendung zwischen Projekten, zentrale Indizierung, Transformation und Weitergabe getrennt dokumentieren. **Nicht dokumentiert = keine automatische Übernahme**. Fachplaner- und Bauherrendaten nur für berechtigte Projektkontexte verwenden. Preisstatistiken dürfen keine vertraulichen Angebotgeber/Projekte unzulässig offengelegen.
+
+### 16.3 Auswahllogik für eine Kostenposition
+
+Die Suche priorisiert **fachliche Leistungsähnlichkeit vor Preisnähe**. Erst prüfen: gleiches Werk/gleicher Leistungsumfang (Material vs vollständige Leistung vs Element vs Gebäudekennwert); kompatible Mengendefinition und Einheit; technische Eigenschaften; Preisart; Bauwerksart, Standort und Preisstand; rechtliche Nutzbarkeit. Erst dann sind unterschiedliche Preishinweise vergleichbar. Fehlende Felder und unpassende Leistungen werden **sichtbar** statt mit einem scheinpräzisen Prozentwert „normalisiert“.
+
+Die UI bleibt einfach: zu einem Kostenansatz erscheint ein **Seitendialog „Preisreferenzen“** mit Quellenarten, Datum, Einheit, Preisband, Bedingungen, Beleg und Einordnung; „Im Kostenansatz verwenden“ zeigt eine Vorher/Nachher-Rechnung. Kein neuer zentraler Excel-artiger Verwaltungsbereich für jede Kleinigkeit. Details erst auf Bedarf. Bei einer Preisquellenänderung erhält der Ansatz einen **Prüfhinweis**, keine unsichtbare Neu-Bepreisung. Romy darf geeignete Treffer erklären, fehlende Informationen markieren und vergleichbare Referenzen vorschlagen, jedoch keinen KI-Preis als überprüft/abgerechnet deklarieren.
+
+**Eigene TBA-Daten bevorzugt, aber nicht überschätzen:** Historische Projektpreise müssen rechtlich zulässig, technisch vergleichbar und nach Preis-/Projektkontext beschrieben sein. Mehrere Angebote desselben Ausschreibungsverfahrens sind **nicht** unabhängige Bauprojekte. Bei kleiner Stichprobe nur Einzelwerte und eine ausdrücklich schwache Indikation anzeigen, kein automatischer „Marktpreis“. Eine externe Referenz kann die Kontrolle der TBA-Historie verbessern; beide Quellen bleiben sichtbar.
+
+### 16.4 Recherchierte Referenzen und ihre Grenzen (Stand 22.11.2026)
+
+| Quelle / Referenz | Vorbild für TBA | Grenze vor Integration |
+| --- | --- | --- |
+| **BKI** | Abgerechnete Referenzobjekte, bauteilbezogene Kostenkennwerte, Kostenplanung bis 3. Ebene, Indizes/Regionalfaktoren; unterstützte Schnittstellen auch für Archicad. | Lizenz für die **Speicherung in Office** und die spätere Wiederverwendung **explizit erfragen**; Exportmöglichkeit im BKI-Programm allein genügt nicht. BKI-Baupreise können **netto und brutto** vorliegen: Steuerbasis **pro Quelle** speichern, nicht per Art hart vorgeben. |
+| **SIRADOS 365** | Positions-/Elementdaten, eigene Positionen und Preise, Von–Mittel–Bis-Preise und Ortsfaktoren, Schnittstellen. Laut Anbieter beruhen deren Preisbänder auf recherchierten Ausschreibungen/Preisspiegeln; Nettopreise für fertige Leistung. | Online-Zugang, API und Export **sind nicht automatisch eine Lizenz** zur zentralen Wiederveröffentlichung oder dauerhaften Speicherung in Office. Preisart und Aktualitätslogik unterscheiden sich von BKI. |
+| **DBD-BauPreise / DBD-BIM Elements** | Leistungs-/Bauteilkonfigurator, regionale kalkulierte Preise mit Zuordnung DIN 276 und Kostenanteilen. | Anbieter unterscheidet kalkulierte DBD-Baupreise von Angebotspreisen einzelner Unternehmer; Methodik nicht als beobachteter Marktpreis ausgeben. API-Nutzung nur unter Nutzungsbedingungen. |
+| **Phase0** | Sehr einfache Preissuche im laufenden Editor; Preisrückläufe aus Angeboten, Vergleich nach Ort/Gewerk und KI-Vorschläge mit Belegen. | Proprietäre, an Phase0 gebundene Preisdatenbank; keine Lizenz zum Übernehmen nach Office bekannt. Herstellerangaben zu Größe/Statistik variieren zwischen Webseiten; für TBA zählen zunächst Interaktionsprinzip und Vergleichbarkeit. |
+| **Baukonom** | Methode zur eigenen Büro-Preishistorie, Quellprojekt, Zeitraum, Gewerk, Preisspiegel, Streuung/Indexierung und Vergleich; ausdrücklich andere Kennwerttiefe als LPH 2/3. | Konzentriert sich auf Einheitspreise aus LV-/Angebotsdaten; nicht direkt gleichzusetzen mit einem bauteilorientierten LPH-3-Kennwert. Fremde Software nicht nötig, wenn Konzept im eigenen Office einfacher bleibt. |
+| **Destatis / GENESIS** | Offene, versionierte **Baupreisindizes** als separat sichtbarer Kontext zur zeitlichen Vergleichbarkeit. Datenlizenz Deutschland – Namensnennung 2.0. | Index ist **kein** Einheitspreis; Baukostenindex und Baupreisindex messen Unterschiedliches. Exakte Indexreihe, Bezugsjahr und Aktualisierungsstand speichern, nie blind alle Positionen hochrechnen. |
+| **Heinze Baupreisinfo** | Frei nutzbare Orientierung für eine manuelle Fachprüfung. | Kostenloser Zugang bedeutet **nicht** freies Recht zum Kopieren des Bestands in unsere Datenbank oder zum Scraping. |
+| **DDC-CWICR / allgemeine offene Projekte** | Eventuell Struktur- und Testdaten; methodische Orientierung. | Preis-/Datenteile teils **CC BY-NC** und teilweise modellregionalisiert: keine ungeprüfte Nutzung in einer beruflich betriebenen Office-Preisdatenbank. |
+| **ÖKOBAUDAT / IBU.data** | Zukünftige technische Material-/EPD-Links im Produkt- und Bauteilkatalog. | **Keine** Baupreisquelle; Umweltwirkungen nicht mit Preiswerten verwechseln. |
+
+**Beleglinks und methodische Transparenz:** https://bki.de/bki-kostenplaner · https://bki.de/hinweise-zur-baukonjunktur · https://www.sirados.de/faq/sirados-inhalt · https://www.dbd.de/wissen/baupreise/ · https://www.phase0.com/preisdatenbank · https://baukonom.com/kostenkennwerte-aus-eigenen-projekten · https://www.destatis.de/DE/Service/OpenData/genesis-api-webservice-oberflaeche.html · https://www.destatis.de/DE/Themen/Wirtschaft/Preise/Baupreise-Immobilienpreisindex/_inhalt.html · https://support.dinmedia.de/de/support/solutions/articles/80001166273-kann-ich-eine-norm-in-meiner-software-verwenden-
+
+### 16.5 Fachliche Pilotprüfung statt Volltextimport
+
+**Prototyp ohne Kundendaten:** An einer synthetischen Kostengruppe der dritten Ebene drei **erkennbar künstliche** Quellen mit unterschiedlicher Evidenzart, Daten-/Preisstand und Leistungsabdeckung anlegen; einen Kostenelement-Ansatz verknüpfen, Quelle wechseln, Revision 01 festhalten und Preisquelle verändern. Alle Originalwerte, Versionen, Belege und Vorher/Nachher-Rechnungen bleiben korrekt. Ein AI-Schätzwert darf berechnet, aber **nicht fachlich freigegeben** werden. Ein Materialpreis darf nie ohne ausdrückliche Ergänzung zu einem fertigen Einbaupreis werden.
+
+**Pilot mit TBA nach Freigabe:** Ein begrenztes, rechtmäßig wiederverwendbares Referenzset aus einer **abgerechneten** Leistung, einem **Angebot**, einer **Kostenelement-Schätzung** und einem **Fachplanerbeitrag**, sämtlich anonymisiert. Erst wenn dieser Vergleich sinnvoll funktioniert, über eine gemeinsame Speicherung in Supabase und gegebenenfalls lizensierte externe Daten entscheiden. Kostenbibliothek und Lizenzrecht sind getrennte Abnahmetore.
+
+**Noch zu entscheiden:** Wer bestätigt Preisreferenzen zur büroweiten Wiederverwendung; ob und welche früheren Angebotspreise rechtmäßig zentral gespeichert werden dürfen; Norm-/Lizenzvereinbarungen und Preisbasis netto/brutto; Indizes je Bauleistung; Datenschutz und Aufbewahrungsfristen; minimale Relevanzschwelle je Kostenelement; ob ein Fremd-Datenvertrag wirtschaftlich vertretbar ist. Die Auswahl einer kommerziellen Datenbank kann nicht allein durch Open-Source-Recherche ersetzt werden.
