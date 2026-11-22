@@ -347,3 +347,5 @@ select.ci{padding:4px 2px}
 .as-links span{color:var(--kb-meta);font-weight:600}
 .as-links a{color:var(--kb-link);text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .as-links a:hover{text-decoration:underline}
+.kb-xml-zeile{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:10px}
+.kb-xml-zeile .btn-quiet{padding-left:2px;padding-right:2px}

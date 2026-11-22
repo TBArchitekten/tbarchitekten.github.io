@@ -294,6 +294,14 @@ test('Muster: nur Ansicht, ohne Import und ohne Speichern',async()=>{
     assert.match(await page.locator('.panel').textContent(),/Gerüstfläche/);
     assert.equal(await page.locator('.panel [data-act="pos-neu"]').count(),0);
     assert.equal(await page.locator('.panel [data-act="kg-entfaellt"]').count(),0);
+    // Die Klassifizierung für Archicad gibt es auch zur Ansicht: aus der Gliederung des Stands, ohne zu speichern.
+    await page.click('.tab[data-tab="uebersicht"]');
+    const [laden]=await Promise.all([page.waitForEvent('download'),page.click('[data-act="klassifizierung"]')]);
+    assert.equal(laden.suggestedFilename(),'DIN276-2018_TBA_Archicad-Klassifizierung.xml');
+    const xml=fs.readFileSync(await laden.path(),'utf8');
+    assert.match(xml,/<Name>DIN 276:2018-12 \(TBA\)<\/Name>/);
+    assert.match(xml,/<ID>330<\/ID>\n\t+<Name>Gruppe 330<\/Name>[\s\S]*?<Children>\n\t+<Item>\n\t+<ID>331<\/ID>/);
+    assert.ok(!/<ID>[178]\d\d<\/ID>/.test(xml),'nur KG 200 bis 600');
     assert.equal(await page.evaluate(()=>window.__fake.aufrufe.filter(a=>a.op!=='select').length),0);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
@@ -328,6 +336,13 @@ test('iPhone: Liste und Kostenberechnung ohne Querscrollen',async()=>{
       await page.click(`.tab[data-tab="${tab}"]`);
       assert.ok(await breit()<=1,tab+' breiter als der Bildschirm');
     }
+    // Die Anleitung mit Teil III: Schemata und Tabellen schieben sich in ihrem Rahmen, die Seite nicht.
+    await page.goto(adresse('kostenberechnung-hilfe.html#archicad'));
+    await page.locator('h2',{hasText:'So modellieren, dass die Mengen stimmen'}).waitFor();
+    assert.ok(await breit()<=1,'Anleitung breiter als der Bildschirm');
+    assert.equal(await page.locator('#archicad .abb-scroll svg').count(),6);
+    assert.ok(await page.locator('#archicad .abb-scroll').first().evaluate(e=>e.scrollWidth>e.clientWidth),'Schema wird auf dem iPhone nur verkleinert');
+    await foto(page,'10-iphone-anleitung-archicad');
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
