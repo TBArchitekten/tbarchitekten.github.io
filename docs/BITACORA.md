@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-22 · Kostenberechnung · Architekturstand aktualisiert, fünf Issues und Preisdatenbank-Fachkonzept · ChatGPT
+- Qué cambió y por qué: Nach bereits gemergter Claude-Implementierung (PR #121–#128) den **einzigen Architekturvertrag** `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md` mit dem tatsächlichen Stand abgeglichen. Vorhandenes, getestet/deployt, fachlich nicht abgenommen und geplant unterschieden. Fünf präzise GitHub-Issues angelegt: #129 Archicad-Mengenprovenienz, #130 KI-/Prüfstatus, #131 Snapshots und XLSX/PDF, #132 Living Documents + Preisdatenbank, #133 DIN-Kataloglizenz. Vorläufigen Preisdatenbank-Fachvertrag anhand BKI/SIRADOS/DBD/Phase0/Baukonom/Destatis/Heinze, ohne fremde Datenkopie, ergänzt.
+- Archivos: `docs/KOSTENBERECHNUNG-ARCHITEKTUR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`; Issues #129–#133.
+- Base de datos: **keine** Migration, keine Änderung; Supabase Office wurde **nur lesend** geprüft (Vorlage, RLS, Function).
+- Deploy de funciones: **keiner**. Bereits live befindliche Funktion `office-kosten-ai` v2 unverändert.
+- Cómo se probó: `main` SHA `6df5037f`, gemergte PRs, Dateien, GitHub-CI/Pages-Erfolg, fünf Office-Kostentabellen mit RLS, aktive Vorlage v1.1 und Edge Function verifiziert; keine eigene Browser-/Archicad-26-/Live-Kostenberechnung ausgeführt. Externe Quellen und Lizenzanforderungen recherchiert.
+- Quedó pendiente o sin probar: Fachabnahme Gari, echte anonymisierte Kostenreferenz mit zwei Revisionen, vollständige DIN-Nutzungs-/Exportlizenz, Archicad-Import, professionelle Preisstichprobe, detailliertes Datenmodell/Supabase-RLS, XLSX/PDF-Dokumentqualität; keine Preisdatenbank ist implementiert. Vor Merge #108 Branch gegen den fortgeschrittenen `main` abgleichen.
+- Riesgos o decisiones que necesitan a Gari: Keine externe Preisdatenbank ohne Erlaubnis übernehmen. `Annahme KI` darf nicht als validierter Marktpreis durchgehen; Projektangaben bleiben privat.
+- PR: #108 (Draft; nicht gemergt), #107 unverändert.
+
 ### 2026-11-22 · Eine Anleitung für Archicad: Teil III der Kostenberechnung, eigene Schemata, Klassifizierung aus dem Werkzeug · Claude
 - Qué cambió y por qué: Gari (22.11., 12:24) no quiere dos Anleitungen («debe ser solo una Guía … tan bien hecha y estructurada que sea solo una Guía y no dos») y pidió una solución para publicar lo de Graphisoft en vez de dejarlo interno. Hecho:
   - **Teil III «Archicad»** de `kostenberechnung-hilfe.html` reúne todo lo del Doc privado y lo que ya había: drei Regeln; tabla Bauteil → Werkzeug · Klassifizierung (Graphisoft) → KG → Menge → Seite (32 filas); modelar según las BIM-Modellierungsrichtlinien (Wand/Decke/Fußbodenaufbau, Sohlplatte/Fundamente, Öffnungen, Dächer); Flächen nach DIN 277; Einrichten in Archicad 26 y Teamwork (7 pasos); las dos Auswertungen con los Spaltenköpfe que reconoce el import; Einlesen; Rezepte; Erster Test en 30 minutos; Grenzen. Sprungmarken arriba del capítulo.
