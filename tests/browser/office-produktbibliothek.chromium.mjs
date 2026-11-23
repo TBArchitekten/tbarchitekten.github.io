@@ -48,13 +48,15 @@ test('Bibliothek: Preise mit Herkunft, Suche, Filter und Archiv',async()=>{
   try{
     await page.locator('.pill[aria-pressed="true"]',{hasText:'Bodenbeläge · 3'}).waitFor();
     assert.match(await page.locator('[data-zahl]').textContent(),/3 Einträge · Bodenbeläge · .*auf der Bodenplatte KG 324, auf Decken KG 353/);
+    assert.equal(await karte(page,'Kalkstein, geschliffen').locator('.pb-verwendung').textContent(),'Ausgewählt in Testhaus · BO-01 · bemustert');
     assert.match(await page.locator('.pb-banner.info').textContent(),/aus 4 Kostenberechnungen \(2022–2026\): Schätzungen, keine Angebote/);
     // Derselbe Ansatz in drei Kostenberechnungen: übernommen, zählt als eine Quelle.
     const parkett=karte(page,'Parkett, vollflächig geklebt');
     assert.match(await parkett.locator('.pb-preis').textContent(),/^180 €\/m² eingebaut$/);
     const pt=await parkett.textContent();
-    assert.equal(await parkett.locator('.meta').first().textContent(),'Leistung, kein Produkt','die Familie wiederholt nicht den Namen');
-    assert.match(pt,/Ansatz in 3 Kostenberechnungen, kein Angebot/,'gezählt werden Kostenberechnungen, nicht Positionen');
+    assert.equal(await parkett.locator('.meta').first().textContent(),'Leistung, kein Produkt · KG 324/353','die Familie wiederholt nicht den Namen; KG aus den Ansätzen');
+    assert.match(pt,/Ansätze der Kostenberechnungen K-01, K-02, K-03 \(2022–2026\) · kein Angebot/,'die Herkunft beim Namen, je Kostenberechnung einmal');
+    assert.match(pt,/Noch in keinem Projekt ausgewählt/);
     assert.match(pt,/seit 2022 unverändert übernommen/);
     assert.match(pt,/1 Quelle/);
     assert.ok(!/Datenblatt/.test(pt),'eine Leistung braucht kein Datenblatt');
@@ -62,6 +64,7 @@ test('Bibliothek: Preise mit Herkunft, Suche, Filter und Archiv',async()=>{
     const estrich=karte(page,'Heizestrich, schwimmend');
     assert.match(await estrich.locator('.pb-preis').textContent(),/^38–95 €\/m² eingebaut$/);
     assert.match(await estrich.textContent(),/Spanne × 2,5: Umfang prüfen/);
+    assert.match(await estrich.textContent(),/Ansätze der Kostenberechnungen K-01, K-04 \(2022–2024\) · kein Angebot/);
     // Ein Listenpreis ist Material, nicht eingebaut.
     const stein=karte(page,'Kalkstein, geschliffen');
     assert.match(await stein.locator('.pb-preis').textContent(),/^120 €\/m² Material$/);
@@ -75,7 +78,14 @@ test('Bibliothek: Preise mit Herkunft, Suche, Filter und Archiv',async()=>{
     await page.waitForFunction(()=>document.querySelectorAll('.pb-karte').length===1);
     assert.equal(await page.evaluate(()=>document.activeElement?.id),'pbSuche');
     assert.equal(await karte(page,'Kalkstein, geschliffen').count(),1);
+    await page.fill('#pbSuche','kg 324');
+    await page.waitForFunction(()=>document.querySelectorAll('.pb-karte').length===2);
     await page.fill('#pbSuche','');
+    // Auswahl für ein Projekt: nur was dort gewählt ist.
+    await page.selectOption('#pbProjekt',await page.evaluate(()=>window.__fake.P1));
+    await page.waitForFunction(()=>document.querySelectorAll('.pb-karte').length===1);
+    assert.match(await page.locator('[data-zahl]').textContent(),/^1 Eintrag ausgewählt für T-01 · Testhaus · Bodenbeläge/);
+    await page.selectOption('#pbProjekt','alle');
     // Herkunft: nur Datenblatt-Listenpreise, dann nur ohne Preis.
     await page.selectOption('#pbHerkunft','liste');
     await page.waitForFunction(()=>document.querySelectorAll('.pb-karte').length===1);
@@ -176,19 +186,26 @@ test('Zu Projekt, Preis eintragen, Stand ändern und Entfernen nur nach Rückfra
     await dlg.locator('h2',{hasText:'Zu Projekt'}).waitFor();
     assert.deepEqual(await dlg.locator('[name="projekt"] option').allTextContents(),['T-01 · Testhaus']);
     assert.equal(await dlg.locator('[name="code"]').inputValue(),'BO-02');
+    assert.equal(await dlg.locator('[name="raeume"], [name="menge"], [name="status"]').count(),0,'Zu Projekt wählt nur aus');
     await dlg.locator('[name="code"]').fill('BO-01');
     await dlg.locator('button[value="speichern"]').click();
     await dlg.locator('[data-dialog-fehler]',{hasText:'Diesen Code gibt es im Projekt schon.'}).waitFor();
     await dlg.locator('[name="code"]').fill('bo-03');
-    await dlg.locator('[name="raeume"]').fill('Wohnen, Essen');
+    await dlg.locator('[name="notiz"]').fill('Variante Wohnen');
     await dlg.locator('button[value="speichern"]').click();
     await page.locator('.pb-banner.info',{hasText:'Zum Projekt hinzugefügt: T-01 · Testhaus · BO-03.'}).waitFor();
     assert.match(await karte(page,'Heizestrich, schwimmend').locator('.pb-verwendung').textContent(),/Testhaus · BO-03 · vorgeschlagen/);
     const v=(await db(page)).office_produkt_verwendungen.find(x=>x.code==='BO-03');
-    assert.equal(v.projekt_id,ids.P1);assert.equal(v.raeume,'Wohnen, Essen');
+    assert.equal(v.projekt_id,ids.P1);assert.equal(v.notiz,'Variante Wohnen');assert.equal(v.status,'vorgeschlagen');
 
     await page.goto(adresse('produktbibliothek.html?id='+ids.S1));
     await page.locator('h1',{hasText:'Kalkstein, geschliffen'}).waitFor();
+    // Foto: erscheint als Musterfläche der Karte.
+    await page.setInputFiles('[data-foto]',{name:'Muster.png',mimeType:'image/png',buffer:Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000','hex')});
+    await page.locator('.pb-banner.info',{hasText:'Hochgeladen: Muster.png.'}).waitFor();
+    assert.equal((await db(page)).office_produkt_dokumente.filter(d=>d.produkt_id===ids.S1&&d.art==='bild').length,1);
+    assert.equal(await page.locator('.pb-swatch.gross img').count(),1);
+    assert.match(await page.locator('.pb-side label.btn').first().textContent(),/Weiteres Foto/);
     // Preis eintragen: deutsche Zahl, Tippfehler wird abgefangen.
     await page.click('[data-preis-neu]');
     await dlg.locator('[name="art"]').selectOption('angebot_eingebaut');
@@ -206,7 +223,7 @@ test('Zu Projekt, Preis eintragen, Stand ändern und Entfernen nur nach Rückfra
     await page.locator('[data-dok-weg="'+ids.D1+'"]').click();
     await dlg.locator('button[value="ja"]').click();
     await page.waitForFunction(id=>!window.__fake.db.office_produkt_dokumente.some(d=>d.id===id),ids.D1);
-    assert.equal(Object.keys((await db(page)).__dateien).length,0,'die Datei ist auch aus dem Speicher entfernt');
+    assert.ok(!Object.keys((await db(page)).__dateien).some(p=>p.includes('b1111111-1111')),'die Datei ist auch aus dem Speicher entfernt');
     // Danach Esc beim Entfernen eines Preises: das alte «ja» zählt nicht.
     const zeile=page.locator('.pb-tabelle tr',{hasText:'1.234,5'});
     await zeile.locator('[data-preis-weg]').click();

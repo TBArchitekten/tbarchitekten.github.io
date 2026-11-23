@@ -88,6 +88,7 @@ select.pb-input{padding-right:28px}
 /* Produktblatt */
 .pb-cols{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:18px;align-items:start}
 .pb-side,.pb-main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.pb-side>.btn{align-self:flex-start}
 .pb-box{padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .pb-box p{margin:0}
 .pb-box>.btn{align-self:flex-start}

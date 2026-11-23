@@ -48,7 +48,7 @@ const KG_HINWEIS={bodenbelag:'die Kostengruppe ergibt sich aus der Verwendung: a
 
 let nutzer=null,mitglied=null;
 const daten={produkte:[],preise:[],dokumente:[],verwendungen:[],projekte:[],team:new Set()};
-const ui={kategorie:'bodenbelag',suche:'',herkunft:'alle',sort:'zuletzt',archiv:false};
+const ui={kategorie:'bodenbelag',suche:'',herkunft:'alle',projekt:'alle',sort:'zuletzt',archiv:false};
 let bilder=new Map();
 
 function fehler(text){root.innerHTML='<div class="pb-wrap"><a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a><div class="pb-banner warn">'+esc(text)+'</div></div>'}
@@ -137,16 +137,33 @@ function preisBild(e){
   const min=werte[0],max=werte[werte.length-1];
   bild.haupt=(min===max?zahl(min):zahl(min)+'–'+zahl(max))+' €/'+einheit;
   bild.zusatz=eingebaut.length?'eingebaut':'Material';
-  // Kostenberechnungen zählen, nicht Positionen: eine Kostenberechnung mit Belag auf Bodenplatte und Decke ist eine.
-  const markt=liste.filter(x=>MARKT.has(x.art)).length,ansaetze=new Set(liste.filter(x=>x.art==='ansatz_kobe').map((x,i)=>quelleVon(x)||'#'+i)).size;
+  const markt=liste.filter(x=>MARKT.has(x.art)).length;
   if(eingebaut.length){
     if(markt)bild.meta=markt===1?'aus 1 Angebot oder Abrechnung':'aus '+markt+' Angeboten oder Abrechnungen';
-    else bild.meta='Ansatz in '+ansaetze+(ansaetze===1?' Kostenberechnung':' Kostenberechnungen')+', kein Angebot';
+    else bild.meta=ansatzHerkunft(liste.filter(x=>x.art==='ansatz_kobe'))+' · kein Angebot';
   }else bild.meta='Listenpreis, ohne Verlegung';
   if(bild.ausFamilie)bild.meta+=' · Familie «'+e.familie+'»';
   bild.badges=hinweiseFuer(liste);
   return bild;
 }
+// Woher ein Ansatz stammt, beim Namen der Kostenberechnung (gezählt werden Kostenberechnungen, nicht Positionen:
+// derselbe Belag auf Bodenplatte und Decke einer Kostenberechnung ist eine).
+function ansatzHerkunft(liste){
+  const quellen=[...new Set(liste.map(quelleVon).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de',{numeric:true}));
+  const jahre=liste.map(x=>jahr(x.stand)).filter(Boolean).sort();
+  const zeit=jahre.length?' ('+(jahre[0]===jahre[jahre.length-1]?jahre[0]:jahre[0]+'–'+jahre[jahre.length-1])+')':'';
+  if(!quellen.length)return 'Ansatz einer Kostenberechnung'+zeit;
+  if(quellen.length===1)return 'Ansatz der Kostenberechnung '+quellen[0]+zeit;
+  if(quellen.length<=3)return 'Ansätze der Kostenberechnungen '+quellen.join(', ')+zeit;
+  return 'Ansätze aus '+quellen.length+' Kostenberechnungen'+zeit;
+}
+// Kostengruppen, in denen der Eintrag (oder seine Familie) angesetzt wurde: sie folgen aus der Verwendung,
+// ein Bodenbelag steht auf der Bodenplatte in KG 324 und auf Decken in KG 353.
+function kgVon(e){
+  const l=preiseVon(e).length?preiseVon(e):familienPreise(e);
+  return [...new Set(l.map(x=>x.kg).filter(Boolean))].sort();
+}
+const kgText=e=>{const k=kgVon(e);return k.length?'KG '+k.join('/'):''};
 // Hinweise zu einer Liste von Preisen: übernommener Ansatz (zählt als eine Quelle), große Spanne eingebaut, nur eine Quelle.
 function hinweiseFuer(liste){
   const raus=[];
@@ -164,11 +181,13 @@ const KOPIE_TEXT='Gleicher Betrag in mehreren Kostenberechnungen: vermutlich ein
 function haeufigste(liste){const z=new Map();for(const x of liste)z.set(x,(z.get(x)||0)+1);let best=liste[0]||'m²',n=0;for(const [k,v] of z)if(v>n){best=k;n=v}return best}
 function dokumenteVon(e){return daten.dokumente.filter(d=>d.produkt_id===e.id)}
 function verwendungenVon(e){return daten.verwendungen.filter(v=>v.produkt_id===e.id)}
+// Ob und wo der Eintrag ausgewählt ist (nicht, woher der Preis stammt: das sagt die Zeile darüber).
 function verwendungsZeile(e){
-  const v=verwendungenVon(e).filter(x=>x.status!=='verworfen');
-  if(!v.length)return 'in keinem laufenden Projekt';
+  let v=verwendungenVon(e).filter(x=>x.status!=='verworfen');
+  if(!v.length)return 'Noch in keinem Projekt ausgewählt';
+  if(ui.projekt!=='alle')v=[...v.filter(x=>x.projekt_id===ui.projekt),...v.filter(x=>x.projekt_id!==ui.projekt)];
   const p=projekt(v[0].projekt_id);
-  return [p?.name||'Projekt',v[0].code,v[0].status].filter(Boolean).join(' · ')+(v.length>1?' · +'+(v.length-1):'');
+  return 'Ausgewählt in '+[p?.name||'einem Projekt',v[0].code,v[0].status].filter(Boolean).join(' · ')+(v.length>1?' · +'+(v.length-1):'');
 }
 
 // ---------- Bild der Karte ----------
@@ -219,8 +238,14 @@ async function zeigeListe(){
 function gefiltert(){
   const q=ui.suche.trim().toLowerCase();
   let liste=daten.produkte.filter(e=>(ui.archiv?e.archiviert:!e.archiviert)&&(ui.kategorie==='alle'||e.kategorie===ui.kategorie));
-  if(q)liste=liste.filter(e=>[e.name,e.hersteller,e.serie,e.familie,e.beschreibung,...(e.merkmale||[]).map(m=>m.feld+' '+m.wert)]
-    .filter(Boolean).join(' ').toLowerCase().includes(q));
+  if(q)liste=liste.filter(e=>[e.name,e.hersteller,e.serie,e.familie,e.beschreibung,...(e.merkmale||[]).map(m=>m.feld+' '+m.wert),
+    ...kgVon(e).map(k=>'kg '+k)].filter(Boolean).join(' ').toLowerCase().includes(q));
+  // Auswahl für ein Projekt: nur was dort gewählt ist, nach Code.
+  if(ui.projekt!=='alle'){
+    const code=e=>(verwendungenVon(e).find(v=>v.projekt_id===ui.projekt&&v.status!=='verworfen')?.code)||'';
+    liste=liste.filter(e=>verwendungenVon(e).some(v=>v.projekt_id===ui.projekt&&v.status!=='verworfen'));
+    if(ui.sort==='zuletzt')liste.sort((a,b)=>(code(a)||'~').localeCompare(code(b)||'~','de',{numeric:true}));
+  }
   if(ui.herkunft!=='alle')liste=liste.filter(e=>{const l=preisBild(e).liste;
     if(ui.herkunft==='markt')return l.some(x=>MARKT.has(x.art));
     if(ui.herkunft==='ansatz')return l.some(x=>x.art==='ansatz_kobe');
@@ -262,6 +287,9 @@ function renderListe(){
         <div class="pb-gruppe"><label for="pbHerkunft" class="meta">Preis aus</label>
         <select id="pbHerkunft" class="pb-input">${[['alle','allen Quellen'],['markt','Angebot oder Abrechnung'],['ansatz','Kostenberechnung (Ansatz)'],['liste','Datenblatt (Listenpreis)'],['ohne','noch ohne Preis']]
           .map(([k,t])=>'<option value="'+k+'"'+(ui.herkunft===k?' selected':'')+'>'+t+'</option>').join('')}</select></div>
+        <div class="pb-gruppe"><label for="pbProjekt" class="meta">Projekt</label>
+        <select id="pbProjekt" class="pb-input"><option value="alle">alle Projekte</option>${daten.projekte.filter(p=>p.status==='aktiv')
+          .map(p=>'<option value="'+esc(p.id)+'"'+(ui.projekt===p.id?' selected':'')+'>'+esc(projektName(p))+'</option>').join('')}</select></div>
         <div class="pb-gruppe"><label for="pbSort" class="meta">Sortieren</label>
         <select id="pbSort" class="pb-input">${[['zuletzt','zuletzt geändert'],['preis','Preis eingebaut'],['projekte','Anzahl Projekte'],['name','Name']]
           .map(([k,t])=>'<option value="'+k+'"'+(ui.sort===k?' selected':'')+'>'+t+'</option>').join('')}</select></div>
@@ -277,6 +305,7 @@ function renderListe(){
   root.querySelector('#pbSuche').addEventListener('input',ev=>{ui.suche=ev.target.value;renderErgebnis()});
   root.querySelector('#pbHerkunft').addEventListener('change',ev=>{ui.herkunft=ev.target.value;renderErgebnis()});
   root.querySelector('#pbSort').addEventListener('change',ev=>{ui.sort=ev.target.value;renderErgebnis()});
+  root.querySelector('#pbProjekt').addEventListener('change',ev=>{ui.projekt=ev.target.value;renderErgebnis()});
   root.querySelector('[data-archiv]').addEventListener('click',()=>{ui.archiv=!ui.archiv;void zeigeListe()});
   root.querySelectorAll('[data-kat]').forEach(b=>b.addEventListener('click',()=>{
     ui.kategorie=b.dataset.kat;root.querySelectorAll('[data-kat]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderErgebnis()}));
@@ -285,9 +314,12 @@ function renderListe(){
 function renderErgebnis(){
   const el=root.querySelector('[data-ergebnis]');if(!el)return;
   const liste=gefiltert(),anzahl=root.querySelector('[data-zahl]');
-  if(anzahl)anzahl.textContent=liste.length+' '+(liste.length===1?'Eintrag':'Einträge')+(ui.kategorie!=='alle'?' · '+katName(ui.kategorie):'')+(KG_HINWEIS[ui.kategorie]?' · '+KG_HINWEIS[ui.kategorie]:'');
+  const fuer=ui.projekt!=='alle'?projekt(ui.projekt):null;
+  if(anzahl)anzahl.textContent=liste.length+' '+(liste.length===1?'Eintrag':'Einträge')+(fuer?' ausgewählt für '+projektName(fuer):'')+
+    (ui.kategorie!=='alle'?' · '+katName(ui.kategorie):'')+(KG_HINWEIS[ui.kategorie]?' · '+KG_HINWEIS[ui.kategorie]:'');
   el.innerHTML=`${liste.length?'<div class="pb-grid">'+liste.map(karte).join('')+'</div>':
-      '<div class="card pb-leer"><p>'+(daten.produkte.length?'Nichts gefunden. Andere Kategorie oder weniger Suchbegriffe?':'Die Bibliothek ist noch leer.')+'</p>'+
+      '<div class="card pb-leer"><p>'+(fuer?'Für dieses Projekt ist hier noch nichts ausgewählt. «Zu Projekt» auf einer Karte wählt aus.':
+        daten.produkte.length?'Nichts gefunden. Andere Kategorie oder weniger Suchbegriffe?':'Die Bibliothek ist noch leer.')+'</p>'+
       '<p class="meta">Am schnellsten mit einem Herstellerdatenblatt: Romy liest es, du prüfst, die Bibliothek übernimmt.</p></div>'}`;
   el.querySelectorAll('[data-zu-projekt]').forEach(b=>b.addEventListener('click',()=>zuProjekt(daten.produkte.find(e=>e.id===b.dataset.zuProjekt))));
 }
@@ -302,7 +334,7 @@ function karte(e){
     ${swatch(e)}
     <div class="pb-karte-text">
       <h2><a href="./produktbibliothek.html?id=${esc(e.id)}">${esc(e.name)}</a></h2>
-      <p class="meta">${esc([unter,e.familie!==e.name?e.familie:''].filter(Boolean).join(' · '))}</p>
+      <p class="meta">${esc([unter,e.familie!==e.name?e.familie:'',kgText(e)].filter(Boolean).join(' · '))}</p>
       <p class="pb-preis${b.liste.length?'':' leer'}">${esc(b.haupt)}${b.zusatz?' <span>'+esc(b.zusatz)+'</span>':''}</p>
       <p class="meta">${esc(b.meta)}</p>
       ${badges.length?'<div class="pb-chips">'+badges.map(badge).join('')+'</div>':''}
@@ -322,7 +354,7 @@ function renderProdukt(e){
   const doks=dokumenteVon(e),eigene=preiseVon(e),familie=familienPreise(e),verw=verwendungenVon(e);
   const datenblatt=doks.find(d=>d.art==='datenblatt');
   const merkmale=(e.merkmale||[]).filter(m=>m&&m.feld);
-  const kopf=[e.typ==='leistung'?'Leistung, kein Produkt':(e.hersteller||'Hersteller offen'),e.serie?'Serie '+e.serie:'',e.familie?'Familie «'+e.familie+'»':'',
+  const kopf=[e.typ==='leistung'?'Leistung, kein Produkt':(e.hersteller||'Hersteller offen'),e.serie?'Serie '+e.serie:'',e.familie?'Familie «'+e.familie+'»':'',kgText(e),
     e.status==='geprueft'&&e.geprueft_am?'geprüft am '+datum(e.geprueft_am):'Entwurf'].filter(Boolean).join(' · ');
   const hinweise=hinweiseFuer(eigene),hinweiseFamilie=hinweiseFuer(familie);
   root.innerHTML=`<div class="pb-wrap">
@@ -336,6 +368,7 @@ function renderProdukt(e){
     <div class="pb-cols">
       <div class="pb-side">
         ${swatch(e,'pb-swatch gross')}
+        <label class="btn">${doks.some(d=>d.art==='bild')?'Weiteres Foto':'Foto hinzufügen'}<input type="file" class="pb-datei" accept="image/jpeg,image/png,image/webp" data-foto></label>
         ${e.beschreibung?'<section class="card pb-box"><p>'+esc(e.beschreibung)+'</p></section>':''}
         <section class="card pb-box"><h2 class="pb-h2">Dokumente</h2>
           ${doks.length?'<ul class="pb-doks">'+doks.map(d=>`<li><span><b>${esc(DOKARTEN[d.art]||d.art)}</b><br><span class="meta">${esc(d.name)}${d.seiten?' · '+d.seiten+' S.':''}${d.gelesen_am?' · von Romy gelesen':''}</span></span>
@@ -379,6 +412,7 @@ function renderProdukt(e){
   root.querySelectorAll('[data-dok-lesen]').forEach(b=>b.addEventListener('click',()=>bestehendesLesen(e,b.dataset.dokLesen)));
   root.querySelectorAll('[data-status]').forEach(s=>s.addEventListener('change',()=>statusAendern(e,s.dataset.status,s.value)));
   root.querySelector('#pbDokDatei').addEventListener('change',ev=>{const f=ev.target.files?.[0];if(f)void dokumentHochladen(e,f,root.querySelector('#pbDokArt').value)});
+  root.querySelector('[data-foto]').addEventListener('change',ev=>{const f=ev.target.files?.[0];if(f)void dokumentHochladen(e,f,'bild')});
 }
 function preisTabelle(liste,eigene,familie=false){
   const zeilen=liste.slice().sort((a,b)=>String(b.stand||'').localeCompare(String(a.stand||''))).map(x=>{
@@ -395,12 +429,11 @@ function preisTabelle(liste,eigene,familie=false){
     <th scope="col">Projekt · Menge</th><th scope="col">Quelle</th><th scope="col"><span class="sr">Aktion</span></th></tr></thead><tbody>${zeilen}</tbody></table></div>`;
 }
 function verwendungsTabelle(liste){
-  return `<div class="pb-tabelle"><table><thead><tr><th scope="col">Projekt</th><th scope="col">Code</th><th scope="col">Räume</th><th scope="col" class="num">Menge</th><th scope="col">Stand der Bemusterung</th></tr></thead><tbody>${
+  return `<div class="pb-tabelle"><table><thead><tr><th scope="col">Projekt</th><th scope="col">Code</th><th scope="col">Stand der Bemusterung</th><th scope="col">Notiz</th></tr></thead><tbody>${
     liste.map(v=>{const p=projekt(v.projekt_id),darf=darfProjekt(p);
-      return `<tr><td>${esc(projektName(p)||'Projekt')}</td><td>${esc(v.code||'—')}</td><td>${esc(v.raeume||'—')}</td>
-        <td class="num">${v.menge!=null?esc(zahl(v.menge)+' '+(v.einheit||'')):'—'}</td>
+      return `<tr><td>${esc(projektName(p)||'Projekt')}</td><td>${esc(v.code||'—')}</td>
         <td>${darf?'<label class="sr" for="st-'+esc(v.id)+'">Stand</label><select id="st-'+esc(v.id)+'" class="pb-input" data-status="'+esc(v.id)+'">'+STATI.map(s=>'<option'+(s===v.status?' selected':'')+'>'+s+'</option>').join('')+'</select>':esc(v.status)}
-        ${v.notiz?'<br><span class="meta">'+esc(v.notiz)+'</span>':''}</td></tr>`}).join('')}</tbody></table></div>`;
+        </td><td>${esc(v.notiz||'—')}</td></tr>`}).join('')}</tbody></table></div>`;
 }
 async function oeffneDokument(id,seite){
   const d=daten.dokumente.find(x=>x.id===id);if(!d)return;
@@ -526,13 +559,9 @@ function zuProjekt(e){
     <div class="pb-felder">
       <label class="breit">Projekt<select name="projekt" class="pb-input">${projekte.map(p=>'<option value="'+esc(p.id)+'">'+esc(projektName(p))+'</option>').join('')}</select></label>
       <label>Code<input name="code" class="pb-input" value="${esc(naechsterCode(erstes,e.kategorie))}" maxlength="8" pattern="[A-Za-z]{1,4}-[0-9]{1,3}" title="z. B. BO-01"></label>
-      <label>Stand<select name="status" class="pb-input">${STATI.slice(0,5).map(s=>'<option>'+s+'</option>').join('')}</select></label>
-      <label class="breit">Räume<input name="raeume" class="pb-input" maxlength="400" placeholder="z. B. Wohnen, Essen, Flur EG"></label>
-      <label>Menge<input name="menge" class="pb-input" inputmode="decimal"></label>
-      <label>Einheit<select name="einheit" class="pb-input">${EINHEITEN.map(x=>'<option>'+x+'</option>').join('')}</select></label>
-      <label class="breit">Notiz<input name="notiz" class="pb-input" maxlength="1000"></label>
+      <label class="breit">Notiz<input name="notiz" class="pb-input" maxlength="1000" placeholder="z. B. Variante für Wohnen, Muster bestellt"></label>
     </div>
-    <p class="meta">Der Code verbindet Produkt, Räume in Archicad und Kostenberechnung; je Projekt gibt es ihn einmal.</p>
+    <p class="meta">Hier wird nur ausgewählt: welches Material in welchem Projekt, unter welchem Code (je Projekt einmal). Menge und Räume stehen in der Kostenberechnung; später verbindet der Code sie mit Archicad. Den Stand der Bemusterung änderst du im Produktblatt.</p>
     <p class="pb-banner warn" data-dialog-fehler hidden></p>
     <div class="pb-actions"><button value="speichern" class="btn btn-primary">Hinzufügen</button><button value="abbrechen" class="btn" formnovalidate>Abbrechen</button></div></form>`);
   form.projekt.addEventListener('change',()=>{form.code.value=naechsterCode(form.projekt.value,e.kategorie)});
@@ -540,10 +569,9 @@ function zuProjekt(e){
     if(ev.submitter?.value!=='speichern')return;
     ev.preventDefault();
     const f=new FormData(form),fehlerEl=dialog.querySelector('[data-dialog-fehler]');
-    const code=String(f.get('code')||'').trim().toUpperCase(),menge=f.get('menge')?dezimal(f.get('menge')):null;
-    if((code&&!/^[A-Z]{1,4}-\d{1,3}$/.test(code))||(f.get('menge')&&menge===null)){fehlerEl.textContent='Code wie BO-01 und Menge als Zahl.';fehlerEl.hidden=false;return}
+    const code=String(f.get('code')||'').trim().toUpperCase();
+    if(code&&!/^[A-Z]{1,4}-\d{1,3}$/.test(code)){fehlerEl.textContent='Code wie BO-01.';fehlerEl.hidden=false;return}
     const {data,error}=await sb.from('office_produkt_verwendungen').insert({produkt_id:e.id,projekt_id:f.get('projekt'),code:code||null,
-      status:f.get('status'),raeume:String(f.get('raeume')||'').trim()||null,menge,einheit:menge!==null?f.get('einheit'):null,
       notiz:String(f.get('notiz')||'').trim()||null}).select('*').single();
     if(error){fehlerEl.textContent=error.code==='23505'?'Diesen Code gibt es im Projekt schon.':'Nicht gespeichert: '+error.message;fehlerEl.hidden=false;return}
     daten.verwendungen.unshift(data);dialog.close();
