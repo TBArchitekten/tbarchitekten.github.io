@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-23 · Kostenarchiv: «Auffällig» señala la fila que no estaba en la suma · Claude
+- Qué cambió y por qué: al revisar los datos reales para el informe, 8 de los 9 casos de «Auffällig, bitte prüfen» comparan con una fila que el original no sumaba. En un par, la que se marcaba dependía del orden de la lista, y así la tarjeta podía señalar el valor bueno (un 110 €/m² que sí cuenta, frente a un 11 €/m² fuera de la suma). Además, dos filas iguales de una misma Kostenberechnung hacían que un par saliera dos veces.
+  - En un par se marca la fila que no está en la suma; dos filas iguales de una Kostenberechnung cuentan como un valor.
+  - La tarjeta dice cuántos casos son filas fuera de la suma, pone primero los casos en que las dos filas cuentan y añade «(dort nicht in der Summe)» cuando lo que no cuenta es la comparación.
+- Archivos: `kosten-pool.js` (`office2`), `kostenberechnung.js` (`office8`), `kostenberechnung.html`, `tests/office-kosten-pool.test.mjs`, `tests/office-kostenberechnung.test.mjs`, `tests/browser/office-kostenarchiv.chromium.mjs`.
+- Base de datos: ninguna.
+- Deploy de funciones: ninguno (Pages al hacer merge).
+- Cómo se probó: test nuevo (par en los dos órdenes, dos filas iguales fuera de la suma); falla con el módulo anterior y pasa con el nuevo; 382 tests unitarios; Chromium Kostenarchiv 4/4 y Kostenberechnung 10/10; en local, con los datos reales: 9 casos, 8 con una fila fuera de la suma.
+- Quedó pendiente o sin probar: nada nuevo.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #143
+
 ### 2026-11-23 · Kostenberechnung: Kostenarchiv y Datenpool «Kennwert aus eigenen Projekten» · Claude
 - Qué cambió y por qué (Gari, 23.11., 21:41: «Tienes mi OK. Antes de hacerlo has de nuevo una investigación…»):
   - **Investigación antes de construir** (AVA con Kennwerte propios, BauKoDat, werk-material/CRB, BCIS, BKI, DESTINI, AACE): todos guardan proyectos terminados y sacan Kennwerte, pero casi ninguno dice de dónde sale cada precio ni si un valor es copia de otro. De ahí las reglas: origen en cada valor; el mismo Ansatz copiado en varias Kostenberechnungen cuenta una vez y su Kostenstand es el más antiguo; Reifegrad del documento (Kostenschätzung, Kostenberechnung, Fortschreibung); valores atípicos marcados, nunca quitados (≥ 2,5× o ≤ 1/2,5 de la mediana desde tres valores); Spanne y mediana, sin cuartiles con tan pocos datos; normalizar con el Baupreisindex de la Kostenberechnung de destino; KG emparentadas; Bestand aparte.

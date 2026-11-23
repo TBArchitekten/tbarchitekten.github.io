@@ -7,7 +7,10 @@
    - BCIS: Spanne und Lage statt eines einzigen Werts; bei wenigen Werten keine Quartile, nur Spanne und Median;
    - BKI: der Reifegrad zählt, eine Kostenberechnung ist keine Abrechnung.
    Darüber hinaus: derselbe Wert in mehreren Kostenberechnungen gilt als übernommen und zählt einmal. Sein Kostenstand ist
-   der des ältesten Vorkommens, denn dort wurde er ermittelt; fortgeschrieben wird von dort aus. */
+   der des ältesten Vorkommens, denn dort wurde er ermittelt; fortgeschrieben wird von dort aus.
+   23.11.2026, abends: Bei einem auffälligen Paar wird die Zeile markiert, die im Original nicht in der Summe steht
+   (an den vier Archiv-Ständen 8 von 9 Fällen); vorher entschied die Reihenfolge der Liste. Gleiche Zeilen einer
+   Kostenberechnung zählen dabei als ein Wert, damit ein Paar nicht zweimal erscheint. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -229,6 +232,8 @@ function uebernommen(liste,{schwelle=0.65}={}){
 // Auffällig: mindestens dreimal so hoch oder ein Drittel so hoch wie dieselbe Leistung in anderen Kostenberechnungen.
 function auffaellig(liste,{schwelle=0.6,faktor=3}={}){
   const m=eimer(liste.filter(e=>e.einheit!=='psch')),out=[],gesehen=new Set();
+  // Gleiche Zeilen einer Kostenberechnung (Titel und Preis) sind ein Wert.
+  const schluessel=e=>e.instanz+'|'+e.titelText+'|'+e.epCent;
   for(const e of liste){
     if(e.einheit==='psch')continue;
     const n=nachbarn(e,m,schwelle).filter(x=>x.epCent!==e.epCent);
@@ -236,17 +241,19 @@ function auffaellig(liste,{schwelle=0.6,faktor=3}={}){
     const med=medianCent(n.map(x=>x.epCent));if(!med||med<=0n)continue;
     const f=Number(e.epCent)/Number(med);
     if(f<faktor&&f>1/faktor)continue;
-    const key=e.instanz+'|'+e.titelText+'|'+e.epCent;if(gesehen.has(key))continue;gesehen.add(key);
+    const key=schluessel(e);if(gesehen.has(key))continue;gesehen.add(key);
     const vergleich=[...new Set(n.map(x=>x.nr))];
     out.push({e,n,medianCent:med,faktor:f,vergleich,minCent:n.reduce((a,x)=>x.epCent<a?x.epCent:a,n[0].epCent),
       maxCent:n.reduce((a,x)=>x.epCent>a?x.epCent:a,n[0].epCent)});
   }
-  // Wer mehr Vergleichswerte hat, ist eher der Ausreißer; ein Paar (A gegen B, B gegen A) erscheint nur einmal.
-  out.sort((a,b)=>b.vergleich.length-a.vergleich.length||new Set(b.n.map(y=>y.epCent)).size-new Set(a.n.map(y=>y.epCent)).size||Math.abs(Math.log(b.faktor))-Math.abs(Math.log(a.faktor)));
+  // Wer mehr Vergleichswerte hat, ist eher der Ausreißer; bei Gleichstand die Zeile außerhalb der Summe des Originals.
+  // Ein Paar (A gegen B, B gegen A) erscheint nur einmal.
+  out.sort((a,b)=>b.vergleich.length-a.vergleich.length||new Set(b.n.map(y=>y.epCent)).size-new Set(a.n.map(y=>y.epCent)).size||
+    (b.e.nichtInSumme?1:0)-(a.e.nichtInSumme?1:0)||Math.abs(Math.log(b.faktor))-Math.abs(Math.log(a.faktor)));
   const belegt=new Set(),fall=[];
   for(const x of out){
-    if(belegt.has(x.e)&&x.n.every(y=>belegt.has(y)))continue;
-    belegt.add(x.e);for(const y of x.n)belegt.add(y);
+    if(belegt.has(schluessel(x.e))&&x.n.every(y=>belegt.has(schluessel(y))))continue;
+    belegt.add(schluessel(x.e));for(const y of x.n)belegt.add(schluessel(y));
     fall.push(x);
   }
   return fall;

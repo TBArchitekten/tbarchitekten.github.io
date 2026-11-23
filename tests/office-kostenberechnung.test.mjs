@@ -265,7 +265,7 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office4',
-    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kosten-pool.js?v=office1','./kostenberechnung.js?v=office7','./kostenberechnung.css?v=office7'])
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kosten-pool.js?v=office2','./kostenberechnung.js?v=office8','./kostenberechnung.css?v=office7'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
     seite.indexOf('kosten-assistent.js')<seite.indexOf('kosten-pool.js')&&seite.indexOf('kosten-pool.js')<seite.indexOf('kostenberechnung.js?'));
