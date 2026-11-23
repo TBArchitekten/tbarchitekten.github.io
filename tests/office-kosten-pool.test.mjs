@@ -120,3 +120,25 @@ test('Übernommen statt neu ermittelt, und auffällige Werte (ein Paar nur einma
   assert.equal(xps[0].e.position,'b2');assert.equal(xps[0].minCent,4000n);assert.equal(xps[0].maxCent,4200n);
   assert.deepEqual(xps[0].vergleich,['T-11']);
 });
+
+test('Auffälliges Paar: markiert wird die Zeile außerhalb der Summe, gleich in welcher Reihenfolge',()=>{
+  const X=inst('x','T-21',{positionen:[pos('x1','345','Vorsatzschale doppelt beplankt','100','m²','110',{p:{archivZeile:30}})]});
+  const Y=inst('y','T-22',{kostenstand:'2026-Q4',positionen:[
+    pos('y1','345','Vorsatzschale doppelt beplankt','22','m²','11',{p:{archivZeile:31,status:'entfaellt',archivNichtInSumme:true}})]});
+  for(const liste of [[X,Y],[Y,X]]){
+    const a=P.auffaellig(P.eintraege(liste,R));
+    assert.equal(a.length,1,'ein Paar, ein Fall');
+    assert.equal(a[0].e.position,'y1');assert.equal(a[0].e.nichtInSumme,true);assert.deepEqual(a[0].vergleich,['T-21']);
+  }
+  // Stehen beide in der Summe, bleibt es ein Fall.
+  const Z=inst('z','T-23',{kostenstand:'2026-Q4',positionen:[pos('z1','345','Vorsatzschale doppelt beplankt','22','m²','11',{p:{archivZeile:32}})]});
+  assert.equal(P.auffaellig(P.eintraege([X,Z],R)).length,1);
+  // Zwei gleiche Zeilen außerhalb der Summe gegen einen Wert: weiter ein Fall, nicht zwei.
+  const W=inst('w','T-24',{kostenstand:'2026-Q4',positionen:[
+    pos('w1','345','Vorsatzschale doppelt beplankt','22','m²','11',{p:{archivZeile:33,status:'entfaellt',archivNichtInSumme:true}}),
+    pos('w2','345','Vorsatzschale doppelt beplankt','8','m²','11',{p:{archivZeile:34,status:'entfaellt',archivNichtInSumme:true}})]});
+  for(const liste of [[X,W],[W,X]]){
+    const a=P.auffaellig(P.eintraege(liste,R));
+    assert.equal(a.length,1,'ein Fall');assert.equal(a[0].e.instanz,'w');
+  }
+});

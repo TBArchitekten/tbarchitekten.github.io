@@ -138,10 +138,20 @@ function kostenarchiv(liste){
       (jahre&&jahre[0]<jahre[1]?' ('+jahre[0]+'–'+jahre[1]+')':'')+'. Ihr Kostenstand ist der des ältesten Vorkommens.</p>'+
       kopien.slice(0,6).map(k=>'<div class="mini"><span>'+esc(kurz(k.titel,46))+' <span class="meta">'+esc(k.projekte.join(', '))+'</span></span><span class="num">'+euroEp(k.epCent,k.einheit)+'</span></div>').join(''):
       '<p class="meta">Keine gleichen Ansätze gefunden.</p>')+'</section>';
+  // 23.11.2026, abends: Steht eine Seite eines Falls im Original nicht in der Summe, sagt die Karte es (auch für die Vergleichswerte).
+  // Zuerst die Fälle, in denen beide Seiten in ihrer Summe stehen: sie betreffen die Summen der Originale.
+  const ausserhalbFall=a=>a.e.nichtInSumme||a.n.every(x=>x.nichtInSumme);
+  const ausserhalb=auff.filter(ausserhalbFall).length;
+  auff.sort((a,b)=>(ausserhalbFall(a)?1:0)-(ausserhalbFall(b)?1:0));
+  const eine=' eine Zeile, die im Original nicht in der Summe steht.',mehrere=' Zeilen, die im Original nicht in der Summe stehen.';
+  const hinweisAuff=!ausserhalb?'':ausserhalb===auff.length?(auff.length===1?'Der Fall betrifft'+eine:'Alle '+auff.length+' Fälle betreffen'+mehrere):
+    ausserhalb+' von '+auff.length+' Fällen '+(ausserhalb===1?'betrifft'+eine:'betreffen'+mehrere);
   const karteAuff='<section class="card archiv-k"><h2 class="kb-h2">Auffällig, bitte prüfen</h2>'+
-    (auff.length?auff.slice(0,4).map(a=>'<p class="auff"><strong>'+esc(a.e.nr)+'</strong> · '+esc(kurz(a.e.bez,60))+': '+euroEp(a.e.epCent,a.e.einheit)+
+    (auff.length?(hinweisAuff?'<p class="meta" style="margin:6px 0 8px">'+esc(hinweisAuff)+'</p>':'')+
+      auff.slice(0,4).map(a=>'<p class="auff"><strong>'+esc(a.e.nr)+'</strong> · '+esc(kurz(a.e.bez,60))+': '+euroEp(a.e.epCent,a.e.einheit)+
       (a.e.menge?' für '+esc(R.zahl(a.e.menge,2))+' '+esc(a.e.einheit):'')+(a.e.nichtInSumme?' (nicht in der Summe)':'')+'. In '+esc(a.vergleich.join(', '))+
-      ' dieselbe Leistung '+(a.minCent===a.maxCent?euroEp(a.minCent,a.e.einheit):euroEp(a.minCent)+' bis '+euroEp(a.maxCent,a.e.einheit))+'.</p>').join('')+
+      ' dieselbe Leistung '+(a.minCent===a.maxCent?euroEp(a.minCent,a.e.einheit):euroEp(a.minCent)+' bis '+euroEp(a.maxCent,a.e.einheit))+
+      (!a.e.nichtInSumme&&a.n.every(x=>x.nichtInSumme)?' (dort nicht in der Summe)':'')+'.</p>').join('')+
       (auff.length>4?'<p class="meta">'+(auff.length-4)+' weitere im Datenpool markiert.</p>':''):'<p class="meta">Nichts auffällig.</p>')+'</section>';
   return '<h2 class="lib" id="kostenarchiv">Kostenarchiv</h2>'+
     '<p class="meta" style="margin:-8px 0 14px">'+zeilen.length+(zeilen.length===1?' alte Kostenberechnung':' alte Kostenberechnungen')+' des Büros · nur lesen. Ihre Positionen sind der Datenpool: '+

@@ -85,6 +85,7 @@ test('Kostenarchiv: Tabelle, je m² BGF, übernommene Ansätze und Auffälliges'
     assert.match(kopien,/Belag Holz/);assert.match(kopien,/180,00\s€\/m²/);assert.match(kopien,/T-02, T-03|T-03, T-02/);
     const auff=await page.locator('.archiv-k',{hasText:'Auffällig, bitte prüfen'}).textContent();
     assert.match(auff,/T-03 · Dämmplatte XPS 140 mm: 188,00\s€\/m² für 60 m² \(nicht in der Summe\)\. In T-02 dieselbe Leistung 40,00\s€ bis 42,00\s€\/m²/);
+    assert.match(auff,/Der Fall betrifft eine Zeile, die im Original nicht in der Summe steht\./);
     // Laufende Kostenberechnungen bleiben, wie sie sind; das Archiv steht darunter.
     assert.equal(await page.locator('.liste .card h2',{hasText:'Testhaus'}).count(),1);
     assert.equal(await page.locator('.liste .card h2',{hasText:'Archiv'}).count(),0);
