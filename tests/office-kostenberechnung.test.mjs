@@ -256,7 +256,7 @@ test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/NAV_ICONS\.kosten='<svg /);
   assert.match(projekte,/getElementById\('officeToolsKosten'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/kostenberechnung\.html';/);
   assert.match(index,/\.\/shell\.js\?v=office51/);
-  assert.match(index,/\.\/office-projects\.js\?v=office54/);
+  assert.match(index,/\.\/office-projects\.js\?v=office55/);
   assert.match(ui,/href="\.\/app\/#section=tools">‹ Werkzeuge/);
 });
 
@@ -265,10 +265,10 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office4',
-    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kostenberechnung.js?v=office6','./kostenberechnung.css?v=office6'])
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kosten-pool.js?v=office1','./kostenberechnung.js?v=office7','./kostenberechnung.css?v=office7'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
-    seite.indexOf('kosten-assistent.js')<seite.indexOf('kostenberechnung.js?'));
+    seite.indexOf('kosten-assistent.js')<seite.indexOf('kosten-pool.js')&&seite.indexOf('kosten-pool.js')<seite.indexOf('kostenberechnung.js?'));
   // In der App ohne Sitzung: anmelden über die App, nicht im Browser umleiten.
   assert.match(ui,/WINDOW_NATIVE\.call\('session\.signIn'\)/);
   assert.match(ui,/must_change_password/);
@@ -318,7 +318,8 @@ test('öffentliches Repository: keine DIN-Titel, keine Projekte, keine Adressen'
   const dateien={'kosten-rechnen.js':read('kosten-rechnen.js'),'kosten-import.js':read('kosten-import.js'),'kostenberechnung.js':ui,
     'kostenberechnung.css':css,'kostenberechnung.html':seite,[MIGRATION]:sql,
     'kostenberechnung-hilfe.html':read('kostenberechnung-hilfe.html'),'terminplan-hilfe.html':read('terminplan-hilfe.html'),'anleitung.css':read('anleitung.css'),
-    'kosten-assistent.js':read('kosten-assistent.js'),'office-kosten-ai/core.mjs':read('supabase/functions/office-kosten-ai/core.mjs'),
+    'kosten-assistent.js':read('kosten-assistent.js'),'kosten-pool.js':read('kosten-pool.js'),'Test Datenpool':read('tests/office-kosten-pool.test.mjs'),
+    'office-kosten-ai/core.mjs':read('supabase/functions/office-kosten-ai/core.mjs'),
     'office-kosten-ai/index.ts':read('supabase/functions/office-kosten-ai/index.ts'),'Migration KI':read('supabase/migrations/20261121180000_office_kosten_ai_v1.sql'),
     'Abnahme KI':read('tests/sql/office-kosten-ai-rls-acceptance.sql'),'Testersatz':read('tests/browser/fixtures/fake-supabase-kosten.js'),
     'fixture':readFileSync(url('tests/fixtures/kosten-archicad-beispiel.xlsx')).toString('latin1')};
@@ -334,10 +335,11 @@ test('öffentliches Repository: keine DIN-Titel, keine Projekte, keine Adressen'
 });
 
 test('deutsch, und ohne spanische Reste',()=>{
-  for(const [name,txt] of [['kostenberechnung.js',ui],['kostenberechnung.html',seite],['kosten-rechnen.js',read('kosten-rechnen.js')],['kosten-import.js',read('kosten-import.js')]])
+  for(const [name,txt] of [['kostenberechnung.js',ui],['kostenberechnung.html',seite],['kosten-rechnen.js',read('kosten-rechnen.js')],['kosten-import.js',read('kosten-import.js')],['kosten-pool.js',read('kosten-pool.js')]])
     assert.ok(!/\b(para|que|como|desde|proyecto|archivo|tarea|también|costos|cálculo|guardar)\b/i.test(txt),'spanische Wörter in '+name);
   for(const t of ['Kostenberechnungen','Muster · nur Ansicht','Mengen aus Archicad','Bericht für die Kostenbesprechung','Was noch fehlt',
-    'Herkunft des Kennwerts','Stand festhalten','Kostenschätzung und Kostenberechnung'])
+    'Herkunft des Kennwerts','Stand festhalten','Kostenschätzung und Kostenberechnung','Kostenarchiv','Kennwert aus eigenen Projekten',
+    'Als Kennwert übernehmen','Übernommen statt neu ermittelt','Auffällig, bitte prüfen','Archiv · nur lesen'])
     assert.ok(ui.includes(t),'fehlt in der Oberfläche: '+t);
 });
 

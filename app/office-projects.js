@@ -31,7 +31,18 @@ function showProjects(){
     host.innerHTML='<p class="office-project-empty">'+(target?'Projekt nicht gefunden oder kein Zugriff.':'Noch keine Projekte vorhanden.')+'</p>';
     return;
   }
-  for(const project of visible){
+  // Archivierte Projekte (etwa alte Kostenberechnungen im Kostenarchiv) gesammelt unter den aktiven, zugeklappt.
+  const aktive=target?visible:visible.filter(p=>p.status==='aktiv'),alte=target?[]:visible.filter(p=>p.status!=='aktiv');
+  for(const project of aktive)host.append(projectCard(project,target));
+  if(alte.length){
+    const box=document.createElement('details');box.className='office-project-archive';
+    const sum=document.createElement('summary');sum.textContent='Archiv · '+alte.length+(alte.length===1?' abgeschlossenes Projekt':' abgeschlossene Projekte');
+    const grid=document.createElement('div');grid.className='office-projects-list office-project-archive-list';
+    for(const project of alte)grid.append(projectCard(project,target));
+    box.append(sum,grid);host.append(box);
+  }
+}
+function projectCard(project,target){
     const related=plans.filter(x=>x.project_id===project.id);
     const assigned=team.filter(t=>t.project_id===project.id);
     const names=assigned.map(t=>members.find(m=>m.user_id===t.user_id)?.display_name).filter(Boolean);
@@ -43,7 +54,8 @@ function showProjects(){
     meta.classList.add('office-project-team-list');
     card.append(number,title,meta);
     const actions=document.createElement('div');actions.className='office-project-actions';
-    const work=document.createElement('button');work.type='button';work.textContent='In Work öffnen';work.onclick=()=>openWork(project.id);actions.append(work);
+    if(project.status==='aktiv'){const work=document.createElement('button');work.type='button';work.textContent='In Work öffnen';work.onclick=()=>openWork(project.id);actions.append(work)}
+    else{const archiv=document.createElement('a');archiv.href='../kostenberechnung.html#kostenarchiv';archiv.textContent='Kostenarchiv';actions.append(archiv)}
     const people=document.createElement('button');people.type='button';people.textContent='Mitglieder';people.onclick=()=>manageMembers(project);actions.append(people);
     if(!target){
       const details=document.createElement('button');details.type='button';details.textContent='Terminpläne ansehen';
@@ -70,8 +82,7 @@ function showProjects(){
       }
       card.append(box);
     }
-    host.append(card);
-  }
+    return card;
 }
 function showPlans(){
   const templateHost=document.getElementById('officePlansTemplates');

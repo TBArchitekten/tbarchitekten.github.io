@@ -2,10 +2,12 @@
    Oberfläche nach dem Entwurf vom 21.11.: oben die Antwort (Summe, Abweichung, was fehlt), darunter die
    Gliederung nach DIN 276 bis zur 3. Ebene; jede Kostengruppe ist sichtbar und hat einen Stand, jede Zahl
    zeigt ihre Herkunft. Daten wie beim Terminplan: Muster → Projekt-Kostenberechnung (JSON-Stand, bedingtes
-   Speichern über server_revision) → Stände. Rechnen: kosten-rechnen.js. Archicad-Import: kosten-import.js. */
+   Speichern über server_revision) → Stände. Rechnen: kosten-rechnen.js. Archicad-Import: kosten-import.js.
+   23.11.2026: Kostenarchiv (alte Kostenberechnungen des Büros, nur lesen) und Datenpool «Kennwert aus eigenen
+   Projekten» in den Details einer Position (kosten-pool.js): Werte mit Herkunft, gleiche Werte zählen einmal. */
 (()=>{
 'use strict';
-const R=window.TBA_KOSTEN_RECHNEN,I=window.TBA_KOSTEN_IMPORT,A=window.TBA_KOSTEN_ASSISTENT,OFFICE=window.TBA_OFFICE_CONFIG;
+const R=window.TBA_KOSTEN_RECHNEN,I=window.TBA_KOSTEN_IMPORT,A=window.TBA_KOSTEN_ASSISTENT,P=window.TBA_KOSTEN_POOL,OFFICE=window.TBA_OFFICE_CONFIG;
 const sb=window.MINDS_SUPABASE||(window.supabase&&OFFICE?window.supabase.createClient(OFFICE.url,OFFICE.key,
   {auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}):null);
 const inApp=!!window.WINDOW_NATIVE?.available;
@@ -24,12 +26,14 @@ const KNOPF_KLASSIFIZIERUNG='<button type="button" class="btn btn-quiet" data-ac
 const TABS=[['uebersicht','Übersicht'],['positionen','Positionen'],['quellen','Quellen'],['vergleich','Vergleich'],['bericht','Bericht']];
 const KG_MUSTER=/^[1-8]\d\d$/;
 
-let nutzer=null,mitglied=null,doc=null,st=null,calc=null,baum=null,istMuster=false,kannBearbeiten=false;
+let nutzer=null,mitglied=null,doc=null,st=null,calc=null,baum=null,istMuster=false,istArchiv=false,kannBearbeiten=false;
+// Datenpool: alle anderen Kostenberechnungen des Büros, beim ersten Öffnen geladen (lesen darf das ganze Office).
+let poolDaten=null,poolLaedt=null,poolTimer=0;
 // Ansicht je Browser merken (Gliederung, Zeilenhöhe, Spaltenbreiten); fehlt der Speicher, gelten die Vorgaben.
 const PREFS_KEY='tba.office.kostenberechnung.ansicht';
 function ladePrefs(){try{return JSON.parse(localStorage.getItem(PREFS_KEY)||'{}')||{}}catch{return {}}}
 const PREFS=ladePrefs();
-const ui={tab:'uebersicht',offen:new Set(['300']),filter:'300',auswahl:null,kgAuswahl:null,elAuswahl:null,brutto:false,loeschen:null,staende:null,importVorschau:null,meldung:'',markiert:new Set(),
+const ui={tab:'uebersicht',offen:new Set(['300']),filter:'300',auswahl:null,kgAuswahl:null,elAuswahl:null,brutto:false,loeschen:null,staende:null,importVorschau:null,meldung:'',markiert:new Set(),pool:null,poolGruppen:null,
   sicht:PREFS.sicht==='gewerke'?'gewerke':'kg',zeilen:PREFS.zeilen==='kompakt'?'kompakt':'voll',breiteBez:Number(PREFS.bez)||null,breiteKom:Number(PREFS.kom)||null};
 function merkePrefs(){try{localStorage.setItem(PREFS_KEY,JSON.stringify({sicht:ui.sicht,zeilen:ui.zeilen,bez:ui.breiteBez,kom:ui.breiteKom}))}catch{}}
 let serverRevision=0,speichernTimer=null,laeuft=false,ausstehend=false,konflikt=false,speicherText='';
@@ -69,16 +73,17 @@ async function start(){
 // ---------- Liste ----------
 let listeDaten=null;
 async function zeigeListe(){
-  const [tp,ins,pr,pm]=await Promise.all([
+  const [tp,ins,pr,pm,ar]=await Promise.all([
     sb.from('office_kosten_templates').select('id,title,version,norm,status,description,updated_at,state').eq('is_active',true).order('title'),
     sb.from('office_kosten_instances').select('id,project_id,project_number,project_name,phase,updated_at,state').eq('is_archived',false).order('updated_at',{ascending:false}).limit(200),
     sb.from('office_projects').select('id,number,name,status,projektleiter_id').order('number').limit(250),
-    sb.from('office_project_members').select('project_id').eq('user_id',nutzer.id).limit(500)
+    sb.from('office_project_members').select('project_id').eq('user_id',nutzer.id).limit(500),
+    sb.from('office_kosten_instances').select('id,project_id,project_number,project_name,phase,updated_at,is_archived,state').eq('is_archived',true).order('project_number').limit(100)
   ]);
-  const err=tp.error||ins.error||pr.error||pm.error;if(err)throw err;
+  const err=tp.error||ins.error||pr.error||pm.error||ar.error;if(err)throw err;
   const team=new Set((pm.data||[]).map(x=>x.project_id));
   const projekte=(pr.data||[]).filter(p=>p.status==='aktiv'&&(mitglied.role==='admin'||p.projektleiter_id===nutzer.id||team.has(p.id)));
-  listeDaten={muster:tp.data||[],instanzen:ins.data||[],projekte};
+  listeDaten={muster:tp.data||[],instanzen:ins.data||[],projekte,archiv:ar.data||[]};
   const karten=listeDaten.muster.map(t=>'<article class="card"><span class="nr">Muster · '+esc(t.norm)+'</span><h2>'+esc(t.title)+'</h2>'+
     '<p class="meta">Version '+esc(t.version)+' · '+esc(t.status)+' · schreibgeschützt</p><p class="meta">'+esc(t.description)+'</p>'+
     '<div class="acts"><a class="btn" href="./kostenberechnung.html?muster='+encodeURIComponent(t.id)+'">Muster ansehen</a></div></article>').join('')
@@ -95,8 +100,55 @@ async function zeigeListe(){
     '<p class="kb-intro">Muster nach DIN 276:2018-12 bis zur 3. Ebene übernehmen, Mengen aus Archicad und Beiträge der Fachplanung zusammenführen und mit der Kostenschätzung vergleichen.</p></div>'+
     '<div class="kb-actions">'+ANLEITUNG+(listeDaten.projekte.length&&listeDaten.muster.length?'<button type="button" class="btn btn-primary" data-act="neu">'+ICON_PLUS+'Kostenberechnung anlegen</button>':'')+'</div>'+
     '</header><h2 class="lib">Muster · nur Ansicht</h2><div class="liste">'+karten+'</div>'+
-    '<h2 class="lib">Projekt-Kostenberechnungen</h2><div class="liste">'+instanzen+'</div>'+
+    '<h2 class="lib">Projekt-Kostenberechnungen</h2><div class="liste">'+instanzen+'</div>'+kostenarchiv(listeDaten.archiv)+
     '<p class="meta" style="margin-top:22px"><a href="./kostenberechnung-hilfe.html" target="_blank" rel="noopener noreferrer">Anleitung zur Kostenberechnung · Ablauf, Archicad, Kennwerte und Bericht</a></p></div>';
+}
+// ---------- Kostenarchiv ----------
+// Alte Kostenberechnungen des Büros, als archivierte Projekte angelegt und nur zu lesen. Ihre Positionen sind der Datenpool.
+const HERKUNFT_REIHE=['angebot','fachplanung','bki','eigen','abgerechnet','geschaetzt','ohne'];
+const euroEp=(cent,eh)=>cent===null||cent===undefined?'–':R.euro(cent,{nachkomma:true})+(eh?'/'+eh:'');
+function reifegradText(r){return r==='feststellung'?'abgerechnet':r==='laufend'?'laufende Kostenberechnung':(P?.REIFEGRAD[r]||'Kostenberechnung')+', keine Abrechnung'}
+function herkunftBalken(h){
+  const summe=HERKUNFT_REIHE.reduce((s,k)=>s+(h[k]||0),0)||1;
+  return '<span class="hk-bar" aria-hidden="true">'+HERKUNFT_REIHE.filter(k=>h[k]).map(k=>'<span class="hk-'+k+'" style="width:'+(100*h[k]/summe).toFixed(1)+'%"></span>').join('')+'</span>'+
+    '<span class="meta">'+HERKUNFT_REIHE.filter(k=>h[k]).map(k=>esc(P.HERKUNFT[k])+' '+h[k]).join(' · ')+'</span>';
+}
+function kostenarchiv(liste){
+  if(!P||!liste?.length)return '';
+  const zeilen=P.archivZeilen(liste,R);
+  const e=P.eintraege(liste,R),kopien=P.uebernommen(e),auff=P.auffaellig(e);
+  const tabelle='<section class="card archiv-karte"><div class="tbl"><table class="kb-table archiv-tab"><thead><tr><th>Projekt</th><th>Gebäude</th><th>Stand</th>'+
+    '<th class="num">KG 300 netto</th><th class="num">je m² BGF</th><th class="num">Positionen</th><th>Herkunft der Preise</th><th></th></tr></thead><tbody>'+
+    zeilen.map(z=>'<tr><td><strong>'+esc(z.nr)+'</strong><br><span class="meta">'+esc(z.name)+'</span></td>'+
+      '<td>'+esc(z.gebaeude||'–')+'<br><span class="meta">'+esc([z.bauweise,z.massnahme].filter(Boolean).join(' · '))+'</span></td>'+
+      '<td>'+esc(z.dokument||'–')+'<br><span class="meta">'+esc(reifegradText(z.reifegrad))+'</span></td>'+
+      '<td class="num">'+R.euro(z.kg300Cent)+'</td><td class="num">'+(z.jeBgfCent!==null?R.euro(z.jeBgfCent):'<span class="meta">BGF fehlt</span>')+'</td>'+
+      '<td class="num">'+z.positionen+(z.inSumme<z.positionen?'<br><span class="meta">'+z.inSumme+' in der Summe</span>':'')+'</td>'+
+      '<td class="hk">'+herkunftBalken(z.herkunft)+'</td>'+
+      '<td><a class="btn" href="./kostenberechnung.html?id='+encodeURIComponent(z.id)+'">Öffnen</a></td></tr>').join('')+
+    '</tbody></table></div></section>';
+  const mitBgf=zeilen.filter(z=>z.jeBgfCent!==null).sort((a,b)=>(a.jeBgfCent<b.jeBgfCent?-1:1));
+  const maxBgf=mitBgf.reduce((m,z)=>z.jeBgfCent>m?z.jeBgfCent:m,1n);
+  const karteBgf='<section class="card archiv-k"><h2 class="kb-h2">KG 300 je m² BGF</h2>'+mitBgf.map(z=>'<div class="mini"><span>'+esc(z.nr)+' <span class="meta">'+esc(z.gebaeude)+'</span></span><span class="num">'+R.euro(z.jeBgfCent)+'</span></div>'+
+    '<span class="bar"><span style="width:'+(Number(z.jeBgfCent*1000n/maxBgf)/10)+'%"></span></span>').join('')+
+    '<p class="meta" style="margin-top:10px">Je Stand der Kostenberechnung, nicht fortgeschrieben. Im Datenpool rechnet der Baupreisindex der neuen Kostenberechnung die Werte auf ihren Stand, sobald er eingetragen ist.</p></section>';
+  const jahre=kopien.length?[Math.min(...kopien.map(k=>k.von||9999)),Math.max(...kopien.map(k=>k.bis||0))]:null;
+  const karteKopien='<section class="card archiv-k"><div class="k-kopf"><h2 class="kb-h2">Übernommen statt neu ermittelt</h2><span class="chip chip-src">im Datenpool je eine Quelle</span></div>'+
+    (kopien.length?'<p class="meta" style="margin:6px 0 8px">'+kopien.length+(kopien.length===1?' Ansatz steht':' Ansätze stehen')+' mit gleichem Preis und gleicher Leistung in zwei oder mehr Kostenberechnungen'+
+      (jahre&&jahre[0]<jahre[1]?' ('+jahre[0]+'–'+jahre[1]+')':'')+'. Ihr Kostenstand ist der des ältesten Vorkommens.</p>'+
+      kopien.slice(0,6).map(k=>'<div class="mini"><span>'+esc(kurz(k.titel,46))+' <span class="meta">'+esc(k.projekte.join(', '))+'</span></span><span class="num">'+euroEp(k.epCent,k.einheit)+'</span></div>').join(''):
+      '<p class="meta">Keine gleichen Ansätze gefunden.</p>')+'</section>';
+  const karteAuff='<section class="card archiv-k"><h2 class="kb-h2">Auffällig, bitte prüfen</h2>'+
+    (auff.length?auff.slice(0,4).map(a=>'<p class="auff"><strong>'+esc(a.e.nr)+'</strong> · '+esc(kurz(a.e.bez,60))+': '+euroEp(a.e.epCent,a.e.einheit)+
+      (a.e.menge?' für '+esc(R.zahl(a.e.menge,2))+' '+esc(a.e.einheit):'')+(a.e.nichtInSumme?' (nicht in der Summe)':'')+'. In '+esc(a.vergleich.join(', '))+
+      ' dieselbe Leistung '+(a.minCent===a.maxCent?euroEp(a.minCent,a.e.einheit):euroEp(a.minCent)+' bis '+euroEp(a.maxCent,a.e.einheit))+'.</p>').join('')+
+      (auff.length>4?'<p class="meta">'+(auff.length-4)+' weitere im Datenpool markiert.</p>':''):'<p class="meta">Nichts auffällig.</p>')+'</section>';
+  return '<h2 class="lib" id="kostenarchiv">Kostenarchiv</h2>'+
+    '<p class="meta" style="margin:-8px 0 14px">'+zeilen.length+(zeilen.length===1?' alte Kostenberechnung':' alte Kostenberechnungen')+' des Büros · nur lesen. Ihre Positionen sind der Datenpool: '+
+    'in jeder Kostenberechnung holt «Kennwert aus eigenen Projekten» in den Details einer Position Werte mit Herkunft.</p>'+tabelle+
+    '<div class="archiv-karten">'+karteBgf+karteKopien+karteAuff+'</div>'+
+    '<p class="meta" style="margin-top:12px">Weitere alte Kostenberechnungen kommen über Claude ins Archiv: das Excel des Büros (sonst das PDF) wird Zeile für Zeile gelesen, '+
+    'die Summen je Kostengruppe werden gegen das Original geprüft, und das Projekt wird als archiviert angelegt.</p>';
 }
 function dialogNeu(){
   const d=listeDaten;if(!d)return;
@@ -127,7 +179,7 @@ function dialogNeu(){
 // ---------- Laden ----------
 async function ladeKostenberechnung(id){
   const {data:row,error}=await sb.from('office_kosten_instances')
-    .select('id,project_id,project_number,project_name,phase,owner_id,template_version,state,server_revision,updated_at').eq('id',id).maybeSingle();
+    .select('id,project_id,project_number,project_name,phase,owner_id,template_version,state,server_revision,updated_at,is_archived').eq('id',id).maybeSingle();
   if(error)throw error;
   if(!row)throw Error('Kostenberechnung nicht gefunden.');
   if(row.state?.schema!==R.SCHEMA)throw Error('Unbekannter Stand der Kostenberechnung.');
@@ -140,7 +192,9 @@ async function ladeKostenberechnung(id){
     leitet=p.data?.projektleiter_id===nutzer.id;team=!!t.data;
   }
   kannBearbeiten=mitglied.role==='admin'||row.owner_id===nutzer.id||leitet||team;
-  speicherText='gespeichert · Revision '+serverRevision;
+  // Archiv: eine alte Kostenberechnung bleibt, wie sie war; sie liefert Kennwerte, geändert wird sie nicht.
+  istArchiv=row.is_archived===true;if(istArchiv)kannBearbeiten=false;
+  speicherText=istArchiv?'Archiv · nur lesen':'gespeichert · Revision '+serverRevision;
   ui.tab=tabAusHash()||'uebersicht';
   render();
   void ladeStaende();
@@ -235,7 +289,7 @@ function entfaelltMit(kg){return R.kette(kg).find(x=>x!==kg&&st.gruppen?.[x]?.st
 function blaetterUnter(kg){return [...calc.blaetter.keys()].filter(b=>b===kg||R.liegtUnter(b,kg))}
 function chipKg(n){
   if(!n)return '';
-  if(n.status==='entfaellt')return '<span class="chip">entfällt</span>';
+  if(n.status==='entfaellt')return istArchiv?'<span class="chip chip-mute">ohne Ansatz</span>':'<span class="chip">entfällt</span>';
   if(n.blatt){
     if(n.status==='enthalten')return '<span class="chip chip-src">in Pauschale</span>';
     if(n.status==='frei')return '<span class="chip chip-mute">optional</span>';
@@ -258,15 +312,16 @@ function render(){
   if(ui.elAuswahl&&!(st.elemente||[]).some(e=>e.id===ui.elAuswahl))ui.elAuswahl=null;
   const aktiv=document.activeElement?.dataset?.key||null,imInspektor=!!document.activeElement?.closest?.('.inspektor');
   const kopf='<a class="kb-back" href="./kostenberechnung.html">‹ Kostenberechnungen</a>'+
-    '<header class="kb-head"><div class="kb-head-text"><p class="kicker">Office · Kostenberechnung'+(istMuster?' · Muster':'')+'</p>'+
-    '<h1>'+esc(doc.project_name)+'</h1><p class="kb-intro">'+esc([doc.project_number!=='Muster'?doc.project_number:'',doc.phase==='LPH3'?'LPH 3':doc.phase,
+    '<header class="kb-head"><div class="kb-head-text"><p class="kicker">Office · Kostenberechnung'+(istMuster?' · Muster':'')+(istArchiv?' · Archiv':'')+'</p>'+
+    '<h1>'+esc(doc.project_name)+'</h1><p class="kb-intro">'+esc([doc.project_number!=='Muster'?doc.project_number:'',istArchiv?(st.archiv?.dokumentKurz||'Archiv'):doc.phase==='LPH3'?'LPH 3':doc.phase,
       (st.norm||'DIN 276')+' bis zur 3. Ebene','Kostenstand '+(R.quartalText(st.kostenstand)||'offen'),istMuster?'Version '+doc.version:'Stand '+datum(doc.updated_at)].filter(Boolean).join(' · '))+'</p></div>'+
-    '<div class="kb-actions">'+ANLEITUNG+(assistent&&!istMuster?'<button type="button" class="btn'+(assistent.offen()?' aktiv':'')+'" data-act="assistent" aria-pressed="'+assistent.offen()+'">'+ICON_KI+'Assistent</button>':'')+
+    '<div class="kb-actions">'+ANLEITUNG+(assistent&&!istMuster&&!istArchiv?'<button type="button" class="btn'+(assistent.offen()?' aktiv':'')+'" data-act="assistent" aria-pressed="'+assistent.offen()+'">'+ICON_KI+'Assistent</button>':'')+
     (kannBearbeiten?'<button type="button" class="btn" data-act="import">'+ICON_IMPORT+'Mengen aus Archicad</button>':'')+
     '<button type="button" class="btn btn-primary" data-act="tab" data-tab="bericht">Bericht für die Kostenbesprechung</button></div></header>'+
     '<p class="kb-save meta" id="kbSave"></p>';
   let banner='';
   if(istMuster)banner='<div class="kb-banner info">Muster · nur Ansicht. Eine Kostenberechnung für ein Projekt legst du in der <a href="./kostenberechnung.html">Übersicht</a> an; das Muster bleibt dabei unverändert.</div>';
+  else if(istArchiv)banner=archivBanner();
   else if(!kannBearbeiten)banner='<div class="kb-banner info">Nur Ansicht: Fortschreiben können das Projektteam, die Projektleitung und wer die Kostenberechnung angelegt hat.</div>';
   if(konflikt)banner+='<div class="kb-banner warn"><strong>Nicht gespeichert.</strong> Auf dem Server liegt ein neuerer Stand, oder die Verbindung ist unterbrochen. Deine Änderungen sind noch in diesem Fenster.'+
     '<div class="kb-banner-actions"><button type="button" class="btn" data-act="sichern">Meine Fassung als Datei sichern</button><button type="button" class="btn" data-act="neuladen">Neu laden</button></div></div>';
@@ -279,6 +334,14 @@ function render(){
   assistent?.sync();
   zeigeSpeicherstatus();
   if(aktiv){const el=(imInspektor&&root.querySelector('.inspektor')||root).querySelector('[data-key="'+CSS.escape(aktiv)+'"]');if(el){el.focus({preventScroll:true});if(el.select&&el.type==='text')try{el.setSelectionRange(el.value.length,el.value.length)}catch{}}}
+}
+function archivBanner(){
+  const a=st.archiv||{};
+  const satz=[a.gebaeude,a.bauweise,a.massnahme,a.ort].filter(Boolean).join(' · ');
+  return '<div class="kb-banner info archiv"><strong>Archiv · nur lesen.</strong> '+esc(a.dokument||'Alte Kostenberechnung')+(a.stand?' vom '+esc(datum(a.stand)):'')+
+    (a.quelle?' · '+esc(a.quelle):'')+'.'+(satz?' '+esc(satz)+'.':'')+' Reifegrad: '+esc(reifegradText(a.reifegrad||'berechnung'))+'. '+
+    'Die Positionen sind Kennwerte für neue Kostenberechnungen: dort in den Details einer Position «Kennwert aus eigenen Projekten» wählen.'+
+    (a.hinweise?.length?'<ul class="archiv-hinweise">'+a.hinweise.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul>':'')+'</div>';
 }
 function datalistGw(){
   const codes=[...new Set([...(st.positionen||[]).map(p=>R.gewerkKurz(p.gewerk)).filter(Boolean),...Object.keys(st.gewerke||{})])].sort();
@@ -306,7 +369,7 @@ function tabUebersicht(){
   const anteil=b=>g.bekanntCent>0n&&b>0n?R.prozent(Number(R.teile(b*1000n,g.bekanntCent))/10):'';
   const jeBgf=b=>mitBgf&&b>0n?R.euro(R.teile(b*1000000n,R.mikro(bgf))):'';
   const chev=(kg,hat)=>hat?'<button type="button" class="chev" data-act="aufklappen" data-kg="'+esc(kg)+'" aria-expanded="'+ui.offen.has(kg)+'" aria-label="KG '+esc(kg)+(ui.offen.has(kg)?' zuklappen':' aufklappen')+'">›</button>':'<span class="chev" aria-hidden="true"></span>';
-  const werte=(b,aus,kn,fett)=>'<span class="num"'+(fett?' style="font-weight:650"':'')+'>'+(aus?'entfällt':(kn?.status==='enthalten'?'<span class="meta">in Pauschale</span>':R.euro(b)))+'</span>'+
+  const werte=(b,aus,kn,fett)=>'<span class="num"'+(fett?' style="font-weight:650"':'')+'>'+(aus?(istArchiv?'–':'entfällt'):(kn?.status==='enthalten'?'<span class="meta">in Pauschale</span>':R.euro(b)))+'</span>'+
     '<span class="num hide-s">'+(aus||kn?.status==='enthalten'?'':R.euro(bruttoVon(b)))+'</span><span class="num hide-s meta">'+(aus?'':anteil(b))+'</span>'+(mitBgf?'<span class="num hide-s meta">'+(aus?'':jeBgf(b))+'</span>':'');
   let zeilen='';
   for(const k of erste){
@@ -458,7 +521,7 @@ function tabPositionen(){
 function inspektor(ergebnis){
   const pos=(st.positionen||[]).find(p=>p.id===ui.auswahl);
   const el=!pos&&ui.elAuswahl?(st.elemente||[]).find(e=>e.id===ui.elAuswahl):null;
-  const inhalt=pos?panelPosition(pos,ergebnis.get(pos.id)):el?panelElement(el):(ui.kgAuswahl?panelKg(ui.kgAuswahl):'');
+  const inhalt=pos?(ui.pool?.id===pos.id&&P?panelPool(pos):panelPosition(pos,ergebnis.get(pos.id))):el?panelElement(el):(ui.kgAuswahl?panelKg(ui.kgAuswahl):'');
   if(!inhalt)return '';
   return '<aside class="inspektor" aria-label="Details"><div class="inspektor-kopf"><span class="meta">Details</span><button type="button" class="inspektor-zu" data-act="schliessen" aria-label="Details schließen">×</button></div>'+inhalt+'</aside>';
 }
@@ -521,12 +584,12 @@ function zeileElement(el,aus){
 function kurz(t,n){t=String(t||'');return t.length>n?t.slice(0,n-1)+'…':t}
 function zeilePosition(p,r,{imElement=false,pauschal='',mitKg=false}={}){
   const k='pos:'+p.id+':',kw=p.kennwert||{},betragModus=p.modus==='betrag';
-  const aus=r.status==='entfaellt'||r.ausgeschlossen,art=R.ARTEN[kw.art];
+  const aus=r.status==='entfaellt'||r.ausgeschlossen,art=R.ARTEN[kw.art],ausText=p.archivNichtInSumme?'nicht in der Summe':'entfällt';
   const katTitel=titel(p.kg),eigen=p.titel&&p.titel!==katTitel?p.titel:'';
   const name=pauschal?eigen:(eigen||[p.bauteiltyp,aufbauText(p)].filter(Boolean).join(' · '));
   const transformiert=!betragModus&&(r.kette?.schritte||[]).some(s=>s.art!=='start'&&s.art!=='ende');
   const fehlt=r.fehlt.map(x=>({kg:'Kostengruppe',menge:'Menge',betrag:'Betrag',kennwert:'EP',mengenquelle:'Herkunft der Menge',quelle:'Quelle',fundstelle:'Fundstelle'}[x]||x)).join(', ');
-  const dot='<span class="stand '+(aus?'aus':r.status==='offen'?'offen':'ok')+'" title="'+esc(aus?'entfällt':r.status==='offen'?'offen: '+fehlt:'vollständig')+'"></span>';
+  const dot='<span class="stand '+(aus?'aus':r.status==='offen'?'offen':'ok')+'" title="'+esc(aus?ausText:r.status==='offen'?'offen: '+fehlt:'vollständig')+'"></span>';
   let ep;
   if(betragModus)ep=textFeld(k+'betrag',preis(p.betrag),{label:'Betrag netto',zahl:true});
   else if(transformiert)ep='<button type="button" class="ep-kette" data-act="waehle" data-id="'+esc(p.id)+'" title="Herkunft des Einheitspreises">'+euroGenau(r.kennwertCent)+
@@ -545,9 +608,9 @@ function zeilePosition(p,r,{imElement=false,pauschal='',mitKg=false}={}){
     zelle('menge',betragModus?'<span class="ct num">1</span>':textFeld(k+'menge',R.zahl(p.menge,3),{label:'Menge',zahl:true}))+
     zelle('eh',betragModus?'<span class="ct">psch</span>':einheitFeld(k+'einheit',p.einheit))+
     zelle('ep',ep)+
-    zelle('netto',aus?'entfällt':(r.betragCent!==null?euroGenau(r.betragCent):'<span class="offen">offen</span>'))+
+    zelle('netto',aus?ausText:(r.betragCent!==null?euroGenau(r.betragCent):'<span class="offen">offen</span>'))+
     zelle('brutto',aus||r.betragCent===null?'':euroGenau(bruttoVon(r.betragCent)))+
-    zelle('quelle',aus?'<span class="chip">entfällt</span>':quelle)+
+    zelle('quelle',aus?'<span class="chip">'+ausText+'</span>':quelle)+
     zelle('kom',textFeld(k+'notiz',p.notiz,{mehrzeilig:true,label:'Kommentar'}))+'</div>';
 }
 // Dieselben Positionen nach Gewerken; das Kürzel steht in der Spalte GW.
@@ -642,11 +705,13 @@ function panelPosition(p,r){
   const els=KG_MUSTER.test(String(p.kg||''))?elementeIn(p.kg):[];
   const el=els.find(e=>e.id===p.element);
   let html='<section class="card panel"><p class="kicker">'+(gruppe?'Pauschale':'Position')+(el?' · Element «'+esc(kurz(el.titel||'ohne Namen',40))+'»':'')+'</p><h2>'+esc(kgName(p.kg)||'Neue Position')+'</h2>'+
-    '<p class="meta">'+(r.status==='entfaellt'?'entfällt':r.betragCent!==null?(p.modus==='betrag'?'Betrag ':esc(R.zahl(p.menge,2))+' '+esc(p.einheit||'')+' × '+R.euro(r.kennwertCent,{nachkomma:true})+' = ')+'<strong style="color:var(--kb-ink)">'+R.euro(r.betragCent,{nachkomma:true})+'</strong> netto':
+    '<p class="meta">'+(r.status==='entfaellt'?(p.archivNichtInSumme?'nicht in der Summe der Kostenberechnung':'entfällt'):r.betragCent!==null?(p.modus==='betrag'?'Betrag ':esc(R.zahl(p.menge,2))+' '+esc(p.einheit||'')+' × '+R.euro(r.kennwertCent,{nachkomma:true})+' = ')+'<strong style="color:var(--kb-ink)">'+R.euro(r.betragCent,{nachkomma:true})+'</strong> netto':
       'Offen: '+esc(r.fehlt.map(f=>({kg:'Kostengruppe',menge:'Menge',betrag:'Betrag',kennwert:'Kennwert',mengenquelle:'Herkunft der Menge',quelle:'Quelle',fundstelle:'Fundstelle'}[f]||f)).join(', ')))+'</p>'+
     (gruppe?'<p class="meta hinweis">Gilt für die ganze KG '+esc(p.kg)+'. Ihre Unter-Kostengruppen ohne eigene Position gelten als enthalten.</p>':'')+
     (p.assistent?'<p class="meta">Vom Assistenten vorgeschlagen, übernommen am '+esc(datum(p.assistent))+'.</p>':'')+
     (KG_MUSTER.test(String(p.kg||''))?'<p style="margin:8px 0 0"><button type="button" class="btn btn-quiet" style="padding:0;min-height:0" data-act="kg" data-kg="'+esc(p.kg)+'">Zur KG '+esc(p.kg)+'</button></p>':'')+
+    (P&&p.modus!=='betrag'?'<div class="pool-auf"><button type="button" class="btn" data-act="pool" data-id="'+esc(p.id)+'">Kennwert aus eigenen Projekten</button>'+
+      '<span class="meta">'+(istArchiv?'Vergleichen mit den anderen Kostenberechnungen des Büros.':'Werte mit Herkunft aus den Kostenberechnungen des Büros, auch aus dem Kostenarchiv.')+'</span></div>':'')+
     '<div class="form" style="margin-top:14px"><div class="two">'+feld('Kostengruppe',k+'kg',p.kg,{attr:'list="kbKgListe" inputmode="numeric" maxlength="3"'})+feld('Gewerk (GW)',k+'gewerk',p.gewerk,{attr:'list="kbGwListe" maxlength="8" placeholder="z. B. BM"'})+'</div>'+
     feld('Bezeichnung',k+'titel',p.titel&&p.titel!==titel(p.kg)?p.titel:'',{attr:'placeholder="'+esc(gruppe?'Pauschal für KG '+p.kg:'z. B. Wärmedämmung Mineralfaser 200 mm')+'"'})+
     '<div class="two">'+feld('Ort',k+'ort',p.ort,{attr:'placeholder="z. B. EG / OG"'})+
@@ -685,6 +750,79 @@ function panelPosition(p,r){
     '<button type="button" class="btn" data-act="entfaellt" data-id="'+esc(p.id)+'">'+(p.status==='entfaellt'?'Wieder aufnehmen':'Entfällt')+'</button>'+
     '<button type="button" class="btn btn-danger" data-act="loeschen" data-id="'+esc(p.id)+'">'+(ui.loeschen===p.id?'Wirklich löschen?':'Löschen')+'</button></div>';
   return html+'</div></section>';
+}
+
+// ---------- Datenpool: Kennwert aus eigenen Projekten ----------
+function poolStart(p){
+  const eigen=p.titel&&p.titel!==titel(p.kg)?p.titel:'';
+  return {id:p.id,text:eigen,verwandt:false,alleKg:!KG_MUSTER.test(String(p.kg||'')),nurAngebote:false,nurNeubau:false,andereEinheiten:false};
+}
+async function ladePool(){
+  if(poolLaedt)return poolLaedt;
+  poolLaedt=(async()=>{
+    const {data,error}=await sb.from('office_kosten_instances').select('id,project_number,project_name,is_archived,state').limit(300);
+    if(error)poolDaten={fehler:'Der Datenpool ist gerade nicht erreichbar.',eintraege:[],instanzen:0};
+    else{const andere=(data||[]).filter(i=>i.id!==doc?.id);poolDaten={eintraege:P.eintraege(andere,R),instanzen:andere.length}}
+    zeigePoolErgebnis();
+  })();
+  return poolLaedt;
+}
+function zeigePoolErgebnis(){
+  const p=ui.pool&&(st?.positionen||[]).find(x=>x.id===ui.pool.id),el=root.querySelector('#kbPoolErgebnis');
+  if(p&&el)el.innerHTML=poolErgebnis(p);
+}
+function poolChip(f,text,an){return '<button type="button" class="chip" data-act="pool-filter" data-f="'+f+'" aria-pressed="'+!!an+'">'+esc(text)+'</button>'}
+function panelPool(p){
+  const o=ui.pool,mitKg=KG_MUSTER.test(String(p.kg||'')),verwandt=mitKg?P.VERWANDT[p.kg]||[]:[];
+  const chips=(mitKg?poolChip('kg','nur KG '+p.kg,!o.alleKg):'')+(verwandt.length&&!o.alleKg?poolChip('verwandt','auch KG '+verwandt.join(', '),o.verwandt):'')+
+    poolChip('angebote','nur Angebote',o.nurAngebote)+poolChip('neubau','nur Neubau',o.nurNeubau)+poolChip('einheiten','auch andere Einheiten',o.andereEinheiten);
+  return '<section class="card panel pool" aria-label="Kennwert aus eigenen Projekten"><p class="kicker">Datenpool</p><h2>Kennwert aus eigenen Projekten</h2>'+
+    '<p class="meta">Für '+esc(kgName(p.kg)||'die Position')+(p.titel&&p.titel!==titel(p.kg)?' · '+esc(kurz(p.titel,60)):'')+(p.einheit?' · je '+esc(p.einheit):'')+'</p>'+
+    '<div class="form" style="margin-top:12px"><label class="feld">Suchen in allen Kostenberechnungen<input type="search" data-pool="suche" value="'+esc(o.text)+'" placeholder="z. B. Parkett, XPS, Innentür" autocomplete="off"></label></div>'+
+    '<div class="filter pool-filter" role="group" aria-label="Filter des Datenpools">'+chips+'</div>'+
+    '<div id="kbPoolErgebnis" aria-live="polite">'+poolErgebnis(p)+'</div>'+
+    '<p style="margin:14px 0 0"><button type="button" class="btn btn-quiet" style="padding:0;min-height:0" data-act="pool-zu">‹ Zurück zur Position</button></p></section>';
+}
+function standText(e){return e.dokument||(e.kostenstand?R.quartalText(e.kostenstand):'')}
+function poolGruppeHtml(g,p,stat){
+  const u=g.ursprung,n=P.normiere(g.epCent,u.kostenstand,st,R),auff=stat.auffaellig.has(g.key);
+  const chips=(g.kopie?'<span class="chip chip-src">gleich in '+g.projekte.length+' Kostenberechnungen</span>':'')+(auff?'<span class="chip chip-att">auffällig</span>':'')+
+    (g.nichtInSumme?'<span class="chip chip-mute">nicht in der Summe</span>':'')+(g.abgerechnet?'<span class="chip chip-ok">abgerechnet</span>':'');
+  const index=n.gleich?'':n.fehlt?'Stand '+R.quartalText(u.kostenstand)+' · ohne Baupreisindex unverändert':
+    '≈ '+euroEp(n.cent,g.einheit)+' mit dem Baupreisindex '+R.quartalText(u.kostenstand)+' → '+R.quartalText(st.kostenstand);
+  const jahre=[...new Set(g.vorkommen.map(e=>String(e.kostenstand).slice(0,4)).filter(Boolean))].sort();
+  const kopie=g.kopie?'<p class="meta hinweis">Derselbe Wert in '+g.projekte.length+' Kostenberechnungen'+(jahre.length>1?' ('+jahre[0]+'–'+jahre[jahre.length-1]+')':'')+
+    ': vermutlich übernommen, zählt als eine Quelle'+(g.vorkommen.some(e=>e.herkunft==='angebot')?'':', ohne Angebot')+'. Kostenstand ist der des ältesten Vorkommens.</p>':'';
+  const liste='<ul class="pool-vork">'+g.vorkommen.slice(0,6).map(e=>'<li><strong>'+esc(e.nr)+'</strong> '+esc(e.projekt)+(e.quelle?' · '+esc(e.quelle):'')+' · '+esc(kurz(e.bez,70))+
+    '<br><span class="meta">'+(e.menge?esc(R.zahl(e.menge,2))+' '+esc(e.einheit)+' · ':'')+esc(standText(e))+' · '+esc(P.HERKUNFT[e.herkunft]||'')+' · '+esc(reifegradText(e.reifegrad))+
+    (e.nichtInSumme?' · nicht in der Summe':'')+'</span></li>').join('')+(g.vorkommen.length>6?'<li class="meta">… und '+(g.vorkommen.length-6)+' weitere</li>':'')+'</ul>';
+  const knopf=g.passt===false?'<p class="meta">Andere Einheit ('+esc(g.einheit)+'): nur zum Vergleich.</p>':
+    kannBearbeiten&&p.modus!=='betrag'?'<button type="button" class="btn btn-primary" data-act="pool-nehmen" data-gruppe="'+esc(g.key)+'">Als Kennwert übernehmen</button>':'';
+  return '<article class="pool-gruppe'+(auff?' auffaellig':'')+'"><div class="pool-kopf"><strong class="num">'+euroEp(g.epCent,g.einheit)+'</strong>'+chips+'</div>'+
+    (index?'<p class="meta">'+esc(index)+'</p>':'')+kopie+liste+knopf+'</article>';
+}
+function poolErgebnis(p){
+  if(poolDaten===null){void ladePool();return '<p class="meta">Kennwerte werden geladen …</p>'}
+  if(poolDaten.fehler)return '<p class="meta att">'+esc(poolDaten.fehler)+'</p>';
+  const o=ui.pool,mitKg=KG_MUSTER.test(String(p.kg||''));
+  const treffer=P.suche(poolDaten.eintraege,{text:o.text,kg:mitKg?p.kg:'',verwandt:o.verwandt,alleKg:o.alleKg||!mitKg,einheit:p.einheit||'',
+    andereEinheiten:o.andereEinheiten,nurAngebote:o.nurAngebote,nurNeubau:o.nurNeubau,ohneInstanz:doc?.id});
+  const gruppen=P.gruppiere(treffer);ui.poolGruppen=new Map(gruppen.map(g=>[g.key,g]));
+  if(!gruppen.length)return '<p class="meta" style="margin-top:12px">Nichts gefunden'+(o.alleKg||!mitKg?'':' in KG '+esc(p.kg))+'. Ein anderes Wort'+
+    (o.alleKg||!mitKg?'':', «auch KG …» oder alle Kostengruppen')+' versuchen.</p>'+(o.alleKg||!mitKg?'':'<p><button type="button" class="btn" data-act="pool-filter" data-f="kg">In allen Kostengruppen suchen</button></p>');
+  const stat=P.statistik(gruppen,st,R),eh=p.einheit||gruppen[0].einheit;
+  const satz={gleich:'Alle Werte im Kostenstand dieser Kostenberechnung.',
+    fortgeschrieben:'Spanne und Median auf '+R.quartalText(st.kostenstand)+' fortgeschrieben, mit dem Baupreisindex dieser Kostenberechnung.',
+    ohneIndex:'Werte wie eingetragen: der Baupreisindex für ihre Quartale fehlt hier noch (Quellen › Baupreisindex). Ein übernommener Kennwert wird fortgeschrieben, sobald er eingetragen ist.'}[stat.stand];
+  const neu=gruppen.filter(g=>!g.bestand),bestand=gruppen.filter(g=>g.bestand);
+  return '<p class="pool-sum"><strong>'+treffer.length+(treffer.length===1?' Wert':' Werte')+'</strong> aus '+stat.projekte+(stat.projekte===1?' Kostenberechnung':' Kostenberechnungen')+
+      ' · '+stat.n+' unabhängig'+(stat.n>=2?' · Spanne '+euroEp(stat.minCent)+' bis '+euroEp(stat.maxCent,eh):'')+(stat.n>=3?' · Median '+euroEp(stat.medianCent,eh):'')+'</p>'+
+    '<p class="meta">'+esc(satz)+(stat.n>0&&stat.n<5?' Wenige Werte: die Spanne ist eine Orientierung, keine Statistik.':'')+'</p>'+
+    neu.map(g=>poolGruppeHtml(g,p,stat)).join('')+
+    (bestand.length?'<p class="sec">Im Bestand (Sanierung, Umbau)</p>'+bestand.map(g=>poolGruppeHtml(g,p,stat)).join(''):'')+
+    '<p class="meta" style="margin-top:12px">Gefunden in '+stat.projekte+' von '+poolDaten.instanzen+' Kostenberechnungen. Pauschalen und Beträge ohne Einheit sind keine Kennwerte.</p>'+
+    '<p class="meta" style="margin-top:6px"><a href="./produktbibliothek.html?suche='+encodeURIComponent(o.text||'')+'" target="_blank" rel="noopener noreferrer">In der Produktbibliothek suchen ›</a> '+
+    'Ein Angebot zum gewählten Produkt ist die bessere Quelle als ein alter Ansatz.</p>';
 }
 
 // Quellen und Grundlagen
@@ -1032,10 +1170,15 @@ root.addEventListener('click',ev=>{
   if(act==='brutto'){ui.brutto=d.wert==='1';render();return}
   if(act==='sicht'){ui.sicht=d.wert==='gewerke'?'gewerke':'kg';merkePrefs();render();return}
   if(act==='zeilen'){ui.zeilen=d.wert==='kompakt'?'kompakt':'voll';merkePrefs();render();return}
-  if(act==='schliessen'){ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;render();return}
+  if(act==='schliessen'){ui.pool=null;ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;render();return}
   if(act==='el'){ui.elAuswahl=d.id;ui.auswahl=null;ui.kgAuswahl=null;ui.loeschen=null;render();return}
   if(act==='alle-fehlt'){ui.alleFehlt=!ui.alleFehlt;render();return}
-  if(act==='waehle'){ui.auswahl=d.id;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;if(ui.tab!=='positionen'){ui.tab='positionen';merkeTab()}render();zeigePanel();return}
+  if(act==='pool'){const p=(st.positionen||[]).find(x=>x.id===d.id);if(!p||!P)return;ui.auswahl=p.id;ui.pool=poolStart(p);ui.tab='positionen';render();
+    setTimeout(()=>root.querySelector('[data-pool="suche"]')?.focus({preventScroll:true}),0);return}
+  if(act==='pool-zu'){ui.pool=null;render();return}
+  if(act==='pool-filter'&&ui.pool){const f={kg:'alleKg',verwandt:'verwandt',angebote:'nurAngebote',neubau:'nurNeubau',einheiten:'andereEinheiten'}[d.f];
+    if(f){ui.pool[f]=!ui.pool[f];if(f==='alleKg'&&ui.pool.alleKg)ui.pool.verwandt=false}render();return}
+  if(act==='waehle'){ui.pool=null;ui.auswahl=d.id;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;if(ui.tab!=='positionen'){ui.tab='positionen';merkeTab()}render();zeigePanel();return}
   if(act==='goto'){geheZu(d);return}
   if(act==='drucken'){if(ui.tab!=='bericht'){ui.tab='bericht';render()}setTimeout(()=>window.print(),50);return}
   if(act==='import'&&kannBearbeiten){dialogImport();return}
@@ -1043,6 +1186,15 @@ root.addEventListener('click',ev=>{
   if(act==='klassifizierung'){klassifizierungLaden();return}
   if(act==='neuladen'){location.reload();return}
   if(!kannBearbeiten)return;
+  if(act==='pool-nehmen'&&ui.pool){
+    const p=(st.positionen||[]).find(x=>x.id===ui.pool.id),g=ui.poolGruppen?.get(d.gruppe);
+    if(!p||!g||g.passt===false)return;
+    p.kennwert=P.uebernahme(g,R);if(!p.einheit)p.einheit=g.einheit;
+    if(!p.titel||p.titel===titel(p.kg))p.titel=g.ursprung.bez;
+    ui.meldung='Kennwert übernommen: '+euroEp(g.epCent,g.einheit)+' aus '+g.ursprung.nr+(g.ursprung.quelle?', '+g.ursprung.quelle:'')+
+      (g.ursprung.kostenstand&&g.ursprung.kostenstand!==st.kostenstand?' (Kostenstand '+R.quartalText(g.ursprung.kostenstand)+')':'')+'.';
+    ui.pool=null;geaendert();render();return;
+  }
   if(act==='pos-neu'){neuePosition(d.kg||'',d.el||'',d.quelle==='tabelle');return}
   if(act==='el-neu'){neuesElement(d.kg);return}
   const e=d.id?(st.elemente||[]).find(x=>x.id===d.id):null;
@@ -1082,7 +1234,7 @@ root.addEventListener('click',ev=>{
 // und nicht im Assistenten, der sein eigenes Escape hat.
 document.addEventListener('keydown',ev=>{
   if(ev.key!=='Escape'||ev.isComposing||dialog.open||ev.target?.closest?.('#kbAssistent'))return;
-  if(st&&ui.tab==='positionen'&&(ui.auswahl||ui.kgAuswahl||ui.elAuswahl)){ev.preventDefault();ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;render()}
+  if(st&&ui.tab==='positionen'&&(ui.auswahl||ui.kgAuswahl||ui.elAuswahl)){ev.preventDefault();ui.pool=null;ui.auswahl=null;ui.kgAuswahl=null;ui.elAuswahl=null;ui.loeschen=null;render()}
 });
 root.addEventListener('keydown',ev=>{
   const el=ev.target;
@@ -1104,7 +1256,8 @@ function hoehenAnpassen(){
   const ts=[...root.querySelectorAll('.ktab.voll textarea.ci')];
   ts.forEach(t=>{t.style.height='auto'});const hs=ts.map(t=>t.scrollHeight);ts.forEach((t,i)=>{t.style.height=Math.max(31,hs[i])+'px'});
 }
-root.addEventListener('input',ev=>{if(ev.target.matches?.('textarea.ci'))hoehe(ev.target)});
+root.addEventListener('input',ev=>{if(ev.target.matches?.('textarea.ci'))hoehe(ev.target);
+  if(ev.target.matches?.('[data-pool="suche"]')&&ui.pool){ui.pool.text=ev.target.value;clearTimeout(poolTimer);poolTimer=setTimeout(zeigePoolErgebnis,140)}});
 root.addEventListener('focusin',ev=>{if(ev.target.matches?.('.einzeilig textarea.ci'))hoehe(ev.target)});
 root.addEventListener('focusout',ev=>{if(ev.target.matches?.('.einzeilig textarea.ci'))ev.target.style.height=''});
 // Spaltenbreite ziehen wie in Excel (Bezeichnung und Kommentar); gemerkt je Browser.

@@ -49,6 +49,8 @@ const KG_HINWEIS={bodenbelag:'die Kostengruppe ergibt sich aus der Verwendung: a
 let nutzer=null,mitglied=null;
 const daten={produkte:[],preise:[],dokumente:[],verwendungen:[],projekte:[],team:new Set()};
 const ui={kategorie:'bodenbelag',suche:'',herkunft:'alle',projekt:'alle',sort:'zuletzt',archiv:false};
+// Aus der Kostenberechnung (Datenpool): ?suche=… sucht in allen Kategorien.
+if(params.get('suche')){ui.suche=params.get('suche').slice(0,80);ui.kategorie='alle'}
 let bilder=new Map();
 
 function fehler(text){root.innerHTML='<div class="pb-wrap"><a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a><div class="pb-banner warn">'+esc(text)+'</div></div>'}

@@ -68,6 +68,10 @@
 .office-app .office-project-plans{margin:14px 0 0;border-top:1px solid #e9ecef;padding-top:12px}
 .office-app .office-project-plans a{display:block;margin:8px 0;color:#355d99;font-size:14px}
 .office-app .office-project-empty{color:#7c838a;padding:22px;background:white;border:1px solid #e4e6e9;border-radius:14px}
+.office-app .office-project-archive{grid-column:1/-1;margin-top:10px}
+.office-app .office-project-archive>summary{cursor:pointer;font-size:14px;font-weight:650;color:#57606a;padding:10px 2px;min-height:44px;display:flex;align-items:center;gap:8px}
+.office-app .office-project-archive-list{margin-top:6px}
+.office-app .office-project-archive .office-project-card{background:#fcfcfc}
 @media(max-width:680px){.office-app .office-projects-head{align-items:flex-start;flex-direction:column}.office-app .office-projects-new{width:100%}}
 
 .office-app .office-tools-card + .office-tools-card{margin-top:16px}
