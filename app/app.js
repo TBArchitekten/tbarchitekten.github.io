@@ -1637,7 +1637,7 @@ function bindMessageReactions(){
   });
 }
 
-function renderToday(){const d=today(),ev=state.events.filter(x=>x.date===d).sort((a,b)=>a.start.localeCompare(b.start)),ta=state.tasks.filter(x=>(x.date===d||taskSpansDay(x,d))&&activeTask(x));$('#todaySummary').textContent=`${ev.length} ${ev.length===1?'Termin':'Termine'} · ${ta.length} ${ta.length===1?'Aufgabe':'Aufgaben'}`;$('#todayNext').textContent=ev[0]?`${ev[0].start} · ${ev[0].title}`:'Kein nächster Termin'}
+function renderToday(){const d=today(),ev=state.events.filter(x=>x.date===d).sort((a,b)=>a.start.localeCompare(b.start)),ta=state.tasks.filter(x=>(x.date===d||taskSpansDay(x,d))&&activeTask(x)&&x.mine!==false);$('#todaySummary').textContent=`${ev.length} ${ev.length===1?'Termin':'Termine'} · ${ta.length} ${ta.length===1?'Aufgabe':'Aufgaben'}`;$('#todayNext').textContent=ev[0]?`${ev[0].start} · ${ev[0].title}`:'Kein nächster Termin'}
 function orb(mode='idle',label=''){const o=$('#orbButton');if(!o)return;o.classList.remove('listening','thinking');if(mode!=='idle')o.classList.add(mode);const s=$('#orbStatus');if(s)s.textContent=label}
 function setWorking(el,on){if(el)el.classList.toggle('is-working',!!on)}
 function localFallback(text){const n=text.toLowerCase();if(/was habe ich heute|was steht heute|heute an|qué tengo hoy|que tengo hoy/.test(n)){const d=today(),e=state.events.filter(x=>x.date===d),t=state.tasks.filter(x=>x.date===d&&activeTask(x));return `Heute: ${e.length} ${e.length===1?'Termin':'Termine'} und ${t.length} ${t.length===1?'offene Aufgabe':'offene Aufgaben'}.`}if(/kalender|calendario|agenda/.test(n)){show('calendar');return 'Ich öffne den Kalender.'}return 'Romy ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.'}
@@ -4116,8 +4116,10 @@ async function aiUsagePanel(){
     modal('Uso IA',`<div class="usage-panel"><div class="usage-summary"><div><span>TOKENS · 7 DÍAS</span><strong>${fmt(totals.total)}</strong></div><div><span>CACHÉ DE INPUT</span><strong>${hit}%</strong></div></div><div class="small">Medición interna disponible desde Build 42. El gasto exacto sigue estando en OpenAI; aquí vemos qué parte de MINDS consume los tokens.</div><div class="usage-breakdown">${breakdown||'<div class="small">Todavía no hay llamadas medidas.</div>'}</div></div>`);
   }catch{modal('Uso IA','<div class="small">No pude leer el consumo ahora mismo.</div>')}
 }
+// Office: die Aufgabenliste zeigt nur meine Aufgaben (Gari, 23.11.2026); alle Aufgaben eines Projekts stehen im Planner.
+const listTasks=()=>OFFICE?state.tasks.filter(t=>t.mine!==false):state.tasks;
 function tasksPanel(){
-  const pending=state.tasks.filter(t=>!t.archivedAt&&!t.done);
+  const pending=listTasks().filter(t=>!t.archivedAt&&!t.done);
   const undated=pending.filter(t=>!t.date).length;
   const groups=OFFICE
     ?[...state.projects.map(p=>({id:'project:'+p.id,name:p.name,color:p.color||fallbackColor(p.id),count:pending.filter(t=>t.projectId===p.id).length})).filter(g=>g.count),
@@ -4131,7 +4133,7 @@ function tasksPanel(){
   document.querySelectorAll('[data-task-group]').forEach(b=>b.onclick=()=>taskGroupPanel(b.dataset.taskGroup||''));
 }
 function taskGroupPanel(group){
-  const all=state.tasks.filter(t=>!t.archivedAt);
+  const all=listTasks().filter(t=>!t.archivedAt);
   const isUndated=group==='undated',categoryId=group.startsWith('category:')?group.slice(9):null;
   const byProject=group.startsWith('project:'),projectId=byProject?group.slice(8)||null:null;
   const title=isUndated?'Ohne Datum':byProject?(projectId?project(projectId):'Ohne Projekt'):(state.categories.find(c=>c.id===categoryId)?.name||'Aufgaben');

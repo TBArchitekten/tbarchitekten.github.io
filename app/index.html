@@ -43,12 +43,12 @@
      The former Office assistant remains an explicit legacy fallback; no Window credentials or data. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="../office-config.js?v=1"></script>
-<script>window.APP_PROFILE="office";window.APP_CHAT_RUNTIME=localStorage.getItem("tba_office_chat_backend")==="legacy"?"legacy":"window";</script>
+<script>window.APP_PROFILE="office";window.APP_CHAT_RUNTIME="window";try{localStorage.removeItem("tba_office_chat_backend")}catch(e){}</script>
 <script src="./assistant-i18n.js?v=office1"></script>
 <script src="../shared/supabase-client.js?v=office3"></script>
 <script src="../office-core.js?v=office37"></script>
 <script src="../shared/human-surface.js?v=2"></script>
-<script src="./shell.js?v=office49"></script>
+<script src="./shell.js?v=office50"></script>
 <script src="./turn-integrity.js?v=romy4"></script>
 <script src="./final-round.js?v=romy4"></script>
 <script src="./chat-stream-recovery.js?v=romy4"></script>
@@ -59,22 +59,22 @@
 <script src="./dashboard-model.js?v=office2"></script>
 <script src="./calendar-colors.js?v=office2"></script>
 <script src="./office-fristen.js?v=office3"></script>
-<script src="./app.js?v=office54"></script>
+<script src="./app.js?v=office55"></script>
 <script src="./work-team.js?v=office40"></script>
 <script src="./office-desktop-ops.js?v=office38"></script>
 <script src="./planner-terminplan-sync.js?v=office1"></script>
 <script src="./work.js?v=office49"></script>
 <script src="./bandeja.js?v=office1"></script>
 <script src="./ahora.js?v=office4"></script>
-<script src="./sync.js?v=office6"></script>
+<script src="./sync.js?v=office7"></script>
 <script src="./task-team.js?v=office2"></script>
 <script src="./task-detail.js?v=office4"></script>
 <script src="./time-plan-model.js?v=office2"></script>
 <script src="./time-plan.js?v=office2"></script>
-<script src="./dashboard.js?v=office40"></script>
+<script src="./dashboard.js?v=office41"></script>
 <script src="./romy-transport.js?v=office27"></script>
 <script src="./office-assistant.js?v=office37"></script>
-<script src="./office-engine-chat.js?v=romy4"></script>
+<script src="./office-engine-chat.js?v=romy5"></script>
 <script src="./office-personal.js?v=romy4"></script>
 <script src="./office-projects.js?v=office53"></script>
 </body>

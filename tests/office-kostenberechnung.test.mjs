@@ -255,7 +255,7 @@ test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/<strong>Kostenberechnung<\/strong><small>Nach DIN 276 bis zur 3\. Ebene/);
   assert.match(shell,/NAV_ICONS\.kosten='<svg /);
   assert.match(projekte,/getElementById\('officeToolsKosten'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/kostenberechnung\.html';/);
-  assert.match(index,/\.\/shell\.js\?v=office49/);
+  assert.match(index,/\.\/shell\.js\?v=office50/);
   assert.match(index,/\.\/office-projects\.js\?v=office53/);
   assert.match(ui,/href="\.\/app\/#section=tools">‹ Werkzeuge/);
 });
@@ -265,7 +265,7 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office4',
-    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kostenberechnung.js?v=office5','./kostenberechnung.css?v=office6'])
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kostenberechnung.js?v=office6','./kostenberechnung.css?v=office6'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
     seite.indexOf('kosten-assistent.js')<seite.indexOf('kostenberechnung.js?'));
@@ -306,7 +306,9 @@ test('Migration: drei Tabellen mit RLS über die Office-Helfer, nichts Destrukti
   // Die Abnahme läuft in einer Transaktion, die zurückgerollt wird, prüft ihr Ergebnis selbst und läuft im CI.
   assert.match(abnahme,/^-- [^\n]*\n(?:--[^\n]*\n)*begin;\n/);
   assert.match(abnahme,/\nrollback;\n/);
-  assert.match(abnahme,/C_sieht=0; C_update=0; C_delete=0; C_versions=0; '/);
+  // Seit 23.11.2026 liest jedes Office-Mitglied (wie beim Terminplan); ändern, löschen, festhalten nur Ersteller, Leitung, Team.
+  assert.match(abnahme,/C_sieht=1; C_update=0; C_delete=0; C_versions=1; '/);
+  assert.match(abnahme,/C_insertP=verweigert; C_version=verweigert; /);
   assert.match(abnahme,/raise exception 'RLS Kostenberechnung weicht ab/);
   assert.match(abnahme,/Testdaten der Kostenberechnung sind nach dem Zurückrollen geblieben/);
   assert.match(read('.github/workflows/verify.yml'),/< tests\/sql\/office-kostenberechnung-rls-acceptance\.sql/);

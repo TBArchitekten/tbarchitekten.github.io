@@ -9,7 +9,7 @@ const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z0-9-]+\.js)\?v=[^"]+">
 const src=f=>read('app/'+f);
 
 test('The app connects only to TBA Office, with the office sign-in',()=>{
-  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME=localStorage\.getItem\("tba_office_chat_backend"\)==="legacy"\?"legacy":"window";<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
+  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME="window";try\{localStorage\.removeItem\("tba_office_chat_backend"\)\}catch\(e\)\{\}<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
   const client=read('shared/supabase-client.js');
   assert.match(client,/const office = window\.TBA_OFFICE_CONFIG;/);
   assert.match(client,/storageKey: office\.storageKey,/,'one session with the start page');
@@ -52,11 +52,18 @@ test('Office runs the shared Window chat under Office profile and isolates legac
   assert.ok(loaded.indexOf('office-fristen.js')<loaded.indexOf('app.js'));
   assert.ok(loaded.indexOf('ai.js')<loaded.indexOf('app.js'),'common AI initializes before canonical app');
   assert.ok(loaded.indexOf('office-engine-chat.js')>loaded.indexOf('app.js'));
-  // Since 09.11.2026 the shared engine (ASSISTANT_PROFILE=office) is the default; the former runtime
-  // stays as an explicit fallback (localStorage tba_office_chat_backend=legacy).
+  // Since 09.11.2026 the shared engine (ASSISTANT_PROFILE=office) is the default. Since 23.11.2026 (Gari) the
+  // former runtime can no longer be chosen: no «Vorherige Romy-Version», a stale choice in the browser is cleared.
   assert.match(src('office-assistant.js'),/if\(window\.APP_CHAT_RUNTIME!==['"]legacy['"]\)return/,'old runtime only via explicit choice');
   assert.match(src('office-engine-chat.js'),/if\(window\.APP_PROFILE!==['"]office['"]\|\|window\.APP_CHAT_RUNTIME===['"]legacy['"]\)return/);
   const shell=src('shell.js');
+  // Menü «Mehr» (Gari, 23.11.2026): keine Gesprächsliste, kein «Neues Gespräch», keine frühere Romy-Version,
+  // kein «Terminplan-Muster» (das steht in Werkzeuge). Romy ist ein Gespräch, Themen haben Threads in Work.
+  const engine=src('office-engine-chat.js');
+  for(const gone of ['Vorherige Romy-Version','toggleLegacy','addMenu(','tba_office_chat_backend'])
+    assert.ok(!engine.includes(gone),'office-engine-chat.js still has '+gone);
+  assert.doesNotMatch(shell,/officePlansDrawer|>Terminplan-Muster</);
+  assert.match(shell,/id="officeProjectsDrawer" href="#section=projects">Projekte verwalten<\/a>/);
   for(const nav of ['bandeja','readings','thoughts'])
     assert.match(shell,new RegExp(`data-nav="${nav}"[^>]*hidden`),nav+' stays hidden');
   assert.match(shell,/data-nav="assistant" aria-label="Romy"/);

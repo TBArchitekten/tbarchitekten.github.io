@@ -1,10 +1,11 @@
--- Abnahme RLS · Kostenberechnung v1 (Migration 20261121100000_office_kostenberechnung_v1.sql), 21.11.2026.
+-- Abnahme RLS · Kostenberechnung v1 (Migration 20261121100000_office_kostenberechnung_v1.sql), 21.11.2026;
+-- seit 23.11.2026 lesen alle Office-Mitglieder (20261123100100_office_kosten_lesen_office.sql), schreiben weiter nur Ersteller, Projektleitung und Team.
 -- Erfundene Personen und Projekte; alles läuft in einer Transaktion, die am Ende zurückgerollt wird.
 -- Läuft im CI auf der frisch migrierten Datenbank (verify.yml) und lässt sich ebenso gegen jede Datenbank
 -- mit der Migration ausführen: gezählt wird nur, was diese Datei selbst anlegt.
 -- A = Projektleitung von P, B = Team von P (und Q), C = Mitglied ohne Bezug zu P, D = kein Office-Mitglied.
 -- Erwartet:
--- B_insert=ok; B_templates=1; B_version=ok; B_move=verweigert; C_sieht=0; C_update=0; C_delete=0; C_versions=0;
+-- B_insert=ok; B_templates=1; B_version=ok; B_move=verweigert; C_sieht=1; C_update=0; C_delete=0; C_versions=1;
 -- C_insertP=verweigert; C_version=verweigert; A_sieht=1; A_update_rev=2; A_alte_revision=0; D_templates=0; D_sieht=0;
 -- anon=verweigert; B_delete=1;
 begin;
@@ -28,7 +29,7 @@ insert into public.office_kosten_templates(id,title,version,state) values
 do $test$
 declare
   r text := ''; n int; rev bigint; iid uuid;
-  erwartet constant text := 'B_insert=ok; B_templates=1; B_version=ok; B_move=verweigert; C_sieht=0; C_update=0; C_delete=0; C_versions=0; '
+  erwartet constant text := 'B_insert=ok; B_templates=1; B_version=ok; B_move=verweigert; C_sieht=1; C_update=0; C_delete=0; C_versions=1; '
     || 'C_insertP=verweigert; C_version=verweigert; A_sieht=1; A_update_rev=2; A_alte_revision=0; D_templates=0; D_sieht=0; '
     || 'anon=verweigert; B_delete=1; ';
   p_projekt constant uuid := 'e0000000-0000-4000-8000-0000000000e1';
@@ -50,7 +51,7 @@ begin
   exception when others then r := r || 'B_move=verweigert; ';
   end;
   execute 'reset role';
-  -- C (Mitglied, nicht im Team von P): sieht nichts, ändert nichts, legt nichts in P an.
+  -- C (Mitglied, nicht im Team von P): liest wie beim Terminplan, ändert nichts, legt nichts in P an.
   perform set_config('request.jwt.claims', '{"sub":"c0000000-0000-4000-8000-00000000000c","role":"authenticated"}', true);
   execute 'set local role authenticated';
   select count(*) into n from public.office_kosten_instances where project_id in (p_projekt,q_projekt); r := r || 'C_sieht=' || n || '; ';

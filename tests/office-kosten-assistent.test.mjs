@@ -262,7 +262,7 @@ test('Migrationen: Verlauf und Zählung mit RLS; kein Tageslimit für Terminplan
   assert.match(ohneLimit,/revoke all on function public\.office_kosten_ai_consume_request\(uuid\) from public, anon;/);
   assert.doesNotMatch(sql,/grant[^;]*(update|delete)[^;]*office_kosten_(dialogue_messages|ai_requests)/i);
   assert.match(abnahme,/^begin;$/m);assert.match(abnahme,/^rollback;$/m);
-  assert.match(abnahme,/B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=false; C_liest=0; /);
+  assert.match(abnahme,/B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=ok; C_kontingent=true; C_liest=1; /);
   assert.match(abnahme,/B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=31; /);
   assert.match(abnahmeTerminplan,/M_ohne_limit=true; M_gezaehlt=30; N_kontingent=false; fremder_plan=false; anon=verweigert; /);
   for(const a of [abnahme,abnahmeTerminplan]){assert.match(a,/^begin;$/m);assert.match(a,/^rollback;$/m);assert.match(a,/example\.invalid/)}

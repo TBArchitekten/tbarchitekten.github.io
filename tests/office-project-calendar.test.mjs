@@ -16,7 +16,9 @@ test('Kalender loads your projects: all dated tasks and Termine of your teams; o
   assert.match(sync,/from\('office_project_members'\)\.select\('project_id'\)\.eq\('user_id',user\.id\)/);
   assert.match(sync,/',and\(project_id\.in\.\('\+teamProjectIds\.join\(','\)\+'\),or\(due_date\.not\.is\.null,start_date\.not\.is\.null\)\)'/);
   assert.match(sync,/const filter='user_id\.eq\.'\+user\.id\+\(teamProjectIds\.length\?',project_id\.in\.\('\+teamProjectIds\.join\(','\)\+'\)':''\);/);
-  assert.match(sync,/mine:t\.user_id===user\.id\|\|assigned\.includes\(user\.id\)\|\|linkedTaskIds\.has\(t\.id\)/);
+  // Since 23.11.2026 (Gari): a task with responsibles is theirs only; without responsibles it stays with its author.
+  assert.match(sync,/const verantwortlich=assigned\.includes\(user\.id\)\|\|linkedTaskIds\.has\(t\.id\);/);
+  assert.match(sync,/mine:assigned\.length\|\|linkedTaskIds\.has\(t\.id\)\?verantwortlich:t\.user_id===user\.id\}/);
   assert.match(sync,/ownerId:e\.user_id\|\|null,mine:e\.user_id===user\.id/);
   assert.match(sync,/const tasks=\(state\.tasks\|\|\[\]\)\.filter\(own\)\.map/);
   assert.match(sync,/const events=\(state\.events\|\|\[\]\)\.filter\(own\)\.map/);
@@ -25,6 +27,22 @@ test('Kalender loads your projects: all dated tasks and Termine of your teams; o
 });
 
 test('Heute stays yours; Fristen only of your projects', ()=>{
+  // Desktop Heute, Plan, the Aufgaben list and the summary show only own tasks (Gari, 23.11.2026).
+  const dash=read('app/dashboard.js'),app=read('app/app.js');
+  assert.match(dash,/const ownTasks = state => \(state\.tasks \|\| \[\]\)\.filter\(t => t\.mine !== false\);/);
+  assert.equal((dash.match(/M\.tasksForDay\(\{\.\.\.state,tasks:ownTasks\(state\)\}/g)||[]).length,2);
+  assert.doesNotMatch(dash,/M\.tasksForDay\(state,/);
+  assert.match(app,/const listTasks=\(\)=>OFFICE\?state\.tasks\.filter\(t=>t\.mine!==false\):state\.tasks;/);
+  assert.match(app,/function tasksPanel\(\)\{\n  const pending=listTasks\(\)/);
+  assert.match(app,/function taskGroupPanel\(group\)\{\n  const all=listTasks\(\)/);
+  assert.match(app,/activeTask\(x\)&&x\.mine!==false\);\$\('#todaySummary'\)/);
+  // The rule itself, on sample rows.
+  const rule=(t,me,assigned,linked)=>{const verantwortlich=assigned.includes(me)||linked.has(t.id);return assigned.length||linked.has(t.id)?verantwortlich:t.user_id===me};
+  assert.equal(rule({id:1,user_id:'gari'},'gari',[],new Set()),true,'own task without responsibles');
+  assert.equal(rule({id:2,user_id:'gari'},'gari',['ana'],new Set()),false,'created by me, Ana is responsible');
+  assert.equal(rule({id:2,user_id:'gari'},'ana',['ana'],new Set()),true);
+  assert.equal(rule({id:3,user_id:'ana'},'gari',[],new Set()),false,'colleague task without responsibles');
+  assert.equal(rule({id:4,user_id:'ana'},'gari',['ana','gari'],new Set()),true);
   assert.match(read('app/ahora.js'),/tasks:\(full\.tasks\|\|\[\]\)\.filter\(t=>t\.mine!==false\),events:\(full\.events\|\|\[\]\)\.filter\(e=>e\.mine!==false\)/);
   const fr=read('app/office-fristen.js');
   assert.match(fr,/from\('office_project_members'\)\.select\('project_id'\)\.eq\('user_id',user\.id\)/);
