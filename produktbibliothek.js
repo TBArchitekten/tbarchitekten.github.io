@@ -119,10 +119,12 @@ function uebernommen(liste){
   }
   return raus;
 }
+// Unabhängige Quellen: Ansätze aus Kostenberechnungen zählen je Betrag einmal (derselbe Betrag in mehreren
+// Kostenberechnungen gilt als übernommen, mehrere Positionen einer Kostenberechnung mit demselben Betrag sind ein
+// Ansatz); Angebote, Abrechnungen und Listenpreise zählen einzeln.
 function quellenZahl(liste){
-  const kopien=uebernommen(liste);
-  let n=liste.length;for(const k of kopien)n-=k.anzahl-1;
-  return n;
+  const ansaetze=liste.filter(x=>x.art==='ansatz_kobe');
+  return new Set(ansaetze.map(x=>Number(x.betrag).toFixed(2)+'|'+x.einheit)).size+liste.length-ansaetze.length;
 }
 function preisBild(e){
   const eigene=preiseVon(e),familie=eigene.length?[]:familienPreise(e),liste=eigene.length?eigene:familie;
@@ -178,7 +180,7 @@ function farbeVon(e){
 // Fliesen im Raster, Textil fein gestreift. Nur Andeutung, kein Produktfoto.
 function texturVon(e){
   const t=[e.familie,e.name,e.beschreibung].filter(Boolean).join(' ').toLowerCase();
-  if(/parkett|diele|holz|eiche|esche|nussbaum|lärche|douglas/.test(t))
+  if(/parkett|diele|holz|eiche|esche|nussbaum|lärche|douglas|zeder|ahorn|buche/.test(t))
     return 'repeating-linear-gradient(90deg,rgba(90,60,30,.2) 0 2px,transparent 2px 58px),repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 1px,transparent 1px 7px)';
   if(/fliese|feinstein|keramik|mosaik/.test(t))
     return 'linear-gradient(90deg,rgba(255,255,255,.55) 0 2px,transparent 2px),linear-gradient(0deg,rgba(255,255,255,.55) 0 2px,transparent 2px)';
