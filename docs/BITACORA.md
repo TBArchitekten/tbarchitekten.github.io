@@ -17,6 +17,17 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-23 · Produktbibliothek: Fassade, Wand, Decke und Holzdeck aus den alten Kostenberechnungen · Claude
+- Qué cambió y por qué (Gari, 23.11., 20:11: «Avanza como lo has planteado»): criterio acordado — en la Bibliothek va lo que se elige y se enseña al Bauherr; lo que solo se calcula (Putz, Anstrich, Gipskarton, Abdichtung, Gerüst, Zulagen, el Aufbau del Dach) espera al Datenpool. Fenster und Türen, no. Cargadas en la base, desde los Excel originales y la lectura del PDF del edificio existente: Fassade (Außenputz, Putz auf Holzfaser, hinterlüftetes Putzsystem, Metallbekleidung, Fassadenbekleidung de un edificio de oficinas, Lüftungslamellen), Wand (Naturstein, Fliesen, Glaswand, Sauna), Decke (Akustik-, Raster- y Streckmetalldecke) y el Holzdeck exterior en Bodenbeläge (KG 363). Mismas reglas: fila y texto original en la Quelle, Stand, KG, cantidades de una misma Kostenberechnung sumadas, notas donde falta la unidad.
+- De paso: la muestra de la tarjeta ya no pinta madera para «Holzfaser» o «Holzwolle», que son aislantes.
+- Archivos: `produktbibliothek.js` (`office4`), `produktbibliothek.html`, `tests/office-produktbibliothek.test.mjs`.
+- Base de datos: solo datos, sin migración: 14 Leistungen nuevas con 23 Ansätze (ahora 33 entradas y 67 precios); comprobado por categoría.
+- Deploy de funciones: ninguno.
+- Cómo se probó: tests unitarios; carga en una transacción con comprobación del número de precios.
+- Quedó pendiente o sin probar: nada nuevo.
+- Riesgos o decisiones que necesitan a Gari: los Bodenaufbau ya cargados (Estrich, Dämmung, Abdichtung, Trockenschüttung) pasan al Datenpool cuando exista.
+- PR: #141
+
 ### 2026-11-23 · Produktbibliothek: Herkunft beim Namen, KG auf der Karte, Auswahl im Projekt, Foto · Claude
 - Qué cambió y por qué (Gari, 23.11., 19:35, con capturas del iPhone):
   - «in keinem laufenden Projekt» se leía como si el precio no viniera de ningún proyecto; hablaba del uso. Ahora la tarjeta dice de qué Kostenberechnungen sale el Ansatz («Ansatz der Kostenberechnung … (2022) · kein Angebot») y, aparte, si está elegido en un proyecto («Noch in keinem Projekt ausgewählt» / «Ausgewählt in …»).
