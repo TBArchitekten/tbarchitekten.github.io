@@ -15,6 +15,32 @@ const workSignedCache=new Map();
 let team=[],reviewSettings=null,reviewReportLimit=20,workRenderVersion=0;
 /* Purely visual preferences and labels; no task statuses are rewritten. */
 const WORK_MOBILE_LAYOUT_KEY='minds-work-mobile-planner-layout-v1';
+// Das Board behält seine Stelle (Gari, 23.11.2026): nach einer Änderung in einem Bucket ganz rechts sprang es an den
+// Anfang zurück, weil jedes Neuzeichnen das Board ersetzt. Gemerkt werden je Projekt die seitliche Position, die
+// Position in jedem Bucket und welche «Erledigte Aufgaben» offen sind. Das Board trägt sein Projekt; ein anderes
+// Projekt (oder das Muster) beginnt links.
+let boardMemory=null;
+const boardKey=()=>project?(project.id??project.client_key):null;
+function rememberBoard(body){
+  const board=body?.querySelector('.work-board');
+  if(!board)return;
+  const buckets={};
+  board.querySelectorAll('.work-bucket').forEach(b=>{
+    buckets[b.dataset.workBucketDrop||'__none']={top:b.querySelector('.work-bucket-scroll')?.scrollTop||0,
+      done:!!b.querySelector('details.work-completed')?.open};
+  });
+  boardMemory={project:board.dataset.workBoardProject||'',left:board.scrollLeft,top:board.scrollTop,page:body.scrollTop,buckets};
+}
+function restoreBoard(body){
+  const board=body?.querySelector('.work-board'),m=boardMemory;
+  if(!board||!m||!m.project||m.project!==board.dataset.workBoardProject)return;
+  board.querySelectorAll('.work-bucket').forEach(b=>{
+    const s=m.buckets[b.dataset.workBucketDrop||'__none'];if(!s)return;
+    const done=b.querySelector('details.work-completed');if(done&&s.done)done.open=true;
+    const scroll=b.querySelector('.work-bucket-scroll');if(scroll)scroll.scrollTop=s.top;
+  });
+  board.scrollLeft=m.left;board.scrollTop=m.top;body.scrollTop=m.page;
+}
 function isMusterPlanner(){return OFFICE&&new URLSearchParams(String(location.hash||'').replace(/^#/,'')).get('muster')==='LPH3'}
 
 function setStatus(t=''){const el=$('#workStatus');if(el)el.textContent=t}
@@ -844,6 +870,7 @@ async function syncFromTerminplan(){
   };
 }
 async function renderPlanner(preview=false){
+  rememberBoard($('#workBody'));
   if(preview){
     const result=await fetch('./data/muster-planner-lph3-v0.3.json?v=lph3-031',{cache:'no-store'});
     if(!result.ok)throw new Error('Das Muster LPH 3 konnte nicht geladen werden.');
@@ -866,10 +893,11 @@ async function renderPlanner(preview=false){
     await loadPlanner();team=await window.MINDS_WORK_TEAM.members(project.id);
   }
   const body=$('#workBody'),unbucketed=tasks.some(t=>!t.work_bucket_id),columns=[...(unbucketed?[{id:'__none',name:'Ohne Bucket',virtual:true}]:[]),...buckets];
+  rememberBoard(body);
   // Buckets side by side by default (scroll sideways on the phone); the list is opt-in.
   const mobileList=localStorage.getItem(WORK_MOBILE_LAYOUT_KEY)==='list';
   body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Listenansicht</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':(tasks.some(t=>window.TBAPlannerTerminplanSync?.linkOf(t))?'<button type="button" data-work-terminplan-sync title="Termine der verknüpften Aufgaben aus dem Projekt-Terminplan übernehmen">Termine aus Terminplan</button>':'')+'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
-    <div class="work-board ${mobileList?'mobile-stack':''}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
+    <div class="work-board ${mobileList?'mobile-stack':''}" data-work-board-project="${esc(String(preview?'muster':boardKey()||''))}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
       ${b.terminplan_ref?`<div class="work-bucket-pretitle">Abgabe / Planungspaket${preview?' · '+esc(b.id):''}</div>`:''}
       <header class="work-bucket-header">${b.virtual
         ?`<strong>${esc(b.name)}</strong>`
@@ -889,6 +917,7 @@ async function renderPlanner(preview=false){
       <div class="work-bucket-scroll"><div class="work-task-list" data-work-task-list="open" data-work-list-bucket="${b.virtual?'':b.id}">${open.map(t=>taskCard(t,preview)).join('')}</div>
       ${done.length?`<details class="work-completed"><summary>Erledigte Aufgaben <span>${done.length}</span></summary><div class="work-task-list" data-work-task-list="done" data-work-list-bucket="${b.virtual?'':b.id}">${done.map(t=>taskCard(t,preview)).join('')}</div></details>`:''}</div>
     </section>`}).join('')}</div>`;
+  restoreBoard(body);
   if(preview){
     body.classList.add('work-muster-preview');
     body.querySelectorAll('[data-work-task]').forEach(card=>{
