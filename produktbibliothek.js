@@ -201,7 +201,8 @@ function farbeVon(e){
 function texturVon(e){
   // Nur Name und Familie: in einer Beschreibung steckt «Eiche» auch in «vergleichen».
   const t=[e.familie,e.name].filter(Boolean).join(' ').toLowerCase();
-  if(/parkett|diele|holz|eiche|esche|nussbaum|lärche|douglas|zeder|ahorn|buche/.test(t))
+  // «Holzfaser» und «Holzwolle» sind Dämmstoffe, kein sichtbares Holz.
+  if(/parkett|diele|holz(?!faser|wolle)|eiche|esche|nussbaum|lärche|douglas|zeder|ahorn|buche/.test(t))
     return 'repeating-linear-gradient(90deg,rgba(90,60,30,.2) 0 2px,transparent 2px 58px),repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 1px,transparent 1px 7px)';
   if(/fliese|feinstein|keramik|mosaik/.test(t))
     return 'linear-gradient(90deg,rgba(255,255,255,.55) 0 2px,transparent 2px),linear-gradient(0deg,rgba(255,255,255,.55) 0 2px,transparent 2px)';
