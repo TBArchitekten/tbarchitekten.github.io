@@ -24,12 +24,12 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
   - **Heute, Plan y Aufgaben solo con las propias** (propuesta aceptada en el chat): una tarea con Verantwortliche es solo de ellos; sin Verantwortliche sigue siendo de quien la creó. El Planner de cada proyecto y el Kalender (con «Nur meine») siguen mostrando todo. Antes el panel Heute del escritorio y la lista de Aufgaben no filtraban.
   - **Kostenberechnung visible para todo el Office**, como el Terminplan y las carpetas del servidor (decisión de Gari). Migración `20261123100100_office_kosten_lesen_office.sql`: solo añade policies (lectura para miembros; preguntar al asistente; el Verlauf sigue privado). Escribir, Stände, crear y borrar siguen en quien la creó, la Projektleitung y el Team.
 - Archivos: `app/index.html`, `app/office-engine-chat.js` (`romy5`), `app/shell.js` (`office50`), `app/sync.js` (`office7`), `app/dashboard.js` (`office41`), `app/app.js` (`office55`), `kostenberechnung.js` (`office6`), `kostenberechnung.html`, `kostenberechnung-hilfe.html`, dos migraciones, `tests/sql/office-work-buckets-acceptance.sql` (nueva), `tests/sql/office-kostenberechnung-rls-acceptance.sql`, `tests/sql/office-kosten-ai-rls-acceptance.sql`, `.github/workflows/verify.yml`, tests unitarios y de navegador, `docs/ESTADO.md`, `docs/BITACORA.md`.
-- Base de datos: dos migraciones, sin nada destructivo (funciones nuevas y policies añadidas); aplicadas con el conector de Supabase (#116) tras la CI.
+- Base de datos: dos migraciones, sin nada destructivo (funciones nuevas y policies añadidas); aplicadas con el conector de Supabase (#116) tras la CI verde, y comprobadas: tres funciones invoker, anon sin ejecución, cinco policies nuevas.
 - Deploy de funciones: ninguno.
 - Cómo se probó: 357 tests unitarios; navegador 26 (una elección «legacy» antigua se borra al arrancar; el menú ya no ofrece las cuatro entradas); abnahmen SQL en la CI: buckets (C sin relación no puede, B del Team quita un bucket de A, tareas abiertas a «Ohne Bucket», terminadas quedan, nada borrado, ordenar, restaurar al final, no miembros y anon no), Kostenberechnung (C lee, no cambia), asistente (C pregunta, lee solo lo suyo).
 - Quedó pendiente o sin probar: `minds_save_work_claim` (revisar entradas de «Wissen» en Work) tampoco existe en el Office; no tocado.
 - Riesgos o decisiones que necesitan a Gari: las tareas creadas por él sin Verantwortliche siguen en su Heute hasta que las asigne.
-- PR: (este)
+- PR: #134
 
 ### 2026-11-22 · Eine Anleitung für Archicad: Teil III der Kostenberechnung, eigene Schemata, Klassifizierung aus dem Werkzeug · Claude
 - Qué cambió y por qué: Gari (22.11., 12:24) no quiere dos Anleitungen («debe ser solo una Guía … tan bien hecha y estructurada que sea solo una Guía y no dos») y pidió una solución para publicar lo de Graphisoft en vez de dejarlo interno. Hecho:
