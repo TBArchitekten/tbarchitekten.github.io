@@ -151,11 +151,11 @@ test('Migration: RLS mit Office-Helfern, nichts Destruktives, privater Speicher'
 
 test('Seite und Werkzeugkarte: eigene Seite, gleicher Client wie die Kostenberechnung',()=>{
   assert.match(seite,/<html lang="de">/);
-  assert.match(seite,/<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office1">/);
+  assert.match(seite,/<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office2">/);
   assert.match(seite,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   assert.match(seite,/<script src="\.\/office-config\.js\?v=1"><\/script>/);
   assert.match(seite,/<script src="\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
-  assert.match(seite,/<script src="\.\/produktbibliothek\.js\?v=office2"><\/script>/);
+  assert.match(seite,/<script src="\.\/produktbibliothek\.js\?v=office3"><\/script>/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(shell,/id="officeToolsProdukte" aria-label="Produktbibliothek öffnen"/);
   assert.match(shell,/<strong>Produktbibliothek<\/strong><small>Materialien einmal erfassen, in jedem Projekt verwenden/);
@@ -173,9 +173,13 @@ test('Seite und Werkzeugkarte: eigene Seite, gleicher Client wie die Kostenberec
   assert.ok(!/innerHTML\s*=\s*[^;]*\$\{(?!esc\()[a-z]+\.(name|hersteller|familie|beschreibung|wert|feld|notiz|raeume|quelle|kommentar)\}/i.test(ui),'Texte aus der Datenbank nur maskiert');
   for(const t of ['Herstellerdatenblatt hochladen','Von Hand anlegen','Prüfen und übernehmen','Zu Projekt','Nicht im Datenblatt',
     'Ein Listenpreis ist kein eingebauter Preis','unverändert übernommen','Umfang prüfen','auf der Bodenplatte KG 324, auf Decken KG 353',
-    'Datenblatt geprüft','Datenblatt fehlt','Leistung, kein Produkt','Preise der Familie'])
+    'Datenblatt geprüft','Datenblatt fehlt','Leistung, kein Produkt','Preise der Familie','Noch in keinem Projekt ausgewählt','Ausgewählt in ',
+    'Ansatz der Kostenberechnung ','Foto hinzufügen','Hier wird nur ausgewählt'])
     assert.ok(ui.includes(t),'fehlt in der Oberfläche: '+t);
   assert.match(css,/@media \(max-width:860px\)/);
+  // Zu Projekt wählt nur aus: Menge und Räume gehören in die Kostenberechnung, nicht in den Dialog.
+  const dialogZuProjekt=ui.slice(ui.indexOf('function zuProjekt('),ui.indexOf('// ---------- Datenblatt prüfen'));
+  assert.ok(!/name="(raeume|menge|einheit|status)"/.test(dialogZuProjekt),'Zu Projekt fragt Menge, Räume oder Stand ab');
 });
 
 test('Öffentliches Repository: keine DIN-Titel, keine Projekte, keine Adressen, kein Spanisch',()=>{

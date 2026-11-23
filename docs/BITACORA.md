@@ -17,6 +17,21 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-23 · Produktbibliothek: Herkunft beim Namen, KG auf der Karte, Auswahl im Projekt, Foto · Claude
+- Qué cambió y por qué (Gari, 23.11., 19:35, con capturas del iPhone):
+  - «in keinem laufenden Projekt» se leía como si el precio no viniera de ningún proyecto; hablaba del uso. Ahora la tarjeta dice de qué Kostenberechnungen sale el Ansatz («Ansatz der Kostenberechnung … (2022) · kein Angebot») y, aparte, si está elegido en un proyecto («Noch in keinem Projekt ausgewählt» / «Ausgewählt in …»).
+  - **KG en la tarjeta y en el Produktblatt** («KG 324/353»), tomada de los Ansätze; la búsqueda también encuentra «kg 353».
+  - **Zu Projekt solo elige:** proyecto, código y nota. Menge y Räume salen del diálogo, porque viven en la Kostenberechnung (y más adelante en Archicad, unidos por el código); el estado de la Bemusterung se cambia en el Produktblatt. Las columnas de la base siguen ahí, sin tocar.
+  - **Filtro «Projekt»** en la Bibliothek: enseña solo lo elegido para ese proyecto, ordenado por código, como primera lista de materiales del proyecto.
+  - **«Foto hinzufügen»** en el Produktblatt (en el iPhone, cámara o fotos): la foto pasa a ser la muestra de la tarjeta.
+- Archivos: `produktbibliothek.js` (`office3`), `produktbibliothek.css` (`office2`), `produktbibliothek.html`, `tests/office-produktbibliothek.test.mjs`, `tests/browser/office-produktbibliothek.chromium.mjs`.
+- Base de datos: ninguna.
+- Deploy de funciones: ninguno (Pages al hacer merge).
+- Cómo se probó: tests unitarios (el diálogo Zu Projekt no pide Menge, Räume ni estado) y los seis recorridos en Chromium (origen con nombres, KG, búsqueda por KG, filtro por proyecto, foto como muestra, Zu Projekt con nota).
+- Quedó pendiente o sin probar: subir una foto desde el iPhone real.
+- Riesgos o decisiones que necesitan a Gari: ninguno; cargar más categorías desde las KoBes espera su respuesta.
+- PR: #140
+
 ### 2026-11-23 · Produktbibliothek: Kostenberechnungen zählen, nicht Positionen · Claude
 - Qué cambió y por qué: con los datos reales, una tarjeta decía «Ansatz in 5 Kostenberechnungen» para Parkett, que sale de tres: contaba filas, y una Kostenberechnung con el mismo belag sobre la Bodenplatte y sobre los forjados tiene dos. Ahora cuenta Kostenberechnungen distintas. De paso, la muestra de la tarjeta mira solo nombre y familia (una descripción con «vergleichen» daba textura de madera por «eiche»).
 - Archivos: `produktbibliothek.js` (`office2`), `produktbibliothek.html`, `tests/office-produktbibliothek.test.mjs`, `tests/browser/fixtures/fake-supabase-produkte.js` (una Kostenberechnung con dos filas), `tests/browser/office-produktbibliothek.chromium.mjs`.
