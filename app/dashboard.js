@@ -187,8 +187,11 @@
       ['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>'<span>'+d+'</span>').join('') +
       '</div><div class="desk-month-grid">' + cells + '</div>';
   };
+  // Heute und Plan zeigen nur die eigenen Aufgaben (Gari, 23.11.2026): wo man verantwortlich ist, oder ohne
+  // Verantwortliche selbst angelegt (sync.js setzt mine). Der Kalender bleibt der Kalender der Projekte.
+  const ownTasks = state => (state.tasks || []).filter(t => t.mine !== false);
   const todayHtml = state => {
-    const items = M.tasksForDay(state,prefs.selectedDate);
+    const items = M.tasksForDay({...state,tasks:ownTasks(state)},prefs.selectedDate);
     const meetings = M.eventsForDay(state,prefs.selectedDate);
     const dateName = prefs.selectedDate === M.dayKey(new Date()) ?
       'Heute · ' + niceDate(prefs.selectedDate) : niceDate(prefs.selectedDate);
@@ -393,7 +396,7 @@
         '<strong>' + E(eventTitle) + '</strong><small>' + (isSession?'Reservierte Zeit · ':'') + E(item.start) + '–' + time + '</small></button>';
     }).join('');
     const effort=Math.round(sessions.reduce((sum,e)=>sum+Math.max(0,Number(e.duration)||0),0));
-    const plannedTasks=M.tasksForDay(state,date).filter(t=>!t.done);
+    const plannedTasks=M.tasksForDay({...state,tasks:ownTasks(state)},date).filter(t=>!t.done);
     const totalEstimate=plannedTasks.reduce((sum,t)=>sum+M.estimatedMinutes(t),0);
     const unknown=plannedTasks.filter(t=>!M.estimatedMinutes(t)).length;
     const rows=plannedTasks.slice(0,6).map(t=>'<div class="desk-plan-task-row"><span>'+E(t.title)+'</span>'+

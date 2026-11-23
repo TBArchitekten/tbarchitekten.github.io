@@ -28,17 +28,25 @@ async function boot(runtime){
   page.on('pageerror',e=>errors.push(e.message));
   await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
   await page.route(/supabase\.co|fonts\.(googleapis|gstatic)/,r=>r.abort());
-  if(runtime)await page.addInitScript(v=>{try{localStorage.setItem('tba_office_chat_backend',v)}catch{}},runtime);
+  // Seeded once per tab (init scripts also run in frames and on later navigations).
+  if(runtime)await page.addInitScript(v=>{try{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('tba_office_chat_backend',v)}}catch{}},runtime);
   await page.goto(`http://localhost:${server.address().port}/app/`);
   await page.waitForTimeout(1500);
   return {page,errors};
 }
 
+// A browser that still carries the former choice «legacy» starts the shared engine and forgets the choice
+// (Gari, 23.11.2026: the former Romy version is no longer offered).
 for(const runtime of ['', 'legacy']){
-  test(`Office app starts without errors and shows the first screen (${runtime||'shared engine'})`,async()=>{
+  test(`Office app starts without errors and shows the first screen (${runtime?'stale legacy choice':'shared engine'})`,async()=>{
     const {page,errors}=await boot(runtime);
     try{
       assert.deepEqual(errors,[],'no page error during start');
+      assert.deepEqual(await page.evaluate(()=>[window.APP_CHAT_RUNTIME,localStorage.getItem('tba_office_chat_backend')]),['window',null]);
+      await page.evaluate(()=>document.getElementById('drawer')?.classList.remove('hidden'));
+      const menu=await page.evaluate(()=>[...document.querySelectorAll('#drawer button,#drawer a')].map(b=>b.textContent.trim()).filter(Boolean));
+      for(const gone of ['Neues Gespräch','Meine Gespräche','Vorherige Romy-Version','Terminplan-Muster'])
+        assert.ok(!menu.includes(gone),'menu still offers '+gone);
       const visible=await page.evaluate(()=>[...document.querySelectorAll('[id$="Screen"]')].some(e=>e.offsetParent&&e.textContent.trim().length>20));
       assert.ok(visible,'a screen with content is visible right after start');
     }finally{await page.close()}

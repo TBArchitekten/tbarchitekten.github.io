@@ -194,7 +194,7 @@ function projectTaskRow(t,catKey,projKey){
 }
 // The Kalender is the calendar of your projects (decision of Gari, 07.11.2026): own tasks (personal or in
 // a project), tasks assigned to you, and every dated task of the projects whose team you are in.
-// Heute stays yours: it filters on `mine`.
+// Heute stays yours: it filters on `mine` (since 23.11.2026: responsible, or created and without responsibles).
 let teamProjectIds=[];
 async function loadTeamProjects(){
   const {data,error}=await sb.from('office_project_members').select('project_id').eq('user_id',user.id);
@@ -253,8 +253,11 @@ async function pullState(local,maps){
   const remoteTasks=(tasks||[]).filter(t=>!deletedTaskIds.has(t.client_key||t.id)).map(t=>{
     const ids=teamIdsFor(assignedByTask.get(t.id)||[],t.assignee_person_id);
     const assigned=ids.length?ids:(t.assignee_person_id?[t.assignee_person_id]:[]);
+    // Meine Aufgabe (Gari, 23.11.2026): hat sie Verantwortliche, gehört sie nur ihnen; ohne Verantwortliche
+    // bleibt sie bei der Person, die sie angelegt hat. Heute, Plan und Aufgaben zeigen nur meine.
+    const verantwortlich=assigned.includes(user.id)||linkedTaskIds.has(t.id);
     return {...projectTaskRow(t,catKey,projKey),assigneePersonIds:assigned,
-      mine:t.user_id===user.id||assigned.includes(user.id)||linkedTaskIds.has(t.id)};
+      mine:assigned.length||linkedTaskIds.has(t.id)?verantwortlich:t.user_id===user.id};
   });
   const taskKeys=new Map((tasks||[]).map(t=>[t.id,t.client_key||t.id]));
   const teamAllocations=(allocations||[]).map(a=>({

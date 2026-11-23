@@ -1,9 +1,10 @@
 -- Abnahme RLS · KI-Assistent der Kostenberechnung (Migrationen 20261121180000_office_kosten_ai_v1.sql und
 -- 20261122100000_office_ki_ohne_tageslimit.sql: kein Tageslimit, jede Anfrage wird gezählt), 21./22.11.2026.
+-- Seit 23.11.2026 (20261123100100_office_kosten_lesen_office.sql) darf jedes Office-Mitglied fragen; jede Person liest nur ihren eigenen Verlauf.
 -- Erfundene Personen und Projekte; alles läuft in einer Transaktion, die am Ende zurückgerollt wird.
 -- A = Projektleitung von P, B = Team von P, C = Mitglied ohne Bezug zu P, D = kein Office-Mitglied.
 -- Erwartet (Wahrheitswerte als «true»/«false»: so schreibt PL/pgSQL sie in Text):
--- B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=false; C_liest=0;
+-- B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=ok; C_kontingent=true; C_liest=1;
 -- B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=31;
 begin;
 insert into auth.users(id,aud,role,email,instance_id) values
@@ -24,7 +25,7 @@ insert into public.office_kosten_instances(id,project_id,template_version,projec
 do $test$
 declare
   r text := ''; n int; ok boolean;
-  erwartet constant text := 'B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=verweigert; C_kontingent=false; C_liest=0; '
+  erwartet constant text := 'B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=ok; C_kontingent=true; C_liest=1; '
     || 'B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=31; ';
   k constant uuid := 'f1000000-0000-4000-8000-0000000000f1';
 begin
@@ -43,12 +44,12 @@ begin
   insert into public.office_kosten_dialogue_messages(instance_id,user_id,role,body) values (k,'a1000000-0000-4000-8000-00000000000a','user','Frage');
   r := r || 'A_schreibt=ok; ';
   execute 'reset role';
-  -- C (Mitglied ohne Bezug): weder schreiben noch Kontingent noch lesen.
+  -- C (Mitglied ohne Bezug): fragt wie jedes Office-Mitglied, liest nur die eigene Nachricht.
   perform set_config('request.jwt.claims', '{"sub":"c1000000-0000-4000-8000-00000000000c","role":"authenticated"}', true);
   execute 'set local role authenticated';
   begin
     insert into public.office_kosten_dialogue_messages(instance_id,user_id,role,body) values (k,'c1000000-0000-4000-8000-00000000000c','user','x');
-    r := r || 'C_schreibt=ERLAUBT(FEHLER); ';
+    r := r || 'C_schreibt=ok; ';
   exception when others then r := r || 'C_schreibt=verweigert; ';
   end;
   select public.office_kosten_ai_consume_request(k) into ok; r := r || 'C_kontingent=' || ok || '; ';

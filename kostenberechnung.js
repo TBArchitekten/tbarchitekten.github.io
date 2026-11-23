@@ -105,7 +105,7 @@ function dialogNeu(){
     '<label class="feld">Projekt<select name="projekt" required>'+d.projekte.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.number+' · '+p.name)+'</option>').join('')+'</select></label>'+
     '<label class="feld">Muster<select name="muster" required>'+d.muster.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.title+' · '+t.version)+'</option>').join('')+'</select></label>'+
     '<label class="feld">Kostenstand<select name="kostenstand">'+quartale().map(x=>'<option value="'+x+'"'+(x===q?' selected':'')+'>'+esc(R.quartalText(x))+'</option>').join('')+'</select></label>'+
-    '<p class="meta">Das Muster bleibt unverändert. Sehen und fortschreiben können die Kostenberechnung das Projektteam, die Projektleitung und wer sie anlegt.</p>'+
+    '<p class="meta">Das Muster bleibt unverändert. Ansehen kann die Kostenberechnung das ganze Office, wie den Terminplan; fortschreiben das Projektteam, die Projektleitung und wer sie anlegt.</p>'+
     '<p class="meta att" id="kbNeuFehler" role="alert"></p>'+
     '<div class="dlg-actions"><button type="button" class="btn" data-dlg="zu">Abbrechen</button><button class="btn btn-primary" type="submit">Anlegen</button></div></form>';
   dialog.showModal();
@@ -129,7 +129,7 @@ async function ladeKostenberechnung(id){
   const {data:row,error}=await sb.from('office_kosten_instances')
     .select('id,project_id,project_number,project_name,phase,owner_id,template_version,state,server_revision,updated_at').eq('id',id).maybeSingle();
   if(error)throw error;
-  if(!row)throw Error('Kostenberechnung nicht gefunden, oder du gehörst nicht zum Projektteam.');
+  if(!row)throw Error('Kostenberechnung nicht gefunden.');
   if(row.state?.schema!==R.SCHEMA)throw Error('Unbekannter Stand der Kostenberechnung.');
   doc=row;st=row.state;serverRevision=Number(row.server_revision);
   if(!Number.isSafeInteger(serverRevision)||serverRevision<1)throw Error('Keine gültige Serverrevision.');

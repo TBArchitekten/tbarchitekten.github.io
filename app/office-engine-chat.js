@@ -133,25 +133,9 @@ async function openHistory(){
 function showAttachmentNotice(){
   status('Diese Datei kann zurzeit nicht überprüft werden. Kein Upload gilt als erfolgreich.');
 }
-function toggleLegacy(){
-  const legacy=window.confirm('Alten Romy-Chat als Notfall-Alternative öffnen? Der neue Chat bleibt im Office gespeichert. Das Umschalten führt nicht zu einem Datenabgleich zwischen den zwei Verläufen.');
-  if(!legacy)return;
-  localStorage.setItem('tba_office_chat_backend','legacy');location.reload();
-}
-function addMenu(id,label,action){
-  if(document.getElementById(id))return;
-  const signout=document.getElementById('officeSignOut');
-  if(!signout?.parentNode)return;
-  const b=node('button',label,'office-assistant-menu-action');
-  b.id=id;b.type='button';
-  b.addEventListener('click',()=>{document.getElementById('closeDrawer')?.click();void action()});
-  signout.parentNode.insertBefore(b,signout);
-}
+// Kein Menüeintrag mehr für Gesprächsliste, neues Gespräch oder die frühere Romy-Version (Gari, 23.11.2026):
+// Romy ist ein durchgehendes Gespräch im Chat; Themen haben ihre Threads in Work.
 async function initialize(){
-  // app.js declares ISABELLA_APP in the same synchronous document execution.
-  addMenu('officeEngineHistory','Meine Gespräche',openHistory);
-  addMenu('officeEngineNewChat','Neues Gespräch',startNew);
-  addMenu('officeEngineFallback','Vorherige Romy-Version',toggleLegacy);
   await reconcile();
 }
 window.TBA_OFFICE_ENGINE_CHAT=Object.freeze({reconcile,openHistory,startNew,showAttachmentNotice,
