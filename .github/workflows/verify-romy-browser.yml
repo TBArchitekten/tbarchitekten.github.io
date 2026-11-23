@@ -36,3 +36,7 @@ jobs:
         env:
           CI: 'true'
         run: node --test tests/browser/office-kostenberechnung.chromium.mjs
+      - name: Exercise Produktbibliothek (read a datasheet, review, project use, iPhone width) with a synthetic Supabase
+        env:
+          CI: 'true'
+        run: node --test tests/browser/office-produktbibliothek.chromium.mjs

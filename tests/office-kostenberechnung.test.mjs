@@ -255,8 +255,8 @@ test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/<strong>Kostenberechnung<\/strong><small>Nach DIN 276 bis zur 3\. Ebene/);
   assert.match(shell,/NAV_ICONS\.kosten='<svg /);
   assert.match(projekte,/getElementById\('officeToolsKosten'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/kostenberechnung\.html';/);
-  assert.match(index,/\.\/shell\.js\?v=office50/);
-  assert.match(index,/\.\/office-projects\.js\?v=office53/);
+  assert.match(index,/\.\/shell\.js\?v=office51/);
+  assert.match(index,/\.\/office-projects\.js\?v=office54/);
   assert.match(ui,/href="\.\/app\/#section=tools">‹ Werkzeuge/);
 });
 

@@ -362,6 +362,11 @@ document.getElementById('officeToolsStart')?.addEventListener('click',()=>{
 document.getElementById('officeToolsKosten')?.addEventListener('click',()=>{
   window.location.href='../kostenberechnung.html';
 });
+// Produktbibliothek: eigene Seite (produktbibliothek.html im Wurzelverzeichnis): Produkte und Leistungen mit
+// Datenblatt, Preisen mit Herkunft und Verwendung in Projekten.
+document.getElementById('officeToolsProdukte')?.addEventListener('click',()=>{
+  window.location.href='../produktbibliothek.html';
+});
 document.getElementById('officePlansBack')?.addEventListener('click',()=>{window.ISABELLA_APP?.show?.('tools');history.replaceState(null,'','#section=tools')});
 document.getElementById('officePlansDrawer')?.addEventListener('click',()=>{
   document.getElementById('closeDrawer')?.click();openPlans();
