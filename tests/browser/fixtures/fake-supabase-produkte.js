@@ -37,7 +37,7 @@
     office_produkt_dokumente:[{id:D1,produkt_id:S1,art:'datenblatt',name:'Datenblatt Kalkstein.pdf',storage_path:pfad(S1,'b1111111-1111-4111-8111-111111111111'),
       mime_type:'application/pdf',size_bytes:atob(PDF_B64).length,seiten:2,gelesen_am:zeit('2026-11-19'),created_by:UID,created_at:zeit('2026-11-19')}],
     office_produkt_preise:[
-      preis(L1,180,'2022-09-19','K-01'),preis(L1,180,'2026-10-05','K-02'),preis(L1,180,'2026-10-30','K-03'),
+      preis(L1,180,'2022-09-19','K-01'),preis(L1,180,'2022-09-19','K-01',{kg:'324'}),preis(L1,180,'2026-10-05','K-02'),preis(L1,180,'2026-10-30','K-03'),
       preis(L2,38,'2022-09-19','K-01',{kg:'324'}),preis(L2,95,'2024-03-01','K-04',{kg:'324'}),
       {id:crypto.randomUUID(),produkt_id:S1,art:'listenpreis_material',betrag:120,einheit:'m²',stand:'2026-01-01',quelle:'Datenblatt Kalkstein.pdf',
         dokument_id:D1,seite:2,created_by:UID,created_at:zeit('2026-11-19')}],

@@ -54,7 +54,7 @@ test('Bibliothek: Preise mit Herkunft, Suche, Filter und Archiv',async()=>{
     assert.match(await parkett.locator('.pb-preis').textContent(),/^180 €\/m² eingebaut$/);
     const pt=await parkett.textContent();
     assert.equal(await parkett.locator('.meta').first().textContent(),'Leistung, kein Produkt','die Familie wiederholt nicht den Namen');
-    assert.match(pt,/Ansatz in 3 Kostenberechnungen, kein Angebot/);
+    assert.match(pt,/Ansatz in 3 Kostenberechnungen, kein Angebot/,'gezählt werden Kostenberechnungen, nicht Positionen');
     assert.match(pt,/seit 2022 unverändert übernommen/);
     assert.match(pt,/1 Quelle/);
     assert.ok(!/Datenblatt/.test(pt),'eine Leistung braucht kein Datenblatt');
