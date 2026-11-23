@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-23 · Produktbibliothek: Kostenberechnungen zählen, nicht Positionen · Claude
+- Qué cambió y por qué: con los datos reales, una tarjeta decía «Ansatz in 5 Kostenberechnungen» para Parkett, que sale de tres: contaba filas, y una Kostenberechnung con el mismo belag sobre la Bodenplatte y sobre los forjados tiene dos. Ahora cuenta Kostenberechnungen distintas. De paso, la muestra de la tarjeta mira solo nombre y familia (una descripción con «vergleichen» daba textura de madera por «eiche»).
+- Archivos: `produktbibliothek.js` (`office2`), `produktbibliothek.html`, `tests/office-produktbibliothek.test.mjs`, `tests/browser/fixtures/fake-supabase-produkte.js` (una Kostenberechnung con dos filas), `tests/browser/office-produktbibliothek.chromium.mjs`.
+- Base de datos: ninguna.
+- Deploy de funciones: ninguno (Pages al hacer merge).
+- Cómo se probó: tests unitarios y los seis recorridos en Chromium; la Bibliothek dibujada en local con la forma de los datos cargados (19 tarjetas, sin errores).
+- Quedó pendiente o sin probar: nada nuevo.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #139
+
 ### 2026-11-23 · Produktbibliothek (Phase 1): Bibliothek, Datenblatt-Leser, Preise mit Herkunft, Verwendung im Projekt · Claude
 - Qué cambió y por qué (Gari, 23.11.: «sí, apruebo el boceto»): herramienta nueva en Werkzeuge, como Programa pero para materiales, empezando por Bodenbeläge. Un producto se registra una vez y se usa en cada proyecto.
   - **Bibliothek** (`produktbibliothek.html`): tarjetas con muestra, precio y su origen (Listenpreis = solo material; Ansatz de una Kostenberechnung = estimación; Angebot o Abrechnung = precio de mercado). Avisos: el mismo Ansatz en varias Kostenberechnungen cuenta como una fuente («seit 2022 unverändert übernommen»), «Spanne × n: Umfang prüfen» desde ×2, «1 Quelle», «Datenblatt geprüft/fehlt», «Bestand». Buscar también en las Merkmale (R10, Cfl-s1), filtrar por origen del precio, ordenar, Archiv. La KG de un Bodenbelag sale del uso: sobre la Bodenplatte KG 324, sobre Decken KG 353.

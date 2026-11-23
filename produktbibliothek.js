@@ -137,7 +137,8 @@ function preisBild(e){
   const min=werte[0],max=werte[werte.length-1];
   bild.haupt=(min===max?zahl(min):zahl(min)+'–'+zahl(max))+' €/'+einheit;
   bild.zusatz=eingebaut.length?'eingebaut':'Material';
-  const markt=liste.filter(x=>MARKT.has(x.art)).length,ansaetze=liste.filter(x=>x.art==='ansatz_kobe').length;
+  // Kostenberechnungen zählen, nicht Positionen: eine Kostenberechnung mit Belag auf Bodenplatte und Decke ist eine.
+  const markt=liste.filter(x=>MARKT.has(x.art)).length,ansaetze=new Set(liste.filter(x=>x.art==='ansatz_kobe').map((x,i)=>quelleVon(x)||'#'+i)).size;
   if(eingebaut.length){
     if(markt)bild.meta=markt===1?'aus 1 Angebot oder Abrechnung':'aus '+markt+' Angeboten oder Abrechnungen';
     else bild.meta='Ansatz in '+ansaetze+(ansaetze===1?' Kostenberechnung':' Kostenberechnungen')+', kein Angebot';
@@ -179,7 +180,8 @@ function farbeVon(e){
 // Ohne Bild deutet die Karte das Material an (wie im Entwurf): Holz in Dielen, Stein und Estrich gesprenkelt,
 // Fliesen im Raster, Textil fein gestreift. Nur Andeutung, kein Produktfoto.
 function texturVon(e){
-  const t=[e.familie,e.name,e.beschreibung].filter(Boolean).join(' ').toLowerCase();
+  // Nur Name und Familie: in einer Beschreibung steckt «Eiche» auch in «vergleichen».
+  const t=[e.familie,e.name].filter(Boolean).join(' ').toLowerCase();
   if(/parkett|diele|holz|eiche|esche|nussbaum|lärche|douglas|zeder|ahorn|buche/.test(t))
     return 'repeating-linear-gradient(90deg,rgba(90,60,30,.2) 0 2px,transparent 2px 58px),repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 1px,transparent 1px 7px)';
   if(/fliese|feinstein|keramik|mosaik/.test(t))

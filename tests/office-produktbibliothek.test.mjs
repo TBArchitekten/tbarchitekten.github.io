@@ -155,7 +155,7 @@ test('Seite und Werkzeugkarte: eigene Seite, gleicher Client wie die Kostenberec
   assert.match(seite,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   assert.match(seite,/<script src="\.\/office-config\.js\?v=1"><\/script>/);
   assert.match(seite,/<script src="\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
-  assert.match(seite,/<script src="\.\/produktbibliothek\.js\?v=office1"><\/script>/);
+  assert.match(seite,/<script src="\.\/produktbibliothek\.js\?v=office2"><\/script>/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(shell,/id="officeToolsProdukte" aria-label="Produktbibliothek öffnen"/);
   assert.match(shell,/<strong>Produktbibliothek<\/strong><small>Materialien einmal erfassen, in jedem Projekt verwenden/);
