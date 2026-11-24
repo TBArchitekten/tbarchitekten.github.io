@@ -286,7 +286,7 @@ test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/NAV_ICONS\.kosten='<svg /);
   assert.match(projekte,/getElementById\('officeToolsKosten'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/kostenberechnung\.html';/);
   assert.match(index,/\.\/shell\.js\?v=office52/);
-  assert.match(index,/\.\/office-projects\.js\?v=office56/);
+  assert.match(index,/\.\/office-projects\.js\?v=office57/);
   assert.match(ui,/href="\.\/app\/#section=tools">‹ Werkzeuge/);
 });
 
@@ -419,9 +419,9 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   assert.ok(kgs.length>=30);
   for(const kg of kgs)assert.match(kg,/^(3[2-9][1-9]|[46][1-9]0)$/,'KG '+kg);
   assert.match(stil,/\.a-sprung\{/);assert.match(stil,/@media\(max-width:760px\)\{\.abb-scroll svg\{min-width:720px\}\}/);
-  // Terminplan: Assistent, Projektkalender mit Feiertagen, Muster-Planner v0.3.4, Weg zur Kostenberechnung.
+  // Terminplan: Assistent, Projektkalender mit Feiertagen, Muster-Planner v0.3.5, Weg zur Kostenberechnung.
   for(const t of ['id="assistent"','Prüfen und übernehmen','Was-wäre-wenn','Projektkalender','fünf folgenden Jahre','keine Notizen',
-    'v0.3.4','53 Aufgaben','355 Prüfpunkte','Termine aus Terminplan','Bauteilkatalog','04.03','M08A','./kostenberechnung-hilfe.html','21.11.2026'])
+    'v0.3.5','52 Aufgaben','366 Prüfpunkte','Termine aus Terminplan','Bauteilkatalog','04.03','M08A','./kostenberechnung-hilfe.html','21.11.2026'])
     assert.ok(tp.includes(t),'fehlt in der Anleitung zum Terminplan: '+t);
   for(const alt of ['Masterplanner','jetzt <strong>vier','v0.2 umfasst','Behalten, Ändern, Streichen','Ein Predecessor','Handbuchstand: 12.11.2026'])
     assert.ok(!tp.includes(alt),'veraltet in der Anleitung zum Terminplan: '+alt);

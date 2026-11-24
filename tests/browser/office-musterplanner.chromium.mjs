@@ -77,7 +77,7 @@ test('Desktop Muster uses the real work-bucket + work-task-card + canonical task
    await page.goto(url());
    await page.locator('[data-work-task="L3.BAD.1"]').waitFor({state:'attached'});
    assert.equal(await page.locator('.work-bucket').count(),7);
-   assert.equal(await page.locator('.work-task-card').count(),53);
+   assert.equal(await page.locator('.work-task-card').count(),52);
    assert.equal(await page.locator('.work-bucket-explanation').count(),7);
    assert.match(await page.locator('#workProjectTitle').innerText(),/Muster-Planner.*LPH 3/);
    assert.match(await page.locator('.work-bucket').nth(4).innerText(),/Bemusterung/);
@@ -89,7 +89,7 @@ test('Desktop Muster uses the real work-bucket + work-task-card + canonical task
    assert.match(await page.locator('#taskDetailWorkResult').inputValue(),/Wandansichten/);
    assert.match(await page.locator('#taskDetailProfessionalContext').inputValue(),/HOAI Anlage 10 LPH 3/);
    assert.match(await page.locator('#taskDetailPSP').inputValue(),/04\.03/);
-   assert.equal(await page.locator('.minds-task-check-row').count(),9); // L3.BAD.1 mit Optionen und Muster (v0.3.3)
+   assert.equal(await page.locator('.minds-task-check-row').count(),10); // L3.BAD.1 als ganzes Paket (v0.3.5)
    assert.equal(await page.locator('#taskDetailComplete').isDisabled(),true);
    assert.equal(await page.locator('#taskDetailWorkResult').isDisabled(),true);
    assert.equal(await page.locator('#taskDetailPropose').isDisabled(),true);
