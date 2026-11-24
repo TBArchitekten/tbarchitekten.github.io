@@ -10,7 +10,8 @@
    der des ältesten Vorkommens, denn dort wurde er ermittelt; fortgeschrieben wird von dort aus.
    23.11.2026, abends: Bei einem auffälligen Paar wird die Zeile markiert, die im Original nicht in der Summe steht
    (an den vier Archiv-Ständen 8 von 9 Fällen); vorher entschied die Reihenfolge der Liste. Gleiche Zeilen einer
-   Kostenberechnung zählen dabei als ein Wert, damit ein Paar nicht zweimal erscheint. */
+   Kostenberechnung zählen dabei als ein Wert, damit ein Paar nicht zweimal erscheint.
+   24.11.2026: normiere sagt, wenn der Index des Ziels noch nicht veröffentlicht ist (vorlaeufig = letztes Quartal der Reihe). */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -65,7 +66,7 @@ function normiere(cent,von,ziel,R){
   const k=R.kennwertKette({art:'eigen',wert:wertText(cent,R),kostenstand:von},ziel);
   const schritt=(k.schritte||[]).find(s=>s.art==='index');
   if(!schritt||k.nettoCent===null)return {cent:BigInt(cent),faktor:null,fehlt:true,gleich:false};
-  return {cent:k.nettoCent,faktor:Number(R.textAusMikro(schritt.faktor,4)),fehlt:false,gleich:false};
+  return {cent:k.nettoCent,faktor:Number(R.textAusMikro(schritt.faktor,4)),fehlt:false,gleich:false,vorlaeufig:schritt.vorlaeufig||null};
 }
 
 // ---------- Einträge ----------

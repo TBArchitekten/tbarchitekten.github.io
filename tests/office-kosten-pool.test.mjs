@@ -80,7 +80,10 @@ test('Spanne, Median, Ausreißer markiert; Fortschreiben nur mit Index',()=>{
   assert.equal(mit.stand,'fortgeschrieben');
   assert.equal(mit.maxCent,21600n,'180 € × 120/100 = 216 €');
   const n=P.normiere(18000n,'2022-Q3',{schema:R.SCHEMA,kostenstand:'2026-Q4',indizes:[{quartal:'2022-Q3',wert:'100'},{quartal:'2026-Q4',wert:'120'}]},R);
-  assert.equal(n.cent,21600n);assert.equal(n.faktor,1.2);
+  assert.equal(n.cent,21600n);assert.equal(n.faktor,1.2);assert.equal(n.vorlaeufig,null);
+  // Ziel nach dem letzten veröffentlichten Wert: fortgeschrieben bis dahin, und das Ergebnis sagt bis wann.
+  const v=P.normiere(18000n,'2022-Q3',{schema:R.SCHEMA,kostenstand:'2026-Q4',indizes:[{quartal:'2022-Q3',wert:'100'},{quartal:'2026-Q3',wert:'115'}]},R);
+  assert.equal(v.cent,20700n);assert.equal(v.fehlt,false);assert.equal(v.vorlaeufig,'2026-Q3');
 });
 
 test('Übernahme als Kennwert «Eigenes Projekt»: Fundstelle, Kostenstand des Ursprungs, Rechenkern schreibt fort',()=>{

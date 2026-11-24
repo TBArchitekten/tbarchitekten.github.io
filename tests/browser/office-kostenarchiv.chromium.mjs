@@ -137,6 +137,41 @@ test('Datenpool: Kennwert aus eigenen Projekten suchen, prüfen und übernehmen'
   }finally{await ctx.close()}
 });
 
+test('Baupreisindex bis zum letzten veröffentlichten Quartal: Pool, Herkunftskette, Übersicht und Bericht sagen es',async()=>{
+  const {ctx,page,fehler}=await oeffne();
+  try{
+    // Die laufende Kostenberechnung (4. Quartal 2026) bekommt die Reihe bis zum 3. Quartal 2026.
+    await page.evaluate(id=>{const x=window.__fake.db.office_kosten_instances.find(i=>i.id===id);
+      x.state.indizes=[{quartal:'2022-Q3',wert:'118.9'},{quartal:'2026-Q3',wert:'141.7'}];window.__fake.sichern()},Y);
+    await page.goto(adresse('kostenberechnung.html?id='+Y+'#tab=positionen'));
+    await page.locator('h1',{hasText:'Testhaus'}).waitFor();
+    await page.locator('.pos.zeile[data-id="y1"] .mehr').click();
+    await page.locator('.inspektor [data-act="pool"]').click();
+    const gruppe=page.locator('.inspektor .pool .pool-gruppe',{hasText:'180,00'});
+    await gruppe.waitFor();
+    // 180 € × 141,7 / 118,9 = 214,52 €
+    assert.match(await gruppe.textContent(),/≈ 214,52\s€\/m² mit dem Baupreisindex 3\. Quartal 2022 → 4\. Quartal 2026 \(Index bis 3\. Quartal 2026\)/);
+    await gruppe.locator('[data-act="pool-nehmen"]').click();
+    await gespeichert(page);
+    await page.locator('.pos.zeile[data-id="y1"] .mehr').click();
+    const panel=await page.locator('.inspektor .panel').textContent();
+    assert.match(panel,/Baupreisindex 3\. Quartal 2022 → 4\. Quartal 2026/);
+    assert.match(panel,/4\. Quartal 2026 noch nicht veröffentlicht: gerechnet mit dem letzten Wert, 3\. Quartal 2026 \(141,7\)/);
+    assert.match(panel,/80\sm² × 214,52\s€ = 17\.161,60\s€ netto/);
+    await foto(page,'archiv-5-index',false);
+    // Übersicht: einmal als Hinweis, nicht als offener Punkt.
+    await page.click('.tab[data-tab="uebersicht"]');
+    if(await page.locator('[data-act="alle-fehlt"]').count())await page.click('[data-act="alle-fehlt"]');
+    const todo=page.locator('.todo',{hasText:'noch nicht veröffentlicht'});
+    assert.equal(await todo.count(),1);
+    assert.equal(await todo.locator('.dot.info').count(),1);
+    // Bericht: bis wann fortgeschrieben ist.
+    await page.click('.kb-actions [data-tab="bericht"]');
+    assert.match(await page.locator('#kbBericht').textContent(),/Für 4\. Quartal 2026 ist noch kein Wert veröffentlicht; fortgeschrieben bis 3\. Quartal 2026\./);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
 test('Archiv: nur lesen, Datenpool zum Vergleichen, nichts wird gespeichert',async()=>{
   const {ctx,page,fehler}=await oeffne();
   try{

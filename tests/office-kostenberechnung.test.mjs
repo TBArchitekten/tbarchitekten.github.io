@@ -41,6 +41,36 @@ test('Herkunftskette: brutto → Baupreisindex → Regionalfaktor, auf den Cent'
   assert.equal(R.euro(p.betragCent,{nachkomma:true}),'55.034,26\u202f€');
 });
 
+test('Baupreisindex: ein noch nicht veröffentlichtes Quartal rechnet mit dem letzten Wert und sagt es',()=>{
+  // Reihe bis 3. Quartal 2026 (Destatis veröffentlicht etwa sechs Wochen nach dem Berichtsmonat).
+  const indizes=[{quartal:'2022-Q3',wert:'118.9'},{quartal:'2026-Q2',wert:'140.3'},{quartal:'2026-Q3',wert:'141.7'},{quartal:'2025-Q4',wert:''}];
+  const st=basis({kostenstand:'2026-Q4',indizes,positionen:[bki('a','331','10','119',{kostenstand:'2022-Q3',brutto:false,regional:false})]});
+  const e=R.berechne(st),p=e.positionen[0],idx=p.kette.schritte.find(s=>s.art==='index');
+  // 119 × 141,7 / 118,9 = 141,82 €
+  assert.equal(p.kennwertCent,14182n);
+  assert.equal(idx.text,'Baupreisindex 3. Quartal 2022 → 4. Quartal 2026');
+  assert.equal(idx.vorlaeufig,'2026-Q3');
+  assert.equal(idx.detail,'4. Quartal 2026 noch nicht veröffentlicht: gerechnet mit dem letzten Wert, 3. Quartal 2026 (141,7)');
+  assert.deepEqual(p.hinweise,['index_vorlaeufig']);
+  assert.equal(p.status,'vollstaendig','vorläufig ist nicht offen');
+  // In «Was fehlt» einmal, als Hinweis, nicht als offener Punkt.
+  const g=e.fehlt.filter(f=>f.code==='index_vorlaeufig');
+  assert.equal(g.length,1);assert.equal(g[0].schwere,'info');assert.equal(g[0].anzahl,1);
+  assert.ok(!e.fehlt.some(f=>f.code==='index_fehlt'));
+  // Liegt auch die Quelle hinter dem letzten Wert, ist der Faktor 1.
+  const beide=R.kennwertKette({art:'eigen',wert:'100',kostenstand:'2026-Q4',fundstelle:'x'},{...st,kostenstand:'2027-Q1'});
+  assert.equal(R.textAusMikro(beide.schritte.find(s=>s.art==='index').faktor),'1');
+  assert.match(beide.schritte.find(s=>s.art==='index').detail,/^4\. Quartal 2026 und 1\. Quartal 2027 noch nicht veröffentlicht/);
+  // Eine Lücke in der Reihe oder ein Quartal vor ihrem Anfang: weiter «fehlt», ohne Ersatzwert.
+  for(const q of ['2024-Q1','2021-Q1','2025-Q4']){
+    const k=R.kennwertKette({art:'eigen',wert:'100',kostenstand:q,fundstelle:'x'},st);
+    assert.deepEqual(k.hinweise,['index_fehlt'],q);assert.ok(!k.schritte.some(s=>s.art==='index'),q);
+  }
+  // Der veröffentlichte Wert hat Vorrang: kein Hinweis, wenn das Quartal in der Reihe steht.
+  const genau=R.kennwertKette({art:'eigen',wert:'100',kostenstand:'2022-Q3',fundstelle:'x'},{...st,kostenstand:'2026-Q2'});
+  assert.deepEqual(genau.hinweise,[]);assert.equal(genau.schritte.find(s=>s.art==='index').vorlaeufig,undefined);
+});
+
 test('gespeicherte Zahlen mit Punkt, Eingaben deutsch',()=>{
   // Der Fehler, den diese Trennung verhindert: «1.045» im Stand als 1045 gelesen.
   assert.equal(R.dezimal('1.045'),'1.045');
@@ -264,8 +294,8 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<html lang="de">/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office4',
-    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kosten-pool.js?v=office2','./kostenberechnung.js?v=office8','./kostenberechnung.css?v=office7'])
+  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office5',
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office9','./kostenberechnung.css?v=office7'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
     seite.indexOf('kosten-assistent.js')<seite.indexOf('kosten-pool.js')&&seite.indexOf('kosten-pool.js')<seite.indexOf('kostenberechnung.js?'));
