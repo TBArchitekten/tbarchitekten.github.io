@@ -17,6 +17,19 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-24 · Mustermappe: Präsentieren und Entscheidung im Bemusterungstermin (Schritt 2) · Claude
+- Qué cambió y por qué: Gari (24.11.2026): Die Mustermappe wird mit dem Bemusterungstermin vorgestellt und dort entschieden; der Bauherr unterschreibt nicht jedes Blatt. Schritt 2 des Konzepts (OK «Avanza con todos los pasos»).
+  - **«Präsentieren»** in der Mappe: die Seiten groß auf dunkler Fläche (Vollbild, wo der Browser es erlaubt), blättern mit Pfeiltasten oder Knöpfen, ohne Eingabefelder auf der Seite; oben «Entschieden: n von m».
+  - **«Entscheidung erfassen»** je Position: gewählte Variante (die Empfehlung ist vorgewählt) oder «Vertagt», Entscheider (vorbelegt mit dem Bauherrn der Mappe), Datum (der Termin), Bemerkung. Eingetragen wird in der Entscheidungsliste wie mit «Entscheidung eintragen»: «A: Produkt – Bemerkung», Datum, Entscheider, der Termin als Fundstelle; die Datenbank prüft wie bisher Datum, Entscheider und Entscheidung. «Vertagt» entfernt eine frühere Entscheidung, die Bemerkung wird zur Annahme für die Weiterplanung. Die Seiten zeigen danach «Entschieden am … von …», die Übersicht die gewählte Variante.
+  - **Nach dem Termin:** die Karte «Entscheidungen der Bemusterung» listet Entschiedenes und Vertagtes; «In der Produktbibliothek freigeben (n)» setzt die gewählten Produkte im Projekt auf «freigegeben» und die übrigen Kandidaten auf «verworfen» (dieselbe Funktion wie in der Entscheidungsvorlage).
+- Archivos: `projektdokumente.js`, `projektdokumente.css`, `projektdokumente.html` (`?v=office6`), `tests/browser/office-mustermappe.chromium.mjs` (Test 5), `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (444); Chromium `office-mustermappe` (5: Termin mit Pfeiltaste, Entscheidung, «Vertagt» und zurück, Freigabe mit «freigegeben» und «verworfen»), `office-projektdokumente`, `-zahlen` grün; Bildschirmfoto des Präsentierens angesehen.
+- Quedó pendiente o sin probar: Romy schlägt die Entscheidungen aus dem Protokoll des Termins vor (mit Fundstelle); Schritt 3 (Anforderungen gegen die Merkmale) und 4 (Kostenberechnung aus dem Entschiedenen); mit echten Daten noch nicht benutzt.
+- Riesgos o decisiones que necesitan a Gari: —
+- PR: #162
+
 ### 2026-11-24 · Mustermappe: Seiten A3 aus Positionen und Produktbibliothek (Schritt 1) · Claude
 - Qué cambió y por qué: Gari (24.11.2026): für jedes Muster ein bearbeitbares Blatt in einer bearbeitbaren Mustermappe; eine Entscheidung soll mehreren Dokumenten derselben Leistungsphase dienen (Bibliothek → Mappe → Entscheidung → Kostenberechnung), wie Terminplan und Planner. Entscheidungen von Gari: ein Musterblatt je Position, nicht je Produkt; Strategie A und B in einer Mappe; entschieden wird im Bemusterungstermin, nicht auf dem Blatt (keine Unterschrift); eigener Dokumenttyp mit Seitenvorlagen und lebenden Daten wie Programa, die freie Leinwand später. Boceto vom 24.11. mit OK («Avanza con todos los pasos»).
   - **Projektstart › Mustermappen (L3.MAP.1):** eine Mappe je Themenpaket (Bodenbeläge, Bäder, Treppen, Fassade, Licht, weitere). Technisch eine Entscheidungsvorlage in Seitenform (`daten.form = 'mustermappe'`): Stände, Vorlegen, Fundstelle und Beleg wie in der Vorlage; in der Übersicht eine eigene Karte, nicht unter den Entscheidungsvorlagen.

@@ -390,3 +390,38 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
   .mm-druck .mm-seite{width:420mm;height:297mm;aspect-ratio:auto;box-shadow:none}
   .mm-druck .mm-seite,.mm-druck .mm-seite *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+/* Präsentieren im Bemusterungstermin (24.11.2026): die Seite groß auf dunkler Fläche (--m-ink), die Entscheidung
+   daneben; entschieden wird im Termin, eingetragen in der Entscheidungsliste. */
+html.mm-praes-offen{overflow:hidden}
+.mm-praes{position:fixed;inset:0;z-index:60;background:var(--m-ink);color:var(--m-paper);display:flex;flex-direction:column;font-family:var(--pd-font);font-size:15px}
+.mm-praes-kopf,.mm-praes-fuss{display:flex;align-items:center;gap:12px 16px;padding:12px 20px;flex-wrap:wrap}
+.mm-praes-kopf span{color:var(--m-border-strong)}
+.mm-praes-kopf .mm-praes-zahl{margin-left:auto;padding:4px 10px;border-radius:var(--m-radius-pill);background:var(--m-success-soft);color:var(--m-success);font-size:13px;font-weight:600}
+.mm-praes .btn{background:transparent;color:var(--m-paper);border-color:var(--m-border-strong);min-height:44px;font-size:15px}
+.mm-praes .btn:hover{background:transparent;color:var(--m-paper);border-color:var(--m-paper)}
+.mm-praes .btn:disabled{opacity:.4;cursor:default}
+.mm-praes .btn-primary,.mm-praes .btn-primary:hover{background:var(--m-blue);border-color:var(--m-blue);color:var(--m-on-blue)}
+.mm-praes-mitte{flex:1;min-height:0;display:flex;gap:18px;padding:0 20px;align-items:center;justify-content:center}
+.mm-praes-buehne{flex:1;min-width:0;display:flex;justify-content:center}
+.mm-praes-buehne .mm-blatt{width:min(100%,calc((100vh - 150px)*420/297))}
+.mm-praes-buehne .mm-seite{box-shadow:none}
+.mm-praes-nr{min-width:120px;text-align:center}
+.mm-praes-pos{margin-left:8px;font-weight:600}
+.mm-praes-panel{width:360px;flex:0 0 auto;align-self:stretch;overflow:auto;margin-bottom:8px;background:var(--m-paper);color:var(--m-ink);border-radius:var(--m-radius-panel);padding:18px;display:grid;gap:12px;align-content:start}
+.mm-praes-panel .btn{background:var(--m-paper);color:var(--m-blue);border-color:var(--m-blue-line)}
+.mm-praes-panel .btn:hover{background:var(--m-blue-soft);color:var(--m-blue);border-color:var(--m-blue)}
+.mm-praes-panel .btn-primary,.mm-praes-panel .btn-primary:hover{background:var(--m-blue);border-color:var(--m-blue);color:var(--m-on-blue)}
+.mm-praes-art{margin:0;color:var(--m-decision);font-size:13px;font-weight:600}
+.mm-praes-panel h2{margin:0;font-size:20px}
+.mm-praes-wahl{margin:0;padding:0;border:0;display:grid;gap:8px}
+.mm-praes-wahl legend{font-size:13px;color:var(--m-ink-soft);margin-bottom:6px}
+.mm-praes-wahl label{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:var(--m-radius-card);border:1px solid var(--m-border);cursor:pointer}
+.mm-praes-wahl label:has(input:checked){border-color:var(--m-blue);box-shadow:0 0 0 3px var(--m-blue-ring)}
+.mm-praes-wahl input{width:20px;height:20px;margin:0;flex:0 0 auto}
+.mm-praes-wahl span{display:grid;gap:2px}
+.mm-praes-wahl small{color:var(--m-ink-soft);font-size:13px}
+@media (max-width:900px){
+  .mm-praes-mitte{flex-direction:column;overflow:auto;align-items:stretch}
+  .mm-praes-panel{width:auto}
+}
