@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install pinned browser test runner without scripts
-        run: npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
+        run: npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1 pdfjs-dist@6.2.108
       - name: Install isolated Chromium browser
         # The runner image has Chromium's system libraries; --with-deps is only the fallback, because
         # it needs the Ubuntu package mirror (unreachable for hours on 11.11.2026).
@@ -63,4 +63,4 @@ jobs:
       - name: Exercise Projektstart documents (clarification and decision lists, decision memo with numbers from the office, Word and Excel, iPhone width) with a synthetic Supabase
         env:
           CI: 'true'
-        run: node --test tests/browser/office-projektdokumente.chromium.mjs tests/browser/office-projektdokumente-zahlen.chromium.mjs
+        run: node --test tests/browser/office-projektdokumente.chromium.mjs tests/browser/office-projektdokumente-zahlen.chromium.mjs tests/browser/office-mustermappe.chromium.mjs
