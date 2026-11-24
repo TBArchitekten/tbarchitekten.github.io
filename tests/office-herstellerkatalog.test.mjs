@@ -107,7 +107,7 @@ test('Produktbibliothek: Karte und Produktblatt zeigen den Kontakt; Firma beim A
 });
 
 test('Licht und Dokumentarten: Prüfregeln ersetzt, alle bisherigen Werte bleiben, Seite, Leser und Import kennen sie',()=>{
-  const sql=read('supabase/migrations/20261124190000_office_produkte_licht_dokumentarten.sql');
+  const sql=read('supabase/migrations/20261124174523_office_produkte_licht_dokumentarten.sql');
   const ohne=sql.replace(/--.*$/gm,'');
   // Nur die zwei Prüfregeln werden ersetzt (OK von Gari am 24.11.2026); keine Zeile wird gelöscht oder geändert.
   assert.equal((ohne.match(/drop constraint/g)||[]).length,2);

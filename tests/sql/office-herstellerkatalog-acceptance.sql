@@ -108,7 +108,7 @@ begin
   exception when others then r := r || 'anon_schluessel=verweigert; '; end;
   execute 'reset role';
 
-  -- Seit 24.11.2026 (Migration 20261124190000): Kategorie «Licht», Dokumentarten «Angebot» und «Sicherheitsdatenblatt».
+  -- Seit 24.11.2026 (Migration 20261124174523): Kategorie «Licht», Dokumentarten «Angebot» und «Sicherheitsdatenblatt».
   perform set_config('request.jwt.claims', ub, true);
   execute 'set local role authenticated';
   insert into public.office_produkte(kategorie,name) values ('licht','Pendelleuchte (Test)') returning id into produkt;

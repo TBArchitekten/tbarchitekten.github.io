@@ -17,6 +17,21 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-24 · Produktbibliothek: echte Produktfotos, Unterlagen eingeordnet, Migration umbenannt · Claude
+- Qué cambió y por qué: Gari (24.11.2026): Die Karten der Produktbibliothek sollen echte Produktfotos zeigen statt der bisherigen Flächen; die Fotos aus den gelieferten Unterlagen nehmen oder im Netz suchen.
+  - **Daten (nur in der Datenbank, nicht im Repo):** 30 Fotos als Dokumentart «Bild» an allen 24 Produkten des ersten Pakets; das neueste Foto ist die Musterfläche der Karte. Bilder aus den Datenblättern, wo diese welche enthalten, sonst Produktbilder von Hersteller- oder Händlerseiten (5 Produkte); auf 16:9 zugeschnitten, freigestellte Produkte auf weißem Grund.
+  - Wie in #159 angekündigt: zwei Richtpreise als «Angebot», zwei Sicherheitsdatenblätter als «Sicherheitsdatenblatt» (vorher «Sonstiges»; nur die Art geändert, nichts gelöscht).
+  - Einem Beschichtungssystem fehlten Brandklasse und Rutschhemmung: eine Seite der Herstellerbroschüre liegt jetzt als zweites Datenblatt dabei, die neuen Merkmale verweisen mit Seite darauf. Bei einer Trennwand steht «Eignung für Nassreinigung» als offener Punkt.
+  - Hochgeladen über `office-produkt-import` mit einem einmaligen Schlüssel, danach geschlossen.
+  - Migration in `20261124174523_office_produkte_licht_dokumentarten.sql` umbenannt (die Version, die Supabase registriert hat); Test und SQL-Abnahme lesen den neuen Namen.
+- Archivos: `supabase/migrations/20261124174523_office_produkte_licht_dokumentarten.sql` (umbenannt), `tests/office-herstellerkatalog.test.mjs`, `tests/sql/office-herstellerkatalog-acceptance.sql`, `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: keine neue Migration; die umbenannte ist seit #159 angewandt (Version `20261124174523`). Daten wie oben über den Import und den Connector.
+- Deploy de funciones: ninguno (`office-produkt-ai` und `office-produkt-import` laufen seit dem Deploy nach #159).
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün; in Produktion: alle 24 Produkte haben ein Foto, 44 Unterlagen, kein offener Import-Schlüssel.
+- Quedó pendiente o sin probar: —
+- Riesgos o decisiones que necesitan a Gari: Die Fotos von Hersteller- und Händlerseiten sind für die interne Bibliothek gedacht; vor einer Weitergabe nach außen die Rechte prüfen.
+- PR: #PRNR
+
 ### 2026-11-24 · Produktbibliothek: Kategorie «Licht», Dokumentarten «Angebot» und «Sicherheitsdatenblatt» · Claude
 - Qué cambió y por qué: Gari (24.11.2026, OK für genau diese Änderung): Vor dem Paket Licht braucht die Bibliothek die Kategorie «Licht» (der Herstellerkatalog kennt sie seit #157); Angebote und Sicherheitsdatenblätter lagen bisher als «Sonstiges» bei den Produkten.
   - **Datenbank:** die zwei Prüfregeln `office_produkte_kategorie_check` und `office_produkt_dokumente_art_check` werden ersetzt (alte entfernt, erweitert neu angelegt). Keine Zeile wird geändert oder gelöscht; alle bisherigen Werte bleiben gültig.
