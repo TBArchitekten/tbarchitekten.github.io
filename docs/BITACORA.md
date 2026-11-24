@@ -30,7 +30,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (415); Chromium lokal grün: Planner-Karten mit Filter und Reitern (4), Kostenberechnung mit `?neu=` (11), Start, Muster-Planner, Terminplan-Abgleich, Planner-Board; Bildschirmfotos der Filterleiste am Desktop und in iPhone-Breite.
 - Quedó pendiente o sin probar: auf dem iPhone in der App. Zeichen für «In Bearbeitung»: Gari wählt. Die beiden Assistenten (Terminplan, Kostenberechnung) sehen verschieden aus, weil sie getrennt entstanden sind; eine gemeinsame Oberfläche ist als Vorschlag offen.
 - Riesgos o decisiones que necesitan a Gari: Zeichen für «In Bearbeitung»; ob die Assistenten eine gemeinsame Oberfläche bekommen.
-- PR: —
+- PR: #152
 
 ### 2026-11-24 · Planner-Karten: alle Verantwortlichen, Status, Checkliste · Claude
 - Qué cambió y por qué: Garis Wünsche zu den Karten (24.11.2026), mit Recherche (Microsoft Planner, Avatargruppe im Fluent-Design, Linear, GitLab):
