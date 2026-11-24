@@ -21,7 +21,7 @@ test('Lage als nächste Bildschirmecke mit Abstand',()=>{
 test('Beide Assistenten im selben Fenster; die Seiten verschieben nichts selbst',()=>{
   const tp=read('terminplan.html'),kb=read('kostenberechnung.html'),client=read('kosten-assistent.js');
   for(const [name,html] of [['terminplan.html',tp],['kostenberechnung.html',kb]]){
-    assert.match(html,/assistant-surface\.css\?v=office38/,name);
+    assert.match(html,/assistant-surface\.css\?v=office39/,name);
     assert.match(html,/<script src="\.\/assistant-window\.js\?v=1"><\/script>/,name);
   }
   assert.doesNotMatch(tp,/assistantFloating|assistantWindowState|applyAssistantPosition|office-plan-assistant-window-v1/,'kein eigenes Verschieben mehr');

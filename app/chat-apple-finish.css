@@ -8,7 +8,7 @@ body[data-section="assistant"].desk-enabled{
   --desk-tertiary:#858c97;
   --desk-edge:rgba(37,45,59,.09);
   --desk-tint:#f3f5f8;
-  --desk-accent:#007aff;
+  --desk-accent:var(--m-blue);
 }
 body[data-section="assistant"].desk-enabled :is(
   .desk-shell,.desk-panel,.desk-panel button,.desk-panel input,.desk-panel select,
@@ -174,11 +174,11 @@ body[data-section="assistant"].desk-enabled .desk-month-day.is-selected{
   width:34px;
   height:34px;
   border-radius:50%;
-  background:#007aff;
+  background:var(--m-blue);
   color:#fff;
-  border-color:#007aff;
+  border-color:var(--m-blue);
   font-weight:700;
-  box-shadow:0 2px 5px rgba(0,122,255,.15);
+  box-shadow:0 2px 5px rgba(0,98,204,.15);
 }
 body[data-section="assistant"].desk-enabled .desk-month-day.is-today:not(.is-selected){
   color:#c33c4a;
@@ -217,9 +217,9 @@ body[data-section="assistant"].desk-enabled .desk-add-task{
   gap:6px;
   min-height:34px;
   padding:7px 12px;
-  border:1px solid rgba(0,122,255,.10);
+  border:1px solid rgba(0,98,204,.10);
   border-radius:10px;
-  background:#eef5ff;
+  background:var(--m-blue-soft);
   color:#0665c9;
   font-size:11.5px;
   font-weight:620;
@@ -227,7 +227,7 @@ body[data-section="assistant"].desk-enabled .desk-add-task{
 }
 body[data-section="assistant"].desk-enabled .desk-add-task:hover{
   background:#e1efff;
-  border-color:rgba(0,122,255,.27);
+  border-color:rgba(0,98,204,.27);
 }
 body[data-section="assistant"].desk-enabled .desk-add-task .desk-ui-icon{
   width:15px;height:15px;stroke-width:2;
@@ -259,11 +259,11 @@ body[data-section="assistant"].desk-enabled .desk-task-check{
   font-size:11px;
 }
 body[data-section="assistant"].desk-enabled .desk-task-row.is-done .desk-task-check{
-  background:#007aff;border-color:#007aff;
+  background:var(--m-blue);border-color:var(--m-blue);
   color:#fff;
 }
 body[data-section="assistant"].desk-enabled .desk-task-check:hover{
-  border-color:#007aff;
+  border-color:var(--m-blue);
 }
 body[data-section="assistant"].desk-enabled .desk-panel-footer{
   align-items:center;
@@ -292,8 +292,8 @@ body[data-section="assistant"].desk-enabled .desk-panel-footer button{
   text-decoration:none;
 }
 body[data-section="assistant"].desk-enabled .desk-panel-footer button:hover{
-  background:#eef5ff;
-  border-color:rgba(0,122,255,.09);
+  background:var(--m-blue-soft);
+  border-color:rgba(0,98,204,.09);
   color:#005dbc;
 }
 body[data-section="assistant"].desk-enabled .desk-panel-footer .desk-ui-icon{
@@ -414,13 +414,13 @@ body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .compo
   color:#4b5461!important;
 }
 body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .composer .send{
-  background:#007aff!important;color:#fff!important;
+  background:var(--m-blue)!important;color:#fff!important;
 }
 body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .composer :is(.attach,.mic):hover{
   background:#e6eef9!important;
 }
 body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .composer .send:hover{
-  background:#0069db!important;
+  background:var(--m-blue-hover)!important;
 }
 body[data-section="assistant"].desk-enabled .desk-panel--chat .composer textarea{
   min-height:39px;
@@ -434,8 +434,8 @@ body[data-section="assistant"].desk-enabled .desk-panel--chat .composer textarea
   opacity:1;
 }
 body[data-section="assistant"].desk-enabled .desk-panel--chat .composer:focus-within{
-  border-color:rgba(0,122,255,.5)!important;
-  box-shadow:0 0 0 3px rgba(0,122,255,.085)!important;
+  border-color:rgba(0,98,204,.5)!important;
+  box-shadow:0 0 0 3px rgba(0,98,204,.085)!important;
 }
 /* Never let a narrow docked conversation inherit full-width 42px buttons. */
 body[data-section="assistant"].desk-enabled .desk-rail .desk-panel--chat .composer :is(.attach,.send){

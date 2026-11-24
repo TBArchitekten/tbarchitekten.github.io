@@ -1,20 +1,55 @@
-/* MINDS Design Language v0.1 — shared semantic tokens.
-   One vocabulary, different densities. Changes to token meaning require design review. */
+/* Window/Office Design Language v0.2 — die eine Datei für Farben, Schrift und Formen.
+   Jede Seite des Office lädt sie zuerst; Seiten-Variablen verweisen nur noch hierher,
+   damit die Seiten nicht wieder auseinanderlaufen (24.11.2026, Gari: Option B).
+   Blau heißt: hier kann man klicken — Knöpfe, Links, Auswahl, aktive Reiter, Häkchen.
+   Alles andere bleibt neutral; Status behält gedämpfte eigene Farben.
+   Änderungen an der Bedeutung eines Tokens brauchen eine Design-Entscheidung. */
 :root{
   color-scheme:light;
+  /* Häkchen, Optionsfelder und Regler aller Seiten im selben Blau */
+  accent-color:var(--m-blue);
+  /* Flächen */
   --m-paper:#fff;
   --m-surface:#f7f7f6;
   --m-surface-raised:#fff;
+  --m-canvas:#fafafa;
+  --m-fill:#f1f2f4;
+  /* Schrift */
   --m-ink:#171717;
   --m-ink-soft:#60636a;
   --m-ink-faint:#70737a;
+  /* Linien */
   --m-border:#e6e6e4;
+  --m-border-soft:#eeeeec;
   --m-border-strong:#d3d4d2;
-  --m-information:#235c84;
+  --m-hairline:rgba(25,28,36,.086);
+  --m-field:#d9dfe5;
+  /* Das eine Blau: alles, was man anklickt */
+  --m-blue:#0062cc;
+  --m-blue-hover:#0055b3;
+  --m-blue-press:#004a9e;
+  --m-blue-soft:#eef5ff;
+  --m-blue-soft-hover:#e2edff;
+  --m-blue-line:rgba(0,98,204,.28);
+  --m-blue-wash:rgba(0,98,204,.08);
+  --m-blue-ring:rgba(0,98,204,.14);
+  --m-on-blue:#fff;
+  --m-link:var(--m-blue);
+  --m-link-hover:var(--m-blue-hover);
+  --m-focus:var(--m-blue);
+  /* Hinweise und Status: nicht klickbar, daher getönt statt kräftig */
+  --m-information:var(--m-blue-press);
+  --m-information-soft:var(--m-blue-soft);
   --m-success:#287557;
+  --m-success-soft:#ebf4ef;
   --m-attention:#92521d;
+  --m-attention-soft:#fbf1e8;
   --m-error:#b54736;
-  --m-focus:#235c84;
+  --m-error-soft:#fbe9e7;
+  /* Entscheidungspunkte des Auftraggebers (Projektdokumente) */
+  --m-decision:#5b3b8c;
+  --m-decision-soft:#f3eefb;
+  /* Abstände */
   --m-space-1:4px;
   --m-space-2:8px;
   --m-space-3:12px;
@@ -22,11 +57,16 @@
   --m-space-5:24px;
   --m-space-6:32px;
   --m-space-7:48px;
+  /* Formen */
   --m-radius-control:10px;
+  --m-radius-button:12px;
   --m-radius-card:12px;
+  --m-radius-panel:17px;
   --m-radius-overlay:20px;
   --m-radius-pill:999px;
+  /* Schrift */
   --m-type-system:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,Arial,sans-serif;
+  --m-type:var(--m-type-system);
   --m-type-reading:"Iowan Old Style","Palatino Linotype",Georgia,serif;
   --m-size-meta:13px;
   --m-size-body:16px;

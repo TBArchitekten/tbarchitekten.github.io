@@ -119,7 +119,7 @@
   background:transparent;
   color:var(--m-ink-soft);
 }
-.app .work-project-switch button.active{background:var(--m-ink);color:#fff}
+.app .work-project-switch button.active{background:var(--m-blue);color:var(--m-on-blue)}
 .app .work-tabs{
   display:flex;
   flex-wrap:nowrap!important;

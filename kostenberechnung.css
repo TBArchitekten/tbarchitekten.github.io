@@ -1,21 +1,23 @@
 /* TBA Office · Kostenberechnung (21.11.2026). Gleiche Sprache wie Werkzeuge und Projekte im Office:
-   Systemschrift, Hintergrund #fafafa, weiße Karten mit 17 px Radius, Hauptaktion schwarz, Nebenaktion weiß
-   mit Rand, Links #355d99, Signalfarben aus den MINDS-Tokens. Zahlen rechtsbündig in Tabellenziffern. */
+   Systemschrift, weiße Karten mit 17 px Radius, Hauptaktion blau, Nebenaktion weiß mit Rand, Links blau
+   (24.11.2026: alle Farben aus shared/minds-design-tokens.css). Zahlen rechtsbündig in Tabellenziffern. */
 :root{
-  --kb-bg:#fafafa;--kb-card:#fff;--kb-line:#e4e6e9;--kb-line-soft:#eceef0;--kb-ink:#191919;--kb-muted:#686e77;
-  --kb-meta:#626c78;--kb-kicker:#6e7480;--kb-link:#355d99;--kb-att:#92521d;--kb-att-bg:#fbf1e8;--kb-ok:#287557;
-  --kb-ok-bg:#ebf4ef;--kb-info:#235c84;--kb-src:#2a5aa6;--kb-src-bg:#eef3fc;--kb-err:#b54736;--kb-sel:#f3f6fb;
-  --kb-font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,Arial,sans-serif;
+  /* Alle Werte kommen aus shared/minds-design-tokens.css; die kurzen Namen bleiben, damit die Regeln gleich lesen. */
+  --kb-bg:var(--m-canvas);--kb-card:var(--m-paper);--kb-line:var(--m-border);--kb-line-soft:var(--m-border-soft);
+  --kb-ink:var(--m-ink);--kb-muted:var(--m-ink-soft);--kb-meta:var(--m-ink-soft);--kb-kicker:var(--m-ink-faint);
+  --kb-link:var(--m-link);--kb-att:var(--m-attention);--kb-att-bg:var(--m-attention-soft);--kb-ok:var(--m-success);
+  --kb-ok-bg:var(--m-success-soft);--kb-info:var(--m-information);--kb-src:var(--m-information);
+  --kb-src-bg:var(--m-information-soft);--kb-err:var(--m-error);--kb-sel:var(--m-blue-soft);--kb-font:var(--m-type-system);
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--kb-bg);color:var(--kb-ink);font-family:var(--kb-font);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
-a{color:var(--kb-link);text-decoration:none}a:hover{color:#23436f;text-decoration:underline}
+a{color:var(--kb-link);text-decoration:none}a:hover{color:var(--m-link-hover);text-decoration:underline}
 button,input,select,textarea{font:inherit;color:inherit}
 /* Volle Breite: die Tabelle braucht den Platz (Gari, 21.11.: kein Leerraum an den Seiten). */
 .kb{min-height:100vh;padding:26px clamp(14px,2.2vw,36px) 90px}
 .kb-wrap{max-width:2400px;margin:0 auto}
-.kb-back{display:inline-flex;align-items:center;min-height:44px;color:#657080;font-size:15px;margin-bottom:12px}
+.kb-back{display:inline-flex;align-items:center;min-height:44px;color:var(--m-link);font-size:15px;margin-bottom:12px}
 /* Als Reiter in Work (Rahmen): ohne Rücksprung-Link, ohne «Office · Kostenberechnung» und ohne den Projektnamen als
    Überschrift (Gari, 24.11.2026: Work zeigt Projekt und Reiter schon); die Zeile mit LPH, Norm und Kostenstand bleibt. */
 .im-reiter .kb-back,.im-reiter .kb-head .kicker,.im-reiter .kb-head h1{display:none}
@@ -29,24 +31,24 @@ button,input,select,textarea{font:inherit;color:inherit}
 .kb-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .meta{font-size:13px;color:var(--kb-meta);line-height:1.5;margin:0}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
-.btn{font-size:13px;line-height:1.3;border:1px solid #d9dfe5;border-radius:9px;padding:9px 12px;background:#fff;color:#242424;cursor:pointer;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
+.btn{font-size:13px;line-height:1.3;border:1px solid var(--m-field);border-radius:9px;padding:9px 12px;background:#fff;color:#242424;cursor:pointer;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
 .btn:hover{background:#f6f7f9}
 .btn:disabled{opacity:.5;cursor:default}
-.btn-primary{border:1px solid #191919;border-radius:12px;padding:12px 18px;background:#191919;color:#fff;font-size:14px;min-height:44px}
-.btn-primary:hover{background:#000}
+.btn-primary{border:1px solid var(--m-blue);border-radius:var(--m-radius-button);padding:12px 18px;background:var(--m-blue);color:var(--m-on-blue);font-size:14px;min-height:44px}
+.btn-primary:hover{background:var(--m-blue-hover);border-color:var(--m-blue-hover)}
 .btn-quiet{border-color:transparent;background:transparent;color:var(--kb-link)}
 .btn-danger{color:var(--kb-err)}
 .card{background:var(--kb-card);border:1px solid var(--kb-line);border-radius:17px}
 .kb-save{min-height:20px;margin:0 0 6px}
 .kb-banner{border-radius:14px;padding:14px 16px;margin:0 0 18px;font-size:14px;line-height:1.5}
-.kb-banner.info{background:var(--kb-src-bg);color:#1e3f6e}
+.kb-banner.info{background:var(--kb-src-bg);color:var(--m-information)}
 .kb-banner.warn{background:var(--kb-att-bg);color:#6b3a12}
 .kb-banner .kb-banner-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.tabs{display:flex;gap:20px;border-bottom:1px solid #e6e6e4;margin:0 0 24px;overflow-x:auto;scrollbar-width:none}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--m-border);margin:0 0 24px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tab{font-size:13px;font-weight:500;background:transparent;border:0;border-bottom:2px solid transparent;color:#60636a;min-height:44px;padding:12px 2px 10px;cursor:pointer;white-space:nowrap}
-.tab:hover{color:#171717}
-.tab[aria-selected="true"]{color:#171717;border-bottom-color:#171717}
+.tab{font-size:13px;font-weight:500;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--m-ink-soft);min-height:44px;padding:12px 2px 10px;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--m-ink)}
+.tab[aria-selected="true"]{color:var(--m-blue);border-bottom-color:var(--m-blue)}
 .seg{display:inline-flex;background:#f1f2f3;border-radius:10px;padding:3px;gap:2px}
 .seg button{font-size:13px;border:1px solid transparent;background:transparent;border-radius:8px;padding:7px 12px;color:#60636a;cursor:pointer;min-height:36px}
 .seg button[aria-pressed="true"]{background:#fff;border-color:var(--kb-line);color:#171717}
@@ -56,7 +58,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .chip-src{background:var(--kb-src-bg);color:var(--kb-src)}
 .chip-mute{background:#f4f5f6;color:#8a9099}
 button.chip{border:0;cursor:pointer;min-height:32px}
-button.chip[aria-pressed="true"]{background:#191919;color:#fff}
+button.chip[aria-pressed="true"]{background:var(--m-blue);color:var(--m-on-blue)}
 button.chip.chip-aus{color:#9aa0a8}
 button.chip.chip-aus[aria-pressed="true"]{color:#fff}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px;margin-top:7px}
@@ -111,7 +113,7 @@ h2.kb-h2{font-size:17px;font-weight:700;letter-spacing:-.015em;margin:0}
 .ktab .zieh{position:absolute;top:2px;bottom:2px;right:-8px;width:10px;cursor:col-resize;border-radius:3px;touch-action:none}
 .ktab .zieh:hover,.ktab .zieh:active{background:rgba(45,103,195,.2)}
 .ktab .pos:not(.kopf):hover{background:#f8fafc}
-.ktab .pos.sel,.ktab .pos.sel:hover{background:var(--kb-sel);box-shadow:inset 3px 0 0 #2d67c3}
+.ktab .pos.sel,.ktab .pos.sel:hover{background:var(--kb-sel);box-shadow:inset 3px 0 0 var(--m-blue)}
 .ktab .pos.grp1{background:#f1f3f5;border-top:1px solid var(--kb-line);font-weight:700;font-size:15px}
 .ktab .pos.grp{background:#f7f8fa;font-weight:650}
 .ktab .pos.kgz{background:#fcfcfd;font-weight:600}
@@ -180,19 +182,19 @@ select.ci{padding:4px 2px}
    und assistant-window.js, wie beim Terminplan (Reiter unten rechts, verschiebbar, vergrößerbar; Details gehen vor).
    Hier nur der Inhalt, in den Farben und Formen des Terminplan-Gesprächs: Blasen, Vorschlag als Karte, Eingabe. */
 .assistent .assistant-body{padding:0 16px 12px!important}
-.assistent.ziel .assistant-body{box-shadow:inset 0 0 0 3px rgba(0,103,216,.28)}
+.assistent.ziel .assistant-body{box-shadow:inset 0 0 0 3px var(--m-blue-line)}
 .as-label{flex:none}
 .as-verlauf{flex:1 1 auto;min-height:0;overflow:auto;padding:4px 3px 12px;overscroll-behavior:contain}
 .as-lead{font-size:13px;color:#3c424a;line-height:1.56;margin:4px 0 12px}
 .as-starts{display:flex;flex-direction:column;gap:7px}
 .as-start{all:unset;box-sizing:border-box;cursor:pointer;padding:10px 13px;border-radius:13px;font-size:13px;background:#f5f5f7;color:#1d1d1f}
 .as-start:hover{background:#ececf0}
-.as-start:focus-visible{outline:3px solid rgba(0,103,216,.35);outline-offset:2px}
+.as-start:focus-visible{outline:3px solid rgba(0,98,204,.35);outline-offset:2px}
 .as-start:disabled{opacity:.45;cursor:default}
 .as-stream{display:flex;flex-direction:column;gap:12px}
 .as-msg{max-width:94%;font-size:13px;line-height:1.56;padding:11px 13px;border-radius:15px;border:1px solid rgba(31,35,43,.07);color:#1d1d1f}
 .as-msg p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
-.as-msg.ich{align-self:flex-end;background:#eaf2ff;border-color:transparent}
+.as-msg.ich{align-self:flex-end;background:var(--m-blue-soft);border-color:transparent}
 .as-msg.ki{align-self:flex-start;background:#f5f5f7}
 .as-msg.warn{background:var(--kb-att-bg);color:#6b3a12}
 .as-msg.ok{background:#ebf4ed;color:#285139}
@@ -200,7 +202,7 @@ select.ci{padding:4px 2px}
 .as-fragen{margin:6px 0 0;padding-left:18px}
 .as-links{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 0;font-size:11px}
 .as-links span{color:var(--kb-meta)}
-.as-links a{color:#0759ba;text-decoration:none;border-bottom:1px solid rgba(0,103,216,.24)}
+.as-links a{color:var(--m-link);text-decoration:none;border-bottom:1px solid rgba(0,98,204,.24)}
 .as-hinweise{margin-top:6px;font-size:12px;color:var(--kb-meta)}
 .as-hinweise summary{cursor:pointer}
 .as-hinweise ul{margin:4px 0 0;padding-left:18px}
@@ -223,24 +225,24 @@ select.ci{padding:4px 2px}
 .as-pos .chip{padding:4px 7px}
 .as-aktionen{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px}
 .assistent .as-aktionen .btn{border-radius:11px;min-height:38px;padding:9px 14px;font-size:12px;font-weight:600}
-.assistent .as-aktionen .btn-primary{background:#1769d4;border-color:#1769d4;color:#fff}
-.assistent .as-aktionen .btn-primary:hover:not(:disabled){background:#0056b9;border-color:#0056b9}
+.assistent .as-aktionen .btn-primary{background:var(--m-blue);border-color:var(--m-blue);color:#fff}
+.assistent .as-aktionen .btn-primary:hover:not(:disabled){background:var(--m-blue-hover);border-color:var(--m-blue-hover)}
 .assistent .as-aktionen .btn:not(.btn-primary){background:#e8e9ec;border-color:#e8e9ec;color:#333}
 .as-form{flex:none;border-top:1px solid rgba(30,30,35,.08);padding:10px 0 0;background:#fff}
 .as-zeile{display:flex;align-items:flex-end;gap:8px}
 .as-zeile textarea{flex:1 1 auto;min-width:0;resize:vertical;border:1px solid transparent;border-radius:14px;padding:12px 13px;
   font:13px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;min-height:50px;max-height:122px;background:#f5f5f7;outline:0}
-.as-zeile textarea:focus{border-color:rgba(0,103,216,.34);box-shadow:0 0 0 3px rgba(0,103,216,.09)}
+.as-zeile textarea:focus{border-color:rgba(0,98,204,.34);box-shadow:0 0 0 3px rgba(0,98,204,.09)}
 .as-plus,.as-senden{all:unset;box-sizing:border-box;cursor:pointer;flex:none}
 .as-plus{width:41px;height:41px;border-radius:13px;display:grid;place-items:center;background:#f0f1f4;font-size:25px;line-height:1;color:#232731}
-.as-senden{border-radius:11px;padding:10px 14px;background:#1769d4;color:#fff;font-size:12px;font-weight:600}
-.as-senden:hover:not(:disabled){background:#0056b9}
+.as-senden{border-radius:11px;padding:10px 14px;background:var(--m-blue);color:#fff;font-size:12px;font-weight:600}
+.as-senden:hover:not(:disabled){background:var(--m-blue-hover)}
 .as-plus:disabled,.as-senden:disabled{opacity:.4;cursor:default}
-.as-plus:focus-visible,.as-senden:focus-visible{outline:3px solid rgba(0,103,216,.35);outline-offset:2px}
+.as-plus:focus-visible,.as-senden:focus-visible{outline:3px solid rgba(0,98,204,.35);outline-offset:2px}
 .as-anhaenge,.as-bezug{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .as-anhaenge:empty,.as-bezug:empty{display:none}
 .as-anhaenge .meta{flex-basis:100%;font-size:12px}
-.as-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;font-size:12px;background:#eaf2ff;color:#1459a4;border-radius:999px;padding:3px 4px 3px 10px}
+.as-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;font-size:12px;background:var(--m-blue-soft);color:var(--m-blue);border-radius:999px;padding:3px 4px 3px 10px}
 .as-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .as-chip button{all:unset;cursor:pointer;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;font-size:15px}
 .as-chip button:hover{background:rgba(0,0,0,.06)}
@@ -258,7 +260,7 @@ select.ci{padding:4px 2px}
 .feld input:focus,.feld select:focus,.feld textarea:focus{outline:2px solid #b9c9dd;outline-offset:0;border-color:#9fb3cc}
 .feld input[readonly],.feld select:disabled,.feld textarea[readonly]{background:#f7f8fa;color:var(--kb-meta)}
 .check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--kb-ink);min-height:32px}
-.check input{width:18px;height:18px;accent-color:#191919}
+.check input{width:18px;height:18px;accent-color:var(--m-blue)}
 .step{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 14px;padding:9px 0;border-top:1px solid var(--kb-line-soft)}
 .step p{margin:0}
 .step.ende{border-top:1px solid #d9dfe5;font-weight:700}
@@ -365,7 +367,7 @@ select.ci{padding:4px 2px}
 .archiv-tab td.hk{min-width:220px}
 .hk-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:#eef0f2;margin:5px 0 6px;min-width:150px}
 .hk-bar span{display:block;height:100%}
-.hk-angebot{background:#2a5aa6}.hk-fachplanung{background:#5b7fc4}.hk-bki{background:#8fa9d9}.hk-eigen{background:#3c8a68}
+.hk-angebot{background:var(--m-information)}.hk-fachplanung{background:#5b7fc4}.hk-bki{background:#8fa9d9}.hk-eigen{background:#3c8a68}
 .hk-abgerechnet{background:#1e5c43}.hk-geschaetzt{background:#c98a4b}.hk-ohne{background:#d3d7dc}
 .archiv-karten{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:14px;margin-top:14px;align-items:start}
 .archiv-k{padding:18px 20px}

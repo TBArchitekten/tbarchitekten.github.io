@@ -21,5 +21,5 @@ test('Window list mode and desktop rules that the Office relies on are still pre
   assert.match(read('app/mobile-refinement.css'),/\.app \.work-board\.mobile-stack \.work-bucket\{[^}]*height:auto/);
   assert.match(read('app/mobile-refinement.css'),/\.app \.work-board\.mobile-stack \.work-bucket-scroll\{[^}]*overflow:visible/);
   assert.match(read('app/app.css'),/\.work-bucket-scroll\{flex:none!important;min-height:0!important;max-height:none!important;overflow:visible!important\}/);
-  assert.match(read('app/index.html'),/office\.css\?v=office43/);
+  assert.match(read('app/index.html'),/office\.css\?v=office44/);
 });

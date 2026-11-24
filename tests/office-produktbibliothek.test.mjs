@@ -151,7 +151,7 @@ test('Migration: RLS mit Office-Helfern, nichts Destruktives, privater Speicher'
 
 test('Seite und Werkzeugkarte: eigene Seite, gleicher Client wie die Kostenberechnung',()=>{
   assert.match(seite,/<html lang="de">/);
-  assert.match(seite,/<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office2">/);
+  assert.match(seite,/<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office3">/);
   assert.match(seite,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   assert.match(seite,/<script src="\.\/office-config\.js\?v=1"><\/script>/);
   assert.match(seite,/<script src="\.\/shared\/supabase-client\.js\?v=office4"><\/script>/);

@@ -116,7 +116,7 @@ test('Karte: jede verantwortliche Person als Kreis, Status sichtbar',async()=>{
     assert.equal(zwei.overlap,true,'Kreise überlappen');
     // Vorschlag A (Gari, 24.11.2026): der Status als Etikett neben dem Datum; der Kreis bleibt nur zum Erledigen.
     assert.deepEqual([zwei.state,zwei.cls,zwei.label],['progress',[],'Erledigen: Aufgabe zwei']);
-    assert.deepEqual(zwei.tag,['In Bearbeitung','rgb(232, 241, 255)','rgb(21, 89, 196)']);
+    assert.deepEqual(zwei.tag,['In Bearbeitung','rgb(238, 245, 255)','rgb(0, 74, 158)'],'das Blau der gemeinsamen Gestaltung');
     const fuenf=await card('fuenf');
     assert.deepEqual(fuenf.avatars,['GB','AM','CT','+2'],'ab fünf: drei Kreise und +N');
     assert.deepEqual([fuenf.state,fuenf.cls],['waiting',[]]);

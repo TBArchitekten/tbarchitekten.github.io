@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TBA Office · Terminplan</title>
+<link rel="stylesheet" href="./shared/minds-design-tokens.css?v=2">
 <style>
   :root{
     --bg:#f3f3f1;
@@ -12,7 +13,7 @@
     --line-strong:#d5d5d1;
     --text:#111111;
     --muted:#6b6b6b;
-    --accent:#111111;
+    --accent:var(--m-blue);
     --row-h:38px;
     --fixed-left-cols:573px;
     --left-w:925px;
@@ -51,7 +52,7 @@
   .toolbar .sep{width:1px;height:28px;background:var(--line);margin:0 5px}
   .search{height:36px;width:220px;border:1px solid var(--line-strong);border-radius:0;padding:0 10px;background:#fff}
   .toolbar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
-  .toggle{accent-color:#666}
+  .toggle{accent-color:var(--m-blue)}
   .statusbar{
     background:#fff;border-bottom:1px solid var(--line);display:flex;gap:20px;padding:8px 24px;font-size:12px;color:var(--muted);flex-wrap:wrap
   }
@@ -415,7 +416,7 @@ html.im-reiter #officeBack{display:none}
   .dialogue-action button.secondary{background:#fff;color:#18231d;border-color:var(--line-strong)}
   .dialogue-action[hidden]{display:none}
   .ai-mode{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--muted);flex-wrap:wrap}
-  .ai-mode input{accent-color:#18231d}
+  .ai-mode input{accent-color:var(--m-blue)}
   .ai-mode .ai-warning{font-weight:500;color:#6d6048}
   .ai-mode small{color:var(--muted)}
   .dialogue-attachment-preview{display:flex;gap:6px;flex-wrap:wrap;padding:0 8px}
@@ -476,8 +477,8 @@ html.im-reiter #officeBack{display:none}
 </style>
 <!-- In Work als Reiter (Rahmen): kein Rücksprung-Link, Work hat die Reiter. -->
 <script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>
-<link rel="stylesheet" href="./assistant-surface.css?v=office38">
-<link rel="stylesheet" href="./window-editor.css?v=1">
+<link rel="stylesheet" href="./assistant-surface.css?v=office39">
+<link rel="stylesheet" href="./window-editor.css?v=2">
 <link rel="stylesheet" href="./terminplan-planning.css?v=office1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>

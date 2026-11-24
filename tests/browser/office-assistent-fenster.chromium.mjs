@@ -140,7 +140,7 @@ test('Kostenberechnung: dasselbe Fenster wie der Terminplan, verschiebbar; Detai
     // Gleiche Form wie das Terminplan-Gespräch: Kopf, Senden-Knopf, Eingabefeld.
     const stil=await page.evaluate(()=>{const s=e=>getComputedStyle(document.querySelector(e));
       return {kopf:s('#kbAssistent .assistant-head').height,senden:s('#asSenden').backgroundColor,feld:s('#asText').backgroundColor,rand:s('#kbAssistent').borderRadius}});
-    assert.deepEqual(stil,{kopf:'53px',senden:'rgb(23, 105, 212)',feld:'rgb(245, 245, 247)',rand:'20px'});
+    assert.deepEqual(stil,{kopf:'53px',senden:'rgb(0, 98, 204)',feld:'rgb(245, 245, 247)',rand:'20px'});
     assert.ok(!(await page.evaluate(()=>document.getElementById('kb').classList.contains('mit-inspektor'))),'die Tabelle rückt nicht');
     await foto(page,'kb-2-offen');
     // Verschieben am Kopf, gemerkt je Werkzeug.

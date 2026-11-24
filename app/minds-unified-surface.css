@@ -5,9 +5,9 @@
 */
 body[data-section="work"],
 body[data-section="assistant"]{
-  --minds-ui-accent:#007aff;
-  --minds-ui-accent-hover:#0069da;
-  --minds-ui-accent-wash:rgba(0,122,255,.085);
+  --minds-ui-accent:var(--m-blue);
+  --minds-ui-accent-hover:var(--m-blue-hover);
+  --minds-ui-accent-wash:rgba(0,98,204,.085);
   --minds-ui-ink:#1d1d1f;
   --minds-ui-secondary:#626771;
   --minds-ui-tertiary:#858b94;
@@ -39,7 +39,7 @@ body[data-section="assistant"] .app select{
 }
 body[data-section="work"] .app :is(button,input,textarea,select):focus-visible,
 body[data-section="assistant"] .app :is(button,input,textarea,select):focus-visible{
-  outline-color:rgba(0,122,255,.60);
+  outline-color:rgba(0,98,204,.60);
   outline-offset:2px;
 }
 /* Work: the large gray background is now pure white; preserve a quiet
@@ -207,8 +207,8 @@ body[data-section="assistant"] .composer{
   box-shadow:0 1px 5px rgba(35,44,60,.035);
 }
 body[data-section="assistant"] .composer:focus-within{
-  border-color:rgba(0,122,255,.52)!important;
-  box-shadow:0 0 0 3px rgba(0,122,255,.09)!important;
+  border-color:rgba(0,98,204,.52)!important;
+  box-shadow:0 0 0 3px rgba(0,98,204,.09)!important;
 }
 body[data-section="assistant"] .composer textarea{
   color:#242830;
@@ -268,7 +268,7 @@ body[data-section="assistant"].desk-enabled .desk-task-detail strong{
   font-weight:625;
 }
 body[data-section="assistant"].desk-enabled .desk-panel :is(button,input,select,textarea):focus-visible{
-  outline:2px solid rgba(0,122,255,.65);
+  outline:2px solid rgba(0,98,204,.65);
   outline-offset:2px;
 }
 @media(max-width:949px){

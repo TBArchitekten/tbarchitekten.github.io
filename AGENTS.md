@@ -26,6 +26,7 @@ Si trabajas sin acceso al repositorio (un chat normal), termina dándole a Gari 
 - Las pruebas nunca llaman a producción. Corre `node --test tests/*.test.cjs tests/*.test.mjs` antes de cada PR. Si un test deja de cuadrar, actualízalo a conciencia; no lo borres.
 - La interfaz de la oficina está en **alemán** y las fechas en formato `de-DE`.
 - Si cambias un JS o CSS, sube su `?v=` en el HTML que lo carga. GitHub Pages guarda en caché.
+- **Colores, letra y formas solo desde `shared/minds-design-tokens.css`**, que toda página carga primero (Gari, 24.11.2026). Azul `--m-blue` = todo lo que se puede pulsar (botones, enlaces, selección, pestañas activas, casillas); lo demás neutro; los estados usan sus tonos del archivo. Ningún color nuevo escrito a mano en una página: si falta uno, va al archivo. Lo vigila `tests/office-gestaltung.test.mjs`.
 - Cambios en `main` = publicados en ~1 minuto. Trabaja en una rama y abre un PR.
 
 ## Phase 6 · Romy Live und Office-MCP (08.11.2026)

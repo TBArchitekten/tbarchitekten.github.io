@@ -31,7 +31,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office53','shell.js?v=office54','office-projects.js?v=office58','work-polish.css?v=4','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office53','shell.js?v=office54','office-projects.js?v=office58','work-polish.css?v=5','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 
@@ -47,7 +47,7 @@ test('Werkzeugseiten im Rahmen: ohne Rücksprung, nie die App im Rahmen, Revisio
   assert.match(kb,/window\.TBA_OFFICE_TOOL=Object\.freeze\(\{kind:'kosten',revision:\(\)=>serverRevision,pending:\(\)=>ausstehend\|\|laeuft,flush:\(\)=>speichernJetzt\(\)\}\)/);
   assert.match(kb,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
   assert.match(kb,/if\(IM_REITER\)dialog\.addEventListener\('close',\(\)=>\{if\(!angelegt\)window\.parent\.postMessage\(\{tbaOfficeTool:'abgebrochen'\},location\.origin\)\},\{once:true\}\)/);
-  assert.match(kbHtml,/kostenberechnung\.css\?v=office10/);
+  assert.match(kbHtml,/kostenberechnung\.css\?v=office11/);
   assert.match(kbHtml,/kostenberechnung\.js\?v=office13/);
 });
 
@@ -66,7 +66,7 @@ test('Karte: Status als Etikett neben dem Datum (Vorschlag A), der Kreis nur zum
   assert.match(work,/aria-label="\$\{t\.completed_at\?'Wieder öffnen':'Erledigen'\}: \$\{esc\(t\.title\)\}"/);
   assert.doesNotMatch(work,/'is-progress':''|'is-waiting':''/);
   assert.doesNotMatch(css,/work-task-toggle\.is-progress|work-task-toggle\.is-waiting/);
-  assert.match(css,/\.work-task-state\.is-progress\{background:#e8f1ff;color:#1559c4\}/);
+  assert.match(css,/\.work-task-state\.is-progress\{background:var\(--m-blue-soft\);color:var\(--m-information\)\}/);
   assert.match(css,/\.work-task-state\.is-waiting\{background:#fff1d9;color:#94590a\}/);
 });
 
