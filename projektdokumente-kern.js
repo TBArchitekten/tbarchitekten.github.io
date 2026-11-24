@@ -327,6 +327,33 @@ function pruefe(art,d){
   return '';
 }
 
+// ---------- Vorschläge von Romy ----------
+// Wortweiser Vergleich für «grün eingefügt, rot gestrichen» (längste gemeinsame Teilfolge der Wörter).
+function wortDiff(alt,neu){
+  const a=s(alt).split(/(\s+)/).filter(x=>x!==''),b=s(neu).split(/(\s+)/).filter(x=>x!=='');
+  if(a.length*b.length>400000)return [{typ:'weg',text:s(alt)},{typ:'neu',text:s(neu)}];
+  const L=Array.from({length:a.length+1},()=>new Uint16Array(b.length+1));
+  for(let i=a.length-1;i>=0;i--)for(let j=b.length-1;j>=0;j--)L[i][j]=a[i]===b[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  const out=[],dazu=(typ,text)=>{const l=out[out.length-1];if(l&&l.typ===typ)l.text+=text;else out.push({typ,text})};
+  let i=0,j=0;
+  while(i<a.length&&j<b.length){
+    if(a[i]===b[j]){dazu('gleich',a[i]);i++;j++}
+    else if(L[i+1][j]>=L[i][j+1]){dazu('weg',a[i]);i++}
+    else{dazu('neu',b[j]);j++}
+  }
+  while(i<a.length)dazu('weg',a[i++]);
+  while(j<b.length)dazu('neu',b[j++]);
+  return out;
+}
+// Was ein übernommener Vorschlag an einer Zeile ändert, in Worten («Frist: 28.11. → 06.12.»).
+function aenderungText(art,alt,daten,heute=heuteIso()){
+  return Object.keys(daten||{}).filter(k=>!k.startsWith('_')).map(k=>{
+    const sp=(SPALTEN[art]||[]).find(x=>x.key===k);
+    const zeige=d=>sp?.typ==='datum'?datumKurz(d?.[k],heute):zellText(art,k,d||{},{heute});
+    return feldName(art,k)+': '+(kurz(zeige(alt),60)||'–')+' → '+(kurz(zeige(daten),60)||'–');
+  }).join(' · ');
+}
+
 // ---------- Kosten einer Variante ----------
 function betragVon(o){
   const b=leseZahl(o?.betrag);
@@ -438,5 +465,5 @@ return Object.freeze({DISZIPLINEN,RUNDEN,STATUS_KLAERUNG,STATUS_ENTSCHEIDUNG,JA_
   kurz,gueltigIso,heuteIso,leseDatum,datumKurz,datumLang,excelTag,leseZahl,euro,leereZeile,optionen,naechsteOptionId,erledigt,ueberfaellig,
   istEntscheidungspunkt,ohneBestaetigung,optionenText,folgenText,empfehlungText,nummer,zellText,feldName,zaehle,zusammenfassung,passt,filtere,
   zaehleFilter,wartendeEntscheidungspunkte,entscheidungAusKlaerung,aufgabeAusKlaerung,zusammenfuehren,geaenderteFelder,vorschlagErlaubt,
-  ohneEntscheidung,pruefe,betragVon,mehrkosten,vorlageInhalt,vorlageBloecke});
+  ohneEntscheidung,pruefe,wortDiff,aenderungText,betragVon,mehrkosten,vorlageInhalt,vorlageBloecke});
 });

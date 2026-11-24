@@ -326,6 +326,99 @@ test('Excel im Aufbau der Bürovorlage',async()=>{
   await ctx.close();
 });
 
+test('Romy: Vorschläge mit Fundstelle, nichts ändert sich ohne «Übernehmen», nie eine Entscheidung',async()=>{
+  const {ctx,page,fehler}=await oeffne();
+  await page.goto(adresse('projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=klaerungsliste'));
+  await page.locator('[data-act="romy"]',{hasText:'Romy fragen'}).waitFor();
+  const vorher=(await zeilenVon(page,'klaerungsliste')).length;
+  await page.locator('[data-act="romy"]').click();
+  await page.locator('dialog[open] h2',{hasText:'Vorschläge aus einem Dokument'}).waitFor();
+  await page.locator('dialog input[name="quelle"]').fill('Protokoll Koordination 02');
+  await page.locator('dialog textarea[name="text"]').fill('TOP 3: Unterzug … TOP 4: Aussparung Steigschacht … TOP 7: Wärmepumpe …');
+  await page.locator('dialog button[type="submit"]').click();
+  await page.locator('.pd-banner.romy',{hasText:'Romy hat in «Protokoll Koordination 02» 3 Vorschläge gemacht.'}).waitFor();
+  assert.match(await page.locator('.pd-romy-antwort').innerText(),/zwei neue Klärungen[\s\S]*TOP 9 betrifft die Bemusterung/);
+  assert.equal((await zeilenVon(page,'klaerungsliste')).length,vorher,'ein Vorschlag ändert die Liste nicht');
+  assert.equal((await db(page,'office_projektdokument_vorschlaege')).filter(v=>v.status==='offen').length,3);
+  const neue=page.locator('tr.pd-vorschlag:not(.pd-vs-aenderung)');
+  assert.equal(await neue.count(),2);
+  assert.match(await neue.first().innerText(),/Aussparung für den Steigschacht[\s\S]*Fundstelle: Protokoll Koordination 02, S\. 2, TOP 4/);
+  assert.match(await page.locator('tr.pd-vs-aenderung').innerText(),/Romy schlägt für 1 vor: Frist: 05\.12\. → 08\.12\./);
+  await foto(page,'7-romy-vorschlaege');
+  // Übernehmen: neue Zeile mit «R», Herkunft «romy»; Verwerfen: nichts.
+  await neue.first().locator('[data-act="vs-ja"]').click();
+  await page.locator('.pd-meldung',{hasText:'Übernommen.'}).waitFor();
+  let z=await zeilenVon(page,'klaerungsliste');
+  assert.equal(z.length,vorher+1);
+  const neu=z[z.length-1];
+  assert.equal(neu.quelle,'romy');
+  assert.equal(neu.daten.fundstelle,'Protokoll Koordination 02, S. 2, TOP 4');
+  assert.deepEqual(neu.daten.disziplinen,['HLS','TWP']);
+  assert.equal(neu.daten.status,'offen','Vorgaben der Liste bleiben');
+  assert.ok(await page.locator('tr[data-zeile="'+neu.id+'"] td.pd-romy').count()>=3,'übernommene Felder tragen «R»');
+  await page.locator('tr.pd-vorschlag:not(.pd-vs-aenderung) [data-act="vs-nein"]').click();
+  await page.locator('.pd-meldung',{hasText:'Verworfen.'}).waitFor();
+  assert.equal((await zeilenVon(page,'klaerungsliste')).length,vorher+1);
+  await page.locator('tr.pd-vs-aenderung [data-act="vs-ja"]').click();
+  await page.locator('.pd-meldung',{hasText:'Übernommen.'}).waitFor();
+  assert.equal((await zeilenVon(page,'klaerungsliste'))[0].daten.frist,'2026-12-08');
+  const vs=await db(page,'office_projektdokument_vorschlaege');
+  assert.deepEqual(vs.map(v=>v.status).sort(),['uebernommen','uebernommen','verworfen']);
+  assert.equal(await page.locator('.pd-banner.romy').count(),0);
+  // Verlauf: woher der Wert kam und wer ihn übernommen hat.
+  await page.locator('td[data-k="nr"]').first().click();
+  await page.locator('.pd-verlauf li',{hasText:'Vorschlag von Romy (Protokoll Koordination 02, S. 2, TOP 3), übernommen von Test Leitung'}).waitFor();
+  await page.locator('[data-act="detail-zu"]').click();
+  // Fristen mit dem Terminplan prüfen: ein Vorschlag mit Fundstelle im Terminplan.
+  await page.locator('input[data-act="waehle"]').first().check();
+  await page.locator('[data-act="romy-fristen"]').click();
+  await page.locator('tr.pd-vs-aenderung',{hasText:'Fundstelle: Terminplan: Vorabzug TWP (04.12.2026)'}).waitFor();
+  assert.equal(page.evaluate?((await page.evaluate(()=>window.__fake.anfragen.at(-1).body.zeilen_ids.length))):1,1);
+  await page.locator('tr.pd-vs-aenderung [data-act="vs-nein"]').click();
+  await page.locator('.pd-meldung',{hasText:'Verworfen.'}).waitFor();
+  assert.equal((await zeilenVon(page,'klaerungsliste'))[0].daten.frist,'2026-12-08','verworfen ändert nichts');
+  // Frage an die Fachplaner: Text zum Kopieren, keine Änderung.
+  await page.locator('input[data-act="waehle"]').first().check();
+  await page.locator('[data-act="romy-fachplaner"]').click();
+  await page.locator('dialog[open] h2',{hasText:'Frage an die Fachplaner'}).waitFor();
+  assert.match(await page.locator('dialog .pd-romy-ausgabe').inputValue(),/An TWP/);
+  await page.locator('dialog [data-dlg="zu"]').click();
+  // Entscheidungsliste: Romy schlägt eine Frage vor; «entschieden» und Entscheider kommen nicht mit.
+  await page.goto(adresse('projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=entscheidungsliste'));
+  await page.locator('[data-act="romy"]').click();
+  await page.locator('dialog input[name="quelle"]').fill('Protokoll Bauherr 03');
+  await page.locator('dialog textarea[name="text"]').fill('Fenster: Holz oder Holz-Aluminium, AG entscheidet.');
+  await page.locator('dialog button[type="submit"]').click();
+  await page.locator('.pd-banner.romy',{hasText:'1 Vorschlag'}).waitFor();
+  const offen=(await db(page,'office_projektdokument_vorschlaege')).filter(v=>v.status==='offen');
+  assert.equal(offen.length,1);
+  assert.equal(offen[0].daten.status,undefined);
+  assert.equal(offen[0].daten.entscheider,undefined);
+  await page.locator('[data-act="vs-alle-ja"]').click();
+  await page.locator('.pd-meldung',{hasText:'Übernommen.'}).waitFor();
+  const e=await zeilenVon(page,'entscheidungsliste');
+  assert.equal(e.at(-1).daten.thema,'Fenster, Material');
+  assert.equal(e.at(-1).daten.status,'vorbereitet');
+  // Vorlage: einen Abschnitt neu formulieren lassen; grün eingefügt, erst «Übernehmen» ändert den Text.
+  const vorlage=(await zeilenVon(page,'entscheidungsvorlagen'))[0];
+  await page.goto(adresse('projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&vorlage='+vorlage.id));
+  await page.locator('#r-abschnitt').selectOption({index:0});
+  await page.locator('#r-auftrag').fill('den Kostenunterschied nennen');
+  await page.locator('[data-act="romy-abschnitt"]').click();
+  await page.locator('.pd-diff ins',{hasText:'5.004,30 € netto'}).waitFor();
+  const e1=(await zeilenVon(page,'entscheidungsliste'))[0];
+  assert.doesNotMatch(e1.daten.anlass,/5\.004,30/,'vor dem Übernehmen unverändert');
+  await foto(page,'8-romy-vorlage');
+  await page.locator('.pd-vs-zeile [data-act="vs-ja"]').click();
+  await page.locator('#v-'+e1.id+'-anlass').waitFor();
+  assert.match(await page.locator('#v-'+e1.id+'-anlass').inputValue(),/5\.004,30 € netto/);
+  const e1nach=(await zeilenVon(page,'entscheidungsliste'))[0];
+  assert.match(e1nach.daten.anlass,/5\.004,30/);
+  assert.equal(e1nach.quelle,'romy');
+  assert.deepEqual(fehler,[]);
+  await ctx.close();
+});
+
 test('iPhone: Übersicht, Liste und Vorlage ohne Querscrollen der Seite',async()=>{
   const {ctx,page,fehler}=await oeffne();
   await page.setViewportSize({width:390,height:844});
