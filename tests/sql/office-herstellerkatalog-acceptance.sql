@@ -24,7 +24,7 @@ declare
        'B_anlegen=ok; D_lesen=0; D_anlegen=verweigert; anon=verweigert; T_verbessert=1; urheber_fest=verweigert; '
     || 'loeschen=verweigert; doppelt=verweigert; archiviert_frei=ok; B_kontakt=ok; T_aendert_fremden=0; firma_fest=verweigert; '
     || 'T_entfernt_fremden=0; B_entfernt=1; ohne_projekt=verweigert; produkt_verknuepft=1; '
-    || 'B_schluessel=verweigert; anon_schluessel=verweigert; ';
+    || 'B_schluessel=verweigert; anon_schluessel=verweigert; licht=ok; angebot=ok; sicherheitsdatenblatt=ok; unbekannte_art=verweigert; ';
   ub constant text := '{"sub":"a6000000-0000-4000-8000-00000000000a","role":"authenticated"}';
   ut constant text := '{"sub":"b6000000-0000-4000-8000-00000000000b","role":"authenticated"}';
   ud constant text := '{"sub":"d6000000-0000-4000-8000-00000000000d","role":"authenticated"}';
@@ -106,6 +106,23 @@ begin
   execute 'set local role anon';
   begin perform 1 from public.office_import_tokens limit 1; r := r || 'anon_schluessel=ERLAUBT(FEHLER); ';
   exception when others then r := r || 'anon_schluessel=verweigert; '; end;
+  execute 'reset role';
+
+  -- Seit 24.11.2026 (Migration 20261124190000): Kategorie «Licht», Dokumentarten «Angebot» und «Sicherheitsdatenblatt».
+  perform set_config('request.jwt.claims', ub, true);
+  execute 'set local role authenticated';
+  insert into public.office_produkte(kategorie,name) values ('licht','Pendelleuchte (Test)') returning id into produkt;
+  r := r || 'licht=ok; ';
+  insert into public.office_produkt_dokumente(produkt_id,art,name,storage_path,mime_type,size_bytes)
+  values (produkt,'angebot','Angebot.pdf','a6000000-0000-4000-8000-00000000000a/' || produkt::text || '/0f000000-0000-4000-8000-0000000000a1.pdf','application/pdf',100);
+  r := r || 'angebot=ok; ';
+  insert into public.office_produkt_dokumente(produkt_id,art,name,storage_path,mime_type,size_bytes)
+  values (produkt,'sicherheitsdatenblatt','SDB.pdf','a6000000-0000-4000-8000-00000000000a/' || produkt::text || '/0f000000-0000-4000-8000-0000000000a2.pdf','application/pdf',100);
+  r := r || 'sicherheitsdatenblatt=ok; ';
+  begin insert into public.office_produkt_dokumente(produkt_id,art,name,storage_path,mime_type,size_bytes)
+    values (produkt,'rechnung','Rechnung.pdf','a6000000-0000-4000-8000-00000000000a/' || produkt::text || '/0f000000-0000-4000-8000-0000000000a3.pdf','application/pdf',100);
+    r := r || 'unbekannte_art=ERLAUBT(FEHLER); ';
+  exception when others then r := r || 'unbekannte_art=verweigert; '; end;
   execute 'reset role';
 
   if r <> erwartet then raise exception 'Herstellerkatalog weicht ab: % (erwartet: %)', r, erwartet; end if;

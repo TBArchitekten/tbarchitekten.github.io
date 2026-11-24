@@ -5,8 +5,8 @@
    Nichts wird geraten: was nicht im Dokument steht, kommt unter «fehlend», nie als Wert. */
 export const MODEL="gpt-6.1-terra"; // wie office-kosten-ai und office-terminplan-ai
 export const VERSION="office-produkt-ai-v1";
-export const KATEGORIEN=Object.freeze(["bodenbelag","wandbelag","decke","fassade","fenster_tueren","sanitaer","beschlaege","sonstiges"]);
-export const DOKUMENTARTEN=Object.freeze(["datenblatt","preisliste","verlegeanleitung","pflegeanleitung","leistungserklaerung","epd","zertifikat","sonstiges"]);
+export const KATEGORIEN=Object.freeze(["bodenbelag","wandbelag","decke","fassade","fenster_tueren","sanitaer","licht","beschlaege","sonstiges"]);
+export const DOKUMENTARTEN=Object.freeze(["datenblatt","preisliste","verlegeanleitung","pflegeanleitung","leistungserklaerung","epd","zertifikat","angebot","sicherheitsdatenblatt","sonstiges"]);
 export const PREISARTEN=Object.freeze(["listenpreis_material","angebot_material","angebot_eingebaut"]);
 export const EINHEITEN=Object.freeze(["m²","m","m³","St","psch","kg","t","h"]);
 export const GRENZE=Object.freeze({merkmale:40,fehlend:20,preise:10,familien:120});
@@ -48,9 +48,9 @@ export const SCHEMA={
 };
 
 export function anweisungen(){return [
-  "Du liest für die Produktbibliothek des TBA Office (Titus Bernhard Architekten) ein Herstellerdokument: Datenblatt, Preisliste, Verlegeanleitung, Leistungserklärung, Umweltdeklaration oder ein Foto davon.",
+  "Du liest für die Produktbibliothek des TBA Office (Titus Bernhard Architekten) ein Herstellerdokument: Datenblatt, Preisliste, Verlegeanleitung, Leistungserklärung, Umweltdeklaration, Angebot, Sicherheitsdatenblatt oder ein Foto davon.",
   "Übernimm nur, was im Dokument steht. Rate nie und ergänze nichts aus allgemeinem Wissen. Jede Angabe in merkmale und preise nennt die Seite des Dokuments (seite, als Zahl im Text, etwa \"2\"); bei einem Bild ist es \"1\".",
-  "produkt: name wie der Hersteller das Produkt nennt (ohne Werbezusätze), hersteller, serie, kategorie aus der Liste (bodenbelag, wandbelag, decke, fassade, fenster_tueren, sanitaer, beschlaege, sonstiges; leer, wenn unklar), beschreibung in einem Satz, farbe als Hex-Farbe nur wenn das Dokument eine Farbe eindeutig zeigt oder nennt, sonst leer.",
+  "produkt: name wie der Hersteller das Produkt nennt (ohne Werbezusätze), hersteller, serie, kategorie aus der Liste (bodenbelag, wandbelag, decke, fassade, fenster_tueren, sanitaer, licht, beschlaege, sonstiges; leer, wenn unklar), beschreibung in einem Satz, farbe als Hex-Farbe nur wenn das Dokument eine Farbe eindeutig zeigt oder nennt, sonst leer.",
   "familie: die Art der Leistung, zu der das Produkt in einer Kostenberechnung gehört, etwa «Parkett, vollflächig geklebt» oder «Feinsteinzeug, Dünnbett». Passt eine der bekannten_familien, nimm sie wörtlich; sonst ein kurzer neuer Name; leer, wenn unklar.",
   "merkmale: technische Angaben mit dem Feldnamen auf Deutsch, kurz und einheitlich: Format, Stärke, Nutzschicht, Oberfläche, Verlegung, Brandverhalten, Rutschhemmung, Fußbodenheizung, Emissionen, Nutzungsklasse, Gewicht, Farbe, Material, Normen und weitere, die das Dokument nennt. wert genau wie im Dokument, mit Einheit.",
   "fehlend: bei einem Bodenbelag jedes dieser Felder, das das Dokument nicht nennt: Format, Stärke, Nutzschicht, Oberfläche, Verlegung, Brandverhalten, Rutschhemmung, Fußbodenheizung, Emissionen, Nutzungsklasse. Bei anderen Kategorien die Felder, die man für die Planung erwarten würde und die fehlen. Nenne außerdem «Preis», wenn das Dokument keinen Preis enthält.",

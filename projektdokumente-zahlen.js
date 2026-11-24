@@ -83,7 +83,7 @@ function produktText(produkt,verwendung){
   return [s(verwendung?.code),name].filter(Boolean).join(' · ').slice(0,200);
 }
 // Nächster freier Code im Projekt, wie in der Produktbibliothek (Kürzel der Kategorie, zweistellig gezählt).
-const KUERZEL=Object.freeze({bodenbelag:'BO',wandbelag:'WA',decke:'DE',fassade:'FA',fenster_tueren:'FE',sanitaer:'SA',beschlaege:'BE',sonstiges:'SO'});
+const KUERZEL=Object.freeze({bodenbelag:'BO',wandbelag:'WA',decke:'DE',fassade:'FA',fenster_tueren:'FE',sanitaer:'SA',licht:'LI',beschlaege:'BE',sonstiges:'SO'});
 function naechsterCode(projektId,kategorie,verwendungen){
   const kurzel=KUERZEL[kategorie]||'SO';
   const benutzt=new Set((verwendungen||[]).filter(v=>v.projekt_id===projektId&&v.code).map(v=>v.code));

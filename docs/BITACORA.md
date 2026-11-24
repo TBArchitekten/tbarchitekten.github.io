@@ -17,6 +17,20 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-24 · Produktbibliothek: Kategorie «Licht», Dokumentarten «Angebot» und «Sicherheitsdatenblatt» · Claude
+- Qué cambió y por qué: Gari (24.11.2026, OK für genau diese Änderung): Vor dem Paket Licht braucht die Bibliothek die Kategorie «Licht» (der Herstellerkatalog kennt sie seit #157); Angebote und Sicherheitsdatenblätter lagen bisher als «Sonstiges» bei den Produkten.
+  - **Datenbank:** die zwei Prüfregeln `office_produkte_kategorie_check` und `office_produkt_dokumente_art_check` werden ersetzt (alte entfernt, erweitert neu angelegt). Keine Zeile wird geändert oder gelöscht; alle bisherigen Werte bleiben gültig.
+  - **Seite:** Kategorie «Licht» mit dem Kürzel LI (Codes wie LI-01) und die zwei Dokumentarten in Auswahl und Liste; im Projektstart vergibt «In die Musterliste» für Licht das Kürzel LI.
+  - **Romy liest Datenblätter** (`office-produkt-ai`): Kategorie `licht`, Dokumentarten `angebot` und `sicherheitsdatenblatt` in Schema und Anweisung; die Version bleibt `office-produkt-ai-v1` (nur neue Werte, abwärtskompatibel).
+  - **Import** (`office-produkt-import`): dieselben zwei Arten.
+- Archivos: `supabase/migrations/20261124190000_office_produkte_licht_dokumentarten.sql` (neu), `produktbibliothek.js` (`office8`), `produktbibliothek.html`, `projektdokumente-zahlen.js` (`office2`), `projektdokumente.html`, `supabase/functions/office-produkt-ai/core.mjs`, `supabase/functions/office-produkt-import/core.mjs`; Tests: `tests/office-herstellerkatalog.test.mjs` (neu 1, angepasst 1), `tests/sql/office-herstellerkatalog-acceptance.sql` (Licht, Angebot, Sicherheitsdatenblatt erlaubt, unbekannte Art verweigert), Versionen in `office-produktbibliothek`.
+- Base de datos: Migration `20261124190000_office_produkte_licht_dokumentarten.sql` — aplicada en Supabase: nach dem Merge über den Connector; danach die vorhandenen Richtpreise als «Angebot» und die Sicherheitsdatenblätter als «Sicherheitsdatenblatt» (nur die Art geändert, nichts gelöscht).
+- Deploy de funciones: `office-produkt-ai` und `office-produkt-import` nach dem Merge über den Workflow.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (434); Chromium lokal grün: Produktbibliothek (6), Herstellerkatalog (5), Zahlen im Projektstart (1); SQL-Abnahme in CI.
+- Quedó pendiente o sin probar: —
+- Riesgos o decisiones que necesitan a Gari: —
+- PR: #159
+
 ### 2026-11-24 · Herstellerkatalog und Produktbibliothek: erste Daten, Import geschlossen, Verknüpfung bleibt beim Bearbeiten · Claude
 - Qué cambió y por qué: Gari (24.11.2026) gab die Unterlagen einer Kollegin zu Bodenbelägen und Sanitär (Datenblätter, Richtpreise, eine Preisliste) und eine Herstellerrecherche: sichten, ordnen, Produktkarten anlegen, für das laufende Projekt vormerken und daraus den Herstellerkatalog füllen.
   - **Daten (nur in der Datenbank, nicht im Repo):** 58 Firmen mit Typ, Angebot, Kategorien und Kontakt (was die Recherche nicht belegt, steht als «n. v.»; zusammengefasste Einträge einzeln, ohne Kontakt, Notiz «nachrecherchieren»). 65 Kontakte in Projekten: Recherche mit Belag und Marke («Muster zuerst anfordern», «zweite Runde»), Unterlagen der Kollegin, ein Richtpreis. 24 Produkte (11 Bodenbeläge, 13 Sanitär) als «Entwurf», jede Angabe mit Seite und Dokument, Fehlendes als «Nicht im Datenblatt». 43 Unterlagen: Datenblätter, Richtpreise, Preisliste, Verlege- und Pflegehinweise, Sicherheitsdatenblätter (Angebote und Sicherheitsdatenblätter als «Sonstiges»). 3 Preise netto: 2 Richtpreise eingebaut mit Position und Seite, 1 Listenpreis aus der Preisliste (UVP inkl. MwSt. umgerechnet). 24 Verwendungen im laufenden Projekt «vorgeschlagen», ohne Code, mit dem Belag in der Notiz.

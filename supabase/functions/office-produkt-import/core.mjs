@@ -7,7 +7,7 @@ export const BUCKET="office-produkte";
 export const MAX_BYTES=26214400; // wie die Prüfung in office_produkt_dokumente (25 MB)
 // Wie die erlaubten Arten in office_produkt_dokumente (Migration 20261123180000).
 export const ARTEN=new Set(["datenblatt","preisliste","verlegeanleitung","pflegeanleitung","leistungserklaerung","epd",
-  "zertifikat","bild","sonstiges"]);
+  "zertifikat","angebot","sicherheitsdatenblatt","bild","sonstiges"]);
 export const MIMES=new Map([["application/pdf","pdf"],["image/jpeg","jpg"],["image/png","png"],["image/webp","webp"]]);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN=/^[A-Za-z0-9_-]{43,128}$/;
