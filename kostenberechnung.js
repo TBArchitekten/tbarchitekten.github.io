@@ -43,6 +43,7 @@ function quartale(){
   for(let j=bis;j>=2018;j--)for(let q=4;q>=1;q--)aus.push(j+'-Q'+q);
   return aus;
 }
+function letzterIndex(){return (st?.indizes||[]).filter(x=>Number(R.dezimal(x.wert))>0&&R.quartalIndex(x.quartal)!==null).map(x=>x.quartal).sort((a,b)=>R.quartalIndex(a)-R.quartalIndex(b)).pop()||''}
 function aktuellesQuartal(){const d=new Date();return d.getFullYear()+'-Q'+(Math.floor(d.getMonth()/3)+1)}
 const titel=kg=>R.katalogTitel(st,kg);
 const kgName=kg=>'KG '+kg+(titel(kg)?' '+titel(kg):'');
@@ -749,7 +750,7 @@ function panelPosition(p,r){
         if(s.art==='start')return '<div class="step"><p>'+esc(s.text)+'</p><p class="num">'+wert+'</p>'+(s.detail?'<p class="meta">'+esc(s.detail)+'</p><p></p>':'')+'</div>';
         if(s.art==='ende')return '<div class="step ende"><p>'+esc(s.text)+'</p><p class="num">'+wert+' netto</p></div>';
         return '<div class="step"><p>'+esc(s.text)+'</p><p class="num">'+s.op+' '+esc(R.zahl(R.textAusMikro(s.faktor),6))+' = '+wert+'</p>'+(s.detail?'<p class="meta">'+esc(s.detail)+'</p><p></p>':'')+'</div>';
-      }).join('')+r.hinweise.map(h=>'<p class="meta att" style="margin-top:6px">'+esc({index_fehlt:'Baupreisindex für '+(R.quartalText(kw.kostenstand)||'den Kostenstand')+' oder '+R.quartalText(st.kostenstand)+' fehlt (Quellen).',
+      }).join('')+r.hinweise.filter(h=>h!=='index_vorlaeufig').map(h=>'<p class="meta att" style="margin-top:6px">'+esc({index_fehlt:'Baupreisindex für '+(R.quartalText(kw.kostenstand)||'den Kostenstand')+' oder '+R.quartalText(st.kostenstand)+' fehlt (Quellen).',
         regionalfaktor_fehlt:'Regionalfaktor fehlt (Quellen).',zuschlag_fehlt:'Zuschlag fehlt (Quellen).',nicht_mehr_im_modell:'Diese Menge kam aus Archicad und fehlt im letzten Import.'}[h]||h)+'</p>').join('');
     }
   }
@@ -799,7 +800,7 @@ function poolGruppeHtml(g,p,stat){
   const chips=(g.kopie?'<span class="chip chip-src">gleich in '+g.projekte.length+' Kostenberechnungen</span>':'')+(auff?'<span class="chip chip-att">auffällig</span>':'')+
     (g.nichtInSumme?'<span class="chip chip-mute">nicht in der Summe</span>':'')+(g.abgerechnet?'<span class="chip chip-ok">abgerechnet</span>':'');
   const index=n.gleich?'':n.fehlt?'Stand '+R.quartalText(u.kostenstand)+' · ohne Baupreisindex unverändert':
-    '≈ '+euroEp(n.cent,g.einheit)+' mit dem Baupreisindex '+R.quartalText(u.kostenstand)+' → '+R.quartalText(st.kostenstand);
+    '≈ '+euroEp(n.cent,g.einheit)+' mit dem Baupreisindex '+R.quartalText(u.kostenstand)+' → '+R.quartalText(st.kostenstand)+(n.vorlaeufig?' (Index bis '+R.quartalText(n.vorlaeufig)+')':'');
   const jahre=[...new Set(g.vorkommen.map(e=>String(e.kostenstand).slice(0,4)).filter(Boolean))].sort();
   const kopie=g.kopie?'<p class="meta hinweis">Derselbe Wert in '+g.projekte.length+' Kostenberechnungen'+(jahre.length>1?' ('+jahre[0]+'–'+jahre[jahre.length-1]+')':'')+
     ': vermutlich übernommen, zählt als eine Quelle'+(g.vorkommen.some(e=>e.herkunft==='angebot')?'':', ohne Angebot')+'. Kostenstand ist der des ältesten Vorkommens.</p>':'';
@@ -1017,7 +1018,8 @@ function bericht(){
     (st.annahmen?'<h3>Annahmen und Erläuterungen</h3><p style="white-space:pre-line;font-size:13px">'+esc(st.annahmen)+'</p>':'')+
     (offen.length?'<h3>Offene Punkte</h3><ul style="font-size:13px;margin:0;padding-left:18px">'+offen.map(f=>'<li>'+esc(f.text)+'</li>').join('')+'</ul>':'')+
     '<h3>Quellen</h3>'+(quellen.length?'<ul style="font-size:13px;margin:0;padding-left:18px">'+quellen.map(q=>'<li>'+esc(q)+'</li>').join('')+'</ul>':'<p class="meta">Keine Quellen angegeben.</p>')+
-    (st.indizes?.length?'<p class="meta" style="margin-top:8px">Fortschreibung mit '+esc(st.indexReihe||'Baupreisindex')+'.</p>':'');
+    (st.indizes?.length?'<p class="meta" style="margin-top:8px">Fortschreibung mit '+esc(st.indexReihe||'Baupreisindex')+'.'+
+      (calc.fehlt.some(f=>f.code==='index_vorlaeufig')?' Für '+esc(R.quartalText(st.kostenstand))+' ist noch kein Wert veröffentlicht; fortgeschrieben bis '+esc(R.quartalText(letzterIndex()))+'.':'')+'</p>':'');
 }
 
 // ---------- Import ----------

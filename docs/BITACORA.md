@@ -17,6 +17,19 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-24 · Kostenberechnung: Baupreisindex de Destatis en el Muster y valor provisional para el trimestre sin publicar · Claude
+- Qué cambió y por qué (Gari, 24.11., 05:43: «Baupreisindex, sí agrégalo»): el pool y la Kostenberechnung dejaban los valores antiguos «ohne Baupreisindex unverändert» porque ninguna Kostenberechnung tenía la serie. Además, una Kostenberechnung nueva tiene como Kostenstand el trimestre actual, y Destatis publica unas seis semanas después del mes de referencia: aunque se cargara la serie, el 4.º trimestre de 2026 seguiría «sin índice» hasta enero.
+  - **Datos:** en el Muster, la serie oficial Wohngebäude (Neubau, konventionelle Bauart, inkl. USt, 2021 = 100) del 1.er trimestre de 2021 al 3.er trimestre de 2026, 23 valores (Destatis, Konjunkturindikatoren bpr110, Stand 9.10.2026; meses de referencia febrero, mayo, agosto y noviembre como trimestres 1 a 4), y el nombre de la serie corregido (61261-0002, por trimestres; decía 61261-0001, que es por años).
+  - **Cálculo:** si un Kostenstand cae después del último valor de la serie, se usa ese último valor, como se hace en la práctica, y la Herkunftskette lo dice («4. Quartal 2026 noch nicht veröffentlicht: gerechnet mit dem letzten Wert, 3. Quartal 2026 (141,7)»). En «Was noch fehlt» sale una sola vez como aviso (no como punto abierto) y el Bericht dice hasta qué trimestre se actualizó. Un hueco en la serie o un trimestre anterior a su inicio sigue siendo «index_fehlt», sin valor sustituto.
+  - El pool dice «(Index bis 3. Quartal 2026)» junto al valor actualizado; la Anleitung lo explica.
+- Archivos: `kosten-rechnen.js` (`office5`) y su copia `supabase/functions/office-kosten-ai/kosten-rechnen.js`, `kosten-pool.js` (`office3`), `kostenberechnung.js` (`office9`), `kostenberechnung.html`, `kostenberechnung-hilfe.html`, `tests/office-kostenberechnung.test.mjs`, `tests/office-kosten-pool.test.mjs`, `tests/browser/office-kostenarchiv.chromium.mjs`.
+- Base de datos: solo datos, sin migración (conector de Supabase): `state.indizes` e `indexReihe` del Muster.
+- Deploy de funciones: `office-kosten-ai` (lleva la misma copia del Rechenkern).
+- Cómo se probó: test nuevo del cálculo (trimestre sin publicar, los dos trimestres detrás de la serie, hueco, antes del inicio, valor publicado con prioridad, aviso único como «info»); test del pool; recorrido nuevo en Chromium (pool, Herkunftskette, Übersicht, Bericht); 383 tests unitarios; Chromium Kostenarchiv 5/5, Kostenberechnung 10/10, Produktbibliothek 6/6.
+- Quedó pendiente o sin probar: los valores nuevos se añaden a mano cada trimestre (el siguiente, noviembre 2026, a principios de enero de 2027). Antes de 2021 no hay valores en el Muster; si una fuente es más antigua, se añaden desde GENESIS 61261-0002.
+- Riesgos o decisiones que necesitan a Gari: ninguna; la serie es la de Wohngebäude (para un Bürobau Destatis tiene otra).
+- PR: #144
+
 ### 2026-11-23 · Kostenarchiv: «Auffällig» señala la fila que no estaba en la suma · Claude
 - Qué cambió y por qué: al revisar los datos reales para el informe, 8 de los 9 casos de «Auffällig, bitte prüfen» comparan con una fila que el original no sumaba. En un par, la que se marcaba dependía del orden de la lista, y así la tarjeta podía señalar el valor bueno (un 110 €/m² que sí cuenta, frente a un 11 €/m² fuera de la suma). Además, dos filas iguales de una misma Kostenberechnung hacían que un par saliera dos veces.
   - En un par se marca la fila que no está en la suma; dos filas iguales de una Kostenberechnung cuentan como un valor.

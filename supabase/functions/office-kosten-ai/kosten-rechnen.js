@@ -5,7 +5,11 @@
    eine Summe mit offenen Positionen ist «vorläufig», nie vollständig.
    Neu gegenüber #107: die Herkunftskette eines Kennwerts (Umsatzsteuer, Baupreisindex,
    Regionalfaktor, Zuschlag) als sichtbare Schritte.
-   Die DIN-276-Gliederung kommt aus dem Stand (Muster in der Datenbank), nie aus diesem Code. */
+   Die DIN-276-Gliederung kommt aus dem Stand (Muster in der Datenbank), nie aus diesem Code.
+   24.11.2026: Liegt ein Kostenstand nach dem letzten eingetragenen Baupreisindex, ist sein Wert
+   noch nicht veröffentlicht (Destatis veröffentlicht etwa sechs Wochen nach dem Berichtsmonat).
+   Dann gilt der letzte Wert, wie in der Praxis üblich, und die Kette sagt es («index_vorlaeufig»).
+   Eine Lücke in der Reihe oder ein Quartal vor ihrem Anfang bleibt «index_fehlt». */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -123,12 +127,23 @@ function kennwertKette(kw,state){
   }
   const ziel=state?.kostenstand||'',von=kw.kostenstand||'';
   if(von&&ziel&&von!==ziel&&kw.indexieren!==false){
-    const reihe=new Map((state?.indizes||[]).map(x=>[x.quartal,dezimal(x.wert)]));
-    const alt=reihe.get(von),neu=reihe.get(ziel);
-    if(alt&&neu&&mikro(alt)>0n){
-      const f=durch(mikro(neu),mikro(alt));
+    const reihe=new Map();
+    for(const x of state?.indizes||[]){const w=dezimal(x?.wert);if(quartalIndex(x?.quartal)!==null&&w&&mikro(w)>0n)reihe.set(x.quartal,w)}
+    // Der letzte eingetragene Wert gilt für spätere, noch nicht veröffentlichte Quartale.
+    const letzter=[...reihe.keys()].sort((a,b)=>quartalIndex(a)-quartalIndex(b)).pop()||null;
+    const nimm=q=>reihe.has(q)?q:(letzter&&quartalIndex(q)!==null&&quartalIndex(q)>quartalIndex(letzter)?letzter:null);
+    const qa=nimm(von),qn=nimm(ziel);
+    if(qa&&qn){
+      const f=durch(mikro(reihe.get(qn)),mikro(reihe.get(qa)));
       m=mal(m,f);
-      schritte.push({art:'index',text:'Baupreisindex '+quartalText(von)+' → '+quartalText(ziel),op:'×',faktor:f,ergebnis:m});
+      const offen=[von,ziel].filter((q,i)=>(i?qn:qa)!==q);
+      const schritt={art:'index',text:'Baupreisindex '+quartalText(von)+' → '+quartalText(ziel),op:'×',faktor:f,ergebnis:m};
+      if(offen.length){
+        schritt.vorlaeufig=letzter;
+        schritt.detail=offen.map(quartalText).join(' und ')+' noch nicht veröffentlicht: gerechnet mit dem letzten Wert, '+quartalText(letzter)+' ('+zahl(reihe.get(letzter),1)+')';
+        hinweise.push('index_vorlaeufig');
+      }
+      schritte.push(schritt);
     }else hinweise.push('index_fehlt');
   }
   if(schalter(kw,'regional')){
@@ -305,6 +320,7 @@ const PAARE=Object.freeze([
 ]);
 const HINWEIS_TEXT=Object.freeze({
   index_fehlt:'Baupreisindex für einen Kostenstand fehlt',
+  index_vorlaeufig:'Baupreisindex für den Kostenstand noch nicht veröffentlicht, gerechnet mit dem letzten Wert',
   regionalfaktor_fehlt:'Regionalfaktor fehlt (BKI-Werte sind Bundesdurchschnitt)',
   zuschlag_fehlt:'Zuschlag für Gemeinkosten, Wagnis und Gewinn fehlt',
   nicht_mehr_im_modell:'nicht mehr im Archicad-Modell'
@@ -318,7 +334,7 @@ function fehltText(fehlt){
   if(t.length===1)return t[0]+' fehlt';
   return t.slice(0,-1).join(', ')+' und '+t[t.length-1]+' fehlen';
 }
-const GRUNDLAGE=new Set(['index_fehlt','regionalfaktor_fehlt','zuschlag_fehlt']);
+const GRUNDLAGE=new Set(['index_fehlt','index_vorlaeufig','regionalfaktor_fehlt','zuschlag_fehlt']);
 function wasFehlt(state,e,leer){
   const liste=[],grundlagen=new Map();
   const name=kg=>'KG '+kg+(katalogTitel(state,kg)?' '+katalogTitel(state,kg):'');
@@ -348,7 +364,7 @@ function wasFehlt(state,e,leer){
     }
   }
   // Fehlende Grundlagen (Index, Regionalfaktor, Zuschlag) einmal nennen, mit der Zahl der betroffenen Positionen.
-  for(const [h,n] of grundlagen)liste.push({art:'grundlage',schwere:'hoch',code:h,anzahl:n,
+  for(const [h,n] of grundlagen)liste.push({art:'grundlage',schwere:h==='index_vorlaeufig'?'info':'hoch',code:h,anzahl:n,
     text:HINWEIS_TEXT[h]+': betrifft '+n+(n===1?' Position':' Positionen')});
   const mitWert=new Set(e.positionen.filter(p=>!p.ausgeschlossen&&p.betragCent!==null&&p.status!=='entfaellt').map(p=>p.kg));
   const vorhanden=new Set(e.positionen.filter(p=>!p.ausgeschlossen).map(p=>p.kg));
