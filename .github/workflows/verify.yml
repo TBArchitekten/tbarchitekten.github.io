@@ -9,6 +9,7 @@ on:
       - 'tests/sql/office-kosten-ai-*.sql'
       - 'tests/sql/office-work-*.sql'
       - 'tests/sql/office-produkt*.sql'
+      - 'tests/sql/office-projektdokumente-*.sql'
       - 'tests/office-kostenberechnung.test.mjs'
       - 'tests/office-romy-*.test.mjs'
       - '.github/workflows/verify.yml'
@@ -114,6 +115,11 @@ jobs:
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < tests/sql/office-produktbibliothek-acceptance.sql
+      - name: Verify project documents belong to the project team, keep their history, and Romy never records a decision
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-projektdokumente-rls-acceptance.sql
       - name: Verify no generated fixtures persist in the ephemeral database
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)

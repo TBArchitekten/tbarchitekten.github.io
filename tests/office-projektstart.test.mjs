@@ -25,7 +25,9 @@ const VORLAGEN=['LPH3_1_Projektstartvermerk.docx','LPH3_2_Planliste.xlsx','LPH3_
 test('die Werkzeuge führen zum Projektstart',()=>{
   assert.match(shell,/id="officeToolsStart" aria-label="Projektstart öffnen"/);
   assert.match(shell,/<strong>Projektstart<\/strong><small>[^<]*fünf Bürovorlagen für die LPH 3/);
-  assert.match(projekte,/getElementById\('officeToolsStart'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/projektstart\.html';/);
+  // Seit 24.11.2026 öffnet die Karte die Dokumente des Projekts; das Muster bleibt dieses Blatt («Muster ansehen»).
+  assert.match(projekte,/getElementById\('officeToolsStart'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/projektdokumente\.html';/);
+  assert.match(seite,/<a href="\.\/projektdokumente\.html">Zu den Dokumenten eines Projekts<\/a>/);
   // und zurück: das Blatt liegt neben terminplan-hilfe.html, nicht in der App.
   assert.match(seite,/href="\.\/app\/#section=tools"/);
 });
