@@ -226,9 +226,10 @@ test('Migration: neue Tabellen mit RLS, nichts Destruktives, Verlauf nur durch d
 
 test('Seite, Versionen und öffentliches Repository',()=>{
   const html=read('projektdokumente.html');
-  for(const f of ['projektdokumente.css?v=','projektdokumente-kern.js?v=','projektdokumente-export.js?v=','projektdokumente.js?v='])assert.ok(html.includes(f),'fehlt: '+f);
+  for(const f of ['projektdokumente.css?v=','projektdokumente-kern.js?v=','projektdokumente-export.js?v=','kosten-rechnen.js?v=','kosten-pool.js?v=','projektdokumente-zahlen.js?v=','projektdokumente.js?v='])assert.ok(html.includes(f),'fehlt: '+f);
   const TITEL=/Tragende Außenwände|Nichttragende Außenwände|Außenwandöffnungen|Außenwandbekleidungen|Deckenkonstruktionen|Deckenbeläge|Deckenbekleidungen|Dachkonstruktionen|Dachbeläge|Dachbekleidungen|Baugrube|\bGründung\b|Herrichten und Erschließen|Elementierte Außenwandkonstruktionen/;
-  const dateien=['projektdokumente.html','projektdokumente.js','projektdokumente-kern.js','projektdokumente-export.js','projektdokumente.css',
+  const dateien=['projektdokumente.html','projektdokumente.js','projektdokumente-kern.js','projektdokumente-export.js','projektdokumente-zahlen.js','projektdokumente.css',
+    'tests/office-projektdokumente-zahlen.test.mjs','supabase/functions/office-dokumente-ai/core.mjs','supabase/functions/office-dokumente-ai/index.ts',
     'supabase/migrations/20261124065338_office_projektdokumente_v1.sql','tests/sql/office-projektdokumente-rls-acceptance.sql',
     'tests/browser/office-projektdokumente.chromium.mjs','tests/browser/fixtures/fake-supabase-dokumente.js'];
   for(const name of dateien){

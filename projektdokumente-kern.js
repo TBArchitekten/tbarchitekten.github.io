@@ -5,7 +5,9 @@
    gleichzeitiger Bearbeitung und der Inhalt einer Entscheidungsvorlage (Aufbau wie LPH3_5_Entscheidungsvorlage.docx).
    Gelernt von Programmen mit KI (Recherche vom 24.11.2026): Spalten mit Typ und berechneten Werten (Google Tables),
    Vorschläge mit Fundstelle, die erst gelten, wenn jemand sie übernimmt (Canvas, Tiptap), Verlauf je Zeile (Copilot).
-   Romy schlägt nie eine Entscheidung vor; das prüft auch die Datenbank. */
+   Romy schlägt nie eine Entscheidung vor; das prüft auch die Datenbank.
+   Seit dem zweiten Schritt (24.11.2026): Varianten mit Produkt, Kennwert und Menge aus dem Office, jede Zahl mit Fundstelle
+   für das Büro und Beleg für das Dokument; ein Vorschlag ändert an den Varianten nur, was er nennt (optionenZusammen). */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -136,7 +138,11 @@ function euro(c,{einheit=true}={}){
 const FELDER={klaerungsliste:['runde','erfasst_am','disziplinen','ort','plan','sachverhalt','loesung','verantwortlich','frist','status','ag','folgen','erledigt_am','protokoll','aufgabe_id','entscheidung_id','fundstelle'],
   entscheidungsliste:['herkunft','herkunft_ref','thema','frage','anlass','gesichert','angenommen','optionen','empfehlung','begruendung','festliegt','wenn_spaeter','kostenbezug','bis','vorgelegt_am','entschieden_am','entscheidung','entscheider','annahme','bestaetigt_am','status','vorlage_id','fundstelle'],
   entscheidungsvorlagen:['titel','punkte','auftraggeber','besprechung','besprechung_am','verfasser','freigabe','status','vorgelegt_am','weitergegeben']};
-const OPTION_FELDER=['id','text','produkt','kennwert','menge','betrag','quelle','kosten','termine','qualitaet','genehmigung'];
+// Je Variante: Beschreibung, Zahlen und Folgen. Zu Kennwert und Menge gehören die Fundstelle (für das Büro) und der Beleg
+// (für das Dokument an den Auftraggeber, ohne andere Projekte); produkt_id und kobe_ref verweisen auf Produktbibliothek
+// und Kostenberechnung (projektdokumente-zahlen.js). «quelle» bleibt für eine Angabe von Hand.
+const OPTION_FELDER=['id','text','produkt','produkt_id','kennwert','kennwert_quelle','kennwert_beleg','menge','menge_quelle','menge_beleg','kobe_ref',
+  'betrag','quelle','kosten','termine','qualitaet','genehmigung'];
 function leereZeile(art,{heute=heuteIso(),runde=''}={}){
   if(art==='klaerungsliste')return {runde:runde||'',erfasst_am:heute,disziplinen:[],ort:'',plan:'',sachverhalt:'',loesung:'',verantwortlich:'',frist:'',status:'offen',ag:'nein',folgen:'',erledigt_am:'',protokoll:''};
   if(art==='entscheidungsliste')return {herkunft:'',thema:'',frage:'',optionen:[{id:'A',text:''},{id:'B',text:''}],empfehlung:'',begruendung:'',festliegt:'',bis:'',status:'vorbereitet'};
@@ -157,6 +163,33 @@ function ueberfaellig(art,d,heute=heuteIso()){
 }
 function istEntscheidungspunkt(d){return d?.ag==='ja'||d?.status==='Entscheidungspunkt'}
 function ohneBestaetigung(d){return d?.status==='entschieden'&&!gueltigIso(d?.bestaetigt_am)}
+// Ein Vorschlag ändert an den Varianten nur, was er nennt: je Variante zusammengeführt, die übrigen bleiben.
+function optionenZusammen(alt,neu){
+  const liste=(Array.isArray(alt)?alt:[]).filter(o=>o&&typeof o==='object').map(o=>({...o}));
+  for(const o of Array.isArray(neu)?neu:[]){
+    if(!o||typeof o!=='object'||!s(o.id))continue;
+    const i=liste.findIndex(x=>s(x.id)===s(o.id));
+    if(i>=0)liste[i]={...liste[i],...o};else liste.push({...o});
+  }
+  return liste;
+}
+const OPTION_ANZEIGE=[['text','Beschreibung'],['produkt','Produkt'],['kennwert','Kennwert'],['menge','Menge'],['betrag','Betrag'],
+  ['kosten','Kosten'],['termine','Termine'],['qualitaet','Qualität'],['genehmigung','Genehmigung']];
+function optionenAenderung(alt,neu){
+  const vorher=new Map(optionen({optionen:alt}).map(o=>[s(o.id),o]));
+  return optionen({optionen:neu}).map(o=>{
+    const a=vorher.get(s(o.id))||{};
+    const teile=OPTION_ANZEIGE.filter(([k])=>k in o&&s(o[k])!==s(a[k])).map(([k,l])=>l+' '+(kurz(s(a[k]),40)||'–')+' → '+(kurz(s(o[k]),40)||'–'));
+    return teile.length?o.id+': '+teile.join(', '):'';
+  }).filter(Boolean).join(' · ')||'keine Änderung';
+}
+// Beleg der Zahlen für das Dokument; die Fundstellen (mit Projekt und Zeile) bleiben im Büro.
+function belegText(o){
+  return [s(o?.kennwert_beleg).trim()&&'Kennwert: '+s(o.kennwert_beleg).trim(),s(o?.menge_beleg).trim()&&'Menge: '+s(o.menge_beleg).trim(),s(o?.quelle).trim()].filter(Boolean).join('; ');
+}
+function fundstellenText(o){
+  return [s(o?.kennwert_quelle).trim()&&'Kennwert: '+s(o.kennwert_quelle).trim(),s(o?.menge_quelle).trim()&&'Menge: '+s(o.menge_quelle).trim(),s(o?.quelle).trim()].filter(Boolean).join(' · ');
+}
 function optionenText(d){return optionen(d).filter(o=>s(o.text).trim()).map(o=>o.id+': '+s(o.text).trim()).join(' · ')}
 function folgenText(d){
   return optionen(d).map(o=>{
@@ -348,6 +381,7 @@ function wortDiff(alt,neu){
 // Was ein übernommener Vorschlag an einer Zeile ändert, in Worten («Frist: 28.11. → 06.12.»).
 function aenderungText(art,alt,daten,heute=heuteIso()){
   return Object.keys(daten||{}).filter(k=>!k.startsWith('_')).map(k=>{
+    if(k==='optionen')return 'Varianten: '+optionenAenderung(alt?.optionen,daten.optionen);
     const sp=(SPALTEN[art]||[]).find(x=>x.key===k);
     const zeige=d=>sp?.typ==='datum'?datumKurz(d?.[k],heute):zellText(art,k,d||{},{heute});
     return feldName(art,k)+': '+(kurz(zeige(alt),60)||'–')+' → '+(kurz(zeige(daten),60)||'–');
@@ -426,14 +460,14 @@ function vorlageBloecke(inhalt){
     const opts=x.optionen.filter(o=>p(o.text));
     b.push({typ:'h2',text:n+'3 · Varianten und Kosten'});
     if(opts.length){
-      b.push({typ:'tabelle',kopf:['Variante','Produkt','Kennwert netto','Menge','Betrag netto'],breiten:[34,18,16,12,20],rechts:[2,3,4],
+      b.push({typ:'tabelle',varianten:x.id,ids:opts.map(o=>o.id),kopf:['Variante','Produkt','Kennwert netto','Menge','Betrag netto'],breiten:[34,18,16,12,20],rechts:[2,3,4],
         zeilen:opts.map(o=>[o.id+' · '+p(o.text),p(o.produkt),p(o.kennwert),p(o.menge),o.betragCent===null?'':euro(BigInt(o.betragCent))+(o.betragBerechnet?' *':'')])});
       if(opts.some(o=>o.betragBerechnet))b.push({typ:'klein',text:'* Kennwert × Menge'});
       for(const m of x.mehrkosten){
         const netto=BigInt(m.netto),brutto=BigInt(m.brutto);
         b.push({typ:'p',text:(netto>=0n?'Mehrkosten ':'Minderkosten ')+m.id+' gegenüber '+m.gegenueber+': '+euro(netto<0n?-netto:netto)+' netto ('+euro(brutto<0n?-brutto:brutto)+' brutto)'+(p(x.kostenbezug)?', '+p(x.kostenbezug):'')+'.'});
       }
-      const quellen=opts.filter(o=>p(o.quelle)).map(o=>o.id+': '+p(o.quelle));
+      const quellen=opts.filter(o=>belegText(o)).map(o=>o.id+': '+belegText(o));
       if(quellen.length)b.push({typ:'klein',text:'Quellen: '+quellen.join(' · ')});
     }else b.push({typ:'p',text:'[Varianten ergänzen]'});
     b.push({typ:'h2',text:n+'4 · Folgen je Variante'});
@@ -465,5 +499,6 @@ return Object.freeze({DISZIPLINEN,RUNDEN,STATUS_KLAERUNG,STATUS_ENTSCHEIDUNG,JA_
   kurz,gueltigIso,heuteIso,leseDatum,datumKurz,datumLang,excelTag,leseZahl,euro,leereZeile,optionen,naechsteOptionId,erledigt,ueberfaellig,
   istEntscheidungspunkt,ohneBestaetigung,optionenText,folgenText,empfehlungText,nummer,zellText,feldName,zaehle,zusammenfassung,passt,filtere,
   zaehleFilter,wartendeEntscheidungspunkte,entscheidungAusKlaerung,aufgabeAusKlaerung,zusammenfuehren,geaenderteFelder,vorschlagErlaubt,
-  ohneEntscheidung,pruefe,wortDiff,aenderungText,betragVon,mehrkosten,vorlageInhalt,vorlageBloecke});
+  ohneEntscheidung,pruefe,wortDiff,aenderungText,betragVon,mehrkosten,vorlageInhalt,vorlageBloecke,optionenZusammen,optionenAenderung,
+  belegText,fundstellenText});
 });

@@ -3,8 +3,8 @@
 // darf, bekommt nichts), jede Anfrage vor dem bezahlten Modellaufruf zählen, Antwort nach festem Schema prüfen.
 // Die Funktion schreibt nichts: Vorschläge speichert der Client als Vorschlag, gelten tun sie erst nach «Übernehmen».
 import {createClient} from "npm:@supabase/supabase-js@2.57.0";
-import {MODEL,VERSION,AUFGABEN,TEXTFELDER,GRENZE,schemaVorschlaege,SCHEMA_TEXT,SCHEMA_FELDTEXT,anweisungen,
-  pruefeVorschlaege,pruefeText,pruefeFeldtext,kurzZeilen,termineAusPlaenen} from "./core.mjs";
+import {MODEL,VERSION,AUFGABEN,TEXTFELDER,GRENZE,schemaVorschlaege,SCHEMA_TEXT,SCHEMA_FELDTEXT,SCHEMA_ZAHLEN,anweisungen,
+  pruefeVorschlaege,pruefeText,pruefeFeldtext,pruefeZahlen,kandidatenPruefen,kurzZeilen,termineAusPlaenen} from "./core.mjs";
 import {normalizePlanAttachments} from "../office-terminplan-ai/attachments.mjs";
 
 const ORIGIN="https://tbarchitekten.github.io";
@@ -54,7 +54,7 @@ Deno.serve(async req=>{
     input=JSON.parse(raw);
   }catch{return respond(400,{error:"invalid_json"})}
   const action=input?.action;
-  if(!["status","vorschlaege","auswahl","text"].includes(action))return respond(400,{error:"invalid_request"});
+  if(!["status","vorschlaege","auswahl","text","zahlen"].includes(action))return respond(400,{error:"invalid_request"});
   const {data:member,error:memberError}=await sb.from("office_members")
     .select("role,is_active").eq("user_id",auth.user.id).eq("is_active",true).maybeSingle();
   if(memberError||!member)return respond(403,{error:"not_an_office_member"});
@@ -117,6 +117,23 @@ Deno.serve(async req=>{
       quelle="Terminplan";
     }else{schema=SCHEMA_TEXT;pruefe=a=>pruefeText(a)}
     teile=[{type:"input_text",text:JSON.stringify(nutzlast)}];
+  }else if(action==="zahlen"){
+    // Zahlen der Varianten: Romy wählt nur Verweise aus den Kandidaten des Clients; die Zeile kommt aus der Datenbank.
+    if(art!=="entscheidungsliste")return respond(400,{error:"invalid_document"});
+    // deno-lint-ignore no-explicit-any
+    const z=alle.find((x:any)=>x.id===String(input.zeile_id||""));
+    if(!z)return respond(400,{error:"rows_required"});
+    // deno-lint-ignore no-explicit-any
+    const optionen=(Array.isArray(z.daten?.optionen)?z.daten.optionen:[]).filter((o:any)=>String(o?.text||"").trim())
+      // deno-lint-ignore no-explicit-any
+      .map((o:any)=>({id:String(o.id||""),text:text(o.text,300),produkt:text(o.produkt,200),kennwert:text(o.kennwert,40),menge:text(o.menge,40)}));
+    if(!optionen.length)return respond(400,{error:"options_required"});
+    const kandidaten=kandidatenPruefen(input.kandidaten);
+    if(!kandidaten.produkte.length&&!kandidaten.pool.length&&!kandidaten.kobe.length)return respond(400,{error:"candidates_required"});
+    aufgabe="zahlen";schema=SCHEMA_ZAHLEN;quelle="Zahlen aus dem Office";
+    teile=[{type:"input_text",text:JSON.stringify({...kopf,kostenstand:text(input.kostenstand,10),entscheidung:{...kurzZeilen(art,[z])[0],optionen},kandidaten})}];
+    // deno-lint-ignore no-explicit-any
+    pruefe=a=>pruefeZahlen(a,{kandidaten,ids:optionen.map((o:any)=>o.id)});
   }else{
     // Einen Abschnitt einer Entscheidungsvorlage neu formulieren.
     if(art!=="entscheidungsliste")return respond(400,{error:"invalid_document"});
