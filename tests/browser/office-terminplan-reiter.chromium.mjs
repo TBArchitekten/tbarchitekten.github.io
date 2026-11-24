@@ -67,7 +67,9 @@ test('Terminplan im Rahmen: Sitzung über die App, kein Rücksprung-Link, Revisi
   const {ctx,page,fehler,rahmen}=await oeffne('/terminplan.html?id=tp-1');
   try{
     const f=page.frameLocator('#f');
-    await f.locator('#officePlanLabel',{hasText:'Testhaus'}).waitFor();
+    // Im Reiter steht das Projekt schon in Work: die Kopfzeile nennt nur die Phase.
+    await f.locator('#officePlanLabel',{hasText:'LPH3'}).waitFor();
+    assert.equal(await f.locator('#officePlanLabel').textContent(),'LPH3');
     await page.waitForFunction(()=>window.__bruecke.includes('session.get'));
     assert.deepEqual(await rahmen().evaluate(()=>[document.documentElement.classList.contains('im-reiter'),!!window.WINDOW_NATIVE?.available]),[true,true]);
     assert.equal(await f.locator('#officeBack').evaluate(a=>getComputedStyle(a).display),'none');

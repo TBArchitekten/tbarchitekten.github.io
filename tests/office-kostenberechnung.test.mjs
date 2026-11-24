@@ -161,7 +161,7 @@ test('3. Ebene: jede Kostengruppe hat einen Stand, «vorläufig» bis alle gekl�
   assert.equal(e.gesamt.bekanntCent,600000n);
   assert.equal(e.knoten.get('330').zuKlaeren,1);assert.equal(e.knoten.get('330').status,'offen');
   assert.equal(e.knoten.get('340').status,'entfaellt');assert.equal(e.knoten.get('410').status,'vollstaendig');
-  assert.deepEqual(e.vollstaendigkeit,{erledigt:7,gesamt:10,prozent:70,nachKg:true});
+  assert.deepEqual(e.vollstaendigkeit,{erledigt:7,gesamt:10,prozent:70,nachKg:true,vorbelegt:0});
   assert.equal(e.gesamt.vollstaendig,false);assert.equal(e.gesamt.ohneAnsatz,3);
   // Offene Kostengruppen einmal je Eltern-KG, mit ihren Nummern.
   const leer=e.fehlt.filter(f=>f.art==='leer');
@@ -181,6 +181,40 @@ test('3. Ebene: jede Kostengruppe hat einen Stand, «vorläufig» bis alle gekl�
   assert.equal(e.blaetter.get('411'),'vollstaendig');
   assert.deepEqual(R.kette('331'),['300','330','331']);
   assert.ok(R.liegtUnter('331','300')&&R.liegtUnter('331','330')&&!R.liegtUnter('341','330')&&!R.liegtUnter('330','330'));
+});
+
+test('Vom Muster vorbelegtes «entfällt» zählt nicht als geklärt, bis man es bearbeitet oder bestätigt',()=>{
+  // Gari, 24.11.2026: eine neue Kostenberechnung zeigte 14 % Vollständigkeit, ohne dass etwas geklärt war.
+  const katalog=[['100','A'],['110','A1'],['111','a'],['112','b'],['300','B'],['330','B3'],['331','c'],['332','d'],['370','B7'],['371','e'],['379','So',true]]
+    .map(([kg,titel,optional])=>({kg,titel,...(optional?{optional}:{})}));
+  const neu=()=>({schema:R.SCHEMA,ustProzent:'19',katalog,positionen:[],
+    gruppen:{'100':{status:'entfaellt',notiz:'trägt der Bauherr',vorbelegt:true},'370':{status:'entfaellt',notiz:'im Hochbau selten',vorbelegt:true}}});
+  let e=R.berechne(neu());
+  assert.deepEqual(e.vollstaendigkeit,{erledigt:0,gesamt:2,prozent:0,nachKg:true,vorbelegt:4},'neu: 0 %, die Vorbelegung zählt nicht');
+  assert.equal(e.knoten.get('110').status,'entfaellt','die Unter-KG entfällt weiter mit');
+  assert.equal(e.knoten.get('370').status,'entfaellt');
+  assert.deepEqual([e.knoten.get('300').kgGesamt,e.knoten.get('300').vorbelegt],[2,2]);
+  assert.equal(e.knoten.get('371').vorbelegt,1);
+  // Bestätigt (oder bearbeitet): die KG ist für das Projekt entschieden und zählt als geklärt.
+  const st=neu();st.gruppen['370'].vorbelegt=false;
+  e=R.berechne(st);
+  assert.deepEqual(e.vollstaendigkeit,{erledigt:2,gesamt:4,prozent:50,nachKg:true,vorbelegt:2});
+  // Eine eigene Entscheidung unter einer Vorbelegung zählt ebenfalls.
+  const st2=neu();st2.gruppen['111']={status:'entfaellt',notiz:'hier eigens'};
+  assert.equal(R.berechne(st2).vollstaendigkeit.erledigt,1);
+  // Die Seite: Marke beim Anlegen, beim Laden für ältere (wie im Muster), Bestätigen und Bearbeiten heben sie auf.
+  assert.match(ui,/for\(const g of Object\.values\(state\.gruppen\|\|\{\}\)\)if\(g\?\.status==='entfaellt'\)g\.vorbelegt=true;/);
+  assert.match(ui,/if\(g&&g\.vorbelegt===undefined&&g\.status==='entfaellt'&&m\?\.status==='entfaellt'&&String\(m\.notiz\|\|''\)===String\(g\.notiz\|\|''\)\)g\.vorbelegt=true;/);
+  assert.match(ui,/if\(act==='kg-bestaetigen'\)\{const g=st\.gruppen\?\.\[d\.kg\];if\(g\)\{g\.vorbelegt=false;geaendert\(\);render\(\)\}return\}/);
+  assert.match(ui,/if\(st\.gruppen\[kg\]\.vorbelegt\)st\.gruppen\[kg\]\.vorbelegt=false;/);
+  assert.match(ui,/weitere vom Muster als «entfällt» vorbelegt, nicht mitgezählt\./);
+});
+
+test('Kostenstand: wählbar bis zum laufenden Quartal, nicht in die Zukunft; ohne Index ein Hinweis',()=>{
+  assert.match(ui,/for\(let j=j0;j>=2018;j--\)for\(let q=4;q>=1;q--\)if\(j<j0\|\|q<=q0\)aus\.push\(j\+'-Q'\+q\);/);
+  assert.match(ui,/if\(mit&&R\.quartalIndex\(mit\)!==null&&!aus\.includes\(mit\)\)aus\.unshift\(mit\);/);
+  assert.match(ui,/' · Index noch nicht veröffentlicht'/);
+  assert.match(ui,/'Zeitpunkt der Ermittlung \(DIN 276\), höchstens das laufende Quartal\.'/);
 });
 
 test('die Seite zeigt jede Kostengruppe der Gliederung, nicht nur solche mit Positionen',()=>{
@@ -294,8 +328,8 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<html lang="de">/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office4','./kosten-rechnen.js?v=office5',
-    './kosten-import.js?v=office3','./kosten-assistent.js?v=office4','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office12','./kostenberechnung.css?v=office9',
+  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office4','./kosten-rechnen.js?v=office6',
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office4','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office13','./kostenberechnung.css?v=office10',
     './assistant-surface.css?v=office38','./assistant-window.js?v=1'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&

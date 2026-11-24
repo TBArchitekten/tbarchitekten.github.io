@@ -16,9 +16,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .kb{min-height:100vh;padding:26px clamp(14px,2.2vw,36px) 90px}
 .kb-wrap{max-width:2400px;margin:0 auto}
 .kb-back{display:inline-flex;align-items:center;min-height:44px;color:#657080;font-size:15px;margin-bottom:12px}
-/* Als Reiter in Work (Rahmen): ohne Rücksprung-Link, weniger Rand oben; Work zeigt schon Projekt und Reiter. */
-.im-reiter .kb-back{display:none}
-.im-reiter .kb{padding-top:18px}
+/* Als Reiter in Work (Rahmen): ohne Rücksprung-Link, ohne «Office · Kostenberechnung» und ohne den Projektnamen als
+   Überschrift (Gari, 24.11.2026: Work zeigt Projekt und Reiter schon); die Zeile mit LPH, Norm und Kostenstand bleibt. */
+.im-reiter .kb-back,.im-reiter .kb-head .kicker,.im-reiter .kb-head h1{display:none}
+.im-reiter .kb{padding-top:14px}
+.im-reiter .kb-head{align-items:center}
 .kb-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:16px}
 .kb-head-text{flex:1 1 520px;min-width:0}
 .kicker{font-size:12px;letter-spacing:.14em;color:var(--kb-kicker);font-weight:700;margin:0;text-transform:uppercase}
@@ -250,7 +252,7 @@ select.ci{padding:4px 2px}
 .form{display:grid;gap:12px}
 .form .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .form .three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.feld{display:grid;gap:5px;font-size:12px;color:var(--kb-meta);font-weight:600}
+.feld{display:grid;gap:5px;font-size:12px;color:var(--kb-meta);font-weight:600;align-content:start}
 .feld input,.feld select,.feld textarea{font-size:15px;font-weight:400;color:var(--kb-ink);border:1px solid #d9dfe5;border-radius:10px;padding:9px 11px;background:#fff;min-height:42px;width:100%}
 .feld textarea{min-height:110px;resize:vertical;line-height:1.5}
 .feld input:focus,.feld select:focus,.feld textarea:focus{outline:2px solid #b9c9dd;outline-offset:0;border-color:#9fb3cc}
@@ -385,3 +387,7 @@ select.ci{padding:4px 2px}
 .pool-vork li{padding:6px 0;border-top:1px dashed var(--kb-line-soft)}
 .pool-vork li:first-child{border-top:0}
 .pool-gruppe .btn-primary{margin:4px 0 6px}
+/* Vom Muster vorbelegt (24.11.2026): Hinweis unter der Begründung, mit «für dieses Projekt bestätigen». */
+.vorbelegt{display:block;margin-top:4px;font-size:12px}
+button.link{all:unset;cursor:pointer;color:var(--kb-link);text-decoration:underline;text-underline-offset:2px}
+button.link:focus-visible{outline:2px solid var(--kb-link);outline-offset:2px}

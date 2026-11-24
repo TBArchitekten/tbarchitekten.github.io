@@ -70,9 +70,9 @@
     return {data:vorschlagStandard(body),error:null};
   }
   function builder(table){
-    const filter=[];let op='select',daten=null,einzeln=false,zurueck=false,sort=null,grenze=null;
+    const filter=[];let op='select',daten=null,einzeln=false,zurueck=false,sort=null,grenze=null,spalten='';
     const q={
-      select(){if(op!=='select')zurueck=true;return q},
+      select(s){if(op!=='select')zurueck=true;else spalten=String(s||'');return q},
       eq(c,v){filter.push(r=>String(r[c])===String(v));return q},
       order(c,o){sort=[c,o?.ascending!==false];return q},
       limit(n){grenze=n;return q},
@@ -100,7 +100,11 @@
       if(op==='delete'){db[table]=zeilen.filter(r=>!treffer.includes(r));sichern();return {data:null,error:null}}
       if(sort)treffer=[...treffer].sort((a,b)=>(String(a[sort[0]])<String(b[sort[0]])?-1:String(a[sort[0]])>String(b[sort[0]])?1:0)*(sort[1]?1:-1));
       if(grenze)treffer=treffer.slice(0,grenze);
-      return {data:einzeln?(treffer[0]?kopie(treffer[0]):null):kopie(treffer),error:null};
+      // «alias:spalte->schlüssel» wie PostgREST (etwa gruppen:state->gruppen); sonst ganze Zeilen.
+      const projiziere=r=>{if(!spalten.includes('->'))return r;const o={};
+        for(const teil of spalten.split(',').map(x=>x.trim())){const m=teil.match(/^(\w+):(\w+)->(\w+)$/);if(m)o[m[1]]=r[m[2]]?.[m[3]];else o[teil]=r[teil]}
+        return o};
+      return {data:einzeln?(treffer[0]?kopie(projiziere(treffer[0])):null):kopie(treffer.map(projiziere)),error:null};
     }
     return q;
   }

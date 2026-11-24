@@ -40,13 +40,15 @@ test('Werkzeugseiten im Rahmen: ohne Rücksprung, nie die App im Rahmen, Revisio
   const marke="<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>";
   assert.ok(tp.includes(marke)&&kbHtml.includes(marke));
   assert.match(tp,/html\.im-reiter #officeBack\{display:none\}/);
-  assert.match(kbCss,/\.im-reiter \.kb-back\{display:none\}/);
+  // Im Reiter auch ohne «Office · Kostenberechnung» und ohne den Projektnamen als Überschrift (Gari, 24.11.2026).
+  assert.match(kbCss,/\.im-reiter \.kb-back,\.im-reiter \.kb-head \.kicker,\.im-reiter \.kb-head h1\{display:none\}/);
+  assert.match(tp,/\$\('#officePlanLabel'\)\.textContent=IN_WORK&&phase\?phase:\[title,phase\]\.filter\(Boolean\)\.join\(' · '\);/);
   assert.match(tp,/window\.TBA_OFFICE_TOOL=Object\.freeze\(\{\n\s*kind:'terminplan',\n\s*revision:\(\)=>serverRevision,\n\s*pending:\(\)=>!!\(pendingSave\|\|inFlightSave\),/);
   assert.match(kb,/window\.TBA_OFFICE_TOOL=Object\.freeze\(\{kind:'kosten',revision:\(\)=>serverRevision,pending:\(\)=>ausstehend\|\|laeuft,flush:\(\)=>speichernJetzt\(\)\}\)/);
   assert.match(kb,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
   assert.match(kb,/if\(IM_REITER\)dialog\.addEventListener\('close',\(\)=>\{if\(!angelegt\)window\.parent\.postMessage\(\{tbaOfficeTool:'abgebrochen'\},location\.origin\)\},\{once:true\}\)/);
-  assert.match(kbHtml,/kostenberechnung\.css\?v=office9/);
-  assert.match(kbHtml,/kostenberechnung\.js\?v=office12/);
+  assert.match(kbHtml,/kostenberechnung\.css\?v=office10/);
+  assert.match(kbHtml,/kostenberechnung\.js\?v=office13/);
 });
 
 test('Im Rahmen leiht die Seite die Brücke der App (die App nimmt nur den Hauptrahmen an)',()=>{

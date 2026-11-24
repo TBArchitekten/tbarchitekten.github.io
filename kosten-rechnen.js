@@ -217,6 +217,10 @@ function berechne(state){
   const knotenFuer=kg=>{if(!knoten.has(kg))knoten.set(kg,{kg,ebene:ebene(kg),bekanntCent:0n,offen:0,anzahl:0,entfaellt:0,direkt:0,herkunft:{}});return knoten.get(kg)};
   for(const k of katalog)knotenFuer(k.kg);
   const entfaelltMarkiert=kg=>kette(kg).some(x=>markiert[x]?.status==='entfaellt');
+  // Vom Muster vorbelegt und unverändert (24.11.2026; Gari: eine neue Kostenberechnung zeigte 14 % geklärt, ohne dass
+  // etwas geklärt war): ein solches «entfällt» zählt in der Vollständigkeit nicht mit, weder geklärt noch zu klären.
+  // Wer die Kostengruppe bearbeitet oder bestätigt, entscheidet sie für das Projekt; dann zählt sie.
+  const vorbelegtMarkiert=kg=>{const m=kette(kg).filter(x=>markiert[x]?.status==='entfaellt');return m.length>0&&m.every(x=>markiert[x].vorbelegt===true)};
   const positionen=[];
   let bekannt=0n,offenPos=0,anzahl=0;
   const herkunft={};
@@ -262,19 +266,22 @@ function berechne(state){
     else s=optional.has(k.kg)?'frei':'leer';
     blaetter.set(k.kg,s);
   }
-  const zaehle=s=>s==='frei'?[0,0,0]:(s==='leer'||s==='offen')?[1,0,1]:[1,1,0]; // [zählt, geklärt, zu klären]
+  const vorbelegt=new Set([...blaetter].filter(([kg,s])=>s==='entfaellt'&&vorbelegtMarkiert(kg)).map(([kg])=>kg));
+  const zaehle=(s,kg)=>s==='frei'||vorbelegt.has(kg)?[0,0,0]:(s==='leer'||s==='offen')?[1,0,1]:[1,1,0]; // [zählt, geklärt, zu klären]
   for(const n of knoten.values()){
     if(blaetter.has(n.kg)){
-      const [g,k,z]=zaehle(blaetter.get(n.kg));n.blatt=true;n.status=blaetter.get(n.kg);n.kgGesamt=g;n.geklaert=k;n.zuKlaeren=z;continue;
+      const [g,k,z]=zaehle(blaetter.get(n.kg),n.kg);n.blatt=true;n.status=blaetter.get(n.kg);n.kgGesamt=g;n.geklaert=k;n.zuKlaeren=z;
+      n.vorbelegt=vorbelegt.has(n.kg)?1:0;continue;
     }
-    let g=0,k=0,z=0,entf=0;
-    for(const [b,s] of blaetter){if(!liegtUnter(b,n.kg))continue;const [a,c,d]=zaehle(s);g+=a;k+=c;z+=d;if(s==='entfaellt')entf++}
-    n.blatt=false;n.kgGesamt=g;n.geklaert=k;n.zuKlaeren=z;
-    n.status=markiert[n.kg]?.status==='entfaellt'||(g>0&&entf===g)?'entfaellt':(z||n.offen?'offen':(g||n.anzahl?'vollstaendig':'leer'));
+    let g=0,k=0,z=0,entf=0,alle=0,vb=0;
+    for(const [b,s] of blaetter){if(!liegtUnter(b,n.kg))continue;const [a,c,d]=zaehle(s,b);g+=a;k+=c;z+=d;
+      if(s!=='frei')alle++;if(s==='entfaellt')entf++;if(vorbelegt.has(b))vb++}
+    n.blatt=false;n.kgGesamt=g;n.geklaert=k;n.zuKlaeren=z;n.vorbelegt=vb;
+    n.status=markiert[n.kg]?.status==='entfaellt'||(alle>0&&entf===alle)?'entfaellt':(z||n.offen?'offen':(g||n.anzahl?'vollstaendig':'leer'));
   }
   const leer=[...blaetter].filter(([,s])=>s==='leer').map(([kg])=>kg);
   let geklaert=0,zuKlaeren=0;
-  for(const s of blaetter.values()){const [,k,z]=zaehle(s);geklaert+=k;zuKlaeren+=z}
+  for(const [b,s] of blaetter){const [,k,z]=zaehle(s,b);geklaert+=k;zuKlaeren+=z}
   const vollstaendig=offenPos===0&&zuKlaeren===0&&(anzahl>0||geklaert>0);
   const ust=mikro(dezimal(state.ustProzent)??'19');
   const ustCent=teile(bekannt*ust,100n*MIKRO);
@@ -302,7 +309,7 @@ function berechne(state){
     positionen,knoten,blaetter,elemente,gewerke,
     gesamt:{bekanntCent:bekannt,gesamtCent:vollstaendig?bekannt:null,offen:offenPos+leer.length,offenePositionen:offenPos,ohneAnsatz:leer.length,anzahl,vollstaendig},
     ustCent,bruttoCent:bekannt+ustCent,
-    vollstaendigkeit:{erledigt,gesamt:gesamtZahl,prozent:gesamtZahl?Math.floor(erledigt*100/gesamtZahl):0,nachKg:blaetter.size>0},
+    vollstaendigkeit:{erledigt,gesamt:gesamtZahl,prozent:gesamtZahl?Math.floor(erledigt*100/gesamtZahl):0,nachKg:blaetter.size>0,vorbelegt:vorbelegt.size},
     kennzahlen:{bauwerkCent:bauwerk,jeBGF:je(bauwerk,bezug('BGF')),jeBRI:je(bauwerk,bezug('BRI'))},
     herkunft,
     vergleich,ksSummeCent:ksSumme,deltaSummeCent:ksSumme===null?null:bekannt-ksSumme,
