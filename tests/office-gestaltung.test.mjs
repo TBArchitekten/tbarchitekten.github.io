@@ -9,7 +9,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const tokens=read('shared/minds-design-tokens.css');
 const SEITEN=['index.html','app/index.html','app/live/index.html','terminplan.html','terminplan-hilfe.html','kostenberechnung.html',
-  'kostenberechnung-hilfe.html','projektdokumente.html','produktbibliothek.html','projektstart.html','oauth-consent.html'];
+  'kostenberechnung-hilfe.html','projektdokumente.html','produktbibliothek.html','herstellerkatalog.html','projektstart.html','oauth-consent.html'];
 // live.css ist die gepinnte Kopie aus Window (docs/sync-window-app-manifest.json) und bleibt unverändert.
 const GEPINNT=new Set(JSON.parse(read('docs/sync-window-app-manifest.json')).files.map(f=>f.target));
 const css=[...readdirSync(new URL('../',import.meta.url)).filter(f=>f.endsWith('.css')),

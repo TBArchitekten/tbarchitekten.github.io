@@ -1,0 +1,17 @@
+/* TBA Office · Herstellerkatalog (24.11.2026, Claude). Gleiche Gestalt wie die Produktbibliothek (deren Stile lädt
+   die Seite); hier nur die Karten ohne Musterfläche und der Kontaktblock. Farben aus shared/minds-design-tokens.css. */
+.hk-karte{padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.hk-karte h2{margin:0;font-size:17px;line-height:1.3;letter-spacing:-.01em}
+.hk-karte h2 a{color:var(--m-ink);text-decoration:none}
+.hk-karte h2 a:hover{color:var(--m-link)}
+.hk-karte .meta{margin:0}
+.hk-produkte{margin:0;font-size:14px;line-height:1.45;color:var(--m-ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hk-kontakt{margin:0;display:grid;gap:6px;font-size:13px;line-height:1.4}
+.hk-kontakt div{display:grid;grid-template-columns:104px minmax(0,1fr);gap:8px}
+.hk-kontakt dt{color:var(--m-ink-soft)}
+.hk-kontakt dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.hk-projekte{margin-top:2px}
+.hk-liste{margin:0;padding-left:18px;display:grid;gap:6px}
+.hk-kategorien{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 16px}
+.hk-kategorien legend{padding:0;margin-bottom:2px}
+@media (max-width:520px){.hk-kontakt div{grid-template-columns:88px minmax(0,1fr)}}

@@ -25,6 +25,12 @@ entrypoint = "./functions/office-produkt-ai/index.ts"
 verify_jwt = true
 entrypoint = "./functions/office-dokumente-ai/index.ts"
 
+# Claude legt Unterlagen, die Gari ihm gibt, in die Produktbibliothek. Keine Anmeldung eines Mitglieds: die Funktion
+# prüft einen einmaligen, ablaufenden Schlüssel (nur sein SHA-256 steht in office_import_tokens) und antwortet sonst 401.
+[functions.office-produkt-import]
+verify_jwt = false
+entrypoint = "./functions/office-produkt-import/index.ts"
+
 # Called by the database cron with its own secret header, not by browsers.
 [functions.office-romy-mission-runner]
 verify_jwt = false
