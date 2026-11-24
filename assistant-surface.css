@@ -1,5 +1,6 @@
-/* TBA Office · Assistant Surface v0.6
-   Floating macOS-inspired utility window; the Gantt never reflows when it opens. */
+/* TBA Office · Assistant Surface v0.8
+   Floating macOS-inspired utility window; the page never reflows when it opens. Since v0.8 (24.11.2026) the one window
+   of every Office assistant (Terminplan, Kostenberechnung, the next ones), driven by assistant-window.js. */
 :root{--assistant-ink:#1d1d1f;--assistant-muted:#77777c;--assistant-blue:#0067d8}
 .assistant-panel{
   position:fixed!important;right:22px;bottom:20px;top:auto;left:auto;
@@ -110,7 +111,7 @@
 .assistant-panel button:disabled{cursor:not-allowed;opacity:.5}
 @media(max-width:600px){
  .assistant-panel{right:10px;bottom:10px}
- .assistant-panel.is-open{width:calc(100vw - 20px);height:min(80dvh,720px)}
+ .assistant-panel.is-open{width:calc(100vw - 20px);max-width:calc(100vw - 20px);height:min(80dvh,720px)}
  .assistant-panel.is-wide{width:calc(100vw - 20px)}
  .dialogue-label{align-items:flex-start!important}
  .ai-mode{margin-left:0}
@@ -131,15 +132,7 @@
  content:"▤"!important;background:#f1f4f8!important;color:#3263a0!important;
  box-shadow:inset 0 0 0 1px #d8e1ec!important;font-size:18px!important
 }
-.assistant-panel.is-open .assistant-head{cursor:grab;touch-action:none;user-select:none}
-.assistant-panel.is-open .assistant-head:active{cursor:grabbing}
 .assistant-panel.is-dragging,.assistant-panel.is-dragging *{transition:none!important}
-.assistant-panel.is-floating{
- left:var(--assistant-x)!important;top:var(--assistant-y)!important;
- right:auto!important;bottom:auto!important;
- width:var(--assistant-w);height:var(--assistant-h);transition:none!important;
- min-width:340px;min-height:360px;resize:both;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)
-}
 .dialogue-saved-sources{
  display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 3px 8px;
  flex:none;max-height:120px;overflow-y:auto
@@ -164,19 +157,42 @@
 body.assistant-popout{overflow:hidden!important}
 body.assistant-popout #assistantPanel,
 body.assistant-popout #assistantPanel.is-open,
-body.assistant-popout #assistantPanel.is-wide,
-body.assistant-popout #assistantPanel.is-floating{
+body.assistant-popout #assistantPanel.is-wide{
  inset:0!important;top:0!important;right:0!important;bottom:0!important;left:0!important;
  width:100vw!important;max-width:none!important;height:100dvh!important;max-height:none!important;
  border:0!important;border-radius:0!important;resize:none!important;box-shadow:none!important
 }
 body.assistant-popout #assistantPopout{display:none}
 @media(max-width:600px){
- .assistant-panel.is-floating{top:auto!important;bottom:10px!important;left:10px!important;right:10px!important;
-  width:calc(100vw - 20px)!important;resize:none!important}
  .dialogue-input{flex-wrap:wrap;gap:6px!important}
  .dialogue-input textarea{min-width:175px;order:0}
  .dialogue-input #dialogueAttach{order:-1}
  .dialogue-input #dialogueRebuild{order:1}
  .dialogue-input #dialogueSend{order:2}
+}
+
+/* v0.8 (24.11.2026, Gari: «una sola apariencia para los dos y los que vengan … debería de poder moverse también y no
+   estar siempre estable en la esquina»): offen und zu am Kopf verschiebbar; die gemerkte Ecke (data-ecke: r/l und
+   u/o) bleibt beim Öffnen stehen, so wächst das Fenster aus seinem Reiter zur Bildschirmmitte. Größe an der freien
+   Ecke (.assistant-resize). Am Telefon bleibt es unten über die ganze Breite. */
+.assistant-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.assistant-head:active{cursor:grabbing}
+.assistant-toggle{cursor:pointer}
+.assistant-panel.is-placed[data-ecke="ru"]{right:var(--assistant-x)!important;bottom:var(--assistant-y)!important;left:auto!important;top:auto!important}
+.assistant-panel.is-placed[data-ecke="lu"]{left:var(--assistant-x)!important;bottom:var(--assistant-y)!important;right:auto!important;top:auto!important}
+.assistant-panel.is-placed[data-ecke="ro"]{right:var(--assistant-x)!important;top:var(--assistant-y)!important;left:auto!important;bottom:auto!important}
+.assistant-panel.is-placed[data-ecke="lo"]{left:var(--assistant-x)!important;top:var(--assistant-y)!important;right:auto!important;bottom:auto!important}
+.assistant-panel.is-placed.is-open{width:var(--assistant-w)!important;height:var(--assistant-h)!important;
+ max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
+.assistant-resize{position:absolute;width:18px;height:18px;z-index:3;display:none;touch-action:none}
+.assistant-panel.is-open .assistant-resize{display:block}
+.assistant-panel[data-ecke="ru"] .assistant-resize,.assistant-panel:not([data-ecke]) .assistant-resize{left:0;top:0;cursor:nwse-resize}
+.assistant-panel[data-ecke="lu"] .assistant-resize{right:0;top:0;cursor:nesw-resize}
+.assistant-panel[data-ecke="ro"] .assistant-resize{left:0;bottom:0;cursor:nesw-resize}
+.assistant-panel[data-ecke="lo"] .assistant-resize{right:0;bottom:0;cursor:nwse-resize}
+body.assistant-popout .assistant-head{cursor:default;touch-action:auto}
+body.assistant-popout .assistant-resize{display:none!important}
+@media(max-width:600px){
+ .assistant-head{cursor:default;touch-action:auto}
+ .assistant-resize{display:none!important}
 }

@@ -127,11 +127,13 @@ test('Private uploaded files can be reused in subsequent Terminplan requests',()
  for(const s of inline)new Function(s);
 });
 test('Assistant floats, resizes and can open its own window',()=>{
- const html=read('terminplan.html'),css=read('assistant-surface.css');
+ const html=read('terminplan.html'),css=read('assistant-surface.css'),fenster=read('assistant-window.js');
  assert.match(html,/id="assistantPopout"/);
- assert.match(html,/setPointerCapture/);
- assert.match(html,/office-plan-assistant-window-v1/);
- assert.match(css,/resize:both/);
+ // Seit 24.11.2026 das gemeinsame Fenster aller Assistenten: verschieben und Größe über assistant-window.js.
+ assert.match(html,/window\.TBA_ASSISTANT_WINDOW\?\.mount\(document\.getElementById\('assistantPanel'\),\{\n\s*key:'terminplan'/);
+ assert.match(fenster,/root\.document\.addEventListener\('pointermove'/);
+ assert.match(fenster,/const SPEICHER='office-assistant-window-v2:';/);
+ assert.match(css,/\.assistant-resize\{position:absolute;/);
  assert.match(css,/assistant-popout/);
  assert.match(css,/dialogue-saved-sources/);
 });

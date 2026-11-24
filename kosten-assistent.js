@@ -6,7 +6,10 @@
    Revision), und rückgängig, solange danach nichts anderes geändert wurde.
    v2, 22.11.2026 (Gari: ein freierer Assistent, ohne Tageslimit): freies Gespräch auf Deutsch oder Spanisch,
    Websuche mit Links zu den Quellen; jeder Preis im Vorschlag zeigt seine Herkunft, Schätzungen als «Annahme KI».
-   Rein und getestet: tabelleText, bestesBlatt, pruefeVorschlag, wendeAn, vorschau. Die Oberfläche: init(). */
+   Rein und getestet: tabelleText, bestesBlatt, pruefeVorschlag, wendeAn, vorschau. Die Oberfläche: init().
+   24.11.2026 (Gari: eine Oberfläche für alle Assistenten, wie beim Terminplan): das Gespräch steht im gemeinsamen
+   Fenster (assistant-surface.css, assistant-window.js): zu ein Reiter, offen ein schwebendes Fenster, verschiebbar und
+   vergrößerbar; die Tabelle rückt nicht mehr zur Seite. */
 (function(root,factory){
   const api=factory(root);
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -151,10 +154,14 @@ function init(b){
   let offen=false,geprueft=false,bereit=false,modell='',geladen=false,schreibt=false;
   let verlauf=[],vorschlag=null,anhaenge=[],tabelle=null,bezug=null,rueckgaengig=null,startArt='';
   const aside=d.createElement('aside');
-  aside.id='kbAssistent';aside.className='inspektor assistent';aside.hidden=true;aside.setAttribute('aria-label','Assistent');
-  aside.innerHTML='<div class="inspektor-kopf as-kopf"><div class="as-titel"><strong>Assistent</strong><span class="meta" id="asModell">KI · schlägt vor, du entscheidest</span></div>'+
-    '<button type="button" class="inspektor-zu" data-as="zu" aria-label="Assistent schließen">×</button></div>'+
-    '<div class="as-body" id="asBody"><div class="as-leer" id="asLeer"><p class="as-lead">Frag, was du willst: zu dieser Kostenberechnung, zu DIN 276 und HOAI, zu Bauteilen, Produkten und Preisen. '+
+  aside.id='kbAssistent';aside.className='assistant-panel assistent';aside.hidden=true;aside.setAttribute('aria-label','Assistent der Kostenberechnung');
+  aside.innerHTML='<div class="assistant-head">'+
+    '<button type="button" class="assistant-toggle" id="asToggle" aria-expanded="false" aria-controls="asBody">▸ Kosten Assistent</button>'+
+    '<button type="button" class="assistant-window-action" id="asWeit" aria-label="Fenster vergrößern" title="Fenster vergrößern">⤢</button>'+
+    '<button type="button" class="assistant-window-action" data-as="zu" aria-label="Assistent schließen" title="Schließen">×</button></div>'+
+    '<div class="assistant-body as-body" id="asBody" hidden>'+
+    '<div class="dialogue-label as-label"><strong>Kostenberechnung Gespräch</strong><span class="ai-mode"><span id="asModell">KI · schlägt vor, du entscheidest</span></span></div>'+
+    '<div class="as-verlauf" id="asVerlauf"><div class="as-leer" id="asLeer"><p class="as-lead">Frag, was du willst: zu dieser Kostenberechnung, zu DIN 276 und HOAI, zu Bauteilen, Produkten und Preisen. '+
     'Für Aktuelles sucht der Assistent im Internet und nennt die Quellen. Er wertet Angebote, Kostenbeiträge und das alte Büro-Excel aus und schlägt Positionen vor; '+
     'jeder Preis zeigt, woher er kommt, Schätzungen stehen als «Annahme KI» da. In die Kostenberechnung kommt nur, was du übernimmst.</p>'+
     '<div class="as-starts">'+[['fehlt','Was fehlt noch?'],['excel','Altes Büro-Excel übernehmen'],['angebot','Angebot oder Kostenbeitrag auswerten'],
@@ -163,13 +170,17 @@ function init(b){
     '<div class="as-stream" id="asStream" role="log" aria-live="polite"></div><div id="asVorschlag"></div></div>'+
     '<form class="as-form" id="asForm"><div class="as-bezug" id="asBezug"></div><div class="as-anhaenge" id="asAnhaenge"></div>'+
     '<div class="as-zeile"><button type="button" class="as-plus" data-as="datei" aria-label="Datei anhängen" title="PDF, Foto, Excel (.xlsx) oder CSV anhängen">+</button>'+
-    '<textarea id="asText" rows="1" maxlength="2000" aria-label="Nachricht an den Assistenten" placeholder="Nachricht an den Assistenten"></textarea>'+
-    '<button type="submit" class="as-senden" id="asSenden" aria-label="Senden"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button></div>'+
+    '<textarea id="asText" rows="2" maxlength="2000" aria-label="Nachricht an den Assistenten" placeholder="Nachricht an den Assistenten"></textarea>'+
+    '<button type="submit" class="as-senden" id="asSenden" aria-label="Senden">Senden</button></div>'+
     '<p class="meta as-fuss">Mit jeder Anfrage gehen die Kostenberechnung und die angehängten Dateien an den KI-Anbieter des Office; ins Internet gehen nur allgemeine Suchbegriffe, nie der Projektname.</p>'+
-    '<input type="file" id="asDatei" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.csv,.tsv,.txt,application/pdf,image/png,image/jpeg,image/webp"></form>';
+    '<input type="file" id="asDatei" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.csv,.tsv,.txt,application/pdf,image/png,image/jpeg,image/webp"></form></div>';
   d.body.append(aside);
   const $=s=>aside.querySelector(s);
   const text=$('#asText');
+  // Das gemeinsame Fenster der Assistenten (assistant-window.js); ohne das Modul öffnet es ohne Verschieben.
+  const fenster=root.TBA_ASSISTANT_WINDOW?.mount(aside,{key:'kostenberechnung',titel:'Kosten Assistent',
+    toggle:$('#asToggle'),wide:$('#asWeit'),body:$('#asBody'),onToggle:()=>umschalten()})||null;
+  const zeigeFenster=()=>{if(fenster)fenster.zeige(offen);else{aside.classList.toggle('is-open',offen);$('#asBody').hidden=!offen}};
 
   // Verlauf: je Person und Kostenberechnung (RLS), wie das Terminplan-Gespräch.
   async function ladeVerlauf(){
@@ -219,7 +230,7 @@ function init(b){
     $('#asStream').innerHTML=html;
     $('#asLeer').hidden=verlauf.length>0||schreibt;
     zeigeVorschlag();
-    const body=$('#asBody');body.scrollTop=body.scrollHeight;
+    const body=$('#asVerlauf');body.scrollTop=body.scrollHeight;
   }
   const quelleKurz=q=>R.ARTEN[q]?.kurz||'';
   const preis=x=>{const d=R.dezimal(x);return d===null||d===undefined?'':new Intl.NumberFormat('de-DE',{minimumFractionDigits:2,maximumFractionDigits:4}).format(Number(d))};
@@ -401,13 +412,13 @@ function init(b){
     b.render();
     if(offen)setTimeout(()=>text.focus(),0);
   }
+  // Das Fenster steht über der Seite (die Tabelle rückt nicht zur Seite); offene Details gehen vor und blenden es aus.
   function sync(){
     const details=!!b.root.querySelector('.inspektor:not(.assistent)');
     if(details)auswahlMerken();
-    const sichtbar=offen&&!details&&!!b.doc()?.id;
-    aside.hidden=!sichtbar;
-    b.root.classList.toggle('mit-inspektor',details&&b.tabPositionen()||sichtbar);
-    if(sichtbar){zeigeBezug();zeigeAnhaenge();zeigeEingabe();zeigeVorschlag();
+    aside.hidden=details||!b.doc()?.id||!(b.verfuegbar?.()??true);
+    zeigeFenster();
+    if(offen&&!aside.hidden){zeigeBezug();zeigeAnhaenge();zeigeEingabe();zeigeVorschlag();
       const u=$('.as-undo');if(u&&!unveraendert())zeigeVerlauf();}
   }
   aside.addEventListener('click',ev=>{

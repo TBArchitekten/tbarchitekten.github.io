@@ -271,15 +271,19 @@ test('Migrationen: Verlauf und Zählung mit RLS; kein Tageslimit für Terminplan
     assert.ok(ci.includes(f),'die Abnahme läuft nicht in der CI: '+f);
 });
 
-test('Seite: Knopf «Assistent», Details gehen vor, übernehmen nur über geaendert(), deutsch',()=>{
-  assert.match(ui,/data-act="assistent" aria-pressed="'\+assistent\.offen\(\)\+'">'\+ICON_KI\+'Assistent<\/button>/);
-  assert.match(ui,/if\(act==='assistent'\)\{assistent\?\.umschalten\(\);return\}/);
+test('Seite: Fenster wie beim Terminplan, Details gehen vor, übernehmen nur über geaendert(), deutsch',()=>{
+  // 24.11.2026 (Gari): ein Fenster für alle Assistenten; der eigene Knopf im Kopf entfällt, der Reiter öffnet.
+  assert.doesNotMatch(ui,/data-act="assistent"|ICON_KI/);
+  assert.match(client,/aside\.className='assistant-panel assistent'/);
+  assert.match(client,/root\.TBA_ASSISTANT_WINDOW\?\.mount\(aside,\{key:'kostenberechnung',titel:'Kosten Assistent',/);
+  assert.match(ui,/verfuegbar:\(\)=>!!doc&&!istMuster&&!istArchiv,/);
   assert.match(ui,/assistent\?\.sync\(\);/);
   assert.match(ui,/darfBearbeiten:\(\)=>kannBearbeiten&&!istMuster/);
   assert.match(ui,/delete k\.assistent;/);
   assert.match(ui,/Vom Assistenten vorgeschlagen, übernommen am/);
   assert.match(client,/const details=!!b\.root\.querySelector\('\.inspektor:not\(\.assistent\)'\);/);
-  assert.match(client,/const sichtbar=offen&&!details&&!!b\.doc\(\)\?\.id;/);
+  assert.match(client,/aside\.hidden=details\|\|!b\.doc\(\)\?\.id\|\|!\(b\.verfuegbar\?\.\(\)\?\?true\);/);
+  assert.doesNotMatch(client,/mit-inspektor/,'die Tabelle rückt für den Assistenten nicht zur Seite');
   assert.match(client,/b\.geaendert\(\);b\.zeige\(/);
   assert.match(client,/await b\.speichernJetzt\(\);/);
   assert.match(client,/expected_revision:b\.revision\(\)/);
