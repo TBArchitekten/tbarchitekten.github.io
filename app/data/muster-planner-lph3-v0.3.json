@@ -1,11 +1,11 @@
 {
  "id": "tba-lph3-aufgabenbibliothek",
- "version": "0.3.4-draft",
+ "version": "0.3.5-draft",
  "draft": true,
  "phase": "LPH3",
- "updated": "2026-11-15",
+ "updated": "2026-11-24",
  "status": "Entwurf zur gemeinsamen Prüfung · nicht freigegeben",
- "reference": "Muster-Terminplan LPH 3 v1.6 / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. bis 15.11.2026",
+ "reference": "Muster-Terminplan LPH 3 v1.6 / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. bis 24.11.2026",
  "warning": "Jeder Bucket ist eine Abgabe des Muster-Terminplans. Nur TBA-eigene Arbeit; Leistungen der Fachplaner und Prüfzeiten des Auftraggebers sind Wartezeit. Keine Stundenwerte. Termine des Musters sind keine Vertragsfristen.",
  "coding": {
   "pattern": "L3.<Objekt>.<Zustand>",
@@ -25,7 +25,7 @@
   "AUS": "Ausgaberoutine: Vollständigkeit, Vier-Augen-Prüfung, Freigabe, Versandnachweis, Frist",
   "F": "Terminplan fortschreiben (HOAI Anlage 10 LPH 3 f) – in jeder Ausgabe",
   "ABS": "Abschlussroutine: Rückmeldung erfassen, bewerten, zuweisen, Entscheidungsliste",
-  "THEMA": "Themenpaket-Muster: Geometrie – Material – Schnittstellen – Kostenbezug – Abgrenzung LPH 5"
+  "THEMA": "Themenpaket-Muster, eine Person für das ganze Paket: Geometrie – Varianten – Muster – Schnittstellen – Kostenbezug – Entscheidungsvorlage – Abgrenzung LPH 5"
  },
  "results": [
   {
@@ -267,28 +267,6 @@
    }
   },
   {
-   "code": "MAT",
-   "name": "Material- und Produktvergleich",
-   "states": {
-    "1": "Vergleichsmatrix mit Empfehlung"
-   },
-   "toolHook": "–",
-   "producedBy": {
-    "1": "L3.MAT.1"
-   }
-  },
-  {
-   "code": "MUS",
-   "name": "Muster (Musterliste und Musterbewertung)",
-   "states": {
-    "1": "geprüft und dokumentiert"
-   },
-   "toolHook": "–",
-   "producedBy": {
-    "1": "L3.MUS.1"
-   }
-  },
-  {
    "code": "MAP",
    "name": "Material- und Ausstattungsübersichtspläne",
    "states": {
@@ -301,57 +279,68 @@
   },
   {
    "code": "BAD",
-   "name": "Themenpläne Bäder",
+   "name": "Themenpaket Bäder",
    "states": {
-    "1": "Entwurf je Badtyp"
+    "1": "Pläne, bewertete Varianten, Muster und Entscheidungsvorlage"
    },
-   "toolHook": "Planungshilfen des Büros",
+   "toolHook": "Planungshilfen des Büros · Produktbibliothek (Musterliste) · Entscheidungsvorlage (Projektstart)",
    "producedBy": {
     "1": "L3.BAD.1"
    }
   },
   {
    "code": "TRE",
-   "name": "Themenpläne Treppen",
+   "name": "Themenpaket Treppen",
    "states": {
-    "1": "Entwurf"
+    "1": "Pläne, bewertete Varianten, Muster und Entscheidungsvorlage"
    },
-   "toolHook": "Planungshilfen des Büros",
+   "toolHook": "Planungshilfen des Büros · Produktbibliothek (Musterliste) · Entscheidungsvorlage (Projektstart)",
    "producedBy": {
     "1": "L3.TRE.1"
    }
   },
   {
    "code": "FAS",
-   "name": "Themenpläne Fassade",
+   "name": "Themenpaket Fassade",
    "states": {
-    "1": "Prinzipschnitt"
+    "1": "Pläne, bewertete Varianten, Muster und Entscheidungsvorlage"
    },
-   "toolHook": "Planungshilfen des Büros",
+   "toolHook": "Planungshilfen des Büros · Produktbibliothek (Musterliste) · Entscheidungsvorlage (Projektstart)",
    "producedBy": {
     "1": "L3.FAS.1"
    }
   },
   {
    "code": "LIC",
-   "name": "Lichtkonzept",
+   "name": "Themenpaket Licht",
    "states": {
-    "1": "Konzept"
+    "1": "Pläne, bewertete Varianten, Muster und Entscheidungsvorlage"
    },
-   "toolHook": "–",
+   "toolHook": "Produktbibliothek (Musterliste) · Entscheidungsvorlage (Projektstart)",
    "producedBy": {
     "1": "L3.LIC.1"
    }
   },
   {
    "code": "BOD",
-   "name": "Themenpläne Bodenbeläge",
+   "name": "Themenpaket Bodenbeläge",
    "states": {
-    "1": "Belagsplan (Entwurf)"
+    "1": "Pläne, bewertete Varianten, Muster und Entscheidungsvorlage"
    },
-   "toolHook": "Planungshilfen des Büros",
+   "toolHook": "Planungshilfen des Büros · Produktbibliothek (Musterliste) · Entscheidungsvorlage (Projektstart)",
    "producedBy": {
     "1": "L3.BOD.1"
+   }
+  },
+  {
+   "code": "WEI",
+   "name": "Themenpaket weitere Entscheidungsfelder",
+   "states": {
+    "1": "Pläne, bewertete Varianten, Muster und Entscheidungsvorlage"
+   },
+   "toolHook": "Produktbibliothek (Musterliste) · Entscheidungsvorlage (Projektstart)",
+   "producedBy": {
+    "1": "L3.WEI.1"
    }
   },
   {
@@ -453,7 +442,7 @@
    "code": "P-AGT",
    "name": "Art des Auftraggebers",
    "values": "privat / öffentlich",
-   "effect": "Bei öffentlichem Auftraggeber: Bemusterung produktneutral (MAT.1); Vergabe der Fachplaner als eigener Terminstrang – nicht ausgearbeitet."
+   "effect": "Bei öffentlichem Auftraggeber: Bemusterung produktneutral (Regel in QUA.1, Prüfung in A5.AUS); Vergabe der Fachplaner als eigener Terminstrang – nicht ausgearbeitet."
   },
   {
    "code": "P-KOT",
@@ -465,13 +454,13 @@
    "code": "P-THE",
    "name": "Aktive Themenpakete",
    "values": "BAD, TRE, FAS, LIC, BOD, weitere",
-   "effect": "Je aktivem Thema wird eine Themenkarte angelegt. Weitere Themen nach dem Themenpaket-Muster."
+   "effect": "Je aktivem Thema eine Themenkarte; eine Person bearbeitet das ganze Paket (Pläne, Varianten, Muster, Entscheidungsvorlage). Weitere Entscheidungsfelder: Karte L3.WEI.1, im Projekt umbenannt, je weiterem Paket eine."
   },
   {
    "code": "P-MUS",
    "name": "Physische Muster / Mustermappe vereinbart",
    "values": "ja / nein",
-   "effect": "Bei „nein“ entfällt L3.MUS.1."
+   "effect": "Bei „nein“ entfallen in den Themenpaketen die Prüfpunkte zu Mustern; die Entscheidung stützt sich auf Datenblätter und Abbildungen."
   },
   {
    "code": "P-BES",
@@ -501,12 +490,12 @@
   {
    "check": "Codes eindeutig und formgerecht (L3.<Objekt>.<Zustand>)",
    "result": "OK",
-   "detail": "53 Codes"
+   "detail": "52 Codes"
   },
   {
    "check": "Jeder erzeugte Ergebnisstand ist im Ergebnisregister definiert",
    "result": "OK",
-   "detail": "53 Ergebnisstände, 15 Abgabe-Zustände"
+   "detail": "52 Ergebnisstände, 15 Abgabe-Zustände"
   },
   {
    "check": "Jeder Ergebnisstand wird von genau einer Aufgabe erzeugt",
@@ -516,7 +505,7 @@
   {
    "check": "Jede Voraussetzung verweist auf einen erzeugten Ergebnisstand",
    "result": "OK",
-   "detail": "148 Verweise aufgelöst"
+   "detail": "147 Verweise aufgelöst"
   },
   {
    "check": "Abhängigkeiten ohne Zirkelbezug",
@@ -551,12 +540,12 @@
   {
    "check": "HOAI Anlage 10 LPH 3: jede Grundleistung a) bis g) ist mindestens einer Aufgabe zugeordnet",
    "result": "OK",
-   "detail": "a) 29, b) 13, c) 3, d) 2, e) 4, f) 7, g) 6"
+   "detail": "a) 28, b) 13, c) 3, d) 2, e) 4, f) 7, g) 6"
   },
   {
    "check": "Checklisten: Länge nach Bedarf, höchstens 10 Punkte",
    "result": "OK",
-   "detail": "355 Prüfpunkte, je Karte 4 bis 10; Verteilung {4: 1, 5: 11, 6: 15, 7: 10, 8: 9, 9: 6, 10: 1}"
+   "detail": "366 Prüfpunkte, je Karte 4 bis 10; Verteilung {4: 1, 5: 10, 6: 13, 7: 10, 8: 5, 9: 6, 10: 7}"
   },
   {
    "check": "Konkordanz vollständig: jede Karte der drei Vorversionen ist zugeordnet oder begründet entfallen",
@@ -3181,8 +3170,8 @@
    "gate": "PSP 04.04 / 04.05 / 04.06 (M06)",
    "kind": "Abgabe",
    "recipient": "Auftraggeber",
-   "summary": "Qualitäten vorbereiten, Varianten bewerten, Themenpakete ausarbeiten und die Bemusterungsunterlagen übergeben; Abschluss mit durchgeführter Bemusterung und konsolidierter Qualitätsliste als Kostenbasis.",
-   "plannerDescription": "Qualitäten vorbereiten, Varianten bewerten, Themenpakete ausarbeiten und die Bemusterungsunterlagen übergeben; Abschluss mit durchgeführter Bemusterung und konsolidierter Qualitätsliste als Kostenbasis.",
+   "summary": "Qualitäten festlegen und auf Themenpakete verteilen; jedes Paket bearbeitet eine Person vollständig (Pläne, Varianten, Muster, Entscheidungsvorlage); Unterlagen zusammenstellen und übergeben; Abschluss mit durchgeführter Bemusterung und konsolidierter Qualitätsliste als Kostenbasis.",
+   "plannerDescription": "Qualitäten festlegen und auf Themenpakete verteilen; jedes Paket bearbeitet eine Person vollständig (Pläne, Varianten, Muster, Entscheidungsvorlage); Unterlagen zusammenstellen und übergeben; Abschluss mit durchgeführter Bemusterung und konsolidierter Qualitätsliste als Kostenbasis.",
    "scheduleReferences": [
     {
      "taskId": "t059",
@@ -3212,23 +3201,23 @@
    ],
    "deliverables": [
     "QUA.1",
-    "MAT.1",
     "MAP.1",
-    "MUS.1",
     "BAD.1",
     "TRE.1",
     "FAS.1",
-    "LIC.1"
+    "LIC.1",
+    "BOD.1",
+    "WEI.1"
    ],
    "closingResults": [
     "QUA.2"
    ],
-   "note": "Seit Muster-Terminplan v1.3 mit eigenem Vorgang „Bemusterungsunterlagen vorbereiten“ (t058) und Meilenstein „Bemusterungsunterlagen an Auftraggeber übergeben“ (t059); die Abstimmung (t030) und M06 (t031) bilden den Abschluss.",
+   "note": "Seit Muster-Terminplan v1.3 mit eigenem Vorgang „Bemusterungsunterlagen vorbereiten“ (t058) und Meilenstein „Bemusterungsunterlagen an Auftraggeber übergeben“ (t059); die Abstimmung (t030) und M06 (t031) bilden den Abschluss. Seit v0.3.5 (Gari, 24.11.2026) gehören Recherche, Variantenvergleich und Muster zum Themenpaket, das sie braucht: L3.MAT.1 und L3.MUS.1 entfallen, ihre Codes werden nicht neu vergeben.",
    "tasks": [
     {
      "id": "L3.QUA.1",
-     "title": "Qualitäten- und Materialkonzept erarbeiten",
-     "result": "Qualitäts- und Ausstattungsliste (Stand Vorschlag) mit Entscheidungsfeldern, Materialkonzept und Bemusterungsumfang",
+     "title": "Qualitäten- und Materialkonzept erarbeiten, Themenpakete festlegen",
+     "result": "Qualitäts- und Ausstattungsliste (Stand Vorschlag) mit Entscheidungsfeldern, Materialkonzept, Bemusterungsumfang und Paketaufteilung (Feld – Paket – Person)",
      "checks": [
       "Umfang der Bemusterung mit dem Vertrag abgeglichen: welche Bauteile, Räume und Themenpakete, in welcher Tiefe",
       "Entscheidungsfelder festgelegt: kostenrelevante Qualitäten je Bauteil und Raumgruppe (Fassade, Fenster, Dach, Böden, Wände, Decken, Türen, Sanitär- und Elektrostandard)",
@@ -3236,6 +3225,8 @@
       "Funktionale und bauphysikalische Anforderungen je Material aus dem Bauteilkatalog übernommen",
       "Je Position Kostengruppe und Mengenbezug vorgemerkt",
       "Qualitäts- und Ausstattungsliste angelegt: je Position Qualität, Referenz und Status „Vorschlag“",
+      "Themenpakete gebildet: jedes Entscheidungsfeld genau einem Paket zugeordnet (Felder ohne eigenes Thema in einem weiteren Paket); je Paket eine Person, von der Projektleitung benannt",
+      "Gemeinsame Regeln für alle Pakete festgelegt: Referenzcodes und Musterliste, Vergleichskriterien, Preis mit Quelle und Datum, Form der Entscheidungsvorlage; bei öffentlichem Auftraggeber produktneutral",
       "Rückmeldung des Auftraggebers zum Arbeitsstand 01 auf Qualitätswünsche durchgesehen und übernommen",
       "Bemusterungstermine mit dem Auftraggeber abgestimmt"
      ],
@@ -3247,9 +3238,13 @@
       "L3.QUA.1-05",
       "L3.QUA.1-06",
       "L3.QUA.1-07",
-      "L3.QUA.1-08"
+      "L3.QUA.1-08",
+      "L3.QUA.1-09",
+      "L3.QUA.1-10"
      ],
      "checkBlocks": [
+      null,
+      null,
       null,
       null,
       null,
@@ -3266,9 +3261,9 @@
      "owner": "Mitarbeiter/in Architektur (erfahren)",
      "review": "Projektleitung",
      "participants": "Büroleitung (gestalterisch)",
-     "basis": "H: abgeleitet aus HOAI Anlage 10 LPH 3 a) und e); § 2 Abs. 11 (kostenrelevante Erläuterungen). V: Umfang der Bemusterung. I: Qualitäts- und Ausstattungsliste.",
+     "basis": "H: abgeleitet aus HOAI Anlage 10 LPH 3 a) und e); § 2 Abs. 11 (kostenrelevante Erläuterungen). V: Umfang der Bemusterung. I: Qualitäts- und Ausstattungsliste; Paketaufteilung (Gari, 24.11.2026).",
      "effortHours": null,
-     "effortDrivers": "Ausbaustandard; Zahl der Raumgruppen und Entscheidungsfelder",
+     "effortDrivers": "Ausbaustandard; Zahl der Raumgruppen, Entscheidungsfelder und Pakete",
      "sourceType": "TBA-eigene Arbeit",
      "step": "Erarbeiten",
      "labels": [],
@@ -3284,7 +3279,7 @@
       "a"
      ],
      "condition": null,
-     "doneWhen": "Liste von der Projektleitung freigegeben; die Themenpakete sind festgelegt.",
+     "doneWhen": "Liste von der Projektleitung freigegeben; die Themenpakete sind mit je einer verantwortlichen Person und gemeinsamen Regeln festgelegt.",
      "schedule": {
       "executes": [
        "t058"
@@ -3310,157 +3305,11 @@
      }
     },
     {
-     "id": "L3.MAT.1",
-     "title": "Materialien und Produkte recherchieren und Varianten bewerten",
-     "result": "Vergleichsmatrix je Entscheidungsfeld mit Gestaltung, Funktion, Unterhalt, Kostenspanne und Empfehlung",
-     "checks": [
-      "Je Entscheidungsfeld geeignete Materialien/Produkte recherchiert; Herstellerdaten abgelegt",
-      "Eignung geprüft: Formate, technische Kennwerte, Pflege, Dauerhaftigkeit, Verfügbarkeit",
-      "Varianten in einer Vergleichsmatrix gegenübergestellt: Gestaltung, Funktion, Unterhalt, Kostenspanne",
-      "Preisquelle und Preisstand je Variante mit Datum festgehalten; ungeprüfte Herstellerangaben gekennzeichnet",
-      "Empfehlung je Entscheidungsfeld formuliert; offene Prüffragen benannt",
-      "Bei öffentlichem Auftraggeber: Qualitäten produktneutral beschrieben"
-     ],
-     "checkCodes": [
-      "L3.MAT.1-01",
-      "L3.MAT.1-02",
-      "L3.MAT.1-03",
-      "L3.MAT.1-04",
-      "L3.MAT.1-05",
-      "L3.MAT.1-06"
-     ],
-     "checkBlocks": [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-     ],
-     "psp": [
-      "04.03"
-     ],
-     "scope": "TBA-Standard – bei öffentlichem Auftraggeber produktneutral",
-     "owner": "Mitarbeiter/in Architektur",
-     "review": "Projektleitung",
-     "participants": "–",
-     "basis": "I: Organisationsvorschlag (keine HOAI-Grundleistung im Einzelnen). V: Umfang der Bemusterung. R: Produktneutralität bei öffentlichen Auftraggebern (VOB/A § 7).",
-     "effortHours": null,
-     "effortDrivers": "Zahl der Entscheidungsfelder und Varianten",
-     "sourceType": "TBA-eigene Arbeit",
-     "step": "Erarbeiten",
-     "labels": [],
-     "produces": [
-      "MAT.1"
-     ],
-     "requires": [
-      "QUA.1"
-     ],
-     "hoai": [
-      "a"
-     ],
-     "condition": null,
-     "doneWhen": "Vergleichsmatrix vollständig; Empfehlungen in die Qualitäts- und Ausstattungsliste übernommen.",
-     "schedule": {
-      "executes": [
-       "t058"
-      ],
-      "waitsFor": [],
-      "anchor": null,
-      "templateStart": "2027-02-03",
-      "templateEnd": "2027-03-02",
-      "noOwnActivity": false
-     },
-     "origin": {
-      "claude_v01": [],
-      "muster_v021": [
-       "L3-BEM-03",
-       "L3-BEM-04"
-      ],
-      "chatgpt_v01": [],
-      "note": null
-     }
-    },
-    {
-     "id": "L3.MUS.1",
-     "title": "Muster beschaffen, prüfen und dokumentieren",
-     "result": "Musterliste mit Eingangsstand; geprüfte, nummerierte und fotografisch dokumentierte Muster",
-     "checks": [
-      "Musterliste erstellt: benötigte Muster je Thema und Option mit Referenzcode, Hersteller und Liefertermin",
-      "Muster angefragt; Eingang nachgehalten; fehlende Muster als Vorbehalt markiert",
-      "Muster gegen die Produktdaten geprüft (Farbe, Oberfläche, Format); Abweichungen protokolliert",
-      "Muster im Zusammenhang beurteilt (Kombination, Licht) und fotografisch dokumentiert",
-      "Muster eindeutig nummeriert und der Qualitäts- und Ausstattungsliste zugeordnet"
-     ],
-     "checkCodes": [
-      "L3.MUS.1-01",
-      "L3.MUS.1-02",
-      "L3.MUS.1-03",
-      "L3.MUS.1-04",
-      "L3.MUS.1-05"
-     ],
-     "checkBlocks": [
-      null,
-      null,
-      null,
-      null,
-      null
-     ],
-     "psp": [
-      "04.03"
-     ],
-     "scope": "Bedingt: physische Muster vorgesehen",
-     "owner": "Mitarbeiter/in Architektur",
-     "review": "Projektleitung",
-     "participants": "Hersteller",
-     "basis": "I: Organisationsvorschlag. V: Muster/Mustermappe nur, wenn vereinbart.",
-     "effortHours": null,
-     "effortDrivers": "Zahl der Muster; Lieferzeiten",
-     "sourceType": "TBA-eigene Arbeit",
-     "step": "Erarbeiten",
-     "labels": [],
-     "produces": [
-      "MUS.1"
-     ],
-     "requires": [
-      "MAT.1",
-      "BAD.1",
-      "TRE.1",
-      "FAS.1",
-      "LIC.1",
-      "BOD.1"
-     ],
-     "hoai": [
-      "a"
-     ],
-     "condition": "P-MUS = ja",
-     "doneWhen": "Alle Muster liegen vor oder sind als Vorbehalt geführt. Lieferzeiten der Hersteller sind Wartezeit.",
-     "schedule": {
-      "executes": [
-       "t058"
-      ],
-      "waitsFor": [],
-      "anchor": null,
-      "templateStart": "2027-02-03",
-      "templateEnd": "2027-03-02",
-      "noOwnActivity": false
-     },
-     "origin": {
-      "claude_v01": [],
-      "muster_v021": [
-       "L3-BEM-05",
-       "L3-BEM-06"
-      ],
-      "chatgpt_v01": [],
-      "note": null
-     }
-    },
-    {
      "id": "L3.MAP.1",
      "title": "Material- und Ausstattungsübersichtspläne erstellen",
-     "result": "Übersichtspläne mit Materialcodes je Raum und Bauteil",
+     "result": "Übersichtspläne mit Materialcodes je Raum und Bauteil, zusammengeführt aus den Themenpaketen",
      "checks": [
-      "Boden-, Wand- und Deckenqualitäten je Raum mit Materialcode zugeordnet",
+      "Codes der Themenpakete je Raum zusammengeführt: Boden (aus dem Belagsplan), Wand und Decke",
       "Fassaden- und Außenmaterialien in den Ansichten mit Materialcode gekennzeichnet",
       "Planlegende stimmt mit der Qualitäts- und Ausstattungsliste überein",
       "Unentschiedene Flächen gekennzeichnet",
@@ -3499,7 +3348,12 @@
      "requires": [
       "QUA.1",
       "GRU.1",
-      "ANS.1"
+      "ANS.1",
+      "BAD.1",
+      "TRE.1",
+      "FAS.1",
+      "BOD.1",
+      "WEI.1"
      ],
      "hoai": [
       "a"
@@ -3527,18 +3381,19 @@
     },
     {
      "id": "L3.BAD.1",
-     "title": "Themenpaket Bäder: Grundrisse und Wandansichten",
-     "result": "Entwurfspläne je Badtyp (Grundriss und Wandansichten) mit Material- und Ausstattungscodes",
+     "title": "Themenpaket Bäder",
+     "result": "Paket Bäder: Entwurfspläne je Badtyp (Grundriss und Wandansichten) mit Codes, bewertete Varianten mit Mustern und Entscheidungsvorlage",
      "checks": [
-      "Relevante Badtypen festgelegt (je Typ ein Plansatz)",
-      "Grundriss je Badtyp mit Sanitärgegenständen, Bewegungsflächen und Türaufschlag im vertieften Maßstab",
-      "Wandansichten je Badtyp mit Belagshöhen, Belagsbereichen, Nischen und Einbauten",
+      "Entscheidungsfelder des Pakets aus der Qualitäts- und Ausstattungsliste übernommen; Grenzen zu Bodenbelägen und Licht geklärt",
+      "Badtypen festgelegt; je Typ Grundriss mit Sanitärgegenständen, Bewegungsflächen und Türaufschlag im vertieften Maßstab",
+      "Wandansichten je Badtyp mit Belagshöhen, Belagsbereichen, Nischen und Einbauten; als Entwurf gekennzeichnet – keine Verlege- oder Ausführungsplanung (LPH 5)",
+      "Je Entscheidungsfeld mindestens zwei Varianten recherchiert und geprüft (Format, technische Kennwerte, Pflege, Verfügbarkeit); Herstellerdaten abgelegt",
+      "Varianten verglichen (Gestaltung, Funktion, Unterhalt, Kosten) und Empfehlung formuliert; Preis mit Quelle und Datum, ungeprüfte Herstellerangaben gekennzeichnet",
+      "Muster je Variante angefragt; Eingang nachgehalten, fehlende als Vorbehalt markiert",
+      "Muster gegen die Produktdaten geprüft, im Zusammenhang beurteilt und fotografiert; mit Referenzcode in der Musterliste",
       "Sanitärgegenstände und Installationswände mit HLS abgestimmt; offene Fragen an den Fachplaner gestellt",
-      "Material- und Ausstattungscodes aus der Qualitäts- und Ausstattungsliste eingetragen",
-      "Kostenrelevante Mengen ableitbar (Belagsflächen, Stückzahlen)",
-      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
-      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet",
-      "Als Entwurf gekennzeichnet – keine Verlege- oder Ausführungsplanung (LPH 5)"
+      "Codes in Plänen und Liste eingetragen; Mengen ableitbar (Belagsflächen, Stückzahlen); Kostenwirkung je Variante benannt",
+      "Entscheidungsvorlage des Pakets erstellt: Varianten mit Mustern, Empfehlung, Kostenwirkung und Folgen; an die Projektleitung übergeben"
      ],
      "checkCodes": [
       "L3.BAD.1-01",
@@ -3549,12 +3404,14 @@
       "L3.BAD.1-06",
       "L3.BAD.1-07",
       "L3.BAD.1-08",
-      "L3.BAD.1-09"
+      "L3.BAD.1-09",
+      "L3.BAD.1-10"
      ],
      "checkBlocks": [
       "THEMA",
       "THEMA",
-      null,
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA",
       "THEMA",
@@ -3566,12 +3423,12 @@
       "04.03"
      ],
      "scope": "Bedingt: Bad-/Innenraumgestaltung beauftragt",
-     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "owner": "Mitarbeiter/in Architektur – eine Person für das ganze Paket",
      "review": "Projektleitung",
-     "participants": "HLS",
-     "basis": "H: HOAI Anlage 10 LPH 3 a) (bei Innenräumen Maßstäbe 1:50 bis 1:20). V: nur bei entsprechendem Auftrag. I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
+     "participants": "HLS; Hersteller (Muster)",
+     "basis": "H: HOAI Anlage 10 LPH 3 a) (bei Innenräumen Maßstäbe 1:50 bis 1:20). V: nur bei entsprechendem Auftrag; Muster nur, wenn vereinbart. I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
      "effortHours": null,
-     "effortDrivers": "Zahl der Badtypen; Ausstattungsstandard",
+     "effortDrivers": "Zahl der Badtypen; Ausstattungsstandard; Zahl der Muster und Lieferzeiten",
      "sourceType": "TBA-eigene Arbeit",
      "step": "Erarbeiten",
      "labels": [],
@@ -3586,7 +3443,7 @@
       "a"
      ],
      "condition": "P-THE enthält BAD",
-     "doneWhen": "Themenpläne vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Paket vollständig an die Projektleitung übergeben (L3.A5.AUS): Pläne, Codes in der Liste, Muster oder Vorbehalt, Entscheidungsvorlage. Muster früh anfragen – Lieferzeiten sind Wartezeit.",
      "schedule": {
       "executes": [
        "t058"
@@ -3601,7 +3458,11 @@
       "claude_v01": [],
       "muster_v021": [
        "L3-BEM-08",
-       "L3-BEM-09"
+       "L3-BEM-09",
+       "L3-BEM-03",
+       "L3-BEM-04",
+       "L3-BEM-05",
+       "L3-BEM-06"
       ],
       "chatgpt_v01": [],
       "note": null
@@ -3609,17 +3470,19 @@
     },
     {
      "id": "L3.TRE.1",
-     "title": "Themenpaket Treppen: Grundriss, Schnitt und Ansicht",
-     "result": "Treppenentwurf im vertieften Maßstab mit material- und kostenrelevanten Festlegungen",
+     "title": "Themenpaket Treppen",
+     "result": "Paket Treppen: Treppenentwurf im vertieften Maßstab mit material- und kostenrelevanten Festlegungen, bewertete Varianten mit Mustern und Entscheidungsvorlage",
      "checks": [
-      "Treppengeometrie festgelegt: Steigungsverhältnis, Laufbreite, Podeste, Durchgangshöhe",
-      "Grundriss, Schnitt und Ansicht der Treppe im vertieften Maßstab",
-      "Geländer, Handlauf und Oberflächen im Prinzip dargestellt",
+      "Entscheidungsfelder des Pakets aus der Qualitäts- und Ausstattungsliste übernommen; Grenzen zu Bodenbelägen und Licht geklärt",
+      "Treppengeometrie festgelegt (Steigungsverhältnis, Laufbreite, Podeste, Durchgangshöhe); Grundriss, Schnitt und Ansicht im vertieften Maßstab",
+      "Geländer, Handlauf und Oberflächen im Prinzip dargestellt; Ausführungsdetails ausdrücklich der LPH 5 vorbehalten",
+      "Je Entscheidungsfeld mindestens zwei Varianten recherchiert und geprüft (Format, technische Kennwerte, Pflege, Verfügbarkeit); Herstellerdaten abgelegt",
+      "Varianten verglichen (Gestaltung, Funktion, Unterhalt, Kosten) und Empfehlung formuliert; Preis mit Quelle und Datum, ungeprüfte Herstellerangaben gekennzeichnet",
+      "Muster je Variante angefragt; Eingang nachgehalten, fehlende als Vorbehalt markiert",
+      "Muster gegen die Produktdaten geprüft, im Zusammenhang beurteilt und fotografiert; mit Referenzcode in der Musterliste",
       "Tragprinzip mit der Tragwerksplanung abgestimmt; Anforderungen an notwendige Treppen geklärt",
-      "Material- und Ausstattungscodes eingetragen; kostenrelevante Mengen ableitbar",
-      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
-      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet",
-      "Ausführungsdetails ausdrücklich der LPH 5 vorbehalten"
+      "Codes in Plänen und Liste eingetragen; Mengen ableitbar; Kostenwirkung je Variante benannt",
+      "Entscheidungsvorlage des Pakets erstellt: Varianten mit Mustern, Empfehlung, Kostenwirkung und Folgen; an die Projektleitung übergeben"
      ],
      "checkCodes": [
       "L3.TRE.1-01",
@@ -3629,12 +3492,16 @@
       "L3.TRE.1-05",
       "L3.TRE.1-06",
       "L3.TRE.1-07",
-      "L3.TRE.1-08"
+      "L3.TRE.1-08",
+      "L3.TRE.1-09",
+      "L3.TRE.1-10"
      ],
      "checkBlocks": [
       "THEMA",
-      null,
-      null,
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA",
       "THEMA",
@@ -3645,12 +3512,12 @@
       "04.03"
      ],
      "scope": "Bedingt: besondere Treppen / Innenraumgestaltung",
-     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "owner": "Mitarbeiter/in Architektur – eine Person für das ganze Paket",
      "review": "Projektleitung",
-     "participants": "Tragwerk; ggf. Brandschutz",
-     "basis": "H: HOAI Anlage 10 LPH 3 a). V: nur bei entsprechendem Auftrag. I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
+     "participants": "Tragwerk; ggf. Brandschutz; Hersteller (Muster)",
+     "basis": "H: HOAI Anlage 10 LPH 3 a). V: nur bei entsprechendem Auftrag; Muster nur, wenn vereinbart. I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
      "effortHours": null,
-     "effortDrivers": "Zahl und Komplexität der Treppen",
+     "effortDrivers": "Zahl und Komplexität der Treppen; Zahl der Muster und Lieferzeiten",
      "sourceType": "TBA-eigene Arbeit",
      "step": "Erarbeiten",
      "labels": [],
@@ -3666,7 +3533,7 @@
       "a"
      ],
      "condition": "P-THE enthält TRE",
-     "doneWhen": "Themenpläne vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Paket vollständig an die Projektleitung übergeben (L3.A5.AUS): Pläne, Codes in der Liste, Muster oder Vorbehalt, Entscheidungsvorlage. Muster früh anfragen – Lieferzeiten sind Wartezeit.",
      "schedule": {
       "executes": [
        "t058"
@@ -3680,7 +3547,11 @@
      "origin": {
       "claude_v01": [],
       "muster_v021": [
-       "L3-BEM-10"
+       "L3-BEM-10",
+       "L3-BEM-03",
+       "L3-BEM-04",
+       "L3-BEM-05",
+       "L3-BEM-06"
       ],
       "chatgpt_v01": [],
       "note": null
@@ -3688,17 +3559,19 @@
     },
     {
      "id": "L3.FAS.1",
-     "title": "Themenpaket Fassade: Prinzipschnitt",
-     "result": "Kostenrelevanter Fassaden-Prinzipschnitt vom Sockel bis zum Dachrand",
+     "title": "Themenpaket Fassade",
+     "result": "Paket Fassade: kostenrelevanter Prinzipschnitt vom Sockel bis zum Dachrand, bewertete Varianten mit Mustern und Entscheidungsvorlage",
      "checks": [
-      "Fassadenschnitt im Prinzip vom Sockel bis zur Attika/Traufe mit Schichten und Dicken",
-      "Anschlüsse exemplarisch dargestellt: Sockel, Fenster (Laibung, Sturz, Brüstung), Dachrand",
-      "Sonnenschutz und Öffnungsarten festgelegt",
+      "Entscheidungsfelder des Pakets aus der Qualitäts- und Ausstattungsliste übernommen; Grenzen zu Fenstern, Sonnenschutz und Dach geklärt",
+      "Fassadenschnitt im Prinzip vom Sockel bis zur Attika/Traufe mit Schichten und Dicken; Anschlüsse exemplarisch: Sockel, Fenster (Laibung, Sturz, Brüstung), Dachrand",
+      "Sonnenschutz und Öffnungsarten festgelegt; ausführungsreife Details der LPH 5 vorbehalten",
+      "Je Entscheidungsfeld mindestens zwei Varianten recherchiert und geprüft (Format, technische Kennwerte, Pflege, Verfügbarkeit); Herstellerdaten abgelegt",
+      "Varianten verglichen (Gestaltung, Funktion, Unterhalt, Kosten) und Empfehlung formuliert; Preis mit Quelle und Datum, ungeprüfte Herstellerangaben gekennzeichnet",
+      "Muster je Variante angefragt; Eingang nachgehalten, fehlende als Vorbehalt markiert",
+      "Muster gegen die Produktdaten geprüft, im Zusammenhang beurteilt und fotografiert; mit Referenzcode in der Musterliste",
       "Bauphysikalische und statische Fragen an die Fachplaner adressiert (Wärmebrücken, Befestigung)",
-      "Material- und Ausstattungscodes eingetragen; Fassadenfläche je Typ für die Kostenberechnung ableitbar",
-      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
-      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet",
-      "Ausführungsreife Details der LPH 5 vorbehalten"
+      "Codes eingetragen; Fassadenfläche je Typ für die Kostenberechnung ableitbar; Kostenwirkung je Variante benannt",
+      "Entscheidungsvorlage des Pakets erstellt: Varianten mit Mustern, Empfehlung, Kostenwirkung und Folgen; an die Projektleitung übergeben"
      ],
      "checkCodes": [
       "L3.FAS.1-01",
@@ -3708,12 +3581,16 @@
       "L3.FAS.1-05",
       "L3.FAS.1-06",
       "L3.FAS.1-07",
-      "L3.FAS.1-08"
+      "L3.FAS.1-08",
+      "L3.FAS.1-09",
+      "L3.FAS.1-10"
      ],
      "checkBlocks": [
       "THEMA",
-      null,
-      null,
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA",
       "THEMA",
@@ -3724,12 +3601,12 @@
       "04.03"
      ],
      "scope": "Bedingt: konstruktive oder materialbezogene Klärung erforderlich",
-     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "owner": "Mitarbeiter/in Architektur – eine Person für das ganze Paket",
      "review": "Projektleitung",
-     "participants": "Tragwerk; Bauphysik",
-     "basis": "H: HOAI Anlage 10 LPH 3 a). I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
+     "participants": "Tragwerk; Bauphysik; Hersteller (Muster)",
+     "basis": "H: HOAI Anlage 10 LPH 3 a). V: Muster nur, wenn vereinbart. I: Themenpaket-Muster; Abgrenzung zur LPH 5.",
      "effortHours": null,
-     "effortDrivers": "Zahl der Fassadentypen; Konstruktionsart",
+     "effortDrivers": "Zahl der Fassadentypen; Konstruktionsart; Zahl der Muster und Lieferzeiten",
      "sourceType": "TBA-eigene Arbeit",
      "step": "Erarbeiten",
      "labels": [],
@@ -3745,7 +3622,7 @@
       "a"
      ],
      "condition": "P-THE enthält FAS",
-     "doneWhen": "Prinzipschnitt vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Paket vollständig an die Projektleitung übergeben (L3.A5.AUS): Pläne, Codes in der Liste, Muster oder Vorbehalt, Entscheidungsvorlage. Muster früh anfragen – Lieferzeiten sind Wartezeit.",
      "schedule": {
       "executes": [
        "t058"
@@ -3759,7 +3636,11 @@
      "origin": {
       "claude_v01": [],
       "muster_v021": [
-       "L3-BEM-11"
+       "L3-BEM-11",
+       "L3-BEM-03",
+       "L3-BEM-04",
+       "L3-BEM-05",
+       "L3-BEM-06"
       ],
       "chatgpt_v01": [],
       "note": null
@@ -3767,16 +3648,19 @@
     },
     {
      "id": "L3.LIC.1",
-     "title": "Themenpaket Lichtkonzept",
-     "result": "Lichtkonzept je Raumgruppe mit Leuchtenpositionen im Prinzip und geklärter Schnittstelle zur Elektroplanung",
+     "title": "Themenpaket Licht",
+     "result": "Paket Licht: Lichtkonzept je Raumgruppe mit Leuchtenpositionen im Prinzip und geklärter Schnittstelle zur Elektroplanung, bewertete Varianten mit Mustern und Entscheidungsvorlage",
      "checks": [
-      "Lichtkonzept je Raumgruppe beschrieben (Grundbeleuchtung, Akzente, Tageslichtbezug)",
-      "Leuchtenpositionen im Prinzip in Grundrissen bzw. Deckenspiegeln dargestellt",
-      "Einbauleuchten mit Deckenaufbau und Tragwerk abgeglichen",
+      "Entscheidungsfelder des Pakets aus der Qualitäts- und Ausstattungsliste übernommen; Grenzen zu Bädern und Treppen geklärt",
+      "Lichtkonzept je Raumgruppe beschrieben (Grundbeleuchtung, Akzente, Tageslichtbezug); Leuchtenpositionen im Prinzip in Grundrissen bzw. Deckenspiegeln",
+      "Einbauleuchten mit Deckenaufbau und Tragwerk abgeglichen; Leuchtenplanung im Detail der LPH 5 vorbehalten",
+      "Je Entscheidungsfeld mindestens zwei Varianten recherchiert und geprüft (Format, technische Kennwerte, Pflege, Verfügbarkeit); Herstellerdaten abgelegt",
+      "Varianten verglichen (Gestaltung, Funktion, Unterhalt, Kosten) und Empfehlung formuliert; Preis mit Quelle und Datum, ungeprüfte Herstellerangaben gekennzeichnet",
+      "Muster je Variante angefragt; Eingang nachgehalten, fehlende als Vorbehalt markiert",
+      "Muster gegen die Produktdaten geprüft, im Zusammenhang beurteilt und fotografiert; mit Referenzcode in der Musterliste",
       "Schnittstelle zur Elektroplanung geklärt (Auslässe, Schaltung/Steuerung im Grundsatz); Zuständigkeit Lichtplaner/ELT/Architekt festgelegt",
-      "Leuchtenqualitäten in die Qualitäts- und Ausstattungsliste aufgenommen (Kostenbezug)",
-      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
-      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet"
+      "Leuchtenqualitäten in die Qualitäts- und Ausstattungsliste aufgenommen; Stückzahlen ableitbar; Kostenwirkung je Variante benannt",
+      "Entscheidungsvorlage des Pakets erstellt: Varianten mit Mustern, Empfehlung, Kostenwirkung und Folgen; an die Projektleitung übergeben"
      ],
      "checkCodes": [
       "L3.LIC.1-01",
@@ -3785,12 +3669,18 @@
       "L3.LIC.1-04",
       "L3.LIC.1-05",
       "L3.LIC.1-06",
-      "L3.LIC.1-07"
+      "L3.LIC.1-07",
+      "L3.LIC.1-08",
+      "L3.LIC.1-09",
+      "L3.LIC.1-10"
      ],
      "checkBlocks": [
       "THEMA",
-      null,
-      null,
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA",
       "THEMA",
@@ -3800,12 +3690,12 @@
       "04.03"
      ],
      "scope": "Bedingt: Lichtkonzept beauftragt oder gestalterisch erforderlich",
-     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "owner": "Mitarbeiter/in Architektur – eine Person für das ganze Paket",
      "review": "Projektleitung",
-     "participants": "ELT; ggf. Lichtplaner",
-     "basis": "I: Neu in v0.3 als Beispiel für ein weiteres Themenpaket (Thema am 13.11.2026 genannt) – in keiner der drei Vorversionen enthalten, fachlich noch zu prüfen. V: nur bei entsprechendem Auftrag.",
+     "participants": "ELT; ggf. Lichtplaner; Hersteller (Muster)",
+     "basis": "I: Neu in v0.3 als Beispiel für ein weiteres Themenpaket (Thema am 13.11.2026 genannt) – in keiner der drei Vorversionen enthalten, fachlich noch zu prüfen. V: nur bei entsprechendem Auftrag; Muster nur, wenn vereinbart.",
      "effortHours": null,
-     "effortDrivers": "Zahl der Raumgruppen; Anspruch an die Lichtgestaltung",
+     "effortDrivers": "Zahl der Raumgruppen; Anspruch an die Lichtgestaltung; Zahl der Muster",
      "sourceType": "TBA-eigene Arbeit",
      "step": "Erarbeiten",
      "labels": [],
@@ -3820,7 +3710,7 @@
       "a"
      ],
      "condition": "P-THE enthält LIC",
-     "doneWhen": "Lichtkonzept vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Paket vollständig an die Projektleitung übergeben (L3.A5.AUS): Pläne, Codes in der Liste, Muster oder Vorbehalt, Entscheidungsvorlage. Muster früh anfragen – Lieferzeiten sind Wartezeit.",
      "schedule": {
       "executes": [
        "t058"
@@ -3833,24 +3723,31 @@
      },
      "origin": {
       "claude_v01": [],
-      "muster_v021": [],
+      "muster_v021": [
+       "L3-BEM-03",
+       "L3-BEM-04",
+       "L3-BEM-05",
+       "L3-BEM-06"
+      ],
       "chatgpt_v01": [],
       "note": "Neu in v0.3 – Vorschlag"
      }
     },
     {
      "id": "L3.BOD.1",
-     "title": "Themenpaket Bodenbeläge: Belagsplan und Übergänge",
-     "result": "Bodenbelagsplan je Geschoss mit Belagsbereichen, Übergängen und Aufbauhöhen; Optionen mit Mustern zur Entscheidung",
+     "title": "Themenpaket Bodenbeläge",
+     "result": "Paket Bodenbeläge: Belagsplan je Geschoss mit Belagsbereichen, Übergängen und Aufbauhöhen, bewertete Varianten mit Mustern und Entscheidungsvorlage",
      "checks": [
+      "Entscheidungsfelder des Pakets aus der Qualitäts- und Ausstattungsliste übernommen; Grenzen zu Bädern und Treppen geklärt",
       "Belagsarten je Raum bzw. Raumgruppe festgelegt (Nutzung, Beanspruchung, Rutschhemmung)",
-      "Bodenbelagsplan im Grundriss: Belagsbereiche, Verlegerichtung im Prinzip, Übergänge und Schwellen",
+      "Bodenbelagsplan im Grundriss: Belagsbereiche, Verlegerichtung im Prinzip, Übergänge und Schwellen; als Entwurf gekennzeichnet – keine Verlegeplanung (LPH 5)",
+      "Je Entscheidungsfeld mindestens zwei Varianten recherchiert und geprüft (Format, technische Kennwerte, Pflege, Verfügbarkeit); Herstellerdaten abgelegt",
+      "Varianten verglichen (Gestaltung, Funktion, Unterhalt, Kosten) und Empfehlung formuliert; Preis mit Quelle und Datum, ungeprüfte Herstellerangaben gekennzeichnet",
+      "Muster je Variante angefragt; Eingang nachgehalten, fehlende als Vorbehalt markiert",
+      "Muster gegen die Produktdaten geprüft, im Zusammenhang beurteilt und fotografiert; mit Referenzcode in der Musterliste",
       "Fußbodenaufbau je Belag mit dem Bauteilkatalog abgeglichen (Aufbauhöhen, Fußbodenheizung, Trittschall); mit HLS und Tragwerksplanung abgestimmt",
-      "Material- und Ausstattungscodes aus der Qualitäts- und Ausstattungsliste eingetragen",
-      "Kostenrelevante Mengen ableitbar (Belagsflächen je Belag, Sockelleisten)",
-      "Optionen ausgearbeitet: je Entscheidungsfeld des Themas mindestens zwei Varianten mit Empfehlung und Kostenwirkung",
-      "Muster je Option angefordert (über L3.MUS.1); Optionen mit Mustern als Entscheidungsblatt für den Auftraggeber aufbereitet",
-      "Als Entwurf gekennzeichnet – keine Verlegeplanung (LPH 5)"
+      "Codes in Plan und Liste eingetragen; Mengen ableitbar (Belagsflächen je Belag, Sockelleisten); Kostenwirkung je Variante benannt",
+      "Entscheidungsvorlage des Pakets erstellt: Varianten mit Mustern, Empfehlung, Kostenwirkung und Folgen; an die Projektleitung übergeben"
      ],
      "checkCodes": [
       "L3.BOD.1-01",
@@ -3860,11 +3757,15 @@
       "L3.BOD.1-05",
       "L3.BOD.1-06",
       "L3.BOD.1-07",
-      "L3.BOD.1-08"
+      "L3.BOD.1-08",
+      "L3.BOD.1-09",
+      "L3.BOD.1-10"
      ],
      "checkBlocks": [
       "THEMA",
-      null,
+      "THEMA",
+      "THEMA",
+      "THEMA",
       "THEMA",
       "THEMA",
       "THEMA",
@@ -3876,12 +3777,12 @@
       "04.03"
      ],
      "scope": "Bedingt: Bodenbeläge als eigenes Thema vereinbart",
-     "owner": "Mitarbeiter/in Architektur (eine Person je Thema)",
+     "owner": "Mitarbeiter/in Architektur – eine Person für das ganze Paket",
      "review": "Projektleitung",
-     "participants": "HLS (Fußbodenheizung); Tragwerk (Aufbauhöhen)",
-     "basis": "I: Neu in v0.3.3 (Thema am 14.11.2026 genannt) – in keiner der drei Vorversionen enthalten, fachlich noch zu prüfen. V: nur bei entsprechendem Auftrag.",
+     "participants": "HLS (Fußbodenheizung); Tragwerk (Aufbauhöhen); Hersteller (Muster)",
+     "basis": "I: Neu in v0.3.3 (Thema am 14.11.2026 genannt) – in keiner der drei Vorversionen enthalten, fachlich noch zu prüfen. V: nur bei entsprechendem Auftrag; Muster nur, wenn vereinbart.",
      "effortHours": null,
-     "effortDrivers": "Zahl der Geschosse und Belagsarten",
+     "effortDrivers": "Zahl der Geschosse und Belagsarten; Zahl der Muster und Lieferzeiten",
      "sourceType": "TBA-eigene Arbeit",
      "step": "Erarbeiten",
      "labels": [],
@@ -3897,7 +3798,7 @@
       "a"
      ],
      "condition": "P-THE enthält BOD",
-     "doneWhen": "Belagsplan vollständig; Optionen mit Mustern für die Entscheidung aufbereitet; Übergabe an L3.A5.AUS.",
+     "doneWhen": "Paket vollständig an die Projektleitung übergeben (L3.A5.AUS): Pläne, Codes in der Liste, Muster oder Vorbehalt, Entscheidungsvorlage. Muster früh anfragen – Lieferzeiten sind Wartezeit.",
      "schedule": {
       "executes": [
        "t058"
@@ -3910,19 +3811,109 @@
      },
      "origin": {
       "claude_v01": [],
-      "muster_v021": [],
+      "muster_v021": [
+       "L3-BEM-03",
+       "L3-BEM-04",
+       "L3-BEM-05",
+       "L3-BEM-06"
+      ],
       "chatgpt_v01": [],
       "note": "Neu in v0.3.3 – Vorschlag"
      }
     },
     {
+     "id": "L3.WEI.1",
+     "title": "Themenpaket weitere Entscheidungsfelder",
+     "result": "Paket nach Bedarf (etwa Wände und Decken, Türen, Einbauten, Küche): Pläne des Themas, bewertete Varianten mit Mustern und Entscheidungsvorlage",
+     "checks": [
+      "Thema und Entscheidungsfelder des Pakets aus der Qualitäts- und Ausstattungsliste übernommen; Karte im Projekt nach dem Thema benannt; Grenzen zu den anderen Paketen geklärt",
+      "Pläne nach Bedarf des Themas im vertieften Maßstab (Grundriss, Ansicht oder Schnitt); als Entwurf gekennzeichnet – keine Ausführungsplanung (LPH 5)",
+      "Je Entscheidungsfeld mindestens zwei Varianten recherchiert und geprüft (Format, technische Kennwerte, Pflege, Verfügbarkeit); Herstellerdaten abgelegt",
+      "Varianten verglichen (Gestaltung, Funktion, Unterhalt, Kosten) und Empfehlung formuliert; Preis mit Quelle und Datum, ungeprüfte Herstellerangaben gekennzeichnet",
+      "Muster je Variante angefragt; Eingang nachgehalten, fehlende als Vorbehalt markiert",
+      "Muster gegen die Produktdaten geprüft, im Zusammenhang beurteilt und fotografiert; mit Referenzcode in der Musterliste",
+      "Fragen an die betroffenen Fachplaner gestellt und beantwortet",
+      "Codes in Plänen und Liste eingetragen; Mengen ableitbar; Kostenwirkung je Variante benannt",
+      "Entscheidungsvorlage des Pakets erstellt: Varianten mit Mustern, Empfehlung, Kostenwirkung und Folgen; an die Projektleitung übergeben"
+     ],
+     "checkCodes": [
+      "L3.WEI.1-01",
+      "L3.WEI.1-02",
+      "L3.WEI.1-03",
+      "L3.WEI.1-04",
+      "L3.WEI.1-05",
+      "L3.WEI.1-06",
+      "L3.WEI.1-07",
+      "L3.WEI.1-08",
+      "L3.WEI.1-09"
+     ],
+     "checkBlocks": [
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA",
+      "THEMA"
+     ],
+     "psp": [
+      "04.03"
+     ],
+     "scope": "Bedingt: Entscheidungsfelder ohne eigenes Paket",
+     "owner": "Mitarbeiter/in Architektur – eine Person für das ganze Paket",
+     "review": "Projektleitung",
+     "participants": "nach Thema; Hersteller (Muster)",
+     "basis": "I: Neu in v0.3.5 (Gari, 24.11.2026: eine Person je Paket; Felder ohne eigenes Thema brauchen ebenfalls ein Paket). Je weiterem Paket eine Karte. V: nur bei entsprechendem Auftrag; Muster nur, wenn vereinbart.",
+     "effortHours": null,
+     "effortDrivers": "Zahl der Entscheidungsfelder; Zahl der Muster und Lieferzeiten",
+     "sourceType": "TBA-eigene Arbeit",
+     "step": "Erarbeiten",
+     "labels": [],
+     "produces": [
+      "WEI.1"
+     ],
+     "requires": [
+      "QUA.1",
+      "GRU.1"
+     ],
+     "hoai": [
+      "a"
+     ],
+     "condition": "P-THE enthält weitere",
+     "doneWhen": "Paket vollständig an die Projektleitung übergeben (L3.A5.AUS): Pläne, Codes in der Liste, Muster oder Vorbehalt, Entscheidungsvorlage. Muster früh anfragen – Lieferzeiten sind Wartezeit.",
+     "schedule": {
+      "executes": [
+       "t058"
+      ],
+      "waitsFor": [],
+      "anchor": null,
+      "templateStart": "2027-02-03",
+      "templateEnd": "2027-03-02",
+      "noOwnActivity": false
+     },
+     "origin": {
+      "claude_v01": [],
+      "muster_v021": [
+       "L3-BEM-03",
+       "L3-BEM-04",
+       "L3-BEM-05",
+       "L3-BEM-06"
+      ],
+      "chatgpt_v01": [],
+      "note": "Neu in v0.3.5 – Vorschlag"
+     }
+    },
+    {
      "id": "L3.A5.AUS",
      "title": "Bemusterungsunterlagen zusammenstellen, prüfen und dem Auftraggeber übergeben",
-     "result": "Übergebene Bemusterungsunterlagen (Mustermappe physisch/digital) mit Anschreiben, Entscheidungsfeldern und Terminvorschlag für die Bemusterung",
+     "result": "Übergebene Bemusterungsunterlagen (Mustermappe physisch/digital) mit Anschreiben, Entscheidungsvorlagen der Pakete und Terminvorschlag für die Bemusterung",
      "checks": [
-      "Bemusterungsunterlagen vollständig: Qualitäts- und Ausstattungsliste, Vergleichsmatrix, Übersichtspläne, aktive Themenpläne, Muster",
-      "Mustermappe einheitlich nummeriert; Varianten und Empfehlung klar unterschieden",
-      "Kostenfolgen der Varianten je Entscheidungsfeld benannt",
+      "Bemusterungsunterlagen vollständig: Qualitäts- und Ausstattungsliste, Übersichtspläne und je aktivem Paket Pläne, Varianten, Muster und Entscheidungsvorlage",
+      "Pakete untereinander abgeglichen: Materialfamilien und Farben passen zusammen, keine Lücken oder Doppelungen an den Paketgrenzen; Muster der Pakete gemeinsam beurteilt (Kombination, Licht)",
+      "Mustermappe einheitlich nummeriert; Varianten und Empfehlung klar unterschieden; bei öffentlichem Auftraggeber produktneutral",
+      "Kostenfolgen der Varianten je Entscheidungsfeld zusammengefasst",
       "Interne Prüfung und gestalterische Freigabe durch die Büroleitung dokumentiert",
       "Terminplan und Entscheidungsliste fortgeschrieben; aktueller Stand beigefügt",
       "Unterlagen dem Auftraggeber übergeben; Versand dokumentiert; Bemusterungstermin(e) vereinbart"
@@ -3933,10 +3924,12 @@
       "L3.A5.AUS-03",
       "L3.A5.AUS-04",
       "L3.A5.AUS-05",
-      "L3.A5.AUS-06"
+      "L3.A5.AUS-06",
+      "L3.A5.AUS-07"
      ],
      "checkBlocks": [
       "AUS",
+      null,
       null,
       null,
       "AUS",
@@ -3950,9 +3943,9 @@
      "owner": "Projektleitung",
      "review": "Büroleitung (Freigabe)",
      "participants": "Auftraggeber",
-     "basis": "H: HOAI Anlage 10 LPH 3 f). V: Umfang der Bemusterung. I: Ausgaberoutine.",
+     "basis": "H: HOAI Anlage 10 LPH 3 f). V: Umfang der Bemusterung. I: Ausgaberoutine; Abgleich der Pakete.",
      "effortHours": null,
-     "effortDrivers": "Zahl der Entscheidungsfelder; Zahl der Termine; Entscheidungsstruktur des Auftraggebers",
+     "effortDrivers": "Zahl der Pakete und Entscheidungsfelder; Zahl der Termine; Entscheidungsstruktur des Auftraggebers",
      "sourceType": "TBA-eigene Prüfung und Ausgabe",
      "step": "Ausgeben",
      "labels": [
@@ -3963,14 +3956,13 @@
      ],
      "requires": [
       "QUA.1",
-      "MAT.1",
       "MAP.1",
-      "MUS.1",
       "BAD.1",
       "TRE.1",
       "FAS.1",
       "LIC.1",
-      "BOD.1"
+      "BOD.1",
+      "WEI.1"
      ],
      "hoai": [
       "a",
@@ -4007,7 +3999,7 @@
      "title": "Bemusterung durchführen und Qualitätsentscheidungen dokumentieren (M06)",
      "result": "Durchgeführte Bemusterung; Bemusterungsprotokoll; konsolidierte Qualitäts- und Ausstattungsliste mit Status je Position; Entscheidungen an die Bauphysik übergeben",
      "checks": [
-      "Bemusterungstermin(e) durchgeführt; je Thema und Entscheidungsfeld Ergebnis festgehalten: gewählte Option (mit Referenzcode) oder offen (mit Frist)",
+      "Bemusterungstermin(e) durchgeführt; je Paket und Entscheidungsfeld Ergebnis festgehalten: gewählte Option (mit Referenzcode) oder offen (mit Frist)",
       "Bemusterungsprotokoll erstellt: Entscheidungen mit Referenzcode, Datum und Entscheider",
       "Qualitäts- und Ausstattungsliste konsolidiert: je Position Status „bestätigt“ oder „offen mit Kostenannahme“",
       "Kosten- und Terminfolgen geänderter Qualitäten dokumentiert",

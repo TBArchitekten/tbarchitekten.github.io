@@ -107,7 +107,7 @@ function showPlans(){
       planner.href='../muster-planner.html';
       planner.textContent='Muster-Planner ansehen';
       planner.className='office-plan-library-link';
-      planner.title='Entwurf v0.3.4 im Office Planner · nur Ansicht';
+      planner.title='Entwurf v0.3.5 im Office Planner · nur Ansicht';
       actions.append(planner);
     }
     card.append(number,title,metadata,actions);templateHost.append(card);
@@ -118,7 +118,7 @@ function showPlans(){
   plannerNumber.textContent='LPH3 · MUSTER-PLANNER';
   const plannerTitle=document.createElement('h2');plannerTitle.textContent='Muster-Planner LPH 3';
   const plannerMeta=document.createElement('p');plannerMeta.className='office-project-meta';
-  plannerMeta.textContent='Entwurf v0.3.4 · 7 Abgabe-Buckets · 53 TBA-Aufgaben · schreibgeschützte Vorlage';
+  plannerMeta.textContent='Entwurf v0.3.5 · 7 Abgabe-Buckets · 52 TBA-Aufgaben · schreibgeschützte Vorlage';
   const plannerActions=document.createElement('div');plannerActions.className='office-project-actions';
   const plannerOpen=document.createElement('a');plannerOpen.href='../muster-planner.html';
   plannerOpen.textContent='Muster-Planner ansehen';plannerOpen.className='office-plan-library-link';

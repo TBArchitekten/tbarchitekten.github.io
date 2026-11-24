@@ -10,7 +10,7 @@ import os, pathlib, tempfile
 REPO = str(pathlib.Path(__file__).resolve().parents[2])
 OUT = sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="lph3-bibliothek-")
 os.makedirs(OUT, exist_ok=True)
-VERSION, STAND = "0.3.4-draft", "2026-11-15"
+VERSION, STAND = "0.3.5-draft", "2026-11-24"
 TPL = "1.6"
 
 # ───────── Muster-Terminplan (Seed der Seite)
@@ -150,7 +150,7 @@ for a in ABG:
         plannerDescription=a["summary"], scheduleReferences=refs, deliverables=a["liefer"], closingResults=a["abschluss_erg"], note=a.get("hinweis"), tasks=jt))
 lib = dict(id="tba-lph3-aufgabenbibliothek", version=VERSION, draft=True, phase="LPH3", updated=STAND,
     status="Entwurf zur gemeinsamen Prüfung · nicht freigegeben",
-    reference=f"Muster-Terminplan LPH 3 v{TPL} / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. bis 15.11.2026",
+    reference=f"Muster-Terminplan LPH 3 v{TPL} / Claude v0.1 / ChatGPT v0.1 / Muster-Planner v0.2.1 / Entscheidungen Gari 13. bis 24.11.2026",
     warning="Jeder Bucket ist eine Abgabe des Muster-Terminplans. Nur TBA-eigene Arbeit; Leistungen der Fachplaner und Prüfzeiten des Auftraggebers sind Wartezeit. Keine Stundenwerte. Termine des Musters sind keine Vertragsfristen.",
     coding=dict(pattern="L3.<Objekt>.<Zustand>", checkpoint="<Aufgabe>-NN", object="Arbeitsergebnis (3 Buchstaben, phasenunabhängig) oder Abgabe (A1 … A7)",
                 state="Stand des Ergebnisses (1, 2, 3) oder Schritt der Abgabe (PRF, AUS, ABS)", rule="Eine Aufgabe trägt den Code des Ergebnisstands, den sie erzeugt. Codes werden nie neu vergeben."),
