@@ -208,9 +208,12 @@ test('Als Reiter in Work: Sitzung über die App, kein Rücksprung, Abbrechen gem
     // Anlegen: die Seite öffnet die neue Kostenberechnung im Rahmen, ohne «‹ Kostenberechnungen».
     await rahmen().evaluate(()=>location.assign('/kostenberechnung.html?neu=22222222-2222-4222-8222-222222222222'));
     await f.locator('#kbNeu button[type="submit"]').click();
-    await f.locator('h1',{hasText:'Testhaus'}).waitFor();
+    await f.locator('h1',{hasText:'Testhaus'}).waitFor({state:'attached'});
     assert.match(rahmen().url(),/kostenberechnung\.html\?id=/);
     assert.equal(await f.locator('.kb-back').evaluate(a=>getComputedStyle(a).display),'none');
+    // Im Reiter steht das Projekt schon in Work: keine zweite Überschrift, kein «Office · Kostenberechnung» (Gari, 24.11.2026).
+    assert.deepEqual(await f.locator('.kb-head').evaluate(h=>[getComputedStyle(h.querySelector('h1')).display,getComputedStyle(h.querySelector('.kicker')).display]),['none','none']);
+    assert.match(await f.locator('.kb-intro').textContent(),/T-01 · LPH 3 · DIN 276/);
     assert.deepEqual(await page.evaluate(()=>window.__nachrichten),[{tbaOfficeTool:'abgebrochen'}],'Anlegen ist kein Abbruch');
     assert.deepEqual(await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending()]),[1,false]);
     // Eine Änderung steht aus; Work ruft flush, bevor es den Rahmen schließt: gespeichert, nichts mehr offen.
@@ -221,6 +224,38 @@ test('Als Reiter in Work: Sitzung über die App, kein Rücksprung, Abbrechen gem
     await rahmen().evaluate(()=>window.TBA_OFFICE_TOOL.flush());
     assert.deepEqual(await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending(),
       window.__fake.db.office_kosten_instances[0].state.bezug.BGF]),[2,false,'412.5']);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+// Gari, 24.11.2026: eine neue Kostenberechnung zeigte 14 % Vollständigkeit, ohne dass etwas geklärt war; und der
+// Kostenstand ließ Quartale wählen, für die es noch nichts gibt.
+test('Vollständigkeit ohne Vorbelegung des Musters; bestätigen zählt; Kostenstand höchstens das laufende Quartal',async()=>{
+  const {ctx,page,fehler}=await oeffne();
+  try{
+    await anlegen(page);
+    const stand=async()=>{const t=await page.locator('.sum .card',{hasText:'Vollständigkeit'}).textContent();
+      const m=t.match(/(\d+)\s*%.*?(\d+) von (\d+) Kostengruppen geklärt(?:(\d+) weitere vom Muster als «entfällt» vorbelegt, nicht mitgezählt\.)?/s);
+      return m?m.slice(1).map(Number):t};
+    const neu=await stand();
+    assert.deepEqual(neu.slice(0,2),[0,0],'neu: 0 % und nichts geklärt, nicht '+JSON.stringify(neu));
+    assert.ok(neu[3]>0,'die Vorbelegung steht als Hinweis da');
+    // Eine ältere Kostenberechnung ohne Marke: beim Laden erkannt, solange der Eintrag dem Muster entspricht.
+    await page.evaluate(()=>{for(const g of Object.values(window.__fake.db.office_kosten_instances[0].state.gruppen))delete g.vorbelegt;window.__fake.sichern()});
+    await page.reload();await page.locator('h1',{hasText:'Testhaus'}).waitFor();
+    assert.deepEqual(await stand(),neu);
+    // Quellen: der Kostenstand reicht bis zum laufenden Quartal; die Vorbelegung lässt sich bestätigen.
+    await page.click('.tab[data-tab="quellen"]');
+    const jetzt=new Date(),aktuell=jetzt.getFullYear()+'-Q'+(Math.floor(jetzt.getMonth()/3)+1);
+    const optionen=await page.locator('select[data-key="st:kostenstand"] option').evaluateAll(o=>o.map(x=>x.value));
+    assert.equal(optionen[0],aktuell,'keine künftigen Quartale');
+    assert.match(await page.locator('label.feld',{hasText:'Kostenstand der Kostenberechnung'}).textContent(),/Zeitpunkt der Ermittlung \(DIN 276\), höchstens das laufende Quartal\./);
+    await page.locator('[data-act="kg-bestaetigen"][data-kg="100"]').click();
+    await gespeichert(page);
+    assert.equal((await page.evaluate(()=>window.__fake.db.office_kosten_instances[0].state.gruppen['100'].vorbelegt)),false);
+    await page.click('.tab[data-tab="uebersicht"]');
+    const danach=await stand();
+    assert.ok(danach[1]>0&&danach[1]+danach[3]===neu[3],'KG 100 zählt jetzt als geklärt: '+JSON.stringify([neu,danach]));
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

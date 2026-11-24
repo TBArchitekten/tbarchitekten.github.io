@@ -42,10 +42,24 @@ const ui={tab:'uebersicht',offen:new Set(['300']),filter:'300',auswahl:null,kgAu
 function merkePrefs(){try{localStorage.setItem(PREFS_KEY,JSON.stringify({sicht:ui.sicht,zeilen:ui.zeilen,bez:ui.breiteBez,kom:ui.breiteKom}))}catch{}}
 let serverRevision=0,speichernTimer=null,laeuft=false,ausstehend=false,konflikt=false,speicherText='';
 
-function quartale(){
-  const jetzt=new Date(),bis=jetzt.getFullYear()+1,aus=[];
-  for(let j=bis;j>=2018;j--)for(let q=4;q>=1;q--)aus.push(j+'-Q'+q);
+// Kostenstand ist der Zeitpunkt der Ermittlung (DIN 276): wählbar bis zum laufenden Quartal, nicht in die Zukunft
+// (Gari, 24.11.2026). Für das laufende Quartal ist der Baupreisindex meist noch nicht veröffentlicht; dann schreibt
+// die Kostenberechnung bis zum letzten Wert fort und sagt es. Ein schon gespeicherter Wert bleibt wählbar.
+function quartale(mit=''){
+  const jetzt=new Date(),j0=jetzt.getFullYear(),q0=Math.floor(jetzt.getMonth()/3)+1,aus=[];
+  for(let j=j0;j>=2018;j--)for(let q=4;q>=1;q--)if(j<j0||q<=q0)aus.push(j+'-Q'+q);
+  if(mit&&R.quartalIndex(mit)!==null&&!aus.includes(mit))aus.unshift(mit);
   return aus;
+}
+// Vom Muster vorbelegt (24.11.2026): ein «entfällt», das so aus dem Muster kommt, zählt nicht als geklärt, bis man die
+// Kostengruppe für das Projekt bearbeitet oder bestätigt (kosten-rechnen.js). Neue Kostenberechnungen tragen die Marke
+// ab dem Anlegen; ältere bekommen sie beim Laden, wo der Eintrag noch genau dem Muster entspricht.
+function markiereVorbelegt(stand,musterGruppen){
+  for(const [kg,g] of Object.entries(stand?.gruppen||{})){
+    const m=musterGruppen?.[kg];
+    if(g&&g.vorbelegt===undefined&&g.status==='entfaellt'&&m?.status==='entfaellt'&&String(m.notiz||'')===String(g.notiz||''))g.vorbelegt=true;
+  }
+  return stand;
 }
 function letzterIndex(){return (st?.indizes||[]).filter(x=>Number(R.dezimal(x.wert))>0&&R.quartalIndex(x.quartal)!==null).map(x=>x.quartal).sort((a,b)=>R.quartalIndex(a)-R.quartalIndex(b)).pop()||''}
 function aktuellesQuartal(){const d=new Date();return d.getFullYear()+'-Q'+(Math.floor(d.getMonth()/3)+1)}
@@ -86,7 +100,7 @@ let listeDaten=null;
 async function ladeListe(){
   const [tp,ins,pr,pm,ar]=await Promise.all([
     sb.from('office_kosten_templates').select('id,title,version,norm,status,description,updated_at,state').eq('is_active',true).order('title'),
-    sb.from('office_kosten_instances').select('id,project_id,project_number,project_name,phase,updated_at,state').eq('is_archived',false).order('updated_at',{ascending:false}).limit(200),
+    sb.from('office_kosten_instances').select('id,project_id,project_number,project_name,phase,template_id,updated_at,state').eq('is_archived',false).order('updated_at',{ascending:false}).limit(200),
     sb.from('office_projects').select('id,number,name,status,projektleiter_id').order('number').limit(250),
     sb.from('office_project_members').select('project_id').eq('user_id',nutzer.id).limit(500),
     sb.from('office_kosten_instances').select('id,project_id,project_number,project_name,phase,updated_at,is_archived,state').eq('is_archived',true).order('project_number').limit(100)
@@ -95,6 +109,8 @@ async function ladeListe(){
   const team=new Set((pm.data||[]).map(x=>x.project_id));
   const projekte=(pr.data||[]).filter(p=>p.status==='aktiv'&&(mitglied.role==='admin'||p.projektleiter_id===nutzer.id||team.has(p.id)));
   listeDaten={muster:tp.data||[],instanzen:ins.data||[],projekte,archiv:ar.data||[]};
+  const musterGruppen=new Map(listeDaten.muster.map(t=>[t.id,t.state?.gruppen]));
+  for(const i of listeDaten.instanzen)if(i.template_id&&i.state)markiereVorbelegt(i.state,musterGruppen.get(i.template_id));
 }
 async function zeigeListe(){
   await ladeListe();
@@ -193,6 +209,7 @@ function dialogNeu(vorwahl=null){
     try{
       if(!projekt||!muster)throw Error('Bitte Projekt und Muster wählen.');
       const state=JSON.parse(JSON.stringify(muster.state));state.kostenstand=f.elements.kostenstand.value;
+      for(const g of Object.values(state.gruppen||{}))if(g?.status==='entfaellt')g.vorbelegt=true;
       const {data,error}=await sb.from('office_kosten_instances').insert({project_id:projekt.id,template_id:muster.id,template_version:muster.version,
         project_number:projekt.number,project_name:projekt.name,phase:'LPH3',owner_id:nutzer.id,state}).select('id').single();
       if(error||!data?.id)throw Error('Die Kostenberechnung konnte nicht angelegt werden.');
@@ -205,10 +222,14 @@ function dialogNeu(vorwahl=null){
 // ---------- Laden ----------
 async function ladeKostenberechnung(id){
   const {data:row,error}=await sb.from('office_kosten_instances')
-    .select('id,project_id,project_number,project_name,phase,owner_id,template_version,state,server_revision,updated_at,is_archived').eq('id',id).maybeSingle();
+    .select('id,project_id,project_number,project_name,phase,owner_id,template_id,template_version,state,server_revision,updated_at,is_archived').eq('id',id).maybeSingle();
   if(error)throw error;
   if(!row)throw Error('Kostenberechnung nicht gefunden.');
   if(row.state?.schema!==R.SCHEMA)throw Error('Unbekannter Stand der Kostenberechnung.');
+  if(row.template_id&&!row.is_archived){
+    const {data:m}=await sb.from('office_kosten_templates').select('gruppen:state->gruppen').eq('id',row.template_id).maybeSingle();
+    if(m?.gruppen)markiereVorbelegt(row.state,m.gruppen);
+  }
   doc=row;st=row.state;serverRevision=Number(row.server_revision);
   if(!Number.isSafeInteger(serverRevision)||serverRevision<1)throw Error('Keine gültige Serverrevision.');
   let leitet=false,team=false;
@@ -391,7 +412,8 @@ function tabUebersicht(){
     '<div class="card"><p class="sum-label">Kostenvorgabe</p>'+(vorgabe.cent===null?'<p class="big">–</p><p class="meta"><button type="button" class="btn btn-quiet" style="padding:0;min-height:0" data-act="tab" data-tab="quellen">Budget eintragen</button></p>':
       '<p class="big">'+betrag(vorgabe.cent)+'</p><p class="meta '+(vorgabe.differenzCent>0n?'att':'okc')+'">'+(vorgabe.differenzCent>0n?'überschritten um '+R.euro(anzeigeCent(vorgabe.differenzCent)):'unterschritten um '+R.euro(anzeigeCent(-vorgabe.differenzCent)))+'</p>')+'</div>'+
     '<div class="card"><p class="sum-label">Vollständigkeit</p><p class="big">'+v.prozent+' %</p><span class="bar" style="margin:4px 0 10px"><span style="width:'+v.prozent+'%"></span></span>'+
-      '<p class="meta">'+v.erledigt+' von '+v.gesamt+(v.nachKg?' Kostengruppen geklärt':' Positionen vollständig belegt')+'</p></div></section>';
+      '<p class="meta">'+v.erledigt+' von '+v.gesamt+(v.nachKg?' Kostengruppen geklärt':' Positionen vollständig belegt')+'</p>'+
+      (v.vorbelegt?'<p class="meta">'+v.vorbelegt+' weitere vom Muster als «entfällt» vorbelegt, nicht mitgezählt.</p>':'')+'</div></section>';
   const erste=(st.katalog||[]).filter(k=>R.ebene(k.kg)===1);
   const bgf=R.dezimal(st.bezug?.BGF),mitBgf=!!(bgf&&Number(bgf)>0);
   const anteil=b=>g.bekanntCent>0n&&b>0n?R.prozent(Number(R.teile(b*1000n,g.bekanntCent))/10):'';
@@ -665,8 +687,9 @@ function panelKg(kg){
   const els=elementeIn(kg),elIds=new Set(els.map(e=>e.id));
   const pau=n.status==='enthalten'?pauschalIn(kg):'';
   let stand;
-  if(mit)stand='Entfällt mit KG '+mit+(st.gruppen[mit].notiz?': '+st.gruppen[mit].notiz:'')+'.';
-  else if(markiert)stand='Entfällt. Was hier steht, zählt nicht zur Summe und nicht als offen.';
+  const vom=n.vorbelegt&&n.blatt?' Vom Muster vorbelegt: zählt erst als geklärt, wenn du es für dieses Projekt bestätigst.':'';
+  if(mit)stand='Entfällt mit KG '+mit+(st.gruppen[mit].notiz?': '+st.gruppen[mit].notiz:'')+'.'+vom;
+  else if(markiert)stand='Entfällt. Was hier steht, zählt nicht zur Summe und nicht als offen.'+(st.gruppen[kg].vorbelegt?' Vom Muster vorbelegt: zählt erst als geklärt, wenn du es für dieses Projekt bestätigst.':'');
   else if(n.blatt)stand={leer:'Ohne Ansatz: noch nicht entschieden. Eine Position oder ein Element anlegen oder «entfällt» setzen.',frei:'Optional. Bleibt sie leer, zählt sie nicht als offen.',
     enthalten:'In der Pauschale von KG '+pau+' enthalten.',offen:n.offen+(n.offen===1?' Position ist':' Positionen sind')+' noch nicht vollständig belegt.',
     vollstaendig:'Vollständig belegt.',entfaellt:'Alle Positionen entfallen.'}[n.status]||'';
@@ -678,6 +701,7 @@ function panelKg(kg){
     html+='<div class="kg-akt">';
     if(markiert){
       html+='<div class="form" style="width:100%">'+feld('Begründung','gruppe:'+kg+':notiz',st.gruppen[kg].notiz||'',{attr:'placeholder="z. B. nicht vorhanden"'})+'</div>'+
+        (st.gruppen[kg].vorbelegt?'<button type="button" class="btn btn-primary" data-act="kg-bestaetigen" data-kg="'+esc(kg)+'">Für dieses Projekt bestätigen</button>':'')+
         '<button type="button" class="btn" data-act="kg-wieder" data-kg="'+esc(kg)+'">Wieder aufnehmen</button>';
     }else{
       html+=(kinder.length?'':'<button type="button" class="btn btn-primary" data-act="pos-neu" data-kg="'+esc(kg)+'">'+ICON_PLUS+'Position anlegen</button>'+
@@ -717,18 +741,22 @@ function panelElement(el){
     return '<button type="button" class="kg-kind" data-act="waehle" data-id="'+esc(p.id)+'"><span>'+esc(p.titel||'Position')+'</span><span class="num">'+(r?.betragCent!=null?R.euro(r.betragCent):'offen')+'</span></button>'}).join('');
   return html+'</section>';
 }
+function vorbelegtHinweis(kg){
+  return '<span class="meta vorbelegt">Vom Muster vorbelegt'+(kannBearbeiten?' · <button type="button" class="link" data-act="kg-bestaetigen" data-kg="'+esc(kg)+'">für dieses Projekt bestätigen</button>':'')+'</span>';
+}
 function feld(label,key,wert,{attr='',typ='text',hinweis=''}={}){
   return '<label class="feld">'+esc(label)+'<input type="'+typ+'" data-key="'+esc(key)+'" value="'+esc(wert??'')+'"'+(kannBearbeiten?'':' readonly')+' '+attr+'>'+(hinweis?'<span class="meta" style="font-weight:400">'+esc(hinweis)+'</span>':'')+'</label>';
 }
-function auswahl(label,key,wert,optionen){
-  return '<label class="feld">'+esc(label)+'<select data-key="'+esc(key)+'"'+(kannBearbeiten?'':' disabled')+'>'+optionen.map(([v,t])=>'<option value="'+esc(v)+'"'+(String(v)===String(wert??'')?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>';
+function auswahl(label,key,wert,optionen,hinweis=''){
+  return '<label class="feld">'+esc(label)+'<select data-key="'+esc(key)+'"'+(kannBearbeiten?'':' disabled')+'>'+optionen.map(([v,t])=>'<option value="'+esc(v)+'"'+(String(v)===String(wert??'')?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select>'+
+    (hinweis?'<span class="meta" style="font-weight:400">'+esc(hinweis)+'</span>':'')+'</label>';
 }
 function haken(label,key,an){return '<label class="check"><input type="checkbox" data-key="'+esc(key)+'"'+(an?' checked':'')+(kannBearbeiten?'':' disabled')+'>'+esc(label)+'</label>'}
 function schalterAn(kw,name){if(typeof kw?.[name]==='boolean')return kw[name];return !!R.ARTEN[kw?.art]?.[name]}
 function panelPosition(p,r){
   const k='pos:'+p.id+':';const kw=p.kennwert||{};
   const artOpt=[['','Bitte wählen'],...Object.entries(R.ARTEN).map(([a,x])=>[a,x.label])];
-  const qOpt=[['','wie die Kostenberechnung'],...quartale().map(q=>[q,R.quartalText(q)])];
+  const qOpt=[['','wie die Kostenberechnung'],...quartale(kw.kostenstand).map(q=>[q,R.quartalText(q)])];
   const gruppe=KG_MUSTER.test(String(p.kg||''))&&kinderVon(p.kg).length>0;
   const els=KG_MUSTER.test(String(p.kg||''))?elementeIn(p.kg):[];
   const el=els.find(e=>e.id===p.element);
@@ -855,14 +883,17 @@ function poolErgebnis(p){
 
 // Quellen und Grundlagen
 function tabQuellen(){
-  const qOpt=quartale().map(q=>[q,R.quartalText(q)]);
-  const indizes=(st.indizes||[]).map((x,i)=>'<tr><td>'+'<select data-key="index:'+i+':quartal" aria-label="Quartal"'+(kannBearbeiten?'':' disabled')+'>'+qOpt.map(([v,t])=>'<option value="'+v+'"'+(v===x.quartal?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></td>'+
+  const letzter=letzterIndex(),ohneIndex=q=>!!letzter&&R.quartalIndex(q)>R.quartalIndex(letzter);
+  const standOpt=quartale(st.kostenstand).map(q=>[q,R.quartalText(q)+(ohneIndex(q)?' · Index noch nicht veröffentlicht':'')]);
+  const indizes=(st.indizes||[]).map((x,i)=>'<tr><td>'+'<select data-key="index:'+i+':quartal" aria-label="Quartal"'+(kannBearbeiten?'':' disabled')+'>'+quartale(x.quartal).map(q=>[q,R.quartalText(q)]).map(([v,t])=>'<option value="'+v+'"'+(v===x.quartal?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></td>'+
     '<td><input type="text" inputmode="decimal" data-key="index:'+i+':wert" value="'+esc(R.zahl(x.wert,1))+'" aria-label="Indexwert"'+(kannBearbeiten?'':' readonly')+'></td>'+
     '<td>'+(kannBearbeiten?'<button type="button" class="btn btn-quiet" data-act="index-weg" data-i="'+i+'" aria-label="Zeile entfernen">Entfernen</button>':'')+'</td></tr>').join('');
   const gruppen=(st.katalog||[]).filter(k=>R.ebene(k.kg)===1).map(k=>{const g=st.gruppen?.[k.kg]||{};return '<tr><td><span class="kg">'+esc(k.kg)+'</span>'+esc(k.titel)+'</td>'+
-    '<td>'+haken('entfällt','gruppe:'+k.kg+':status',g.status==='entfaellt')+'</td><td><input type="text" data-key="gruppe:'+k.kg+':notiz" value="'+esc(g.notiz||'')+'" aria-label="Begründung"'+(kannBearbeiten?'':' readonly')+'></td></tr>'}).join('');
+    '<td>'+haken('entfällt','gruppe:'+k.kg+':status',g.status==='entfaellt')+'</td><td><input type="text" data-key="gruppe:'+k.kg+':notiz" value="'+esc(g.notiz||'')+'" aria-label="Begründung"'+(kannBearbeiten?'':' readonly')+'>'+
+    (g.vorbelegt?vorbelegtHinweis(k.kg):'')+'</td></tr>'}).join('');
   const weitere=Object.entries(st.gruppen||{}).filter(([kg,g])=>g?.status==='entfaellt'&&R.ebene(kg)>1).sort(([a],[b])=>a.localeCompare(b)).map(([kg,g])=>
-    '<tr><td><span class="kg">'+esc(kg)+'</span>'+esc(titel(kg))+'</td><td><input type="text" data-key="gruppe:'+esc(kg)+':notiz" value="'+esc(g.notiz||'')+'" aria-label="Begründung KG '+esc(kg)+'"'+(kannBearbeiten?'':' readonly')+'></td>'+
+    '<tr><td><span class="kg">'+esc(kg)+'</span>'+esc(titel(kg))+'</td><td><input type="text" data-key="gruppe:'+esc(kg)+':notiz" value="'+esc(g.notiz||'')+'" aria-label="Begründung KG '+esc(kg)+'"'+(kannBearbeiten?'':' readonly')+'>'+
+    (g.vorbelegt?vorbelegtHinweis(kg):'')+'</td>'+
     '<td>'+(kannBearbeiten?'<button type="button" class="btn btn-quiet" data-act="kg-wieder" data-kg="'+esc(kg)+'">Wieder aufnehmen</button>':'')+'</td></tr>').join('');
   const typen=bauteiltypen();
   const rezepte=typen.length?typen.map(t=>{
@@ -882,7 +913,9 @@ function tabQuellen(){
     .sort((x,y)=>x.a.localeCompare(y.a)||x.f.localeCompare(y.f,'de'));
   return '<div class="grid-sec">'+
     '<section class="card"><h2 class="kb-h2">Kostenstand und Steuer</h2><div class="form" style="margin-top:12px"><div class="two">'+
-      auswahl('Kostenstand der Kostenberechnung','st:kostenstand',st.kostenstand,qOpt)+feld('Umsatzsteuer (%)','st:ustProzent',R.zahl(st.ustProzent,2),{attr:'inputmode="decimal"'})+'</div>'+
+      auswahl('Kostenstand der Kostenberechnung','st:kostenstand',st.kostenstand,standOpt,
+        'Zeitpunkt der Ermittlung (DIN 276), höchstens das laufende Quartal.'+(letzter&&ohneIndex(st.kostenstand)?' Der Baupreisindex dafür erscheint erst nach dem Quartal; bis dahin wird bis '+R.quartalText(letzter)+' fortgeschrieben.':''))+
+      feld('Umsatzsteuer (%)','st:ustProzent',R.zahl(st.ustProzent,2),{attr:'inputmode="decimal"'})+'</div>'+
       feld('Kostenvorgabe des Bauherrn, netto (€)','st:kostenvorgabe',R.zahl(st.kostenvorgabe,2),{attr:'inputmode="decimal"',hinweis:'Budget aus Vertrag oder Kostenrahmen'})+'</div></section>'+
     '<section class="card"><h2 class="kb-h2">Bezugsgrößen nach DIN 277</h2><div class="form" style="margin-top:12px"><div class="two">'+
       feld('BGF (m²)','st:bezug.BGF',R.zahl(st.bezug?.BGF,2),{attr:'inputmode="decimal"'})+feld('BRI (m³)','st:bezug.BRI',R.zahl(st.bezug?.BRI,2),{attr:'inputmode="decimal"'})+'</div><div class="two">'+
@@ -1117,6 +1150,7 @@ function aendereFeld(el){
     if(feld==='wert'){const d=R.eingabe(wert);if(d===undefined||(d!==null&&!(Number(d)>0&&Number(d)<10000))){ui.meldung='Den Indexwert als Zahl eingeben, zum Beispiel 131,4.';render();return}x.wert=d??''}
     else{if(st.indizes.some((y,j)=>j!==Number(i)&&y.quartal===wert)){ui.meldung='Für '+R.quartalText(wert)+' gibt es schon einen Wert.';render();return}x.quartal=wert}}
   else if(key.startsWith('gruppe:')){const [,kg,feld]=key.split(':');st.gruppen=st.gruppen||{};st.gruppen[kg]=st.gruppen[kg]||{};
+    if(st.gruppen[kg].vorbelegt)st.gruppen[kg].vorbelegt=false;
     if(feld==='status'){if(wert)st.gruppen[kg].status='entfaellt';else delete st.gruppen[kg]}else st.gruppen[kg].notiz=wert}
   else if(key.startsWith('rezept:')){const teile=key.slice(7).split(':');const feld=teile.pop(),i=teile.pop(),typ=teile.join(':');
     const z=st.rezepte?.[typ]?.zeilen?.[Number(i)];if(!z)return;
@@ -1233,6 +1267,7 @@ root.addEventListener('click',ev=>{
   if(act==='kg-entfaellt'){st.gruppen=st.gruppen||{};st.gruppen[d.kg]={status:'entfaellt',notiz:''};ui.kgAuswahl=d.kg;geaendert();render();
     setTimeout(()=>root.querySelector('[data-key="gruppe:'+CSS.escape(d.kg)+':notiz"]')?.focus(),0);return}
   if(act==='kg-wieder'){if(st.gruppen)delete st.gruppen[d.kg];geaendert();render();return}
+  if(act==='kg-bestaetigen'){const g=st.gruppen?.[d.kg];if(g){g.vorbelegt=false;geaendert();render()}return}
   if(act==='kg-rest'){
     const rest=blaetterUnter(d.kg).filter(x=>calc.blaetter.get(x)==='leer');
     st.gruppen=st.gruppen||{};for(const x of rest)st.gruppen[x]={status:'entfaellt',notiz:'nicht vorhanden'};

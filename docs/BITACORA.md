@@ -17,6 +17,20 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-24 · Kostenberechnung: Kostenstand bis heute, Vollständigkeit ohne Vorbelegung, Reiter ohne doppelten Titel · Claude
+- Qué cambió y por qué: Garis Rückmeldung zur Kostenberechnung von Bernried (24.11.2026):
+  - **Kostenstand:** die Auswahl bot Quartale bis Ende des nächsten Jahres. Jetzt höchstens das laufende Quartal (auch für den Index und den Kostenstand eines Kennwerts); ein schon gespeicherter Wert bleibt wählbar. Das laufende Quartal bleibt, auch wenn Destatis den Index dafür noch nicht veröffentlicht hat: der Kostenstand ist nach DIN 276 der Zeitpunkt der Ermittlung, und die Kostenberechnung schreibt bis zum letzten Wert fort (wie seit #144). In der Liste steht dann «Index noch nicht veröffentlicht», darunter ein Hinweis.
+  - **Vollständigkeit:** eine neue Kostenberechnung zeigte 14 % (34 von 239 geklärt), ohne dass etwas geklärt war: das waren die vom Muster als «entfällt» vorbelegten Kostengruppen (KG 100, 800 und acht im Hochbau seltene). Unverändert zählen sie nicht mehr mit, weder geklärt noch zu klären; die Karte sagt, wie viele vorbelegt sind. «Für dieses Projekt bestätigen» (an der Kostengruppe und in «Quellen») oder eine geänderte Begründung macht sie zur Entscheidung des Projekts; dann zählen sie. Marke `vorbelegt` ab dem Anlegen; ältere Kostenberechnungen bekommen sie beim Laden, wo der Eintrag noch genau dem Muster entspricht (nichts in der Datenbank geändert).
+  - **Im Reiter von Work:** ohne «Office · Kostenberechnung» und ohne den Projektnamen als zweite Überschrift; die Zeile mit LPH, Norm und Kostenstand bleibt. Der Terminplan nennt im Reiter in seiner Kopfzeile nur die Phase.
+  - Formulare: ein Feld neben einem mit Hinweis wurde in die Höhe gezogen; jetzt nicht mehr.
+- Archivos: `kosten-rechnen.js` (`office6`) und die Kopie in `supabase/functions/office-kosten-ai/`, `kostenberechnung.js` (`office13`), `kostenberechnung.css` (`office10`), `kostenberechnung.html`, `projektdokumente.html` (Version des Rechenkerns), `kostenberechnung-hilfe.html`, `terminplan.html`; Tests: `tests/office-kostenberechnung.test.mjs` (2 neu), `tests/browser/office-kostenberechnung.chromium.mjs` (neuer Ablauf: 0 %, ältere ohne Marke, Kostenstand, bestätigen), Anpassungen in `office-work-reiter`, `office-terminplan-reiter`; die Attrappe `fake-supabase-kosten.js` liest `alias:spalte->schlüssel` wie PostgREST.
+- Base de datos: keine Änderung (nur gelesen: das Muster markiert 10 Kostengruppen, die Kostenberechnung von Bernried entspricht ihm noch, Revision 1).
+- Deploy de funciones: `office-kosten-ai` (gleicher Rechenkern wie die Seite; nach dem Merge über den Workflow).
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (425); Chromium lokal grün: Kostenberechnung (13), Terminplan im Rahmen (2), Fenster der Assistenten (3), Kostenarchiv (5), Projektstart-Dokumente (8 + 1); Bildschirmfotos von Übersicht, Quellen und Reiter.
+- Quedó pendiente o sin probar: mit Garis Sitzung in Bernried.
+- Riesgos o decisiones que necesitan a Gari: —
+- PR: #155
+
 ### 2026-11-24 · Ein Fenster für alle Assistenten (Terminplan, Kostenberechnung) · Claude
 - Qué cambió y por qué: Gari (24.11.2026): «sí a una sola apariencia para los dos y los que vengan. Me gusta más como está en Terminplan … debería de poder moverse también y no estar siempre estable en la esquina».
   - **Gemeinsames Fenster** `assistant-window.js` (neu) mit `assistant-surface.css` v0.8: zu ein Reiter unten rechts, offen ein schwebendes Fenster über der Seite, ⤢ vergrößert. Neu: **offen und zu am Kopf verschiebbar** (erst ab einigen Pixeln, ein Klick öffnet weiter; nach dem Ziehen öffnet der Reiter nicht), **Größe an der freien Ecke** (die gemerkte Ecke bleibt stehen). Gemerkt wird je Werkzeug und Gerät die nächste Bildschirmecke mit Abstand: das Fenster öffnet aus seinem Reiter zur Bildschirmmitte und schließt wieder in den Reiter; passt es nicht ganz, rückt es so wenig wie nötig ein. Am Telefon bleibt es unten über die Breite, ohne Verschieben. Escape schließt wie bisher.

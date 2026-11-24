@@ -864,7 +864,8 @@ html.im-reiter #officeBack{display:none}
     const project=data.project||{};
     const title=[project.projectNumber,project.projectName].filter(Boolean).join(' · ')||meta.title||project.name||'Terminplan';
     const phase=project.phase||meta.phase||'';
-    $('#officePlanLabel').textContent=[title,phase].filter(Boolean).join(' · ');
+    // Als Reiter in Work steht das Projekt schon darüber: hier nur die Phase.
+    $('#officePlanLabel').textContent=IN_WORK&&phase?phase:[title,phase].filter(Boolean).join(' · ');
     $('#officeMode').textContent=TEMPLATE_ID?'Muster · nur Ansicht':(canEdit?'Bearbeitung':'nur Ansicht');
     // Back to where the plan lives: its project page in Work, or the Muster in Tools.
     const back=$('#officeBack');
