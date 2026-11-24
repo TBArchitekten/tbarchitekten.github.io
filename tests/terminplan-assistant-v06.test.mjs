@@ -50,11 +50,13 @@ test("floating window does not resize the Gantt and supports collapsed/wide mode
  assert.match(css,/\.assistant-panel\.is-open/);
  assert.match(css,/\.assistant-panel\.is-wide/);
  assert.match(css,/@media print\{\.assistant-panel\{display:none!important\}\}/);
- assert.match(editor,/href="\.\/assistant-surface\.css\?v=office37"/);
+ assert.match(editor,/href="\.\/assistant-surface\.css\?v=office38"/);
  assert.match(editor,/id="assistantWide"/);
  assert.match(editor,/id="assistantClose"/);
- assert.match(editor,/classList\.toggle\('is-open',assistantExpanded\)/);
- assert.match(editor,/classList\.toggle\('is-wide',assistantExpanded&&assistantWide\)/);
+ assert.match(editor,/if\(assistantWindow\)assistantWindow\.zeige\(assistantExpanded\);/);
+ const fenster=fs.readFileSync(new URL("../assistant-window.js",import.meta.url),"utf8");
+ assert.match(fenster,/panel\.classList\.toggle\('is-open',offen\);/);
+ assert.match(fenster,/panel\.classList\.toggle\('is-wide',offen&&weit\);/);
 });
 test("assistant citations use safe link elements, no HTML injection",()=>{
  for(const m of editor.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g))new Function(m[1]);

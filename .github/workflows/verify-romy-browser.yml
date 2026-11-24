@@ -40,6 +40,10 @@ jobs:
         env:
           CI: 'true'
         run: node --test tests/browser/office-terminplan-reiter.chromium.mjs
+      - name: Exercise the one assistant window of Terminplan and Kostenberechnung (move collapsed and open, resize, remembered, iPhone) with a synthetic Supabase
+        env:
+          CI: 'true'
+        run: node --test tests/browser/office-assistent-fenster.chromium.mjs
       - name: Exercise Kostenberechnung (Archicad import, revision conflict, iPhone width) with a synthetic Supabase
         env:
           CI: 'true'

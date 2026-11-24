@@ -24,7 +24,6 @@ const datum=iso=>{const d=new Date(iso);return Number.isFinite(d.getTime())?d.to
 const heuteIso=()=>new Date().toISOString().slice(0,10);
 const ICON_IMPORT='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
 const ICON_PLUS='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
-const ICON_KI='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M11 3.5l1.9 5.1 5.1 1.9-5.1 1.9L11 17.5l-1.9-5.1-5.1-1.9 5.1-1.9z"/><path d="M18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>';
 const ANLEITUNG='<a class="btn btn-quiet" href="./kostenberechnung-hilfe.html" target="_blank" rel="noopener noreferrer">Anleitung</a>';
 // Klassifizierung für den Klassifizierungs-Manager von Archicad, aus der Gliederung dieser Kostenberechnung (Anleitung, Teil III).
 const KNOPF_KLASSIFIZIERUNG='<button type="button" class="btn btn-quiet" data-act="klassifizierung">Klassifizierung für Archicad (.xml)</button>';
@@ -344,7 +343,7 @@ function render(){
     '<header class="kb-head"><div class="kb-head-text"><p class="kicker">Office · Kostenberechnung'+(istMuster?' · Muster':'')+(istArchiv?' · Archiv':'')+'</p>'+
     '<h1>'+esc(doc.project_name)+'</h1><p class="kb-intro">'+esc([doc.project_number!=='Muster'?doc.project_number:'',istArchiv?(st.archiv?.dokumentKurz||'Archiv'):doc.phase==='LPH3'?'LPH 3':doc.phase,
       (st.norm||'DIN 276')+' bis zur 3. Ebene','Kostenstand '+(R.quartalText(st.kostenstand)||'offen'),istMuster?'Version '+doc.version:'Stand '+datum(doc.updated_at)].filter(Boolean).join(' · '))+'</p></div>'+
-    '<div class="kb-actions">'+ANLEITUNG+(assistent&&!istMuster&&!istArchiv?'<button type="button" class="btn'+(assistent.offen()?' aktiv':'')+'" data-act="assistent" aria-pressed="'+assistent.offen()+'">'+ICON_KI+'Assistent</button>':'')+
+    '<div class="kb-actions">'+ANLEITUNG+
     (kannBearbeiten?'<button type="button" class="btn" data-act="import">'+ICON_IMPORT+'Mengen aus Archicad</button>':'')+
     '<button type="button" class="btn btn-primary" data-act="tab" data-tab="bericht">Bericht für die Kostenbesprechung</button></div></header>'+
     '<p class="kb-save meta" id="kbSave"></p>';
@@ -1192,7 +1191,6 @@ root.addEventListener('click',ev=>{
   if(act==='neu'){dialogNeu();return}
   if(!st)return;
   if(act==='tab'){ui.tab=d.tab;ui.meldung='';merkeTab();render();return}
-  if(act==='assistent'){assistent?.umschalten();return}
   if(act==='aufklappen'){ui.offen.has(d.kg)?ui.offen.delete(d.kg):ui.offen.add(d.kg);render();return}
   if(act==='filter'){ui.tab='positionen';ui.filter=d.kg;ui.auswahl=null;ui.kgAuswahl=null;merkeTab();render();return}
   if(act==='kg-gehe'){ui.sicht='kg';ui.elAuswahl=null;ui.tab='positionen';ui.filter=zweiteEbene(d.kg)||d.kg;ui.auswahl=null;ui.kgAuswahl=d.kg;merkeTab();render();zeigePanel();return}
@@ -1308,11 +1306,13 @@ dialog.addEventListener('click',ev=>{if(ev.target.closest('[data-dlg="zu"]')||ev
 function tabAusHash(){const t=new URLSearchParams(location.hash.slice(1)).get('tab');return TABS.some(([k])=>k===t)?t:null}
 window.addEventListener('hashchange',()=>{const t=tabAusHash();if(t&&t!==ui.tab&&st){ui.tab=t;render()}});
 
-// KI-Assistent (kosten-assistent.js): eigenes Fenster rechts, an der Stelle der Details. Er liest den Stand,
-// schlägt vor und übernimmt erst nach «Prüfen und übernehmen»; gespeichert wird wie jede Änderung (geaendert()).
+// KI-Assistent (kosten-assistent.js): im gemeinsamen Fenster der Assistenten (wie beim Terminplan), unten rechts als
+// Reiter, verschiebbar. Er liest den Stand, schlägt vor und übernimmt erst nach «Prüfen und übernehmen»; gespeichert
+// wird wie jede Änderung (geaendert()). Nicht im Muster und nicht im Archiv.
 const assistent=A?.init({sb,R,I,esc,root,
   stand:()=>st,setzeStand:neu=>{st=neu},doc:()=>doc,revision:()=>serverRevision,nutzerId:()=>nutzer?.id||'',
   darfBearbeiten:()=>kannBearbeiten&&!istMuster,konflikt:()=>konflikt,tabPositionen:()=>ui.tab==='positionen',
+  verfuegbar:()=>!!doc&&!istMuster&&!istArchiv,
   auswahl:()=>{
     const p=(st?.positionen||[]).find(x=>x.id===ui.auswahl);if(p)return {kg:p.kg,position:p.id,titel:p.titel};
     const e=ui.elAuswahl?(st?.elemente||[]).find(x=>x.id===ui.elAuswahl):null;if(e)return {kg:e.kg};

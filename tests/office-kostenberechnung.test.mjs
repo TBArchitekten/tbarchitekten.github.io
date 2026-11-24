@@ -295,7 +295,8 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office4','./kosten-rechnen.js?v=office5',
-    './kosten-import.js?v=office3','./kosten-assistent.js?v=office3','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office11','./kostenberechnung.css?v=office8'])
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office4','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office12','./kostenberechnung.css?v=office9',
+    './assistant-surface.css?v=office38','./assistant-window.js?v=1'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
     seite.indexOf('kosten-assistent.js')<seite.indexOf('kosten-pool.js')&&seite.indexOf('kosten-pool.js')<seite.indexOf('kostenberechnung.js?'));
@@ -377,7 +378,7 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   const hilfe=read('kostenberechnung-hilfe.html'),tp=read('terminplan-hilfe.html'),stil=read('anleitung.css');
   for(const [name,html] of [['kostenberechnung-hilfe.html',hilfe],['terminplan-hilfe.html',tp]]){
     assert.match(html,/<html lang="de">/,name);
-    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office4">/,name);
+    assert.match(html,/<link rel="stylesheet" href="\.\/anleitung\.css\?v=office5">/,name);
     assert.ok(!/<style[\s>]/.test(html),'Stil gehört in anleitung.css: '+name);
     assert.ok(!/\b(para|que|como|desde|proyecto|archivo|tarea|también|costos|cálculo|guardar)\b/i.test(html),'spanische Wörter in '+name);
   }

@@ -482,12 +482,15 @@ test('Assistent: Vorschlag aus einem Angebot prüfen, übernehmen und rückgäng
   const {ctx,page,fehler}=await oeffne();
   try{
     await anlegen(page);
-    await page.click('.kb-actions [data-act="assistent"]');
+    // Wie beim Terminplan (Gari, 24.11.2026): der Reiter unten rechts öffnet das Fenster; die Tabelle rückt nicht.
     const as=page.locator('#kbAssistent');
     await as.waitFor({state:'visible'});
+    assert.equal(await page.locator('.kb-actions [data-act="assistent"]').count(),0,'kein eigener Knopf mehr im Kopf');
+    await page.click('#asToggle');
+    await page.locator('#asBody').waitFor({state:'visible'});
     await page.waitForFunction(()=>/test-modell/.test(document.getElementById('asModell')?.textContent||''));
-    assert.equal(await page.locator('.kb-actions [data-act="assistent"]').getAttribute('aria-pressed'),'true');
-    assert.ok(await page.evaluate(()=>document.getElementById('kb').classList.contains('mit-inspektor')),'die Seite rückt nicht zur Seite');
+    assert.equal(await page.locator('#asToggle').getAttribute('aria-expanded'),'true');
+    assert.ok(!(await page.evaluate(()=>document.getElementById('kb').classList.contains('mit-inspektor'))),'die Seite rückt nicht zur Seite');
     assert.equal(await as.locator('.as-start').count(),5);
     // Ein Angebot als PDF anhängen (synthetisch) und fragen.
     await page.setInputFiles('#asDatei',{name:'angebot-test.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n% Test\n')});
@@ -546,9 +549,11 @@ test('Assistent: Vorschlag aus einem Angebot prüfen, übernehmen und rückgäng
     // Verlauf je Person und Kostenberechnung.
     const verlauf=await page.evaluate(()=>window.__fake.db.office_kosten_dialogue_messages.map(m=>m.role+':'+m.event_kind));
     assert.deepEqual(verlauf,['user:question','assistant:proposal','assistant:receipt','assistant:receipt']);
-    // Schließen: die Tabelle hat wieder die volle Breite.
+    // Schließen: zurück in den Reiter; die Tabelle behält ihre volle Breite.
     await as.locator('[data-as="zu"]').click();
-    assert.ok(await as.isHidden());
+    assert.ok(await page.locator('#asBody').isHidden());
+    assert.equal(await as.evaluate(e=>e.classList.contains('is-open')),false);
+    assert.ok(await as.isVisible(),'der Reiter bleibt');
     assert.ok(!(await page.evaluate(()=>document.getElementById('kb').classList.contains('mit-inspektor'))));
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
@@ -560,7 +565,7 @@ test('Assistent: altes Büro-Excel als Tabelle mit Zeilennummern; Fehler der KI 
     await anlegen(page);
     await page.evaluate(()=>{window.__fake.ki=async(name,body)=>body.action==='status'?{data:{ready:true,version:'office-kosten-ai-v2',model:'test-modell'},error:null}:
       {data:{error:'ai_timeout_or_network'},error:{message:'504'}}});
-    await page.click('.kb-actions [data-act="assistent"]');
+    await page.click('#asToggle');
     await page.waitForFunction(()=>/test-modell/.test(document.getElementById('asModell')?.textContent||''));
     const csv='KG;Bezeichnung;Menge;EH;EP;Kommentar\n\n335;Dämmung;412,5;m²;128;BKI\n';
     const [wahl]=await Promise.all([page.waitForEvent('filechooser'),page.click('[data-as="start"][data-start="excel"]')]);
@@ -582,7 +587,7 @@ test('Assistent auf dem iPhone: von unten, ohne Querscrollen',async()=>{
   const {ctx,page,fehler}=await oeffne({width:390,height:844});
   try{
     await anlegen(page);
-    await page.click('.kb-actions [data-act="assistent"]');
+    await page.click('#asToggle');
     const as=page.locator('#kbAssistent');
     await as.waitFor({state:'visible'});
     const box=await as.boundingBox();
