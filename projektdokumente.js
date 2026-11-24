@@ -1191,7 +1191,7 @@ function renderMappe(){
   if(!seiten.some(x=>x.id===mm.seite))mm.seite=seiten[0]?.id||null;
   const i=Math.max(0,seiten.findIndex(x=>x.id===mm.seite)),seite=seiten[i]||null;
   const vorgelegt=v.daten.status==='vorgelegt';
-  const aktionen='<button type="button" class="btn" data-act="mm-pdf">PDF</button>'+
+  const aktionen='<button type="button" class="btn" data-act="mm-praes">Präsentieren</button><button type="button" class="btn" data-act="mm-pdf">PDF</button>'+
     '<button type="button" class="btn btn-primary" data-act="vorlegen">'+(vorgelegt?'Erneut vorlegen':'Als vorgelegt markieren')+'</button>';
   const meta=esc('Vorlage zur Bemusterung'+(inh.termin?' am '+K.datumLang(inh.termin):''))+' · '+(vorgelegt?'vorgelegt am '+esc(K.datumLang(v.daten.vorgelegt_am)):'Entwurf')+
     ' · <span data-speicher>'+esc(speicherText())+'</span>';
@@ -1312,8 +1312,7 @@ function mappeSeitenleiste(v,inh,seite){
   const angaben='<section class="card"><h2>Angaben der Mappe</h2>'+ang('titel','Titel')+
     '<label class="pd-feld"><span>Themenpaket</span><select class="pd-in" id="m-themenpaket" data-vmeta="themenpaket">'+M.THEMEN.map(t=>'<option'+(t===v.daten.themenpaket?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'+
     ang('besprechung_am','Bemusterungstermin','TT.MM.JJJJ')+ang('auftraggeber','Bauherr')+ang('strategie_a','Strategie A','kurz, z. B. Terrazzo und Eiche')+ang('strategie_b','Strategie B')+ang('verfasser','Verfasser')+'</section>';
-  const termin='<section class="card"><h2>Entschieden wird im Termin</h2><p class="meta">Die Mappe wird im Bemusterungstermin vorgestellt; dort wird entschieden, nicht auf dem Blatt. '+
-    'Eintragen in der Entscheidungsliste mit Datum, Entscheider und dem Termin als Fundstelle; danach «In der Produktbibliothek freigeben».</p></section>';
+  const termin=terminKarte(v);
   const staende=ui.staende===null?'<p class="meta">wird geladen …</p>':ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button><span>'+esc([K.datumLang(String(s.created_at).slice(0,10)),name(s.created_by)].filter(Boolean).join(' · '))+'</span></li>').join('')+'</ul>'
     :'<p class="meta">Noch kein Stand. Beim Vorlegen wird der Stand festgehalten und bleibt unverändert.</p>';
   return karte+position+positionen+angaben+termin+'<section class="card" data-staende><h2>Stände</h2>'+staende+'</section>';
@@ -1462,6 +1461,8 @@ function mappeKlick(act,el){
   if(act==='mm-seite'){mm.seite=el.dataset.id;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
   else if(act==='mm-zoom'){mm.lesen=!mm.lesen;render()}
   else if(act==='mm-pdf')void sicher(()=>mappeDrucken(v));
+  else if(act==='mm-praes')void sicher(async()=>{await alleSpeichern();praesOeffnen(v);void mappeLaden(v).then(()=>praesZeichnen()).catch(()=>{})});
+  else if(act==='mm-alle-freigeben')void sicher(()=>alleFreigeben(v));
   else if(act==='mm-position-neu')positionDialog(v);
   else if(act==='mm-position-weg'){if(window.confirm('Die Position aus der Mappe nehmen? In der Entscheidungsliste bleibt sie.'))positionWeg(v,el.dataset.z)}
   else if(act==='mm-hoch'||act==='mm-runter'){seitenSetzen(v,M.seiteVerschieben(M.seitenVon(v.daten),mm.seite,act==='mm-hoch'?-1:1));render()}
@@ -1533,6 +1534,138 @@ function mappeEingabe(el){
   else if(el.matches('textarea[data-mmvorlage]')){v.daten={...v.daten,[el.dataset.mmvorlage]:el.value};markiere(v)}
   else return false;
   mmWachse(el);return true;
+}
+
+// ---------- Mustermappe: Präsentieren im Bemusterungstermin (Schritt 2, 24.11.2026) ----------
+// Die Seite groß, daneben die Entscheidung je Position: gewählte Variante oder «vertagt», Entscheider und Datum (der
+// Termin), der Termin als Fundstelle. Eingetragen wird in der Entscheidungsliste, wie mit «Entscheidung eintragen»;
+// danach gibt «In der Produktbibliothek freigeben» die gewählten Produkte im Projekt frei.
+let praesEl=null;
+function praesOeffnen(v){
+  if(praesEl)return;
+  const l=M.seitenVon(v.daten);
+  mm.praes={i:Math.max(0,l.findIndex(x=>x.id===mm.seite)),panel:false};
+  praesEl=document.createElement('div');
+  praesEl.className='mm-praes';praesEl.setAttribute('role','dialog');praesEl.setAttribute('aria-modal','true');praesEl.setAttribute('aria-label','Mustermappe präsentieren');
+  praesEl.addEventListener('click',praesKlick);
+  praesEl.addEventListener('submit',praesSenden);
+  document.body.append(praesEl);document.documentElement.classList.add('mm-praes-offen');
+  praesZeichnen();
+  try{const r=praesEl.requestFullscreen?.();if(r&&r.catch)r.catch(()=>{})}catch{}
+  praesEl.querySelector('[data-praes="weiter"]')?.focus();
+}
+function praesSchliessen(){
+  if(!praesEl)return;
+  try{if(document.fullscreenElement){const r=document.exitFullscreen?.();if(r&&r.catch)r.catch(()=>{})}}catch{}
+  const v=vorlageZeile(),l=v?M.seitenVon(v.daten):[];
+  if(l[mm.praes?.i])mm.seite=l[mm.praes.i].id;
+  praesEl.remove();praesEl=null;mm.praes=null;
+  document.documentElement.classList.remove('mm-praes-offen');
+  render();
+}
+function praesSeite(v){
+  const l=M.seitenVon(v.daten);
+  mm.praes.i=Math.min(Math.max(0,mm.praes.i),Math.max(0,l.length-1));
+  return {l,seite:l[mm.praes.i]||null};
+}
+function praesZeichnen(){
+  const v=vorlageZeile();if(!praesEl||!v)return;
+  const inh=mappeJetzt(v),{l,seite}=praesSeite(v),i=mm.praes.i,n=l.length;
+  const z=seite&&['vergleich','material'].includes(seite.typ)?zeilen.entscheidungsliste.find(x=>x.id===seite.punkt):null;
+  const p=z?inh.punkte.find(x=>x.id===z.id):null;
+  const ent=inh.punkte.filter(x=>x.status==='entschieden').length;
+  const fokus=praesEl.contains(document.activeElement)?document.activeElement.dataset.praes||'':'';
+  praesEl.innerHTML='<div class="mm-praes-kopf"><strong>'+esc(inh.titel)+'</strong><span>'+esc(projektName())+'</span>'+
+    '<span class="mm-praes-zahl" role="status">Entschieden: '+ent+' von '+inh.punkte.length+'</span><button type="button" class="btn" data-praes="ende">Beenden</button></div>'+
+    '<div class="mm-praes-mitte"><div class="mm-praes-buehne">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:n,modus:'druck',bild:bildUrl}):'')+'</div>'+
+    (mm.praes.panel&&z&&p?praesPanel(v,z,p):'')+'</div>'+
+    '<div class="mm-praes-fuss"><button type="button" class="btn" data-praes="zurueck" aria-label="Vorige Seite"'+(i===0?' disabled':'')+'>‹</button>'+
+    '<span class="mm-praes-nr">Seite '+(i+1)+' von '+n+'</span><button type="button" class="btn" data-praes="weiter" aria-label="Nächste Seite"'+(i>=n-1?' disabled':'')+'>›</button>'+
+    (p?'<span class="mm-praes-pos">'+esc([p.code,p.bezeichnung].filter(Boolean).join(' · '))+(p.status==='entschieden'?' · entschieden: '+esc(M.gewaehlt(p)):p.status==='vertagt'?' · vertagt':'')+'</span>'+
+      (mm.praes.panel?'':'<button type="button" class="btn btn-primary" data-praes="panel">'+(p.status==='entschieden'?'Entscheidung ändern':'Entscheidung erfassen')+'</button>'):'')+'</div>';
+  const ziel=mm.praes.panel?praesEl.querySelector('.mm-praes-panel input[name="wahl"]:checked')||praesEl.querySelector('.mm-praes-panel input[name="wahl"]'):fokus?praesEl.querySelector('[data-praes="'+fokus+'"]:not(:disabled)'):null;
+  ziel?.focus();
+}
+function praesPanel(v,z,p){
+  const d=z.daten;
+  const gew=d.status==='entschieden'?(/^\s*([A-H])\s*[:·.)]/.exec(s0(d.entscheidung))?.[1]||''):d.status==='vertagt'?'vertagt':s0(d.empfehlung);
+  const wer=s0(d.entscheider)||s0(v.daten.auftraggeber)||'Bauherr';
+  const am=s0(d.entschieden_am)||s0(v.daten.besprechung_am)||heute();
+  const bem=d.status==='entschieden'?(/ – (.*)$/.exec(s0(d.entscheidung))?.[1]||''):d.status==='vertagt'?s0(d.annahme):'';
+  return '<form class="mm-praes-panel" data-praes-form data-z="'+esc(z.id)+'"><p class="mm-praes-art">Entscheidung im Termin</p><h2>'+esc([p.code,p.bezeichnung].filter(Boolean).join(' · '))+'</h2>'+
+    '<fieldset class="mm-praes-wahl"><legend>Gewählt</legend>'+p.optionen.map(o=>'<label><input type="radio" name="wahl" value="'+esc(o.id)+'"'+(o.id===gew?' checked':'')+'><span><strong>'+esc(o.id+' · '+o.name)+'</strong>'+
+      (o.id===p.empfehlung?'<small>Empfehlung des Büros</small>':'')+'</span></label>').join('')+
+    '<label><input type="radio" name="wahl" value="vertagt"'+(gew==='vertagt'?' checked':'')+'><span><strong>Vertagt</strong><small>Annahme für die Weiterplanung als Bemerkung</small></span></label></fieldset>'+
+    '<div class="pd-zwei"><label class="pd-feld"><span>Entscheider</span><input class="pd-in" name="wer" value="'+esc(wer)+'" autocomplete="off"></label>'+
+    '<label class="pd-feld"><span>am</span><input class="pd-in" name="am" value="'+esc(K.datumLang(am))+'" autocomplete="off"></label></div>'+
+    '<label class="pd-feld"><span>Bemerkung</span><textarea class="pd-in" name="bem" rows="2" placeholder="z. B. Muster Eiche natur, geölt">'+esc(bem)+'</textarea></label>'+
+    '<p class="pd-dlg-fehler" data-praes-fehler role="alert"></p><div class="mm-knoepfe"><button type="button" class="btn" data-praes="panel-zu">Abbrechen</button><button type="submit" class="btn btn-primary">Eintragen</button></div>'+
+    '<p class="meta">Geht in die Entscheidungsliste, mit dem Termin als Fundstelle. Danach «In der Produktbibliothek freigeben».</p></form>';
+}
+const s0=x=>x===null||x===undefined?'':String(x);
+function praesKlick(e){
+  const b=e.target.closest('[data-praes]');if(!b||!mm.praes)return;
+  const v=vorlageZeile();if(!v)return;
+  const a=b.dataset.praes;
+  if(a==='ende'){praesSchliessen();return}
+  if(a==='weiter'||a==='zurueck'){mm.praes.i+=a==='weiter'?1:-1;mm.praes.panel=false;praesZeichnen();return}
+  if(a==='panel'){mm.praes.panel=true;praesZeichnen();return}
+  if(a==='panel-zu'){mm.praes.panel=false;praesZeichnen()}
+}
+function praesSenden(e){
+  const f=e.target.closest('[data-praes-form]');if(!f)return;
+  e.preventDefault();
+  const z=zeileVon(f.dataset.z),fehl=f.querySelector('[data-praes-fehler]');if(!z)return;
+  const wahl=f.querySelector('input[name="wahl"]:checked')?.value||'',am=K.leseDatum(f.am.value),wer=f.wer.value.trim(),bem=f.bem.value.trim();
+  if(!wahl){fehl.textContent='Bitte eine Variante wählen oder «Vertagt».';return}
+  if(!am){fehl.textContent='Datum bitte als TT.MM.JJJJ eingeben.';return}
+  const quelle='Bemusterungstermin am '+K.datumLang(am);
+  let neu={...z.daten};
+  if(wahl==='vertagt'){
+    for(const k of ['entscheidung','entschieden_am','entscheider','bestaetigt_am'])delete neu[k];
+    neu={...neu,status:'vertagt',annahme:bem||s0(z.daten.annahme),fundstelle:s0(z.daten.fundstelle)||quelle};
+  }else{
+    const o=K.optionen(z.daten).find(x=>x.id===wahl);if(!o)return;
+    if(!wer){fehl.textContent='Wer hat entschieden?';return}
+    const name=s0(o.muster_produkt?.name)||s0(o.text)||s0(o.produkt);
+    neu={...neu,status:'entschieden',entscheidung:wahl+': '+name+(bem?' – '+bem:''),entschieden_am:am,entscheider:wer,fundstelle:s0(z.daten.fundstelle)||quelle};
+  }
+  const p=K.pruefe('entscheidungsliste',neu);if(p){fehl.textContent=p;return}
+  z.daten=neu;markiere(z);
+  mm.praes.panel=false;praesZeichnen();
+}
+document.addEventListener('keydown',e=>{
+  if(!praesEl||!mm.praes)return;
+  if(e.target.closest?.('input,textarea,select')){if(e.key==='Escape'&&mm.praes.panel){mm.praes.panel=false;praesZeichnen()}return}
+  if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();const b=praesEl.querySelector('[data-praes="weiter"]');if(b&&!b.disabled)b.click()}
+  else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();const b=praesEl.querySelector('[data-praes="zurueck"]');if(b&&!b.disabled)b.click()}
+  else if(e.key==='Escape'){e.preventDefault();if(mm.praes.panel){mm.praes.panel=false;praesZeichnen()}else praesSchliessen()}
+});
+// Nach dem Termin: die Entscheidungen der Mappe und die Freigabe in der Produktbibliothek, einzeln oder alle.
+function terminKarte(v){
+  const punkte=mappePunkte(v),ent=punkte.filter(z=>z.daten.status==='entschieden'),vert=punkte.filter(z=>z.daten.status==='vertagt');
+  if(!ent.length&&!vert.length)return '<section class="card"><h2>Entschieden wird im Termin</h2><p class="meta">Die Mappe wird im Bemusterungstermin vorgestellt; dort wird entschieden, nicht auf dem Blatt. '+
+    '«Präsentieren» zeigt die Seiten groß und nimmt je Position die Entscheidung auf: in der Entscheidungsliste, mit dem Termin als Fundstelle.</p></section>';
+  const q=quellen.daten;
+  const frei=z=>{const o=K.optionen(z.daten).find(x=>x.id===gewaehlteVariante(z.daten));const ver=q&&o?.produkt_id?Z.verwendungIm(o.produkt_id,projekt.id,q.verwendungen):null;return ver?.status==='freigegeben'};
+  const offen=ent.filter(z=>gewaehlteVariante(z.daten)&&!frei(z));
+  return '<section class="card"><h2>Entscheidungen der Bemusterung</h2><ul class="pd-punkte">'+[...ent,...vert].map(z=>{
+      const m=z.daten.muster||{};
+      return '<li><span class="pd-nr">'+esc(m.code||K.nummer('entscheidungsliste',z.nr))+'</span> '+esc(z.daten.status==='entschieden'?z.daten.entscheidung:'vertagt'+(z.daten.annahme?': '+z.daten.annahme:''))+
+        (z.daten.status==='entschieden'?' <span class="meta">('+esc(K.datumLang(z.daten.entschieden_am))+', '+esc(z.daten.entscheider)+')</span>':'')+
+        (frei(z)?' <span class="chip chip-ok">freigegeben</span>':'')+'</li>';
+    }).join('')+'</ul>'+
+    (offen.length?'<button type="button" class="btn btn-primary" data-act="mm-alle-freigeben">In der Produktbibliothek freigeben ('+offen.length+')</button>':'')+
+    '<p class="meta">Freigeben setzt das gewählte Produkt im Projekt auf «freigegeben» und die übrigen Kandidaten auf «verworfen».</p></section>';
+}
+async function alleFreigeben(v){
+  await ladeQuellen();
+  if(!quellen.daten)throw new Error(quellen.fehler||'Die Produktbibliothek ist gerade nicht erreichbar.');
+  const liste=mappePunkte(v).filter(z=>z.daten.status==='entschieden'&&gewaehlteVariante(z.daten)&&K.optionen(z.daten).some(o=>o.produkt_id));
+  if(!liste.length){meldung('Noch keine Entscheidung mit einem Produkt aus der Bibliothek.','warn');return}
+  if(!window.confirm(liste.length+(liste.length===1?' Position':' Positionen')+' in der Produktbibliothek freigeben? Die übrigen Kandidaten stehen danach im Projekt als «verworfen».'))return;
+  for(const z of liste)await freigeben(z,gewaehlteVariante(z.daten),true);
+  meldung('In der Produktbibliothek freigegeben: '+liste.length+(liste.length===1?' Position.':' Positionen.'));render();
 }
 
 // ---------- Romy ----------

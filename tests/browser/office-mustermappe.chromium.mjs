@@ -259,3 +259,63 @@ test('Vorlegen hält den Stand fest; Übersicht, Entscheidungsliste und iPhone',
   await foto(page,'mappe-2-iphone');
   assert.deepEqual(fehler,[]);
 });
+
+test('Präsentieren im Termin: Entscheidung je Position, danach in der Produktbibliothek freigeben',async()=>{
+  const {page,fehler}=await oeffne();
+  await page.setViewportSize({width:1440,height:1000});
+  await page.reload();
+  await page.locator('h1',{hasText:'Mustermappe Bodenbeläge'}).waitFor();
+  assert.match(await page.locator('.card',{hasText:'Entschieden wird im Termin'}).innerText(),/Präsentieren/);
+  await page.locator('button[data-act="mm-praes"]').click();
+  const praes=page.locator('.mm-praes');
+  await praes.waitFor();
+  assert.match(await praes.innerText(),/Entschieden: 0 von 1/);
+  assert.equal(await praes.locator('textarea').count(),0,'im Termin keine Eingabefelder auf der Seite');
+  // Mit der Pfeiltaste bis zur ersten Seite von B2.
+  for(let i=0;i<8&&!(await praes.locator('[data-praes="panel"]').count());i++)await page.keyboard.press('ArrowRight');
+  assert.match(await praes.locator('.mm-praes-pos').innerText(),/B2 · Holz – Eiche/);
+  await praes.locator('[data-praes="panel"]').click();
+  const form=praes.locator('form[data-praes-form]');
+  await form.waitFor();
+  assert.equal(await form.locator('input[name="wahl"]:checked').inputValue(),'A','die Empfehlung ist vorgewählt');
+  assert.equal(await form.locator('input[name="am"]').inputValue(),'03.12.2026','das Datum des Termins');
+  await form.locator('input[name="wer"]').fill('Bauherr');
+  await form.locator('textarea[name="bem"]').fill('Muster Eiche natur, geölt');
+  await form.locator('button[type="submit"]').click();
+  await praes.locator('.mm-praes-zahl',{hasText:'Entschieden: 1 von 1'}).waitFor();
+  await gespeichert(page);
+  let e=(await zeilen(page,'entscheidungsliste'))[0];
+  assert.equal(e.daten.status,'entschieden');
+  assert.equal(e.daten.entscheidung,'A: Parkett Eiche geölt – Muster Eiche natur, geölt');
+  assert.equal(e.daten.entschieden_am,'2026-12-03');assert.equal(e.daten.entscheider,'Bauherr');
+  assert.equal(e.daten.fundstelle,'Bemusterungstermin am 03.12.2026');
+  assert.match(await praes.innerText(),/Entschieden am 03\.12\.2026 von Bauherr: A · Parkett Eiche geölt/);
+  // Vertagt: die Entscheidung fällt weg, die Bemerkung wird zur Annahme; dann doch A.
+  await praes.locator('[data-praes="panel"]').click();
+  await form.locator('input[name="wahl"][value="vertagt"]').check();
+  await form.locator('textarea[name="bem"]').fill('Bis zum Muster wird mit A weitergeplant.');
+  await form.locator('button[type="submit"]').click();
+  await praes.locator('.mm-praes-zahl',{hasText:'Entschieden: 0 von 1'}).waitFor();
+  await gespeichert(page);
+  e=(await zeilen(page,'entscheidungsliste'))[0];
+  assert.equal(e.daten.status,'vertagt');assert.equal(e.daten.annahme,'Bis zum Muster wird mit A weitergeplant.');
+  assert.ok(!('entscheidung' in e.daten)&&!('entschieden_am' in e.daten));
+  await praes.locator('[data-praes="panel"]').click();
+  await form.locator('input[name="wahl"][value="A"]').check();
+  await form.locator('textarea[name="bem"]').fill('');
+  await form.locator('button[type="submit"]').click();
+  await praes.locator('.mm-praes-zahl',{hasText:'Entschieden: 1 von 1'}).waitFor();
+  await foto(page,'mappe-3-praesentieren');
+  await praes.locator('[data-praes="ende"]').click();
+  await praes.waitFor({state:'detached'});
+  // Nach dem Termin: die gewählten Produkte freigeben, die übrigen Kandidaten verworfen.
+  const karte=page.locator('.card',{hasText:'Entscheidungen der Bemusterung'});
+  await karte.waitFor();
+  await karte.locator('button',{hasText:'In der Produktbibliothek freigeben (1)'}).click();
+  await page.locator('.pd-meldung',{hasText:'In der Produktbibliothek freigegeben: 1 Position.'}).waitFor();
+  const d=await db(page),pid=d.office_projects[0].id;
+  const st=Object.fromEntries(d.office_produkt_verwendungen.filter(v=>v.projekt_id===pid).map(v=>[d.office_produkte.find(p=>p.id===v.produkt_id).name,v.status]));
+  assert.deepEqual(st,{'Parkett Eiche geölt':'freigegeben','Naturstein Jura':'verworfen'});
+  await page.locator('.card',{hasText:'Entscheidungen der Bemusterung'}).locator('.chip-ok',{hasText:'freigegeben'}).waitFor();
+  assert.deepEqual(fehler,[]);
+});
