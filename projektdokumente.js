@@ -10,10 +10,16 @@
    Romy (office-dokumente-ai, ab #146): Vorschläge aus Protokollen, Mails und Plänen, jeder mit Fundstelle, grün in der
    Liste; erst «Übernehmen» ändert eine Zeile (Verlauf: «Vorschlag von Romy, übernommen von …»). Dazu Fragen an die
    Fachplaner, Fristen gegen den Terminplan, Bestätigung einer Entscheidung als Mail und Abschnitte der Vorlage neu
-   formuliert (grün eingefügt, rot gestrichen). Eine Entscheidung trägt Romy nie ein. */
+   formuliert (grün eingefügt, rot gestrichen). Eine Entscheidung trägt Romy nie ein.
+   Zahlen der Varianten (zweiter Schritt, 24.11.2026): je Variante «Zahlen aus dem Office» – Produkt aus der
+   Produktbibliothek (mit Musterliste des Projekts), Kennwert aus einem Preis, dem Datenpool oder der Kostenberechnung,
+   Menge aus der Kostenberechnung, jede Zahl mit Fundstelle (projektdokumente-zahlen.js). Romy «Zahlen holen» wählt nur
+   unter diesen Kandidaten und schlägt vor; nach der Entscheidung gibt «In der Produktbibliothek freigeben» das gewählte
+   Produkt im Projekt frei. */
 (()=>{
 'use strict';
 const K=window.TBA_PROJEKTDOKUMENTE,X=window.TBA_PROJEKTDOKUMENTE_EXPORT,OFFICE=window.TBA_OFFICE_CONFIG;
+const Z=window.TBA_PROJEKTDOKUMENTE_ZAHLEN,R=window.TBA_KOSTEN_RECHNEN,P=window.TBA_KOSTEN_POOL;
 const sb=window.MINDS_SUPABASE||(window.supabase&&OFFICE?window.supabase.createClient(OFFICE.url,OFFICE.key,
   {auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}):null);
 const inApp=!!window.WINDOW_NATIVE?.available;
@@ -534,10 +540,13 @@ function feldEingabe(art,z,key,{typ,werte,lang=false,label=null,hinweis=''}={}){
 function optionenEditor(z){
   const opts=K.optionen(z.daten);
   const f=(i,k,l,ph='')=>'<label class="pd-ofeld"><span>'+esc(l)+'</span><input class="pd-in" id="o-'+i+'-'+k+'" data-opt="'+i+'" data-ofeld="'+k+'" data-z="'+z.id+'" value="'+esc(opts[i][k])+'" placeholder="'+esc(ph)+'" autocomplete="off"></label>';
+  if(opts.some(o=>o.produkt_id)&&!quellen.daten&&!quellen.laedt)void ladeQuellen().then(()=>{if(quellen.daten)spaeterRendern()});
   return '<div class="pd-optionen">'+opts.map((o,i)=>'<div class="pd-option"><div class="pd-option-kopf"><strong>Variante '+esc(o.id)+'</strong><button type="button" class="pd-link" data-act="option-weg" data-z="'+z.id+'" data-i="'+i+'">entfernen</button></div>'+
     f(i,'text','Beschreibung')+'<div class="pd-option-zahlen">'+f(i,'produkt','Produkt','z. B. BO-01')+f(i,'kennwert','Kennwert netto','€/m²')+f(i,'menge','Menge','m²')+f(i,'betrag','Betrag netto','leer: Kennwert × Menge')+'</div>'+
-    f(i,'quelle','Quelle der Zahlen','z. B. Kostenberechnung, KG …')+'<div class="pd-option-zahlen">'+f(i,'kosten','Kosten')+f(i,'termine','Termine')+f(i,'qualitaet','Qualität · Gestaltung')+f(i,'genehmigung','Genehmigung')+'</div></div>').join('')+
-    '<button type="button" class="btn" data-act="option-neu" data-z="'+z.id+'">+ Variante</button></div>';
+    herkunftZeile(o)+(Z&&R&&P?'<button type="button" class="btn" data-act="zahlen" data-z="'+z.id+'" data-i="'+i+'">Zahlen aus dem Office …</button>':'')+
+    f(i,'quelle','Weitere Quelle (von Hand)','z. B. Angebot vom …')+'<div class="pd-option-zahlen">'+f(i,'kosten','Kosten')+f(i,'termine','Termine')+f(i,'qualitaet','Qualität · Gestaltung')+f(i,'genehmigung','Genehmigung')+'</div></div>').join('')+
+    '<div class="pd-option-aktionen"><button type="button" class="btn" data-act="option-neu" data-z="'+z.id+'">+ Variante</button>'+
+    (romy.bereit&&Z&&R&&P&&opts.some(o=>String(o.text||'').trim())?'<button type="button" class="btn btn-romy" data-act="romy-zahlen" data-z="'+z.id+'">Romy: Zahlen holen</button>':'')+'</div></div>';
 }
 function detailPanel(art){
   const z=zeilen[art].find(x=>x.id===ui.detail);if(!z)return '';
@@ -556,6 +565,7 @@ function detailPanel(art){
       '<div class="pd-entscheidung"><p class="pd-feld-titel">Entscheidung des Auftraggebers</p>'+
       (d.status==='entschieden'?'<p>'+esc(d.entscheidung)+' · '+esc(d.entscheider)+' · am '+esc(K.datumLang(d.entschieden_am))+'</p>'+feldEingabe(art,z,'bestaetigt_am',{hinweis:K.ohneBestaetigung(d)?'Die Bestätigung in Textform fehlt noch.':''}):'<p class="meta">Noch nicht entschieden.</p>')+
       '<button type="button" class="btn" data-act="entscheiden" data-z="'+z.id+'">'+(d.status==='entschieden'?'Entscheidung ändern':'Entscheidung eintragen')+'</button>'+
+      (d.status==='entschieden'&&K.optionen(d).some(o=>o.produkt_id)?'<button type="button" class="btn" data-act="freigeben" data-z="'+z.id+'">In der Produktbibliothek freigeben</button>':'')+
       '<p class="meta">«entschieden» setzt nur, wer im Projektteam ist, mit Datum und Entscheider; Romy trägt nie eine Entscheidung ein.</p></div>';
   }
   const verknuepft=[];
@@ -638,6 +648,261 @@ function entscheidungDialog(z){
     z.daten=neu;markiere(z);dialog.close();render();
   });
   dialog.showModal();
+}
+
+// ---------- Zahlen der Varianten: Produktbibliothek, Datenpool, Kostenberechnung ----------
+// Beim ersten Bedarf geladen; lesen darf das ganze Office (wie in Produktbibliothek und Kostenberechnung).
+const quellen={daten:null,laedt:null,fehler:''};
+const VERWENDUNG='id,produkt_id,projekt_id,code,status,menge,einheit';
+function ladeQuellen(){
+  if(quellen.laedt)return quellen.laedt;
+  quellen.laedt=(async()=>{
+    if(!Z||!R||!P){quellen.fehler='Die Rechenkerne sind nicht geladen.';return}
+    try{
+      const [pr,pp,pd,pv,ki,kt]=await Promise.all([
+        sb.from('office_produkte').select('id,typ,kategorie,name,hersteller,serie,familie,beschreibung,status,archiviert').eq('archiviert',false).limit(2000),
+        sb.from('office_produkt_preise').select('id,produkt_id,art,betrag,einheit,stand,quelle,projekt_bezeichnung,kg,kommentar').limit(5000),
+        sb.from('office_produkt_dokumente').select('id,produkt_id,art').limit(5000),
+        sb.from('office_produkt_verwendungen').select(VERWENDUNG).limit(5000),
+        sb.from('office_kosten_instances').select('id,project_id,project_number,project_name,is_archived,updated_at,state').limit(300),
+        sb.from('office_kosten_templates').select('id,state').eq('is_active',true).limit(1)]);
+      if([pr,pp,pd,pv,ki,kt].some(x=>x.error))throw new Error('nicht erreichbar');
+      quellen.daten={produkte:pr.data||[],preise:pp.data||[],dokumente:pd.data||[],verwendungen:pv.data||[],instanzen:ki.data||[],muster:(kt.data||[])[0]||null,pool:null,poolOhne:null};
+      quellen.fehler='';
+    }catch(e){console.error('Projektdokumente · Zahlen',e);quellen.fehler='Produktbibliothek und Kostenberechnungen sind gerade nicht erreichbar.';quellen.laedt=null}
+  })();
+  return quellen.laedt;
+}
+function kobeDesProjekts(){
+  return (quellen.daten?.instanzen||[]).filter(i=>i.project_id===projekt?.id&&!i.is_archived)
+    .sort((a,b)=>String(b.updated_at||'').localeCompare(String(a.updated_at||'')))[0]||null;
+}
+// Datenpool ohne die Kostenberechnung des Projekts: deren Positionen stehen eigens zur Wahl.
+function poolEintraege(){
+  const q=quellen.daten;if(!q)return [];
+  const ohne=kobeDesProjekts()?.id||'';
+  if(!q.pool||q.poolOhne!==ohne){q.pool=P.eintraege(q.instanzen.filter(i=>i.id!==ohne),R);q.poolOhne=ohne}
+  return q.pool;
+}
+const zielJetzt=()=>Z.ziel({kobe:kobeDesProjekts(),muster:quellen.daten?.muster,heute:heute()});
+const produktVon=id=>quellen.daten?.produkte.find(p=>p.id===id)||null;
+function produktMarke(o){
+  if(!o?.produkt_id||!quellen.daten||!Z)return '';
+  const p=produktVon(o.produkt_id);if(!p)return '<span class="chip chip-att">nicht in der Produktbibliothek</span>';
+  const d=Z.datenblatt(p,quellen.daten.dokumente);
+  return '<span class="chip '+(d==='geprueft'?'chip-ok':'chip-att')+'">'+esc(Z.DATENBLATT[d])+'</span>';
+}
+function herkunftZeile(o){
+  const li=[];
+  if(o.produkt_id)li.push('<li><strong>Produkt</strong> '+produktMarke(o)+' <a href="./produktbibliothek.html?id='+encodeURIComponent(o.produkt_id)+'" target="_blank" rel="noopener noreferrer">in der Produktbibliothek</a></li>');
+  if(o.kennwert_quelle)li.push('<li><strong>Kennwert</strong> '+esc(o.kennwert_quelle)+'</li>');
+  if(o.menge_quelle)li.push('<li><strong>Menge</strong> '+esc(o.menge_quelle)+'</li>');
+  if(Z&&!Z.einheitPasst(o))li.push('<li class="pd-warn">Die Einheiten von Kennwert und Menge passen nicht zusammen.</li>');
+  return li.length?'<ul class="pd-herkunft">'+li.join('')+'</ul>':'';
+}
+// Ein Feld mit Fokus gilt, bevor ein Dialog die Variante liest.
+function uebernimmOffeneFelder(){const el=document.activeElement;if(el?.matches?.('input[data-opt]'))optionFeld(el)}
+function nimmZahl(z,i,teil,{kg=''}={}){
+  const opts=K.optionen(z.daten).map(x=>({...x}));if(!opts[i])return;
+  opts[i]=Z.setze(opts[i],teil);
+  if(!setze('entscheidungsliste',z,'optionen',opts))return;
+  // Kostenstand und KG stehen sonst nirgends: beim ersten Kennwert oder der ersten Menge vorgeschlagen, nie überschrieben.
+  if(('kennwert' in teil||'menge' in teil)&&!String(z.daten.kostenbezug||'').trim())
+    setze('entscheidungsliste',z,'kostenbezug',['Kostenstand '+R.quartalText(zielJetzt().kostenstand),kg?'KG '+kg:''].filter(Boolean).join(', '));
+}
+
+// Dialog «Zahlen für Variante …»: Gewählt, Produkt, Datenpool, Kostenberechnung des Projekts.
+const zd={z:null,i:0,suche:'',gruppen:new Map(),positionen:new Map()};
+function zahlenDialog(z,i){
+  const o=K.optionen(z.daten)[i];if(!o)return;
+  Object.assign(zd,{z,i,suche:String(o.text||'').trim(),gruppen:new Map(),positionen:new Map()});
+  dialog.innerHTML='<form method="dialog" class="pd-dlg pd-dlg-breit pd-zahlen"><h2>Zahlen für Variante '+esc(o.id)+' · '+esc(K.nummer('entscheidungsliste',z.nr))+'</h2>'+
+    '<p class="meta">Aus der Produktbibliothek, dem Datenpool (Kostenberechnungen des Büros) und der Kostenberechnung des Projekts. Jede Zahl behält ihre Fundstelle; das Dokument an den Auftraggeber nennt nur den Beleg, keine anderen Projekte.</p>'+
+    '<label class="pd-feld"><span>Suchen</span><input class="pd-in" type="search" data-zsuche value="'+esc(zd.suche)+'" autocomplete="off" placeholder="z. B. Parkett Eiche"></label>'+
+    '<div data-zinhalt aria-live="polite"><p class="meta">wird geladen …</p></div>'+
+    '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn btn-primary" data-dlg="zu">Fertig</button></div></form>';
+  const form=dialog.querySelector('form');
+  form.addEventListener('click',e=>{
+    const b=e.target.closest('[data-z-act]');
+    if(b){e.preventDefault();void zahlAktion(b);return}
+    if(e.target.closest('[data-dlg="zu"]'))dialog.close();
+  });
+  form.addEventListener('input',e=>{if(e.target.matches('[data-zsuche]')){clearTimeout(form._t);form._t=setTimeout(()=>{zd.suche=e.target.value;zeigeZahlen()},250)}});
+  form.addEventListener('submit',e=>e.preventDefault());
+  dialog.addEventListener('close',()=>{zd.z=null;render()},{once:true});
+  dialog.showModal();
+  void ladeQuellen().then(zeigeZahlen);
+}
+const eintragZeile=(links,knoepfe)=>'<li><span>'+links+'</span><span class="pd-zknoepfe">'+knoepfe+'</span></li>';
+function zeigeZahlen(){
+  const el=dialog.querySelector('[data-zinhalt]');if(!el||!zd.z)return;
+  if(!quellen.daten){el.innerHTML='<p class="meta warn">'+esc(quellen.fehler||'Produktbibliothek und Kostenberechnungen sind gerade nicht erreichbar.')+'</p>';return}
+  const q=quellen.daten,z=zd.z,o=K.optionen(z.daten)[zd.i];if(!o){el.innerHTML='';return}
+  const zl=zielJetzt(),kobe=kobeDesProjekts(),b=K.betragVon(o),darfHier=darf(projekt);
+  let h='<section class="pd-zwahl"><h3>Gewählt</h3><dl>'+
+    '<div><dt>Produkt</dt><dd>'+(o.produkt?esc(o.produkt)+' '+produktMarke(o):'–')+'</dd></div>'+
+    '<div><dt>Kennwert</dt><dd>'+(o.kennwert?esc(o.kennwert):'–')+(o.kennwert_quelle?'<span>'+esc(o.kennwert_quelle)+'</span>':'')+'</dd></div>'+
+    '<div><dt>Menge</dt><dd>'+(o.menge?esc(o.menge):'–')+(o.menge_quelle?'<span>'+esc(o.menge_quelle)+'</span>':'')+'</dd></div>'+
+    '<div><dt>Betrag netto</dt><dd>'+(b.cent!==null?esc(K.euro(b.cent))+(b.berechnet?' (Kennwert × Menge)':''):'–')+'</dd></div></dl>'+
+    (Z.einheitPasst(o)?'':'<p class="pd-warn">Die Einheiten von Kennwert und Menge passen nicht zusammen.</p>')+
+    '<p class="meta">Fortgeschrieben auf '+esc(R.quartalText(zl.kostenstand))+(zl.herkunft==='kobe'?', den Kostenstand der Kostenberechnung des Projekts.':' (heute): das Projekt hat noch keine Kostenberechnung.')+'</p></section>';
+  // Produkt
+  const gewaehlt=o.produkt_id?produktVon(o.produkt_id):null;
+  h+='<section><h3>Produkt aus der Produktbibliothek</h3>';
+  if(gewaehlt){
+    const v=Z.verwendungIm(gewaehlt.id,projekt.id,q.verwendungen),preise=Z.preiseVon(gewaehlt.id,q.preise);
+    h+='<p><strong>'+esc(Z.produktText(gewaehlt,v))+'</strong> '+produktMarke(o)+(v?' <span class="meta">· im Projekt '+esc(v.code)+', '+esc(v.status)+'</span>':'')+'</p>';
+    if(!v&&darfHier)h+='<p><button type="button" class="btn" data-z-act="muster">In die Musterliste des Projekts ('+esc(Z.naechsterCode(projekt.id,gewaehlt.kategorie,q.verwendungen))+', vorgeschlagen)</button></p>';
+    h+=preise.length?'<ul class="pd-zliste">'+preise.slice(0,6).map(x=>{const k=Z.kennwertAusPreis(x,gewaehlt,zl,R,P);
+      return eintragZeile('<strong>'+esc(k.kennwert)+'</strong> '+esc(Z.PREISART[x.art]||x.art)+(x.stand?' · Stand '+esc(Z.monatText(x.stand)):'')+(k.hinweis?' <span class="pd-warn">'+esc(k.hinweis)+'</span>':''),
+        '<button type="button" class="btn" data-z-act="preis" data-id="'+esc(x.id)+'">Als Kennwert</button>')}).join('')+'</ul>':'<p class="meta">Für dieses Produkt gibt es noch keinen Preis.</p>';
+    h+='<p><button type="button" class="pd-link" data-z-act="produkt-weg">Verknüpfung mit dem Produkt lösen</button></p>';
+  }
+  const treffer=Z.produktSuche(q.produkte,zd.suche,P,{grenze:8}).filter(x=>x.p.id!==gewaehlt?.id);
+  h+=treffer.length?'<ul class="pd-zliste">'+treffer.map(({p})=>{
+      const v=Z.verwendungIm(p.id,projekt.id,q.verwendungen),pr=Z.preiseVon(p.id,q.preise)[0],c=pr?BigInt(Math.round(Number(pr.betrag)*100)):null;
+      return eintragZeile('<strong>'+esc(p.name)+'</strong>'+(p.hersteller?' · '+esc(p.hersteller):'')+(v?' · '+esc(v.code):'')+
+        '<span class="meta"> '+esc(Z.DATENBLATT[Z.datenblatt(p,q.dokumente)])+(c!==null?' · '+esc(Z.euroJe(c,pr.einheit))+' '+esc(Z.PREISART[pr.art]||''):'')+'</span>',
+        '<button type="button" class="btn" data-z-act="produkt" data-id="'+esc(p.id)+'">Wählen</button>')}).join('')+'</ul>'
+    :(gewaehlt?'':'<p class="meta">Nichts gefunden. Ein anderes Wort versuchen oder das Produkt in der <a href="./produktbibliothek.html" target="_blank" rel="noopener noreferrer">Produktbibliothek</a> anlegen.</p>');
+  h+='</section>';
+  // Datenpool: nur Werte in einer Einheit (die der Menge, sonst die häufigste)
+  const alle=Z.poolGruppen(poolEintraege(),P,{text:zd.suche,ohneInstanz:kobe?.id||''});
+  const mengeEinheit=/(m²|m³|St|kg|m|t)\s*$/.exec(String(o.menge||''))?.[1]||'';
+  const zahl=new Map();for(const g of alle)zahl.set(g.einheit,(zahl.get(g.einheit)||0)+1);
+  const einheit=mengeEinheit&&zahl.has(mengeEinheit)?mengeEinheit:[...zahl].sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+  const gruppen=alle.filter(g=>g.einheit===einheit);zd.gruppen=new Map(gruppen.map(g=>[g.key,g]));
+  h+='<section><h3>Kennwert aus dem Datenpool</h3>';
+  if(gruppen.length){
+    const st=P.statistik(gruppen,zl,R),andere=[...zahl.keys()].filter(e=>e!==einheit);
+    h+='<p class="meta">Je '+esc(einheit)+': '+st.n+(st.n===1?' unabhängiger Wert':' unabhängige Werte')+' aus '+st.projekte+(st.projekte===1?' Kostenberechnung':' Kostenberechnungen')+
+      (st.n>=2?' · Spanne '+esc(Z.euro(st.minCent))+' bis '+esc(Z.euro(st.maxCent)):'')+(st.n>=3?' · Median '+esc(Z.euro(st.medianCent)):'')+
+      (st.stand==='fortgeschrieben'?' · auf '+esc(R.quartalText(zl.kostenstand))+' fortgeschrieben':'')+(andere.length?' · auch in '+esc(andere.join(', ')):'')+'</p>';
+    h+='<ul class="pd-zliste">'+gruppen.slice(0,6).map(g=>{const k=Z.kennwertAusPool(g,zl,R,P),u=g.ursprung;
+      return eintragZeile('<strong>'+esc(k.kennwert)+'</strong> '+esc(K.kurz(u.bez,70))+'<span class="meta"> KG '+esc(u.kg)+(g.kopie?' · gleich in '+g.projekte.length+' Kostenberechnungen':'')+
+        (u.kostenstand?' · Kostenstand '+esc(R.quartalText(u.kostenstand)):'')+'</span>','<button type="button" class="btn" data-z-act="pool" data-key="'+esc(g.key)+'">Als Kennwert</button>')}).join('')+'</ul>';
+  }else h+='<p class="meta">'+(String(zd.suche).trim()?'Nichts gefunden. Ein anderes Wort versuchen.':'Ein Suchwort eingeben.')+'</p>';
+  h+='</section>';
+  // Kostenberechnung des Projekts
+  h+='<section><h3>Aus der Kostenberechnung des Projekts</h3>';
+  if(!kobe)h+='<p class="meta">Für dieses Projekt gibt es noch keine Kostenberechnung. <a href="./kostenberechnung.html" target="_blank" rel="noopener noreferrer">Kostenberechnungen öffnen</a></p>';
+  else{
+    const pos=Z.positionen(kobe,R,P,zd.suche,{grenze:8});zd.positionen=new Map(pos.map(x=>[x.id,x]));
+    h+=pos.length?'<ul class="pd-zliste">'+pos.map(x=>eintragZeile('<strong>'+esc(Z.mengeText(x.menge,x.einheit,R))+'</strong> KG '+esc(x.kg)+' · '+esc(K.kurz(x.titel,70))+
+        '<span class="meta">'+(x.epCent!==null?' '+esc(Z.euroJe(x.epCent,x.einheit)):'')+(x.mengenquelle?' · '+esc(x.mengenquelle):'')+'</span>',
+        '<button type="button" class="btn" data-z-act="menge" data-id="'+esc(x.id)+'">Menge</button>'+(x.epCent!==null?'<button type="button" class="btn" data-z-act="ep" data-id="'+esc(x.id)+'">Kennwert</button>':''))).join('')+'</ul>'
+      :'<p class="meta">Keine Position mit Menge gefunden'+(String(zd.suche).trim()?' für «'+esc(zd.suche)+'»':'')+'. <a href="./kostenberechnung.html?id='+encodeURIComponent(kobe.id)+'" target="_blank" rel="noopener noreferrer">Kostenberechnung öffnen</a></p>';
+  }
+  el.innerHTML=h+'</section>';
+}
+async function zahlAktion(b){
+  const f=dialog.querySelector('[data-dlg-fehler]');if(f)f.textContent='';
+  try{
+    const q=quellen.daten,z=zd.z,i=zd.i,o=z&&K.optionen(z.daten)[i];if(!q||!o)return;
+    const zl=zielJetzt(),kobe=kobeDesProjekts(),act=b.dataset.zAct;
+    const kw=k=>k&&{kennwert:k.kennwert,kennwert_quelle:k.kennwert_quelle,kennwert_beleg:k.kennwert_beleg};
+    let teil=null,kg='';
+    if(act==='produkt'){const p=produktVon(b.dataset.id);if(p)teil={produkt:Z.produktText(p,Z.verwendungIm(p.id,projekt.id,q.verwendungen)),produkt_id:p.id}}
+    else if(act==='produkt-weg')teil={produkt_id:''};
+    else if(act==='preis'){const x=q.preise.find(r=>r.id===b.dataset.id);teil=x&&kw(Z.kennwertAusPreis(x,produktVon(x.produkt_id),zl,R,P))}
+    else if(act==='pool')teil=kw(Z.kennwertAusPool(zd.gruppen.get(b.dataset.key),zl,R,P));
+    else if(act==='menge'){const m=Z.mengeAusPosition(zd.positionen.get(b.dataset.id),kobe,R);if(m){teil={menge:m.menge,menge_quelle:m.menge_quelle,menge_beleg:m.menge_beleg,kobe_ref:m.kobe_ref};kg=m.kg}}
+    else if(act==='ep'){const x=zd.positionen.get(b.dataset.id);teil=kw(Z.kennwertAusPosition(x,kobe,R));kg=x?.kg||''}
+    else if(act==='muster'){b.disabled=true;await inMusterliste(z,i);zeigeZahlen();return}
+    if(!teil)return;
+    nimmZahl(z,i,teil,{kg});
+    zeigeZahlen();
+  }catch(e){console.error('Projektdokumente · Zahlen',e);if(f)f.textContent=e?.message||'Das hat nicht geklappt.'}
+}
+// Musterliste des Projekts = Verwendungen in der Produktbibliothek (Code und Stand).
+async function neueVerwendung(p,status,notiz){
+  const q=quellen.daten;
+  for(let versuch=0;versuch<2;versuch++){
+    const code=Z.naechsterCode(projekt.id,p.kategorie,q.verwendungen);
+    const {data,error}=await sb.from('office_produkt_verwendungen').insert({produkt_id:p.id,projekt_id:projekt.id,code,status,created_by:nutzer.id,notiz:String(notiz||'').slice(0,1000)}).select(VERWENDUNG).single();
+    if(!error){q.verwendungen.push(data);return data}
+    if(error.code!=='23505')throw new Error('Die Produktbibliothek hat das nicht übernommen: '+(error.message||'Fehler'));
+    const r=await sb.from('office_produkt_verwendungen').select(VERWENDUNG).limit(5000);if(!r.error)q.verwendungen=r.data||[];
+  }
+  throw new Error('Der Code ist inzwischen vergeben; bitte noch einmal.');
+}
+async function inMusterliste(z,i){
+  const o=K.optionen(z.daten)[i],p=o&&produktVon(o.produkt_id);if(!p)return;
+  if(Z.verwendungIm(p.id,projekt.id,quellen.daten.verwendungen))return;
+  const v=await neueVerwendung(p,'vorgeschlagen','Variante '+o.id+' in '+K.nummer('entscheidungsliste',z.nr));
+  nimmZahl(z,i,{produkt:Z.produktText(p,v)});
+}
+
+// Romy «Zahlen holen»: wählt unter den Kandidaten; der Vorschlag trägt die Zahlen aus den Daten, nicht aus dem Modell.
+async function romyZahlen(z){
+  await ladeQuellen();
+  const q=quellen.daten;if(!q)throw new Error(quellen.fehler||'Produktbibliothek und Kostenberechnungen sind gerade nicht erreichbar.');
+  const opts=K.optionen(z.daten).filter(o=>String(o.text||'').trim());
+  if(!opts.length)throw new Error('Bitte zuerst die Varianten beschreiben.');
+  const zl=zielJetzt(),kobe=kobeDesProjekts();
+  const {liste,karte}=Z.kandidaten(opts,{produkte:q.produkte,preise:q.preise,dokumente:q.dokumente,verwendungen:q.verwendungen,projektId:projekt.id,pool:poolEintraege(),kobe,z:zl,R,P});
+  if(!liste.produkte.length&&!liste.pool.length&&!liste.kobe.length)throw new Error('Weder in der Produktbibliothek noch im Datenpool noch in der Kostenberechnung gibt es etwas Passendes.');
+  const dok=await sichereDokument('entscheidungsliste');
+  await alleSpeichern();
+  const antwort=await romyAufruf({action:'zahlen',dokument_id:dok.id,zeile_id:z.id,kostenstand:zl.kostenstand,kandidaten:liste});
+  const r=antwort.result||{},neu=[],belege=new Set(),warum=[];
+  for(const w of r.optionen||[]){
+    const o=opts.find(x=>x.id===w.id);if(!o)continue;
+    const teil=Z.aufloesen(w,{karte,instanz:kobe,R});
+    if(!Object.keys(teil).length)continue;
+    const n=Z.setze({id:o.id},teil),geaendert=Object.keys(n).filter(k=>k!=='id'&&String(n[k]??'')!==String(o[k]??''));
+    if(!geaendert.length)continue;
+    neu.push(Object.fromEntries([['id',o.id],...geaendert.map(k=>[k,n[k]])]));
+    if(teil.produkt_id)belege.add('Produktbibliothek');
+    if(/^Datenpool/.test(teil.kennwert_quelle||''))belege.add('Datenpool');
+    if(teil.kobe_ref||/^Kostenberechnung/.test(teil.kennwert_quelle||''))belege.add('Kostenberechnung des Projekts');
+    if(w.begruendung)warum.push(o.id+': '+w.begruendung);
+  }
+  ui.romyText={art:'entscheidungsliste',quelle:'Zahlen aus dem Office',text:r.text||'',hinweise:r.hinweise||[],n:neu.length};
+  if(!neu.length){meldung('Romy hat keine neuen Zahlen gefunden.'+(r.hinweise?.length?' '+r.hinweise[0]:''),'info');return}
+  await vorschlaegeSpeichern('entscheidungsliste',[{art:'aenderung',zeile_id:z.id,daten:{optionen:neu},
+    fundstelle:[...belege].join(', ')||'Produktbibliothek, Datenpool, Kostenberechnung',begruendung:warum.join(' · ')}],'Zahlen aus dem Office');
+  meldung('Romy schlägt Zahlen für '+neu.length+(neu.length===1?' Variante':' Varianten')+' vor. Übernehmen oder verwerfen.');
+}
+
+// Nach der Entscheidung: das gewählte Produkt in der Musterliste des Projekts freigeben.
+function gewaehlteVariante(d){return /^\s*([A-H])\s*[:·.)]/.exec(String(d?.entscheidung||''))?.[1]||''}
+function freigabeDialog(z){
+  void ladeQuellen().then(()=>{
+    const q=quellen.daten;if(!q){meldung(quellen.fehler||'Die Produktbibliothek ist gerade nicht erreichbar.','warn');return}
+    const opts=K.optionen(z.daten).filter(o=>o.produkt_id&&produktVon(o.produkt_id));
+    if(!opts.length){meldung('Keine Variante hat ein Produkt aus der Produktbibliothek.','warn');return}
+    const vor=gewaehlteVariante(z.daten);
+    dialog.innerHTML='<form class="pd-dlg"><h2>In der Produktbibliothek freigeben · '+esc(K.nummer('entscheidungsliste',z.nr))+'</h2><p class="meta">Entschieden: '+esc(z.daten.entscheidung)+'</p>'+
+      '<label class="pd-feld"><span>Gewählte Variante</span><select class="pd-in" name="wahl">'+opts.map(o=>'<option value="'+esc(o.id)+'"'+(o.id===vor?' selected':'')+'>'+esc(o.id+' · '+K.kurz(o.produkt||o.text,70))+'</option>').join('')+'</select></label>'+
+      '<label class="pd-wahl-zeile"><input type="checkbox" name="andere" checked> Die Produkte der übrigen Varianten im Projekt als «verworfen» führen</label>'+
+      '<p class="meta">Die Musterliste des Projekts ist die Produktbibliothek: das gewählte Produkt steht danach mit seinem Code als «freigegeben» im Projekt.</p>'+
+      '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Freigeben</button></div></form>';
+    const form=dialog.querySelector('form'),f=dialog.querySelector('[data-dlg-fehler]');
+    form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
+    form.onsubmit=async e=>{
+      e.preventDefault();const knopf=form.querySelector('[type="submit"]');knopf.disabled=true;
+      try{await freigeben(z,form.wahl.value,form.andere.checked);dialog.close();meldung('In der Produktbibliothek freigegeben.');render()}
+      catch(err){f.textContent=err?.message||'Das hat nicht geklappt.';knopf.disabled=false}
+    };
+    dialog.showModal();
+  });
+}
+async function freigeben(z,wahl,andere){
+  const q=quellen.daten;
+  for(const o of K.optionen(z.daten).filter(x=>x.produkt_id)){
+    const p=produktVon(o.produkt_id);if(!p)continue;
+    const v=Z.verwendungIm(p.id,projekt.id,q.verwendungen);
+    if(o.id===wahl){
+      if(!v){await neueVerwendung(p,'freigegeben','Entschieden in '+K.nummer('entscheidungsliste',z.nr)+' (Variante '+o.id+')');continue}
+      if(v.status==='freigegeben')continue;
+      const {error}=await sb.from('office_produkt_verwendungen').update({status:'freigegeben'}).eq('id',v.id);if(error)throw error;
+      v.status='freigegeben';
+    }else if(andere&&v&&['vorgeschlagen','bemustert'].includes(v.status)){
+      const {error}=await sb.from('office_produkt_verwendungen').update({status:'verworfen'}).eq('id',v.id);if(error)throw error;
+      v.status='verworfen';
+    }
+  }
 }
 
 // ---------- Planner und Entscheidungsliste ----------
@@ -726,6 +991,12 @@ function htmlAusBloecken(bloecke){
 const TEXTFELDER={anlass:'Anlass ergänzen',frage:'Frage an den Auftraggeber ergänzen',festliegt:'Was danach festliegt ergänzen',begruendung:'Begründung der Empfehlung'};
 function bearbeitbar(bloecke){
   return bloecke.map(b=>{
+    if(b.typ==='tabelle'&&b.varianten){
+      const z=zeilen.entscheidungsliste.find(x=>x.id===b.varianten),opts=z?K.optionen(z.daten):[];
+      return '<table class="dv-tabelle"><thead><tr>'+b.kopf.map(k=>'<th>'+esc(k)+'</th>').join('')+'</tr></thead><tbody>'+
+        b.zeilen.map((r,j)=>{const marke=produktMarke(opts.find(o=>o.id===b.ids[j]));
+          return '<tr>'+r.map((c,k)=>'<td'+((b.rechts||[]).includes(k)?' class="num"':'')+'>'+esc(c)+(k===1&&marke?' '+marke:'')+'</td>').join('')+'</tr>'}).join('')+'</tbody></table>';
+    }
     if(b.feld&&b.punkt){
       const z=zeilen.entscheidungsliste.find(x=>x.id===b.punkt);if(!z)return htmlAusBloecken([b]);
       const romy=Array.isArray(z.daten._romy)&&z.daten._romy.includes(b.feld);
@@ -752,11 +1023,15 @@ function renderVorlage(){
   const meta=(vorgelegt?'vorgelegt am '+esc(K.datumLang(v.daten.vorgelegt_am)):'Entwurf')+' · <span data-speicher>'+esc(speicherText())+'</span>';
   const ang=(k,l,ph='')=>'<label class="pd-feld"><span>'+esc(l)+'</span><input class="pd-in" id="m-'+k+'" data-vmeta="'+k+'" value="'+esc(k==='besprechung_am'?K.datumLang(v.daten[k]):v.daten[k])+'" placeholder="'+esc(ph)+'" autocomplete="off"></label>';
   const freie=zeilen.entscheidungsliste.filter(z=>!(v.daten.punkte||[]).includes(z.id)&&!['entschieden','entfällt'].includes(z.daten.status));
-  const quellen=punkte.flatMap(z=>K.optionen(z.daten).filter(o=>o.betrag||o.kennwert||o.quelle).map(o=>{
+  if(punkte.some(z=>K.optionen(z.daten).some(o=>o.produkt_id))&&!quellen.daten&&!quellen.laedt)void ladeQuellen().then(()=>{if(quellen.daten&&ui.ansicht==='vorlage')spaeterRendern()});
+  const zahlen=punkte.flatMap(z=>K.optionen(z.daten).filter(o=>o.betrag||o.kennwert||o.menge||o.produkt||o.quelle).map(o=>{
     const b=K.betragVon(o);
+    const zeilenQ=[o.produkt&&'Produkt: '+o.produkt,o.kennwert&&'Kennwert '+o.kennwert+(o.kennwert_quelle?' · '+o.kennwert_quelle:''),
+      o.menge&&'Menge '+o.menge+(o.menge_quelle?' · '+o.menge_quelle:''),o.quelle&&'Von Hand: '+o.quelle].filter(Boolean);
     return '<li><strong>'+esc(K.nummer('entscheidungsliste',z.nr)+' · '+o.id)+'</strong> '+(b.cent!==null?esc(K.euro(b.cent))+(b.berechnet?' (Kennwert × Menge)':''):'ohne Betrag')+
-      '<span>'+esc(o.quelle||'Quelle fehlt')+'</span></li>';
+      (o.produkt_id?' '+produktMarke(o):'')+zeilenQ.map(x=>'<span>'+esc(x)+'</span>').join('')+(zeilenQ.length?'':'<span>Quelle fehlt</span>')+'</li>';
   }));
+  const vsVarianten=offene('entscheidungsliste').filter(v=>v.art==='aenderung'&&Array.isArray(v.daten?.optionen)&&punkte.some(z=>z.id===v.zeile_id));
   const staende=ui.staende===null?'<p class="meta">wird geladen …</p>':ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button><span>'+esc([K.datumLang(String(s.created_at).slice(0,10)),name(s.created_by)].filter(Boolean).join(' · '))+'</span></li>').join('')+'</ul>'
     :'<p class="meta">Noch kein Stand. Beim Vorlegen wird der Stand festgehalten und bleibt unverändert.</p>';
   const fokus=vorZeichnen();
@@ -770,7 +1045,11 @@ function renderVorlage(){
       ' · '+esc(z.daten.status||'')+'<span class="pd-punkt-aktionen"><button type="button" class="pd-link" data-act="punkt-details" data-z="'+z.id+'">Varianten und Details</button>'+
       (punkte.length>1?'<button type="button" class="pd-link" data-act="punkt-weg" data-z="'+z.id+'">entfernen</button>':'')+'</span></li>').join('')+'</ul>'+
       (freie.length?'<label class="pd-feld"><span>Entscheidung hinzufügen</span><select class="pd-in" data-act="punkt-neu"><option value="">wählen …</option>'+freie.map(z=>'<option value="'+z.id+'">'+esc(K.nummer('entscheidungsliste',z.nr)+' · '+(z.daten.thema||'ohne Thema'))+'</option>').join('')+'</select></label>':'')+'</section>'+
-    '<section class="card"><h2>Zahlen und Quellen</h2>'+(quellen.length?'<ul class="pd-quellen">'+quellen.join('')+'</ul>':'<p class="meta">Noch keine Beträge. Unter «Varianten und Details» je Variante Kennwert, Menge oder Betrag mit Quelle eintragen.</p>')+'</section>'+
+    '<section class="card"><h2>Zahlen und Quellen</h2>'+(zahlen.length?'<ul class="pd-quellen">'+zahlen.join('')+'</ul>':'<p class="meta">Noch keine Beträge. Unter «Varianten und Details» je Variante «Zahlen aus dem Office» oder Kennwert, Menge und Betrag von Hand.</p>')+
+      vsVarianten.map(v=>{const z=zeileVon(v.zeile_id);return '<div class="pd-vs-karte"><p><strong>Romy schlägt für '+esc(K.nummer('entscheidungsliste',z?.nr))+' vor:</strong> '+esc(K.aenderungText('entscheidungsliste',z?.daten,v.daten))+'</p>'+
+        (v.begruendung?'<p class="meta">'+esc(v.begruendung)+'</p>':'')+'<p class="meta">Fundstelle: '+esc(v.fundstelle)+'</p>'+vsKnoepfe(v)+'</div>'}).join('')+
+      (romy.bereit&&Z&&R&&P?punkte.filter(z=>K.optionen(z.daten).some(o=>String(o.text||'').trim())).map(z=>'<button type="button" class="btn btn-romy" data-act="romy-zahlen" data-z="'+z.id+'">Romy: Zahlen für '+esc(K.nummer('entscheidungsliste',z.nr))+' holen</button>').join(''):'')+
+      '<p class="meta">Im Dokument steht je Zahl nur der Beleg; die Fundstellen mit Projekt und Zeile bleiben hier.</p></section>'+
     '<section class="card"><h2>Wenn der Auftraggeber entschieden hat</h2><p class="meta">In der Entscheidungsliste «Entscheidung eintragen»: mit Datum und Entscheider, danach die Bestätigung in Textform. Die Vorlage zeigt dann die Entscheidung statt der Ankreuzfelder.</p></section>'+
     (romy.bereit&&punkte.length?'<section class="card"><h2>Romy</h2><p class="meta">Romy formuliert einen Abschnitt neu: grün eingefügt, rot gestrichen. Nichts ändert sich ohne «Übernehmen».</p>'+
       '<label class="pd-feld"><span>Abschnitt</span><select class="pd-in" id="r-abschnitt">'+punkte.flatMap(z=>[['anlass','Anlass'],['frage','Frage an den Auftraggeber'],['begruendung','Empfehlung des Büros'],['festliegt','Was danach festliegt']]
@@ -840,7 +1119,8 @@ function standDialog(id){
 const ROMY_FEHLER={no_terminplan:'Für dieses Projekt gibt es keinen Terminplan mit Terminen.',document_or_text_required:'Bitte eine Datei wählen oder Text einfügen.',
   one_document_required:'Bitte nur eine Datei.',invalid_attachments:'Diese Datei kann Romy nicht lesen: PDF oder Bild bis 8 MB.',ai_not_configured:'Romy ist im Office noch nicht eingerichtet.',
   no_access:'Kein Zugriff auf dieses Dokument.',ai_timeout_or_network:'Romy hat nicht rechtzeitig geantwortet. Bitte noch einmal versuchen.',rows_required:'Bitte zuerst Zeilen auswählen.',
-  instruction_required:'Bitte sagen, was Romy ändern soll.',question_required:'Bitte eine Frage eingeben.',invalid_task:'Das geht in dieser Liste nicht.'};
+  instruction_required:'Bitte sagen, was Romy ändern soll.',question_required:'Bitte eine Frage eingeben.',invalid_task:'Das geht in dieser Liste nicht.',
+  candidates_required:'Romy braucht Kandidaten: in der Produktbibliothek, im Datenpool oder in der Kostenberechnung ist nichts Passendes.',options_required:'Bitte zuerst die Varianten beschreiben.'};
 async function romyStatus(){
   try{const {data,error}=await sb.functions.invoke('office-dokumente-ai',{body:{action:'status'}});romy.bereit=!error&&data?.ready===true}catch{romy.bereit=false}
   if(romy.bereit&&!ui.edit&&!dialog.open&&projekt)render();
@@ -882,6 +1162,7 @@ async function uebernehmen(v){
     const z=zeileVon(v.zeile_id);
     if(!z){await vorschlagStatus(v,'verworfen');meldung('Die Zeile gibt es nicht mehr; der Vorschlag ist verworfen.','warn');return}
     const neu={...z.daten,...v.daten};
+    if(Array.isArray(v.daten.optionen))neu.optionen=K.optionenZusammen(z.daten.optionen,v.daten.optionen);
     if(art==='klaerungsliste'&&['gelöst','entfällt'].includes(v.daten.status)&&!neu.erledigt_am)neu.erledigt_am=heute();
     if(art==='entscheidungsliste'&&v.daten.status==='vorgelegt'&&!neu.vorgelegt_am)neu.vorgelegt_am=heute();
     neu._romy=[...new Set([...(Array.isArray(z.daten._romy)?z.daten._romy:[]),...Object.keys(v.daten)])];
@@ -1060,6 +1341,9 @@ root.addEventListener('click',e=>{
   else if(act==='option-neu'){const z=zeileVon(el.dataset.z);const o=K.optionen(z.daten);setze('entscheidungsliste',z,'optionen',[...o,{id:K.naechsteOptionId(o),text:''}]);render()}
   else if(act==='option-weg'){const z=zeileVon(el.dataset.z);const o=K.optionen(z.daten).filter((_,i)=>i!==Number(el.dataset.i));setze('entscheidungsliste',z,'optionen',o);render()}
   else if(act==='entscheiden'){const z=zeileVon(el.dataset.z);if(z)entscheidungDialog(z)}
+  else if(act==='zahlen'){const z=zeileVon(el.dataset.z);if(z){uebernimmOffeneFelder();zahlenDialog(z,Number(el.dataset.i))}}
+  else if(act==='romy-zahlen'){const z=zeileVon(el.dataset.z);if(z){el.disabled=true;el.textContent='Romy sucht …';void sicher(async()=>{uebernimmOffeneFelder();await romyZahlen(z);render()})}}
+  else if(act==='freigeben'){const z=zeileVon(el.dataset.z);if(z)freigabeDialog(z)}
   else if(act==='loeschen')void sicher(()=>loeschen(zeileVon(el.dataset.z)));
   else if(act==='word'){const v=vorlageZeile();if(v)void sicher(()=>word(v))}
   else if(act==='drucken')void sicher(async()=>{await alleSpeichern();renderVorlage();window.print()});
@@ -1156,8 +1440,12 @@ function feldAusPanel(el){
 function optionFeld(el){
   const z=zeileVon(el.dataset.z);if(!z)return false;
   const o=K.optionen(z.daten).map(x=>({...x}));const i=Number(el.dataset.opt);if(!o[i])return false;
-  if(gleich(o[i][el.dataset.ofeld],el.value))return false;
-  o[i][el.dataset.ofeld]=el.value;
+  const k=el.dataset.ofeld;
+  if(gleich(o[i][k],el.value))return false;
+  o[i][k]=el.value;
+  // Eine von Hand geänderte Zahl hat nicht mehr die Fundstelle der übernommenen.
+  if(k==='kennwert')Object.assign(o[i],{kennwert_quelle:'',kennwert_beleg:''});
+  if(k==='menge')Object.assign(o[i],{menge_quelle:'',menge_beleg:'',kobe_ref:''});
   return setze('entscheidungsliste',z,'optionen',o);
 }
 function vmeta(el){

@@ -25,7 +25,7 @@ function alleObjekte(schema,pfad='',out=[]){
 }
 
 test('Schemas sind strikt und kennen keine Entscheidung',()=>{
-  for(const schema of [C.schemaVorschlaege('klaerungsliste'),C.schemaVorschlaege('entscheidungsliste'),C.SCHEMA_TEXT,C.SCHEMA_FELDTEXT]){
+  for(const schema of [C.schemaVorschlaege('klaerungsliste'),C.schemaVorschlaege('entscheidungsliste'),C.SCHEMA_TEXT,C.SCHEMA_FELDTEXT,C.SCHEMA_ZAHLEN]){
     for(const [pfad,o] of alleObjekte(schema)){
       assert.equal(o.additionalProperties,false,'additionalProperties in '+pfad);
       assert.deepEqual([...o.required].sort(),Object.keys(o.properties).sort(),'required in '+pfad);
@@ -101,6 +101,28 @@ test('Texte, Abschnitte und Eingaben',()=>{
   }
   assert.match(C.anweisungen('vorschlaege','klaerungsliste'),/Ohne Fundstelle kein Vorschlag/);
   assert.throws(()=>C.anweisungen('unbekannt','klaerungsliste'));
+});
+
+test('Zahlen holen: Romy nennt nur Verweise auf Kandidaten, nie Zahlen',()=>{
+  // Das Schema kennt keine Zahl, nur Verweise.
+  assert.deepEqual(Object.keys(C.SCHEMA_ZAHLEN.properties.optionen.items.properties).sort(),['begruendung','id','kennwert','menge','produkt']);
+  const k=C.kandidatenPruefen({produkte:[{ref:'p1',name:'Parkett Eiche geölt',preise:[{ref:'pr1',art:'Angebot eingebaut',wert:'189,69 €/m²',eingebaut:true},{ref:'x9'}]},{ref:'p1',name:'doppelt'}],
+    pool:[{ref:'g1',bezeichnung:'Naturstein Platten',wert:'238,35 €/m²',kostenberechnungen:2}],kobe:[{ref:'k1',kg:'352',bezeichnung:'Parkett Wohnräume',menge:'210 m²'},{ref:'k1'}],fremd:[{ref:'p2'}]});
+  assert.deepEqual([k.produkte.length,k.produkte[0].preise.length,k.pool.length,k.kobe.length],[1,1,1,1],'Verweise eindeutig und geprüft');
+  const r=C.pruefeZahlen({text:'Zwei Varianten.',hinweise:['Kein Angebot für B.'],optionen:[
+    {id:'A',produkt:'p1',kennwert:'pr1',menge:'k1',begruendung:'Angebot eingebaut, gleiche Fläche.'},
+    {id:'B',produkt:'p7',kennwert:'g1',menge:'pr1',begruendung:'Datenpool.'},
+    {id:'C',produkt:'p1',kennwert:'g1',menge:'k1',begruendung:'nicht gefragt'},
+    {id:'A',produkt:'',kennwert:'k1',menge:'k1',begruendung:'doppelt'}]},{kandidaten:k,ids:['A','B']});
+  assert.deepEqual(r.optionen,[{id:'A',produkt:'p1',kennwert:'pr1',menge:'k1',begruendung:'Angebot eingebaut, gleiche Fläche.'},
+    {id:'B',produkt:'',kennwert:'g1',menge:'',begruendung:'Datenpool.'}],'unbekannte Verweise und Mengen aus Preisen fallen weg; nur gefragte Varianten, je einmal');
+  assert.deepEqual(r.hinweise,['Kein Angebot für B.']);
+  assert.throws(()=>C.pruefeZahlen(null,{kandidaten:k}),/invalid_response/);
+  assert.match(C.anweisungen('zahlen','entscheidungsliste'),/Zahlen schreibst du nie/);
+  const ts=read('supabase/functions/office-dokumente-ai/index.ts');
+  assert.ok(ts.includes('const kandidaten=kandidatenPruefen(input.kandidaten);'),'Kandidaten werden geprüft');
+  assert.ok(/action==="zahlen"[\s\S]*const z=alle\.find/.test(ts),'die Varianten kommen aus der Datenbank, nicht aus dem Client');
+  assert.equal(C.VERSION,'office-dokumente-ai-v2');
 });
 
 test('Funktion: unter RLS lesen, jede Anfrage zählen, nichts schreiben',()=>{

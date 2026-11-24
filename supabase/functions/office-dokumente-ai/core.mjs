@@ -3,9 +3,12 @@
    Zeilen und Änderungen vor, jede mit Fundstelle; sie formuliert Fragen an die Fachplaner, prüft Fristen gegen den
    Terminplan, entwirft die Bestätigung einer Entscheidung in Textform und formuliert einen Abschnitt einer
    Entscheidungsvorlage neu. Rein, ohne Netz und ohne Schreibrechte: Vorschläge gelten erst nach «Übernehmen» im Client.
-   Eine Entscheidung trägt Romy nie ein: die Felder dafür gibt es im Schema nicht, und die Prüfung entfernt sie. */
+   Eine Entscheidung trägt Romy nie ein: die Felder dafür gibt es im Schema nicht, und die Prüfung entfernt sie.
+   «Zahlen holen» (24.11.2026, zweiter Schritt): Romy ordnet den Varianten einer Entscheidung Produkt, Kennwert und Menge
+   zu, ausschließlich aus Kandidaten, die der Client aus Produktbibliothek, Datenpool und Kostenberechnung baut; sie
+   antwortet nur mit Verweisen, nie mit Zahlen. Unbekannte Verweise fallen in der Prüfung weg. */
 export const MODEL="gpt-6.1-terra"; // wie office-kosten-ai, office-produkt-ai und office-terminplan-ai
-export const VERSION="office-dokumente-ai-v1";
+export const VERSION="office-dokumente-ai-v2";
 export const DISZIPLINEN=Object.freeze(["ALLE","ARCH","TWP","HLS","ELT","BPH","BRS","GEO","VER","FRA","AUF","AG","BEH"]);
 export const RUNDEN=Object.freeze(["01","02","03"]);
 export const STATUS_KLAERUNG=Object.freeze(["offen","in Klärung","gelöst","Vorbehalt","Entscheidungspunkt","entfällt"]);
@@ -15,7 +18,7 @@ export const NUR_VON_HAND=Object.freeze(["entschieden_am","entscheidung","entsch
 export const AUFGABEN=Object.freeze(["frage_fachplaner","fristen_terminplan","bestaetigung","frage"]);
 export const TEXTFELDER=Object.freeze(["anlass","frage","begruendung","festliegt","wenn_spaeter","gesichert","angenommen"]);
 export const OPTION_IDS=Object.freeze(["A","B","C","D","E"]);
-export const GRENZE=Object.freeze({vorschlaege:40,zeilen:300,termine:200,text:60000,auswahl:40});
+export const GRENZE=Object.freeze({vorschlaege:40,zeilen:300,termine:200,text:60000,auswahl:40,produkte:40,preise:6,pool:40,kobe:40});
 const LAENGE={ort:200,plan:120,sachverhalt:1500,loesung:1500,folgen:1000,protokoll:200,herkunft:200,thema:200,frage:1500,anlass:2500,
   begruendung:1500,festliegt:1000,annahme:600,option:600};
 
@@ -49,6 +52,10 @@ export function schemaVorschlaege(art){
       properties:{art:{type:"string",enum:["neu","aenderung"]},nr:{type:"integer"},
         felder:art==="klaerungsliste"?FELDER_KLAERUNG:FELDER_ENTSCHEIDUNG,fundstelle:T,begruendung:T}}}}};
 }
+export const SCHEMA_ZAHLEN={type:"object",additionalProperties:false,required:["text","optionen","hinweise"],properties:{
+  text:T,hinweise:{type:"array",items:T},
+  optionen:{type:"array",items:{type:"object",additionalProperties:false,required:["id","produkt","kennwert","menge","begruendung"],
+    properties:{id:{type:"string",enum:[...OPTION_IDS]},produkt:T,kennwert:T,menge:T,begruendung:T}}}}};
 export const SCHEMA_TEXT={type:"object",additionalProperties:false,required:["text","hinweise"],properties:{text:T,hinweise:{type:"array",items:T}}};
 export const SCHEMA_FELDTEXT={type:"object",additionalProperties:false,required:["neu","begruendung","hinweise"],
   properties:{neu:T,begruendung:T,hinweise:{type:"array",items:T}}};
@@ -77,6 +84,10 @@ export function anweisungen(aufgabe,art){
       "text: zwei bis drei Sätze an das Projektteam: was das Dokument ist und was du gefunden hast. hinweise: was auffällt, aber kein Vorschlag ist."
     ].join("\n");
   }
+  if(aufgabe==="zahlen")return [...GRUND,
+    "Aufgabe: Ordne jeder Variante der Entscheidung ihre Zahlen zu, nur aus den Kandidaten: produkt = ref eines Produkts der Produktbibliothek, kennwert = ref eines Preises (pr…), eines Werts aus dem Datenpool (g…) oder einer Position der Kostenberechnung des Projekts (k…), menge = ref einer Position der Kostenberechnung (k…). Ein ref, der in den Kandidaten nicht steht, ist verboten; passt nichts, bleibt das Feld leer. Zahlen schreibst du nie.",
+    "Kennwert: ein eingebauter Preis (Angebot eingebaut, Abrechnung, Ansatz einer Kostenberechnung) vor einem Materialpreis; ein Angebot vor einem alten Ansatz; dieselbe Einheit wie die Menge. Menge: dieselbe Fläche für alle Varianten, die dasselbe Bauteil betreffen. Was eine Variante schon hat, schlägst du nur vor, wenn ein Kandidat deutlich besser passt.",
+    "begruendung: ein Satz je Variante (Leistung, Einheit, Stand). text: zwei Sätze an das Projektteam. hinweise: was fehlt, etwa kein Angebot oder keine Kostenberechnung im Projekt."].join("\n");
   if(aufgabe==="frage_fachplaner")return [...GRUND,
     "Aufgabe: Formuliere aus den ausgewählten Klärungen eine Nachricht an die Fachplaner, je Disziplin ein Abschnitt mit den Fragen zu ihren Punkten (Nr, Ort, Sachverhalt, was das Büro braucht, bis wann laut Frist). Freundlich, knapp, ohne Anrede an eine bestimmte Person. Nur das, was in den Zeilen steht."].join("\n");
   if(aufgabe==="fristen_terminplan")return [...GRUND,
@@ -170,6 +181,46 @@ export function pruefeFeldtext(a,{alt=""}={}){
   const neu=s(a.neu,4000);
   if(!neu||neu===s(alt,4000))throw Error("unchanged");
   return {neu,begruendung:s(a.begruendung,600),hinweise:(Array.isArray(a.hinweise)?a.hinweise:[]).map(h=>s(h,400)).filter(Boolean).slice(0,6)};
+}
+
+// Kandidaten aus dem Client: nur kurze Felder, begrenzt; Verweise eindeutig je Art (p, pr, g, k).
+export function kandidatenPruefen(k){
+  const ref=(x,re)=>re.test(String(x?.ref||""))?String(x.ref):"";
+  const produkte=[],pool=[],kobe=[],refs=new Set();
+  for(const p of (Array.isArray(k?.produkte)?k.produkte:[]).slice(0,GRENZE.produkte)){
+    const r=ref(p,/^p\d{1,3}$/);if(!r||refs.has(r))continue;refs.add(r);
+    const preise=[];
+    for(const x of (Array.isArray(p.preise)?p.preise:[]).slice(0,GRENZE.preise)){
+      const rp=ref(x,/^pr\d{1,3}$/);if(!rp||refs.has(rp))continue;refs.add(rp);
+      preise.push({ref:rp,art:eins(x.art,40),wert:eins(x.wert,40),stand:eins(x.stand,10),eingebaut:x.eingebaut===true});
+    }
+    produkte.push({ref:r,name:eins(p.name,120),hersteller:eins(p.hersteller,80),kategorie:eins(p.kategorie,30),code:eins(p.code,10),datenblatt:eins(p.datenblatt,12),preise});
+  }
+  for(const g of (Array.isArray(k?.pool)?k.pool:[]).slice(0,GRENZE.pool)){
+    const r=ref(g,/^g\d{1,3}$/);if(!r||refs.has(r))continue;refs.add(r);
+    pool.push({ref:r,bezeichnung:eins(g.bezeichnung,100),kg:eins(g.kg,3),wert:eins(g.wert,40),kostenstand:eins(g.kostenstand,30),
+      kostenberechnungen:Math.max(0,Math.min(99,Number(g.kostenberechnungen)||0)),herkunft:eins(g.herkunft,30)});
+  }
+  for(const x of (Array.isArray(k?.kobe)?k.kobe:[]).slice(0,GRENZE.kobe)){
+    const r=ref(x,/^k\d{1,3}$/);if(!r||refs.has(r))continue;refs.add(r);
+    kobe.push({ref:r,kg:eins(x.kg,3),bezeichnung:eins(x.bezeichnung,100),menge:eins(x.menge,30),kennwert:eins(x.kennwert,40)});
+  }
+  return {produkte,pool,kobe};
+}
+// Antwort auf Verweise zurückschneiden, die es gibt, und auf die Art, die das Feld erlaubt.
+export function pruefeZahlen(a,{kandidaten,ids=[]}){
+  if(!a||typeof a!=="object")throw Error("invalid_response");
+  const P=new Set(kandidaten.produkte.map(p=>p.ref)),PR=new Set(kandidaten.produkte.flatMap(p=>p.preise.map(x=>x.ref)));
+  const G=new Set(kandidaten.pool.map(g=>g.ref)),KB=new Set(kandidaten.kobe.map(x=>x.ref));
+  const erlaubt=new Set(ids),gesehen=new Set(),optionen=[];
+  for(const o of Array.isArray(a.optionen)?a.optionen:[]){
+    if(!OPTION_IDS.includes(o?.id)||!erlaubt.has(o.id)||gesehen.has(o.id))continue;
+    gesehen.add(o.id);
+    const produkt=P.has(o.produkt)?o.produkt:"",kennwert=PR.has(o.kennwert)||G.has(o.kennwert)||KB.has(o.kennwert)?o.kennwert:"",menge=KB.has(o.menge)?o.menge:"";
+    if(!produkt&&!kennwert&&!menge)continue;
+    optionen.push({id:o.id,produkt,kennwert,menge,begruendung:s(o.begruendung,400)});
+  }
+  return {text:s(a.text,1200),optionen,hinweise:(Array.isArray(a.hinweise)?a.hinweise:[]).map(h=>s(h,400)).filter(Boolean).slice(0,8)};
 }
 
 // ---------- Eingaben für das Modell ----------

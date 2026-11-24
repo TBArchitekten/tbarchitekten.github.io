@@ -5,6 +5,10 @@
 (function(){
   const UID='11111111-1111-4111-8111-111111111111',PID='22222222-2222-4222-8222-222222222222',P2='33333333-3333-4333-8333-333333333333';
   const KEY='tba_dokumente_fake_db_v1';
+  const PR1='66666666-6666-4666-8666-666666666661',PR2='66666666-6666-4666-8666-666666666662',KB='tba.office.kostenberechnung.v1';
+  const INDIZES=[{quartal:'2022-Q3',wert:'118.9'},{quartal:'2025-Q4',wert:'138.2'},{quartal:'2026-Q3',wert:'141.7'}];
+  const pos=(id,titel,menge,wert,kostenstand,zeile=0)=>({id,kg:'352',titel,menge,einheit:'m²',mengenquelle:{art:'archicad'},
+    kennwert:{art:'eigen',wert,fundstelle:'Ansatz Test',kostenstand},...(zeile?{archivZeile:zeile}:{})});
   const session={access_token:'fake',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,
     user:{id:UID,email:'test@fixture.invalid',aud:'authenticated',role:'authenticated'}};
   const jetzt=()=>new Date().toISOString();
@@ -18,7 +22,22 @@
     office_projektdokument_vorschlaege:[],isabella_tasks:[],
     // Ein Terminplan des Testprojekts für «Fristen mit dem Terminplan prüfen».
     office_terminplan_instances:[{id:'55555555-5555-4555-8555-555555555555',project_id:PID,phase:'LPH3',is_archived:false,
-      state:{tasks:[{id:'t1',name:'Vorabzug TWP',type:'milestone',start:'2026-12-04'}]}}]
+      state:{tasks:[{id:'t1',name:'Vorabzug TWP',type:'milestone',start:'2026-12-04'}]}}],
+    // Zahlen der Varianten: Produktbibliothek, Kostenberechnung des Testprojekts und zwei alte (Datenpool), erfunden.
+    office_produkte:[{id:PR1,typ:'produkt',kategorie:'bodenbelag',name:'Parkett Eiche geölt',hersteller:'Holz AG',serie:'',familie:'Parkett',beschreibung:'',status:'geprueft',archiviert:false},
+      {id:PR2,typ:'produkt',kategorie:'bodenbelag',name:'Naturstein Jura',hersteller:'Stein GmbH',serie:'',familie:'',beschreibung:'',status:'entwurf',archiviert:false}],
+    office_produkt_preise:[{id:'66666666-6666-4666-8666-666666666671',produkt_id:PR1,art:'angebot_eingebaut',betrag:185,einheit:'m²',stand:'2025-11-10',quelle:'Angebot Schreinerei Test',projekt_bezeichnung:'T-90 Altbau',kg:'352',kommentar:''},
+      {id:'66666666-6666-4666-8666-666666666672',produkt_id:PR1,art:'listenpreis_material',betrag:64.9,einheit:'m²',stand:'2026-05-02',quelle:'Preisliste 2026',projekt_bezeichnung:'',kg:'',kommentar:''}],
+    office_produkt_dokumente:[{id:'66666666-6666-4666-8666-666666666681',produkt_id:PR1,art:'datenblatt'}],
+    office_produkt_verwendungen:[],
+    office_kosten_templates:[{id:'66666666-6666-4666-8666-666666666691',is_active:true,state:{indizes:INDIZES,indexReihe:'Baupreisindex Test',ustProzent:'19'}}],
+    office_kosten_instances:[
+      {id:'66666666-6666-4666-8666-6666666666a1',project_id:PID,project_number:'T-01',project_name:'Testhaus',is_archived:false,updated_at:'2026-11-20T10:00:00.000Z',
+        state:{schema:KB,kostenstand:'2026-Q4',indizes:INDIZES,ustProzent:'19',positionen:[pos('a','Parkett Wohnräume','210','180','2026-Q4'),pos('b','Fliesen Bäder','38.5','95','2026-Q4')]}},
+      {id:'66666666-6666-4666-8666-6666666666a2',project_id:'66666666-6666-4666-8666-6666666666b1',project_number:'T-90',project_name:'Altbau',is_archived:true,updated_at:'2026-01-01T00:00:00.000Z',
+        state:{schema:KB,kostenstand:'2022-Q3',indizes:INDIZES,archiv:{reifegrad:'berechnung'},positionen:[pos('x1','Parkett Eiche geölt','120','180','2022-Q3',12),pos('x2','Naturstein Platten','80','200','2022-Q3',13)]}},
+      {id:'66666666-6666-4666-8666-6666666666a3',project_id:'66666666-6666-4666-8666-6666666666b2',project_number:'T-91',project_name:'Musterhof',is_archived:true,updated_at:'2026-01-02T00:00:00.000Z',
+        state:{schema:KB,kostenstand:'2022-Q3',indizes:INDIZES,archiv:{reifegrad:'berechnung'},positionen:[pos('y1','Parkett Eiche','95','180','2022-Q3',40)]}}]
   });
   let db=null;try{db=JSON.parse(sessionStorage.getItem(KEY)||'null')}catch{}
   if(!db)db=start();
@@ -151,6 +170,13 @@
     }
     if(body.action==='auswahl')return ok(body,{text:body.aufgabe==='bestaetigung'?'Betreff: Bestätigung Ihrer Entscheidung\n\nSehr geehrte Damen und Herren,\nwir bestätigen …'
       :body.aufgabe==='frage'?'Antwort von Romy zur Frage: '+body.frage:'An TWP:\n– Nr 1: Bitte Lösung für den Unterzug bis 05.12.',hinweise:[]});
+    // «Zahlen holen»: Romy wählt nur Verweise aus den Kandidaten; für A ein erfundener Verweis, der wegfallen muss.
+    if(body.action==='zahlen'){
+      const k=body.kandidaten||{},ref=(l,re)=>(l||[]).find(x=>re.test(x.bezeichnung||x.name||''))?.ref||'';
+      return ok(body,{text:'Für B passen ein Wert aus dem Datenpool und die Fläche der Kostenberechnung.',hinweise:['Für B gibt es kein Produkt in der Produktbibliothek.'],
+        optionen:[{id:'B',produkt:'',kennwert:ref(k.pool,/Naturstein/),menge:ref(k.kobe,/Parkett Wohnräume/),begruendung:'Gleiche Fläche wie A; Wert aus zwei alten Kostenberechnungen.'},
+          {id:'A',produkt:'p999',kennwert:'erfunden',menge:'',begruendung:'nichts'}]});
+    }
     if(body.action==='text'){
       const z=zeilen.find(x=>x.id===body.zeile_id),alt=String(z?.daten?.[body.feld]||'');
       return ok(body,{neu:(alt?alt+' ':'')+'Der Unterschied beträgt 5.004,30 € netto.',begruendung:'Betrag aus der Kostenberechnung eingesetzt.',hinweise:[],zeile_id:body.zeile_id,feld:body.feld});

@@ -250,3 +250,28 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .pd-vs-zeile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--pd-romy);margin:0 0 12px!important}
 .pd-vs-zeile .pd-vs-aktionen{margin-top:0}
 .pd-romy-ausgabe{min-height:260px;font-size:14px;line-height:1.5}
+
+/* Zahlen der Varianten (24.11.2026): Herkunft je Zahl, Dialog «Zahlen aus dem Office», Stand des Datenblatts. */
+.chip-ok{background:var(--pd-ok-bg);color:var(--pd-ok)}
+.pd-warn{color:var(--pd-att)}
+.pd-herkunft{list-style:none;margin:0;padding:8px 10px;border-radius:10px;background:#f6f7f9;display:grid;gap:4px;font-size:12px;color:var(--pd-muted)}
+.pd-herkunft strong{color:var(--pd-ink);font-weight:600;margin-right:4px}
+.pd-option-aktionen{display:flex;flex-wrap:wrap;gap:8px}
+.pd-zahlen section{border-top:1px solid var(--pd-line-soft);padding-top:10px;display:grid;gap:8px}
+.pd-zahlen h3{margin:0;font-size:15px}
+.pd-zwahl dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;font-size:14px}
+.pd-zwahl dt{font-size:12px;color:var(--pd-meta)}
+.pd-zwahl dd{margin:0;display:flex;flex-direction:column;gap:2px}
+.pd-zwahl dd span{font-size:12px;color:var(--pd-meta)}
+.pd-zliste{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:34vh;overflow:auto}
+.pd-zliste li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--pd-line-soft);border-radius:10px;font-size:14px}
+.pd-zliste li>span:first-child{min-width:0}
+.pd-zknoepfe{display:flex;gap:6px;flex:0 0 auto}
+.pd-vs-karte{border:1px dashed var(--pd-romy-line);background:var(--pd-romy-bg);border-radius:12px;padding:10px;display:grid;gap:6px;margin:8px 0;font-size:13px}
+.pd-wahl-zeile{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.pd-seite .btn-romy{margin-top:6px}
+@media (max-width:700px){
+  .pd-zwahl dl{grid-template-columns:1fr}
+  .pd-zliste li{flex-direction:column;align-items:flex-start}
+}
+.pd-quellen .chip,.pd-zwahl .chip{align-self:flex-start}
