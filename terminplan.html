@@ -394,6 +394,7 @@
 .office-plan-head .right{display:flex;align-items:center;gap:14px;color:var(--muted)}
 body.read-only .editor-only{display:none!important}
 @media print{.office-plan-head{display:none!important}}
+html.im-reiter #officeBack{display:none}
 
   /* Office Assistant: rule-backed conversational surface, no provider/model connection. */
   .assistant-body{max-height: min(720px,76vh)}
@@ -473,13 +474,15 @@ body.read-only .editor-only{display:none!important}
   .bar.audit-affected,.milestone.audit-affected{outline:2px solid #bb9252;outline-offset:2px}
   @media (max-width:900px){.assistant-columns{grid-template-columns:1fr}.assistant-body{max-height:44vh}}
 </style>
+<!-- In Work als Reiter (Rahmen): kein Rücksprung-Link, Work hat die Reiter. -->
+<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>
 <link rel="stylesheet" href="./assistant-surface.css?v=office37">
 <link rel="stylesheet" href="./window-editor.css?v=1">
 <link rel="stylesheet" href="./terminplan-planning.css?v=office1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>
 <!-- In the Window app (account Office) this client borrows the app's session; in the browser it is the usual office client. -->
-<script src="./shared/supabase-client.js?v=office3"></script>
+<script src="./shared/supabase-client.js?v=office4"></script>
 </head>
 <body>
 <header class="office-plan-head">
@@ -758,8 +761,11 @@ body.read-only .editor-only{display:none!important}
   const sb=window.MINDS_SUPABASE||supabase.createClient(OFFICE.url,OFFICE.key,{auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   // Inside the Window app the app signs in (its own screen); the browser goes to the office start page.
   const inApp=!!window.WINDOW_NATIVE?.available;
+  // Als Reiter in Work (Rahmen) springt die Seite nie zur Startseite oder in die App: das hieße die App in der App.
+  const IN_WORK=window.self!==window.top;
   function needSignIn(){
     if(inApp){void window.WINDOW_NATIVE.call('session.signIn');return}
+    if(IN_WORK){document.body.innerHTML='<div class="empty">Bitte in TBA Office neu anmelden.</div>';return}
     location.href='./';
   }
   const initialData={project:{name:'Terminplan',start:'2027-01-04',end:'2027-05-28',standDate:'2027-01-04',standLabel:'Muster'},groups:[],tasks:[]};
@@ -883,6 +889,18 @@ body.read-only .editor-only{display:none!important}
     setSaveStatus('Änderungen ungespeichert');
     saveTimer=setTimeout(()=>{void flushSave();},450);
   }
+  // Für Work (Reiter): Revision und ausstehende Speicherung abfragen; vor dem Schließen des Rahmens speichern.
+  window.TBA_OFFICE_TOOL=Object.freeze({
+    kind:'terminplan',
+    revision:()=>serverRevision,
+    pending:()=>!!(pendingSave||inFlightSave),
+    flush:async()=>{
+      for(let i=0;i<80&&(pendingSave||inFlightSave)&&!saveConflict;i++){
+        if(pendingSave&&!inFlightSave)await flushSave();
+        else await new Promise(r=>setTimeout(r,80));
+      }
+    }
+  });
   function raiseSaveConflict(message){
     saveConflict=true;
     saveFailed=true;
@@ -993,7 +1011,7 @@ body.read-only .editor-only{display:none!important}
     }
     // The start password is replaced on the Office page before any tool opens.
     if(member.must_change_password){
-      if(inApp){document.body.innerHTML='<div class="empty">Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.</div>';return}
+      if(inApp||IN_WORK){document.body.innerHTML='<div class="empty">Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.</div>';return}
       location.href='./';return}
 
     if(TEMPLATE_ID){
@@ -1026,6 +1044,7 @@ body.read-only .editor-only{display:none!important}
       canEdit=member.role==='admin'||row.owner_id===userId||leadsProject;
       setPlanChrome(row);
     }else{
+      if(IN_WORK){document.body.innerHTML='<div class="empty">Kein Terminplan gewählt.</div>';return}
       location.href=inApp?'./app/#section=plans':'./';
       return;
     }

@@ -285,8 +285,8 @@ test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/<strong>Kostenberechnung<\/strong><small>Nach DIN 276 bis zur 3\. Ebene/);
   assert.match(shell,/NAV_ICONS\.kosten='<svg /);
   assert.match(projekte,/getElementById\('officeToolsKosten'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/kostenberechnung\.html';/);
-  assert.match(index,/\.\/shell\.js\?v=office53/);
-  assert.match(index,/\.\/office-projects\.js\?v=office57/);
+  assert.match(index,/\.\/shell\.js\?v=office54/);
+  assert.match(index,/\.\/office-projects\.js\?v=office58/);
   assert.match(ui,/href="\.\/app\/#section=tools">‹ Werkzeuge/);
 });
 
@@ -294,8 +294,8 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<html lang="de">/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office5',
-    './kosten-import.js?v=office3','./kosten-assistent.js?v=office3','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office10','./kostenberechnung.css?v=office7'])
+  for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office4','./kosten-rechnen.js?v=office5',
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office3','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office11','./kostenberechnung.css?v=office8'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
     seite.indexOf('kosten-assistent.js')<seite.indexOf('kosten-pool.js')&&seite.indexOf('kosten-pool.js')<seite.indexOf('kostenberechnung.js?'));

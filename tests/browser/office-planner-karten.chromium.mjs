@@ -1,5 +1,7 @@
 // Chromium: Planner-Karten zeigen alle Verantwortlichen und den Status; die Checkliste bricht lange Punkte um
-// und lässt sich umordnen (Gari, 24.11.2026). Supabase ist eine lokale Attrappe – kein Netz, keine Produktion.
+// und lässt sich umordnen (Gari, 24.11.2026). Terminplan und Kostenberechnung sind Reiter wie Planner und Desktop,
+// und die Beschreibung eines Buckets steht nur noch auf Wunsch da. Supabase ist eine lokale Attrappe – kein Netz,
+// keine Produktion.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
@@ -23,7 +25,7 @@ const tag=n=>{const d=new Date();d.setDate(d.getDate()+n);return [d.getFullYear(
 const people=[['pa','Gari Beispiel'],['pb','Ana Muster'],['pc','Carla Test'],['pd','Dora Probe'],['pe','Emil Beispiel']];
 const fixtures={
   isabella_projects:[{id:'p1',client_key:'p1',name:'Testprojekt',number:'0001',archived:false}],
-  minds_work_buckets:[{id:'b0',name:'A5 · Paket',description:'',terminplan_ref:'',sort_order:0,archived:false}],
+  minds_work_buckets:[{id:'b0',name:'A5 · Paket',description:'Was zu diesem Paket gehört und wann es fertig ist.',terminplan_ref:'PSP 04.03',sort_order:0,archived:false}],
   isabella_tasks:[
     task('zwei',{work_status:'in_progress'}),
     task('fuenf',{work_status:'waiting'}),
@@ -36,16 +38,18 @@ const fixtures={
     ...people.map(([id],i)=>({task_id:'fuenf',person_id:id,created_at:'2026-11-24T08:0'+i+':00Z'})),
     {task_id:'ueberfaellig',person_id:'pb',created_at:'2026-11-24T08:00:00Z'}
   ],
+  // Wie die Datenbank: die zuletzt geänderte zuerst.
   office_terminplan_instances:[
-    {id:'tp-lph3',project_id:'p1',phase:'LPH3',updated_at:'2026-11-20T10:00:00Z',is_archived:false},
-    {id:'tp-lph5',project_id:'p1',phase:'LPH5',updated_at:'2026-11-22T10:00:00Z',is_archived:false}
-  ]
+    {id:'tp-lph5',project_id:'p1',phase:'LPH5',updated_at:'2026-11-22T10:00:00Z',server_revision:1,is_archived:false},
+    {id:'tp-lph3',project_id:'p1',phase:'LPH3',updated_at:'2026-11-20T10:00:00Z',server_revision:1,is_archived:false}
+  ],
+  office_kosten_instances:[]
 };
 const harness=`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${pageCss}</head>
 <body data-section="work" class="office-app"><div class="app" id="app"><main id="swipeArea" class="swipe-area"><section id="workScreen" class="screen work-screen active" data-screen="work"><div class="work-shell">
 <div class="work-head"><div><h1 id="workProjectTitle">Work</h1></div><div class="work-project-switch"></div></div>
-<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button type="button" data-work-tool="terminplan" hidden>Terminplan</button><button type="button" data-work-tool="kosten" hidden>Kostenberechnung</button></div>
-<div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div></div></section></main></div>
+<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button></div>
+<div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div><div id="workToolHost" class="work-tool-host" hidden></div></div></section></main></div>
 <div id="modalRoot" hidden></div>
 <script>
 localStorage.setItem('minds-work-project','p1');localStorage.setItem('minds-work-view','planner');
@@ -100,22 +104,25 @@ test('Karte: jede verantwortliche Person als Kreis, Status sichtbar',async()=>{
     const card=id=>page.evaluate(id=>{
       const c=document.querySelector(`[data-work-task="${id}"]`),t=c.querySelector('[data-work-toggle]');
       const av=[...c.querySelectorAll('.work-assignee-avatars .work-assignee-avatar')];
+      const tag=c.querySelector('.work-task-chips .work-task-state');
       return {state:c.dataset.workState,avatars:av.map(a=>a.textContent),name:c.querySelector('.work-assignee-name')?.textContent||'',
-        cls:[...t.classList].filter(x=>x.startsWith('is-')),label:t.getAttribute('aria-label'),bg:getComputedStyle(t).backgroundImage,
+        cls:[...t.classList].filter(x=>x.startsWith('is-')),label:t.getAttribute('aria-label'),
+        tag:tag?[tag.textContent,getComputedStyle(tag).backgroundColor,getComputedStyle(tag).color]:null,
         overlap:av.length>1?av[1].getBoundingClientRect().left<av[0].getBoundingClientRect().right:null};
     },id);
     const zwei=await card('zwei');
     assert.deepEqual(zwei.avatars,['GB','AM'],'beide Personen, nicht nur die erste');
     assert.equal(zwei.name,'Gari Beispiel, Ana Muster');
     assert.equal(zwei.overlap,true,'Kreise überlappen');
-    assert.deepEqual([zwei.state,zwei.cls],['progress',['is-progress']]);
-    assert.match(zwei.label,/^In Bearbeitung · erledigen: Aufgabe zwei$/);
-    assert.match(zwei.bg,/linear-gradient/,'halb gefüllter Kreis');
+    // Vorschlag A (Gari, 24.11.2026): der Status als Etikett neben dem Datum; der Kreis bleibt nur zum Erledigen.
+    assert.deepEqual([zwei.state,zwei.cls,zwei.label],['progress',[],'Erledigen: Aufgabe zwei']);
+    assert.deepEqual(zwei.tag,['In Bearbeitung','rgb(232, 241, 255)','rgb(21, 89, 196)']);
     const fuenf=await card('fuenf');
     assert.deepEqual(fuenf.avatars,['GB','AM','CT','+2'],'ab fünf: drei Kreise und +N');
-    assert.deepEqual([fuenf.state,fuenf.cls],['waiting',['is-waiting']]);
+    assert.deepEqual([fuenf.state,fuenf.cls],['waiting',[]]);
+    assert.deepEqual(fuenf.tag,['Wartet','rgb(255, 241, 217)','rgb(148, 89, 10)']);
     const liste=await card('liste');
-    assert.deepEqual([liste.state,liste.cls,liste.avatars],['open',[],[]]);
+    assert.deepEqual([liste.state,liste.cls,liste.avatars,liste.tag],['open',[],[],null]);
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });
@@ -213,20 +220,104 @@ test('Filter: Nur meine, Person, Status und Fällig; nur für mich, und das Ger�
   }finally{await page.close()}
 });
 
-test('Reiter Terminplan und Kostenberechnung: mehrere zur Wahl, keine Kostenberechnung führt zum Anlegen',async()=>{
+// Werkzeugseiten als Attrappe: sie melden Revision und offene Speicherung wie terminplan.html und kostenberechnung.js.
+const werkzeug=`<!doctype html><html><body><p>Werkzeug</p><script>
+window.__pending=false;
+window.TBA_OFFICE_TOOL={revision:()=>1,pending:()=>window.__pending,
+  flush:async()=>{(parent.__flushes=parent.__flushes||[]).push(location.pathname+location.search);window.__pending=false}};
+</script></body></html>`;
+const rahmen=(page,kind)=>page.evaluate(k=>{const f=document.querySelector('[data-work-tool-pane="'+k+'"] iframe');
+  return f?{src:f.getAttribute('src'),ziel:f.dataset.toolId,url:f.contentWindow?.location.pathname+f.contentWindow?.location.search,marke:f.contentWindow?.__marke??null}:null},kind);
+const bereit=(page,kind)=>page.waitForFunction(k=>document.querySelector('[data-work-tool-pane="'+k+'"] iframe')?.contentWindow?.TBA_OFFICE_TOOL,kind);
+const markiere=(page,kind,wert)=>page.evaluate(([k,w])=>{document.querySelector('[data-work-tool-pane="'+k+'"] iframe').contentWindow.__marke=w},[kind,wert]);
+
+test('Reiter Terminplan und Kostenberechnung: wechseln wie Planner und Desktop, die Seite bleibt offen',async()=>{
   const {page,errors}=await board();
-  const geoeffnet=[];
-  await page.route(/\/(terminplan|kostenberechnung)\.html/,r=>{geoeffnet.push(new URL(r.request().url()).pathname+new URL(r.request().url()).search);r.fulfill({contentType:'text/html',body:'<p>ok</p>'})});
+  await page.route(/\/(terminplan|kostenberechnung)\.html/,r=>r.fulfill({contentType:'text/html',body:werkzeug}));
   try{
-    assert.equal(await page.locator('[data-work-tool="terminplan"]').isVisible(),true);
-    await page.locator('[data-work-tool="terminplan"]').click();
-    const wahl=await page.locator('.work-tool-menu a').evaluateAll(a=>a.map(x=>[x.querySelector('span').textContent,x.getAttribute('href')]));
-    assert.deepEqual(wahl,[['Terminplan LPH 3','../terminplan.html?id=tp-lph3'],['Terminplan LPH 5','../terminplan.html?id=tp-lph5']]);
-    await page.keyboard.press('Escape');
-    assert.equal(await page.locator('.work-tool-menu').count(),0,'Escape schließt die Wahl');
-    await page.locator('[data-work-tool="kosten"]').click();
-    await page.waitForURL(/kostenberechnung\.html/);
-    assert.deepEqual(geoeffnet,['/kostenberechnung.html?neu=p1']);
+    assert.equal(await page.locator('[data-work-view="terminplan"]').isVisible(),true);
+    assert.equal(await page.locator('[data-work-view="kosten"]').isVisible(),true);
+    await page.locator('[data-work-view="terminplan"]').click();
+    await bereit(page,'terminplan');
+    assert.equal(await page.locator('#workBody').isVisible(),false,'das Board ist ausgeblendet, nicht verlassen');
+    assert.equal(await page.locator('[data-work-view="terminplan"]').evaluate(b=>b.classList.contains('active')),true);
+    // Zwei Fassungen: die Wahl steht über der Seite; die zuletzt geänderte ist offen.
+    const wahl=()=>page.locator('[data-work-tool-pane="terminplan"] [data-work-tool-pick]').evaluateAll(b=>b.map(x=>[x.textContent,x.getAttribute('aria-selected')]));
+    assert.deepEqual(await wahl(),[['LPH 5','true'],['LPH 3','false']]);
+    assert.deepEqual(await rahmen(page,'terminplan'),{src:'../terminplan.html?id=tp-lph5',ziel:'tp-lph5',url:'/terminplan.html?id=tp-lph5',marke:null});
+    // Zum Planner und zurück: dieselbe Seite, nicht neu geladen.
+    await markiere(page,'terminplan','A');
+    await page.locator('[data-work-view="planner"]').click();
+    await page.locator('[data-work-task="liste"]').waitFor();
+    assert.equal(await page.locator('#workToolHost').isVisible(),false);
+    await page.locator('[data-work-view="terminplan"]').click();
+    await page.locator('[data-work-tool-pane="terminplan"]').waitFor();
+    assert.equal((await rahmen(page,'terminplan')).marke,'A');
+    // Andere Fassung: was noch aussteht, wird vorher gespeichert; die Wahl merkt sich das Gerät.
+    await page.evaluate(()=>{document.querySelector('[data-work-tool-pane="terminplan"] iframe').contentWindow.__pending=true});
+    await page.locator('[data-work-tool-pick="tp-lph3"]').click();
+    await page.waitForFunction(()=>/id=tp-lph3/.test(document.querySelector('[data-work-tool-pane="terminplan"] iframe').contentWindow.location.search));
+    assert.deepEqual(await page.evaluate(()=>window.__flushes),['/terminplan.html?id=tp-lph5']);
+    assert.deepEqual(await wahl(),[['LPH 5','false'],['LPH 3','true']]);
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('tba-office-work-tool-v1')).p1.terminplan),'tp-lph3');
+    // Hat inzwischen jemand anderes gespeichert, lädt der Reiter beim nächsten Öffnen neu; sonst nicht.
+    await bereit(page,'terminplan');await markiere(page,'terminplan','B');
+    await page.locator('[data-work-view="planner"]').click();await page.locator('[data-work-task="liste"]').waitFor();
+    await page.evaluate(()=>{FIX.office_terminplan_instances.find(r=>r.id==='tp-lph3').server_revision=4});
+    await page.locator('[data-work-view="terminplan"]').click();
+    await page.waitForFunction(()=>{const w=document.querySelector('[data-work-tool-pane="terminplan"] iframe').contentWindow;return w.TBA_OFFICE_TOOL&&w.__marke===undefined});
+    assert.equal((await rahmen(page,'terminplan')).url,'/terminplan.html?id=tp-lph3');
+
+    // Kostenberechnung: keine im Projekt → anlegen im Reiter; Abbrechen führt zurück.
+    await page.locator('[data-work-view="kosten"]').click();
+    const anlegen=page.locator('[data-work-tool-pane="kosten"] [data-work-tool-create]');
+    assert.equal(await anlegen.textContent(),'Kostenberechnung anlegen');
+    assert.equal(await page.locator('[data-work-tool-pane="terminplan"]').isVisible(),false);
+    await anlegen.click();
+    await bereit(page,'kosten');
+    assert.equal((await rahmen(page,'kosten')).url,'/kostenberechnung.html?neu=p1');
+    await page.frames().find(f=>/kostenberechnung/.test(f.url())).evaluate(()=>parent.postMessage({tbaOfficeTool:'abgebrochen'},location.origin));
+    await anlegen.waitFor();
+    assert.equal(await rahmen(page,'kosten'),null);
+    // Angelegt: die Seite öffnet die neue Kostenberechnung, Work übernimmt sie.
+    await anlegen.click();await bereit(page,'kosten');
+    await page.evaluate(()=>{FIX.office_kosten_instances.push({id:'kb-1',project_id:'p1',phase:'LPH3',updated_at:'2026-11-24T12:00:00Z',server_revision:1,is_archived:false})});
+    await page.frames().find(f=>/kostenberechnung/.test(f.url())).evaluate(()=>location.assign('/kostenberechnung.html?id=kb-1'));
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('tba-office-work-tool-v1')||'{}').p1?.kosten==='kb-1');
+    await bereit(page,'kosten');
+    assert.equal((await rahmen(page,'kosten')).ziel,'kb-1');
+    assert.equal(await page.locator('[data-work-tool-pane="kosten"] .work-tool-bar').isVisible(),false,'eine Fassung: keine Wahl');
+    assert.equal(await anlegen.count(),0);
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
+
+test('Bucket: Beschreibung nur beim Zeigen auf den Titel oder über «Info» im Menü',async()=>{
+  const {page,errors}=await board();
+  try{
+    const info=page.locator('[data-work-bucket-drop="b0"] .work-bucket-explanation-body');
+    const ersteKarte=()=>page.locator('[data-work-bucket-drop="b0"] [data-work-task]').first().evaluate(c=>Math.round(c.getBoundingClientRect().top));
+    assert.equal(await info.isVisible(),false,'nicht mehr unter jedem Titel');
+    const oben=await ersteKarte();
+    await page.locator('[data-work-bucket-drop="b0"] .work-bucket-grab strong').hover();
+    await info.waitFor({state:'visible'});
+    assert.equal(await info.evaluate(e=>getComputedStyle(e).position),'absolute','schwebt über den Karten');
+    assert.equal(await ersteKarte(),oben,'die Karten bleiben stehen');
+    assert.match(await info.textContent(),/Was zu diesem Paket gehört.*PSP 04\.03/);
+    await page.mouse.move(5,5);
+    await info.waitFor({state:'hidden'});
+    // «Info» im Menü: bleibt offen, auch nach dem Neuzeichnen, bis man es ausblendet.
+    await page.locator('[data-work-edit-bucket="b0"]').click();
+    await page.locator('[data-work-bucket-info="b0"]').click();
+    assert.equal(await info.isVisible(),true);
+    assert.equal(await info.evaluate(e=>getComputedStyle(e).position),'static');
+    assert.ok(await ersteKarte()>oben,'fest unter dem Titel');
+    await page.evaluate(()=>window.MINDS_WORK.render());
+    await page.locator('[data-work-bucket-drop="b0"].is-info-open').waitFor();
+    await page.locator('[data-work-edit-bucket="b0"]').click();
+    assert.equal(await page.locator('[data-work-bucket-info="b0"]').textContent(),'Info ausblenden');
+    await page.locator('[data-work-bucket-info="b0"]').click();
+    assert.equal(await info.isVisible(),false);
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });

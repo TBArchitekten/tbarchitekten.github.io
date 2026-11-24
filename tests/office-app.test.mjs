@@ -9,14 +9,17 @@ const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z0-9-]+\.js)\?v=[^"]+">
 const src=f=>read('app/'+f);
 
 test('The app connects only to TBA Office, with the office sign-in',()=>{
-  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME="window";try\{localStorage\.removeItem\("tba_office_chat_backend"\)\}catch\(e\)\{\}<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office3"><\/script>/);
+  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME="window";try\{localStorage\.removeItem\("tba_office_chat_backend"\)\}catch\(e\)\{\}<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office4"><\/script>/);
   const client=read('shared/supabase-client.js');
   assert.match(client,/const office = window\.TBA_OFFICE_CONFIG;/);
   assert.match(client,/storageKey: office\.storageKey,/,'one session with the start page');
   // No project address of Window (or any other) in the client: only the office config.
   assert.doesNotMatch(client,/supabase\.co|lodexwyyynlarkqgkyhy/);
   // Since 07.11.2026 the Window iPhone app can open the office (account "Office"): it lends the session.
-  assert.match(client,/const bridge = window\.webkit\?\.messageHandlers\?\.windowNative;/);
+  assert.match(client,/if \(!bridge\) bridge = window\.webkit\?\.messageHandlers\?\.windowNative;/);
+  // In Work (Reiter, Rahmen derselben Herkunft) leiht die Seite die Brücke der App: die App nimmt nur den Hauptrahmen an.
+  assert.match(client,/const parentNative = window\.parent !== window \? window\.parent\.WINDOW_NATIVE : null;/);
+  assert.match(client,/bridge = \{ postMessage: message => parentNative\.call\(message\.type, message\) \};/);
   for(const f of [...readdirSync(new URL('../app/',import.meta.url)).filter(f=>f.endsWith('.js')),'../shared/supabase-client.js']){
     const s=src(f);
     assert.doesNotMatch(s,/[a-z]{20}\.supabase\.co|sb_publishable_|service_role|sb_secret_/,f+' carries no project address or key');
@@ -71,7 +74,7 @@ test('Office runs the shared Window chat under Office profile and isolates legac
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
   assert.match(src('work.js'),/window\.MINDS_WORK=/);
-  assert.match(appIndex,/src="\.\/work\.js\?v=office52"/);
+  assert.match(appIndex,/src="\.\/work\.js\?v=office53"/);
 });
 test('Sync: members only, everyone sees the projects, own calendar, no realtime',()=>{
   const sync=src('sync.js');

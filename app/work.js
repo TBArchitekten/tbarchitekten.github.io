@@ -27,7 +27,7 @@ function rememberBoard(body){
   const buckets={};
   board.querySelectorAll('.work-bucket').forEach(b=>{
     buckets[b.dataset.workBucketDrop||'__none']={top:b.querySelector('.work-bucket-scroll')?.scrollTop||0,
-      done:!!b.querySelector('details.work-completed')?.open};
+      done:!!b.querySelector('details.work-completed')?.open,info:b.classList.contains('is-info-open')};
   });
   boardMemory={project:board.dataset.workBoardProject||'',left:board.scrollLeft,top:board.scrollTop,page:body.scrollTop,buckets};
 }
@@ -37,6 +37,8 @@ function restoreBoard(body){
   board.querySelectorAll('.work-bucket').forEach(b=>{
     const s=m.buckets[b.dataset.workBucketDrop||'__none'];if(!s)return;
     const done=b.querySelector('details.work-completed');if(done&&s.done)done.open=true;
+    const info=b.querySelector('[data-work-bucket-info]');
+    if(info&&s.info){b.classList.add('is-info-open');info.setAttribute('aria-expanded','true');const l=info.querySelector('span');if(l)l.textContent='Info ausblenden'}
     const scroll=b.querySelector('.work-bucket-scroll');if(scroll)scroll.scrollTop=s.top;
   });
   board.scrollLeft=m.left;board.scrollTop=m.top;body.scrollTop=m.page;
@@ -52,12 +54,25 @@ function bindStatic(){
   if(bound)return;bound=true;
   $('.work-project-switch')?.addEventListener('click',e=>{const b=e.target.closest('[data-work-project]');if(!b)return;
     if(isMusterPlanner())history.replaceState(null,'','#section=work');
+    if(b.dataset.workProject!==projectKey)retireToolPanes();
     projectKey=b.dataset.workProject;localStorage.setItem('minds-work-project',projectKey);if(projectKey===OFFICE_ROOT)view='desktop';folderId=null;activeThreadId=null;reviewReportLimit=20;void render()});
   $$('[data-work-view]').forEach(b=>b.onclick=()=>{view=b.dataset.workView;localStorage.setItem('minds-work-view',view);paintChrome();void render()});
-  $$('[data-work-tool]').forEach(b=>b.onclick=()=>void openProjectTool(b.dataset.workTool,b));
+  const host=$('#workToolHost');
+  host?.addEventListener('click',e=>{
+    if(e.target.closest('[data-work-retry]')){void render();return}
+    const pick=e.target.closest('[data-work-tool-pick]');
+    if(pick){void switchToolInstance(pick.closest('[data-work-tool-pane]'),pick.dataset.workToolPick);return}
+    if(e.target.closest('[data-work-tool-create]'))createToolInstance(e.target.closest('[data-work-tool-pane]'));
+  });
+  window.addEventListener('message',onToolMessage);
   const input=$('#workFileInput');if(input)input.onchange=()=>{const fs=[...(input.files||[])];input.value='';if(fs.length)void uploadFiles(fs)};
   const body=$('#workBody');
-  body?.addEventListener('click',e=>{if(e.target.closest('[data-work-retry]'))void render()});
+  body?.addEventListener('click',e=>{
+    if(e.target.closest('[data-work-retry]')){void render();return}
+    // Terminplan-Links im Panorama öffnen den Reiter; mit gedrückter Taste bleibt es ein normaler Link.
+    const link=e.target.closest('[data-work-open-tool]');
+    if(link&&e.button===0&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey){e.preventDefault();openToolTab(link.dataset.workOpenTool,link.dataset.workToolId)}
+  });
   body?.addEventListener('dragover',e=>{if(view!=='desktop')return;e.preventDefault();body.classList.add('is-dragging')});
   body?.addEventListener('dragleave',()=>body.classList.remove('is-dragging'));
   body?.addEventListener('drop',e=>{if(view!=='desktop')return;e.preventDefault();body.classList.remove('is-dragging');const fs=[...(e.dataTransfer?.files||[])];if(fs.length)void uploadFiles(fs)});
@@ -66,6 +81,7 @@ function paintChrome(){
   $('#workProjectTitle').textContent=isMusterPlanner()?'Muster-Planner · LPH 3':projectKey===OFFICE_ROOT?'Büro':project?.name||projectKey;
   $$('[data-work-project]').forEach(b=>b.classList.toggle('active',b.dataset.workProject===projectKey));
   $$('[data-work-view]').forEach(b=>b.classList.toggle('active',b.dataset.workView===view));
+  paintSurface();
 }
 async function waitForWork(promise,stage,ms=14000){
   let timeoutId;
@@ -77,7 +93,8 @@ async function waitForWork(promise,stage,ms=14000){
   }finally{clearTimeout(timeoutId)}
 }
 function workBootFailure(message,switchLabel=''){
-  const body=$('#workBody');
+  const body=$('#workBody'),host=$('#workToolHost');
+  if(body)body.hidden=false;if(host)host.hidden=true;
   if(body)body.innerHTML='<div class="work-empty" role="status"><p>'+esc(message)+'</p><button type="button" data-work-retry class="secondary">Erneut versuchen</button></div>';
   const switcher=$('.work-project-switch');
   if(switcher&&switchLabel)switcher.textContent=switchLabel;
@@ -101,6 +118,7 @@ async function render(){
     }
     if(isMusterPlanner()){
       project={id:null,client_key:'__muster_lph3__',name:'Muster-Planner · LPH 3'};
+      $$('[data-work-view]').forEach(b=>{if(isToolView(b.dataset.workView))b.hidden=true});
       paintChrome();
       await waitForWork(renderPlanner(true),'Muster-Planner');
       return;
@@ -118,18 +136,17 @@ async function render(){
       projectKey=(catalog.data||[])[0]?.client_key||OFFICE_ROOT;
     if(projectKey===OFFICE_ROOT&&!SHOW_BURO){
       project=null;
-      const body=$('#workBody');
-      if(body)body.innerHTML='<div class="work-empty" role="status"><p>Noch keine Projekte.</p><p class="small">Projekte legst du unter Tools → Projekte an.</p><a class="secondary" href="#section=projects">Projekte öffnen</a></div>';
+      const body=$('#workBody'),host=$('#workToolHost');
+      if(host)host.hidden=true;
+      if(body){body.hidden=false;body.innerHTML='<div class="work-empty" role="status"><p>Noch keine Projekte.</p><p class="small">Projekte legst du unter Tools → Projekte an.</p><a class="secondary" href="#section=projects">Projekte öffnen</a></div>'}
       $$('[data-work-view]').forEach(b=>{b.hidden=b.dataset.workView!=='overview'});
-      $$('[data-work-tool]').forEach(b=>{b.hidden=true});
       return;
     }
     if(projectKey===OFFICE_ROOT)view='desktop';
     const loadedProject=projectKey===OFFICE_ROOT?null:await waitForWork(loadProject(session),'project');
     if(!latest())return;
     project=loadedProject;
-    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
-    $$('[data-work-tool]').forEach(b=>{b.hidden=projectKey===OFFICE_ROOT});
+    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner','terminplan','kosten'].includes(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
     paintChrome();
     const settings=project&&!OFFICE?await waitForWork(
       sb.from('minds_self_review_settings').select('enabled,timezone,local_hour,code_preparation_enabled')
@@ -147,7 +164,8 @@ async function render(){
       :view==='overview'?renderOverview()
       :view==='threads'?renderThreads()
       :view==='knowledge'?renderKnowledge()
-      :view==='planner'?renderPlanner():renderDesktop();
+      :view==='planner'?renderPlanner()
+      :isToolView(view)?renderTool(view):renderDesktop();
     await waitForWork(scene,'view');
   }catch(e){
     if(!latest())return;
@@ -381,7 +399,7 @@ function officeTerminplaene(m){
   const rows=(m.plans||[]).map(p=>{
     const next=officeNextMilestone(p.state,m.today);
     const sub=[String(p.phase||'').replace('LPH','LPH '),p.state?.project?.standDate?'Stand '+cockpitShort(p.state.project.standDate):'',next?'Nächster Meilenstein '+cockpitShort(next.start):''].filter(Boolean).join(' · ');
-    return '<a class="cockpit-file" href="../terminplan.html?id='+encodeURIComponent(p.id)+'"><span>'+esc(next?next.name:(p.state?.project?.name||'Terminplan'))+'</span><small>'+esc(sub)+'</small></a>';
+    return '<a class="cockpit-file" href="../terminplan.html?id='+encodeURIComponent(p.id)+'" data-work-open-tool="terminplan" data-work-tool-id="'+esc(p.id)+'"><span>'+esc(next?next.name:(p.state?.project?.name||'Terminplan'))+'</span><small>'+esc(sub)+'</small></a>';
   }).join('');
   return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitPlans"><div class="cockpit-head"><h2 id="cockpitPlans">Terminpläne</h2><button type="button" class="cockpit-link" data-office-new-plan="'+esc(project.id)+'">+ Terminplan</button></div>'+
     (rows||'<p class="cockpit-empty">Noch kein Terminplan für dieses Projekt.</p>')+'</section></div>';
@@ -432,7 +450,7 @@ async function renderOverview(){
     pflege:pflegeQ?.data?.[0]?.value||null,plans:planQ?.data||[],partial:(OFFICE?[taskQ,eventQ,planQ]:[taskQ,claimQ,fileQ,memQ,threadQ]).some(x=>!x)};
   body.innerHTML=cockpitMarkup(m);
   $$('[data-work-go]').forEach(button=>button.onclick=()=>document.querySelector('[data-work-view="'+button.dataset.workGo+'"]')?.click());
-  $$('[data-office-new-plan]').forEach(button=>button.onclick=()=>void window.TBA_OFFICE_PROJECTS?.openNewPlan?.(button.dataset.officeNewPlan));
+  $$('[data-office-new-plan]').forEach(button=>button.onclick=()=>void window.TBA_OFFICE_PROJECTS?.openNewPlan?.(button.dataset.officeNewPlan,{onCreated:id=>openToolTab('terminplan',id)}));
   $$('[data-work-edit-task]').forEach(button=>button.onclick=()=>void window.ISABELLA_APP?.openCanonicalTaskById?.(button.dataset.workEditTask));
   $$('[data-akte-decide]').forEach(button=>button.onclick=()=>{button.disabled=true;void decideAkteEntry(button.dataset.akteId,button.dataset.akteDecide)});
   $$('[data-akte-task]').forEach(button=>button.onclick=()=>{button.disabled=true;void akteEntryToTask(button.dataset.akteTask)});
@@ -796,7 +814,8 @@ const WORK_ICON={
  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/>',
  left:'<path d="M20 12H4m7-7-7 7 7 7"/>',
  right:'<path d="M4 12h16m-7-7 7 7-7 7"/>',
- plus:'<path d="M12 5v14M5 12h14"/>'
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/>'
 };
 function workIcon(name){
  return '<svg class="work-ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(WORK_ICON[name]||'')+'</svg>'
@@ -804,33 +823,158 @@ function workIcon(name){
 function workAvatarInitials(name){
  return String(name||'').split(/[\s,]+/).filter(Boolean).slice(0,2).map(s=>s[0]?.toLocaleUpperCase('de-DE')).join('')||'–'
 }
-// Terminplan and Kostenberechnung as tabs of the project (Gari, 24.11.2026): straight to the project's own,
-// a short choice when there are several, and creating one when there is none.
-function closeToolMenu(){document.querySelector('.work-tool-menu')?.remove()}
-async function openProjectTool(kind,button){
- if(!project)return;
- closeToolMenu();
- const terminplan=kind==='terminplan',page=terminplan?'../terminplan.html':'../kostenberechnung.html';
- const {data,error}=await sb.from(terminplan?'office_terminplan_instances':'office_kosten_instances')
-  .select('id,phase,updated_at').eq('project_id',project.id).eq('is_archived',false).order('updated_at',{ascending:false});
- if(error){setStatus((terminplan?'Terminplan':'Kostenberechnung')+' nicht erreichbar: '+(error.message||error));return}
- const rows=data||[];
- if(rows.length===1){location.assign(page+'?id='+encodeURIComponent(rows[0].id));return}
- if(!rows.length){
-  if(!terminplan){location.assign(page+'?neu='+encodeURIComponent(project.id));return}
-  if(window.TBA_OFFICE_PROJECTS?.openNewPlan)void window.TBA_OFFICE_PROJECTS.openNewPlan(project.id);
-  else setStatus('Noch kein Terminplan für dieses Projekt.');
+// Terminplan und Kostenberechnung als Reiter (Gari, 24.11.2026): Die Werkzeugseite läuft in einem Rahmen neben dem
+// Board und bleibt beim Wechsel der Reiter offen; Work schaltet nur um, was sichtbar ist. Je Projekt und Werkzeug merkt
+// sich Work die zuletzt gewählte Fassung (z. B. LPH 3 oder LPH 5). Bevor ein Rahmen schließt oder eine andere Fassung
+// lädt, speichert die Seite, was noch aussteht (TBA_OFFICE_TOOL in terminplan.html und kostenberechnung.js).
+const WORK_TOOLS={
+ terminplan:{table:'office_terminplan_instances',page:'../terminplan.html',name:'Terminplan',
+  none:'Für dieses Projekt gibt es noch keinen Terminplan.',create:'Terminplan anlegen'},
+ kosten:{table:'office_kosten_instances',page:'../kostenberechnung.html',name:'Kostenberechnung',
+  none:'Für dieses Projekt gibt es noch keine Kostenberechnung.',create:'Kostenberechnung anlegen'}
+};
+const WORK_TOOL_PICK_KEY='tba-office-work-tool-v1';
+function isToolView(v){return Object.prototype.hasOwnProperty.call(WORK_TOOLS,v)}
+function toolPick(projectId,kind){
+ try{return JSON.parse(localStorage.getItem(WORK_TOOL_PICK_KEY)||'{}')[projectId]?.[kind]||null}catch{return null}
+}
+function rememberToolPick(projectId,kind,id){
+ try{const all=JSON.parse(localStorage.getItem(WORK_TOOL_PICK_KEY)||'{}');all[projectId]={...(all[projectId]||{}),[kind]:id};
+  localStorage.setItem(WORK_TOOL_PICK_KEY,JSON.stringify(all))}catch{}
+}
+function paintSurface(){
+ const tool=isToolView(view)&&!!project?.id&&projectKey!==OFFICE_ROOT&&!isMusterPlanner();
+ const body=$('#workBody'),host=$('#workToolHost');
+ if(body)body.hidden=tool;
+ if(!host)return;
+ host.hidden=!tool;
+ host.querySelectorAll('[data-work-tool-pane]').forEach(p=>{
+  p.hidden=!tool||p.dataset.workToolPane!==view||p.dataset.workToolProject!==String(project?.id)||!!p.dataset.retiring});
+}
+function toolFrameApi(frame){try{return frame?.contentWindow?.TBA_OFFICE_TOOL||null}catch{return null}}
+async function flushToolFrame(frame){
+ const api=toolFrameApi(frame);
+ try{if(api?.pending?.())await Promise.race([api.flush(),new Promise(r=>setTimeout(r,6000))])}catch{}
+}
+// Ein anderes Projekt: Die Rahmen des alten speichern zuerst, dann schließen sie.
+function retireToolPanes(keepProjectId=null){
+ $$('#workToolHost [data-work-tool-pane]').forEach(pane=>{
+  if(pane.dataset.retiring||(keepProjectId!==null&&pane.dataset.workToolProject===String(keepProjectId)))return;
+  pane.dataset.retiring='1';pane.hidden=true;
+  void flushToolFrame(pane.querySelector('iframe')).finally(()=>pane.remove());
+ });
+}
+function openToolTab(kind,id=null){
+ if(!isToolView(kind)||!project?.id)return;
+ if(id)rememberToolPick(String(project.id),kind,id);
+ view=kind;localStorage.setItem('minds-work-view',view);paintChrome();void render();
+}
+function toolChip(kind,r,rows,pick){
+ const phase=String(r.phase||'').replace(/^LPH\s*/,'LPH ')||WORK_TOOLS[kind].name;
+ const twin=rows.filter(x=>x.phase===r.phase).length>1;
+ const stand=String(r.updated_at||'').slice(0,10).split('-').reverse().join('.');
+ return '<button type="button" role="tab" data-work-tool-pick="'+esc(r.id)+'" aria-selected="'+(r.id===pick)+'">'+esc(phase)+
+  (twin?' <small>Stand '+esc(stand)+'</small>':'')+'</button>';
+}
+function showToolFrame(pane,kind,target,neu=false){
+ const tool=WORK_TOOLS[kind],stage=pane.querySelector('.work-tool-stage');
+ let frame=stage.querySelector('iframe');
+ if(!frame){
+  stage.innerHTML='';
+  frame=document.createElement('iframe');
+  frame.className='work-tool-frame';
+  frame.title=tool.name+(project?.name?' · '+project.name:'');
+  frame.addEventListener('load',()=>toolFrameLoaded(pane,kind,frame));
+  stage.append(frame);
+ }
+ pane.dataset.creating=neu?'1':'';
+ frame.dataset.toolId=neu?'':target;
+ frame.src=tool.page+(neu?'?neu=':'?id=')+encodeURIComponent(target);
+}
+// Die Seite hat selbst eine Fassung geöffnet (nach dem Anlegen): Work übernimmt sie als gewählte.
+function toolFrameLoaded(pane,kind,frame){
+ let id=null;
+ try{id=new URL(frame.contentWindow.location.href).searchParams.get('id')}catch{}
+ if(!id||id===frame.dataset.toolId)return;
+ frame.dataset.toolId=id;pane.dataset.creating='';
+ rememberToolPick(pane.dataset.workToolProject,kind,id);
+ if(view===kind&&String(project?.id)===pane.dataset.workToolProject)void renderTool(kind);
+}
+// Anlegen abgebrochen (Kostenberechnung): zurück zum leeren Reiter.
+function onToolMessage(e){
+ if(e.origin!==location.origin||e.data?.tbaOfficeTool!=='abgebrochen')return;
+ const pane=$$('#workToolHost [data-work-tool-pane]').find(p=>p.querySelector('iframe')?.contentWindow===e.source);
+ if(!pane||pane.dataset.creating!=='1')return;
+ pane.dataset.creating='';
+ pane.querySelector('iframe')?.remove();
+ if(view===pane.dataset.workToolPane)void renderTool(view);
+}
+function createToolInstance(pane){
+ if(!pane||!project?.id)return;
+ const kind=pane.dataset.workToolPane,pid=pane.dataset.workToolProject;
+ if(kind==='kosten'){showToolFrame(pane,kind,pid,true);return}
+ if(!window.TBA_OFFICE_PROJECTS?.openNewPlan){setStatus('Terminplan anlegen ist gerade nicht verfügbar.');return}
+ void window.TBA_OFFICE_PROJECTS.openNewPlan(pid,{onCreated:id=>{
+  rememberToolPick(pid,'terminplan',id);
+  if(view==='terminplan'&&String(project?.id)===pid)void renderTool('terminplan');
+ }});
+}
+async function switchToolInstance(pane,id){
+ if(!pane||!id)return;
+ const kind=pane.dataset.workToolPane,frame=pane.querySelector('iframe');
+ rememberToolPick(pane.dataset.workToolProject,kind,id);
+ pane.querySelectorAll('[data-work-tool-pick]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.workToolPick===id)));
+ if(frame?.dataset.toolId===id)return;
+ if(frame)await flushToolFrame(frame);
+ showToolFrame(pane,kind,id);
+}
+async function renderTool(kind){
+ const host=$('#workToolHost'),tool=WORK_TOOLS[kind];
+ if(!host||!tool||!project?.id)return;
+ const pid=String(project.id);
+ retireToolPanes(pid);
+ let pane=$$('#workToolHost [data-work-tool-pane]').find(p=>p.dataset.workToolPane===kind&&p.dataset.workToolProject===pid&&!p.dataset.retiring);
+ if(!pane){
+  pane=document.createElement('section');
+  pane.className='work-tool-pane';pane.dataset.workToolPane=kind;pane.dataset.workToolProject=pid;
+  pane.setAttribute('aria-label',tool.name);
+  pane.innerHTML='<div class="work-tool-bar" hidden></div><div class="work-tool-stage"><div class="surface-loading">Öffne '+esc(tool.name)+' …</div></div>';
+  host.append(pane);
+ }
+ paintSurface();
+ const {data,error}=await sb.from(tool.table).select('id,phase,updated_at,server_revision')
+  .eq('project_id',project.id).eq('is_archived',false).order('updated_at',{ascending:false});
+ if(!pane.isConnected||pane.dataset.retiring)return;
+ const stage=pane.querySelector('.work-tool-stage'),bar=pane.querySelector('.work-tool-bar');
+ const frame=stage.querySelector('iframe');
+ if(error){
+  if(!frame)stage.innerHTML='<div class="work-empty" role="status"><p>'+esc(tool.name)+' ist gerade nicht erreichbar.</p><button type="button" class="secondary" data-work-retry>Erneut versuchen</button></div>';
+  setStatus(tool.name+' nicht erreichbar: '+(error.message||error));
   return;
  }
- const stand=iso=>String(iso||'').slice(0,10).split('-').reverse().join('.');
- const menu=document.createElement('div');menu.className='work-tool-menu';menu.setAttribute('role','menu');
- menu.innerHTML=rows.map(r=>`<a role="menuitem" href="${page}?id=${encodeURIComponent(r.id)}"><span>${esc((terminplan?'Terminplan ':'Kostenberechnung ')+String(r.phase||'').replace('LPH','LPH '))}</span><small>Stand ${esc(stand(r.updated_at))}</small></a>`).join('');
- const box=button.getBoundingClientRect();
- menu.style.top=Math.round(box.bottom+6)+'px';menu.style.left=Math.round(Math.max(8,Math.min(box.left,innerWidth-268)))+'px';
- document.body.append(menu);menu.querySelector('a')?.focus();
- const away=e=>{if(e.type==='keydown'&&e.key!=='Escape')return;if(e.type==='pointerdown'&&menu.contains(e.target))return;
-  closeToolMenu();document.removeEventListener('pointerdown',away,true);document.removeEventListener('keydown',away,true)};
- setTimeout(()=>{document.addEventListener('pointerdown',away,true);document.addEventListener('keydown',away,true)},0);
+ const rows=data||[];
+ const pick=[toolPick(pid,kind),frame?.dataset.toolId].find(id=>id&&rows.some(r=>r.id===id))||rows[0]?.id||null;
+ bar.hidden=rows.length<2;
+ bar.innerHTML=rows.length<2?'':'<div class="work-tool-versions" role="tablist" aria-label="'+esc(tool.name)+' wählen">'+
+  rows.map(r=>toolChip(kind,r,rows,pick)).join('')+'</div>';
+ if(!rows.length){
+  if(frame&&pane.dataset.creating==='1')return;
+  if(frame){await flushToolFrame(frame);frame.remove()}
+  stage.innerHTML='<div class="work-empty work-tool-empty" role="status"><p>'+esc(tool.none)+'</p>'+
+   '<button type="button" class="work-tool-create" data-work-tool-create>'+esc(tool.create)+'</button></div>';
+  return;
+ }
+ rememberToolPick(pid,kind,pick);
+ if(frame&&frame.dataset.toolId===pick){
+  // Schon offen: neu laden nur, wenn inzwischen jemand anderes gespeichert hat, hier nichts aussteht und niemand
+  // gerade in der Seite arbeitet.
+  const api=toolFrameApi(frame),row=rows.find(r=>r.id===pick);
+  try{if(api&&!api.pending()&&!frame.contentDocument?.hasFocus()&&Number(row?.server_revision)>Number(api.revision()))
+   frame.contentWindow.location.reload()}catch{}
+  return;
+ }
+ if(frame)await flushToolFrame(frame);
+ showToolFrame(pane,kind,pick);
 }
 // Planner filter (Gari, 24.11.2026): personal, per project and device; it only changes what you see. Cards that do
 // not match stay in the page, hidden, so dragging keeps the order of the whole bucket.
@@ -944,14 +1088,14 @@ function taskCard(t,preview=false){
   const people=workAssigneePeople(t),name=people.map(p=>p.name).join(', '),state=workTaskState(t);
   const priority=t.priority&&t.priority!=='normal'
     ?t.priority==='urgent'?'Dringend':t.priority==='important'?'Wichtig':'Niedrig':'';
-  const toggleTitle=preview?'Muster · nur Ansicht':state.label?state.label+' · anklicken zum Erledigen':'';
   return `<article class="work-task-card ${t.completed_at?'is-done':''}" draggable="${!preview}" data-work-task="${t.id}" data-work-state="${state.key}" tabindex="0">
-    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''} ${state.key==='progress'?'is-progress':''} ${state.key==='waiting'?'is-waiting':''}" ${preview?'disabled':''} ${toggleTitle?`title="${esc(toggleTitle)}"`:''} data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':(state.label?state.label+' · erledigen':'Erledigen')}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
+    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''}" ${preview?'disabled title="Muster · nur Ansicht"':''} data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':'Erledigen'}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
     ${firstImage?`<img class="work-task-cover" loading="lazy" ${cached?`src="${esc(cached)}" data-loaded="1"`:''} data-work-task-image="${esc(firstImage.path)}" alt="${esc(firstImage.name||t.title)}">`:''}
     ${checks.length?`<div class="work-card-checks">${checks.slice(0,5).map(x=>`<div class="${x.done?'done':''}"><span class="work-subcheck" aria-hidden="true">${x.done?'✓':''}</span><span>${esc(x.text||'')}</span></div>`).join('')}${checks.length>5?`<div class="work-check-more">+${checks.length-5} weitere</div>`:''}</div>`:''}
     <footer>
       <div class="work-task-chips">
         ${due?`<span class="work-due ${overdue?'is-overdue':''}" title="Fällig am ${esc(t.due_date)}">${workIcon('calendar')}<time datetime="${esc(t.due_date)}">${esc(due)}</time></span>`:''}
+        ${state.label?`<span class="work-task-state is-${state.key}">${esc(state.label)}</span>`:''}
         ${checks.length?`<span class="work-meta-chip" title="Checkliste">${workIcon('checklist')}${done}/${checks.length}</span>`:''}
         ${attachments.length?`<span class="work-meta-chip" title="${attachments.length} Anlagen">${workIcon('attachment')}${attachments.length}</span>`:''}
         ${priority?`<span class="work-meta-priority">${priority}</span>`:''}
@@ -1033,14 +1177,15 @@ async function renderPlanner(preview=false){
   const mobileList=localStorage.getItem(WORK_MOBILE_LAYOUT_KEY)==='list';
   body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Listenansicht</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':(tasks.some(t=>window.TBAPlannerTerminplanSync?.linkOf(t))?'<button type="button" data-work-terminplan-sync title="Termine der verknüpften Aufgaben aus dem Projekt-Terminplan übernehmen">Termine aus Terminplan</button>':'')+'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
     ${preview?'':plannerFilterBar(plannerFilter())}
-    <div class="work-board ${mobileList?'mobile-stack':''}" data-work-board-project="${esc(String(preview?'muster':boardKey()||''))}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
+    <div class="work-board ${mobileList?'mobile-stack':''}" data-work-board-project="${esc(String(preview?'muster':boardKey()||''))}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at),info=!!(b.description||b.terminplan_ref);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
       ${b.terminplan_ref?`<div class="work-bucket-pretitle">Abgabe / Planungspaket${preview?' · '+esc(b.id):''}</div>`:''}
       <header class="work-bucket-header">${b.virtual
         ?`<strong>${esc(b.name)}</strong>`
-        :`<span class="work-bucket-grab" draggable="${!preview}" data-work-bucket-handle="${b.id}" title="${preview?'Muster · nur Ansicht':'Bucket ziehen, um die Reihenfolge zu ändern'}">${preview?'':'<span class="work-bucket-grip" aria-hidden="true">⠿</span>'}<strong>${esc(b.name)}</strong><span class="work-bucket-count" aria-label="${open.length} offene Aufgaben">${preview?open.length+' / '+all.length:open.length}</span></span>
+        :`<span class="work-bucket-grab" draggable="${!preview}" data-work-bucket-handle="${b.id}" ${preview?'title="Muster · nur Ansicht"':info?`aria-describedby="work-bucket-info-${esc(b.id)}"`:'title="Bucket ziehen, um die Reihenfolge zu ändern"'}>${preview?'':'<span class="work-bucket-grip" aria-hidden="true">⠿</span>'}<strong>${esc(b.name)}</strong><span class="work-bucket-count" aria-label="${open.length} offene Aufgaben">${preview?open.length+' / '+all.length:open.length}</span></span>
           ${preview?'':`<div class="work-bucket-actions">
             <button type="button" class="work-bucket-more" data-work-edit-bucket="${b.id}" aria-label="Aktionen für ${esc(b.name)}" aria-haspopup="menu" aria-expanded="false">•••</button>
             <div class="work-bucket-menu" data-work-bucket-menu="${b.id}" role="menu" hidden>
+              ${info?`<button type="button" role="menuitem" data-work-bucket-info="${b.id}" aria-controls="work-bucket-info-${esc(b.id)}" aria-expanded="false">${workIcon('info')}<span>Info</span></button>`:''}
               <button type="button" role="menuitem" data-work-rename-bucket="${b.id}">${workIcon('pencil')}Bearbeiten</button>
               <button type="button" role="menuitem" data-work-shift-bucket="${b.id}" data-work-shift-direction="left" ${buckets[0]?.id===b.id?'disabled':''}>${workIcon('left')}Nach links</button>
               <button type="button" role="menuitem" data-work-shift-bucket="${b.id}" data-work-shift-direction="right" ${buckets.at(-1)?.id===b.id?'disabled':''}>${workIcon('right')}Nach rechts</button>
@@ -1048,7 +1193,7 @@ async function renderPlanner(preview=false){
             </div>
           </div>`}`}
       </header>
-      ${(b.description||b.terminplan_ref)?`<div class="work-bucket-explanation">${b.description?`<p>${esc(b.description)}</p>`:''}${b.terminplan_ref?`<span class="work-bucket-plan-ref">${esc(b.terminplan_ref)}</span>`:''}</div>`:''}
+      ${info?`<div class="work-bucket-explanation${preview?'':' is-tip'}" ${preview?'':`id="work-bucket-info-${esc(b.id)}" role="tooltip"`}><div class="work-bucket-explanation-body">${b.description?`<p>${esc(b.description)}</p>`:''}${b.terminplan_ref?`<span class="work-bucket-plan-ref">${esc(b.terminplan_ref)}</span>`:''}</div></div>`:''}
       ${b.virtual||preview?'':`<button type="button" class="work-add-task" data-work-add-task="${b.id}">${workIcon('plus')}Aufgabe hinzufügen</button>`}
       <div class="work-bucket-scroll"><div class="work-task-list" data-work-task-list="open" data-work-list-bucket="${b.virtual?'':b.id}">${open.map(t=>taskCard(t,preview)).join('')}</div>
       ${done.length?`<details class="work-completed"><summary>Erledigte Aufgaben <span>${done.length}</span></summary><div class="work-task-list" data-work-task-list="done" data-work-list-bucket="${b.virtual?'':b.id}">${done.map(t=>taskCard(t,preview)).join('')}</div></details>`:''}</div>
@@ -1088,6 +1233,15 @@ async function renderPlanner(preview=false){
     body.querySelectorAll('[data-work-bucket-menu]').forEach(x=>x.hidden=true);
     body.querySelectorAll('[data-work-edit-bucket]').forEach(x=>x.setAttribute('aria-expanded','false'));
     if(menu&&opening){menu.hidden=false;button.setAttribute('aria-expanded','true');menu.querySelector('button:not(:disabled)')?.focus()}
+  });
+  // Beschreibung eines Buckets (Gari, 24.11.2026): auf dem Board nur beim Zeigen auf den Titel oder über «Info» im
+  // Menü; «Info» lässt sie offen, bis man sie wieder schließt (auch auf dem Telefon, ohne Zeiger).
+  $$('[data-work-bucket-info]').forEach(button=>button.onclick=()=>{
+    const bucket=button.closest('.work-bucket'),open=!bucket?.classList.contains('is-info-open');
+    bucket?.classList.toggle('is-info-open',open);
+    button.setAttribute('aria-expanded',String(open));
+    const label=button.querySelector('span');if(label)label.textContent=open?'Info ausblenden':'Info';
+    closeBucketMenus(body);
   });
   $$('[data-work-rename-bucket]').forEach(button=>button.onclick=()=>editBucket(button.dataset.workRenameBucket));
   $$('[data-work-shift-bucket]').forEach(button=>button.onclick=()=>void shiftBucket(button.dataset.workShiftBucket,button.dataset.workShiftDirection));
@@ -1736,6 +1890,6 @@ async function sendThreadMessage(thread,overrideMessage=null){
   }
 }
 
-window.MINDS_WORK={akte:{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask},render,open:(key,nextView='overview')=>{if(key){if(isMusterPlanner())history.replaceState(null,'','#section=work');projectKey=key;localStorage.setItem('minds-work-project',key)}view=nextView;localStorage.setItem('minds-work-view',view);folderId=null;activeThreadId=null;if(document.body.dataset.section==='work')void render()},refresh:()=>document.body.dataset.section==='work'?render():null,context:()=>project?{name:project.name,key:project.client_key,active:document.body.dataset.section==='work',view,thread_id:activeThreadId||null}:null};
+window.MINDS_WORK={akte:{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask},render,open:(key,nextView='overview')=>{if(key){if(key!==projectKey)retireToolPanes();if(isMusterPlanner())history.replaceState(null,'','#section=work');projectKey=key;localStorage.setItem('minds-work-project',key)}view=nextView;localStorage.setItem('minds-work-view',view);folderId=null;activeThreadId=null;if(document.body.dataset.section==='work')void render()},refresh:()=>document.body.dataset.section==='work'?render():null,context:()=>project?{name:project.name,key:project.client_key,active:document.body.dataset.section==='work',view,thread_id:activeThreadId||null}:null};
 if(document.body.dataset.section==='work'&&typeof setTimeout==='function')setTimeout(()=>{if(!bound)void render()},0);
 })();

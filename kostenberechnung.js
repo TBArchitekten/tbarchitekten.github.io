@@ -11,6 +11,9 @@ const R=window.TBA_KOSTEN_RECHNEN,I=window.TBA_KOSTEN_IMPORT,A=window.TBA_KOSTEN
 const sb=window.MINDS_SUPABASE||(window.supabase&&OFFICE?window.supabase.createClient(OFFICE.url,OFFICE.key,
   {auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}):null);
 const inApp=!!window.WINDOW_NATIVE?.available;
+// Als Reiter in Work (Rahmen, 24.11.2026): ohne Rücksprung-Link, und die Seite springt nie zur Startseite oder in die
+// App (das hieße die App in der App). Work bekommt Bescheid, wenn das Anlegen abgebrochen wird.
+const IM_REITER=window.self!==window.top;
 const params=new URLSearchParams(location.search);
 const ID=params.get('id'),MUSTER_ID=params.get('muster');
 // ?neu=<Projekt-ID>: aus dem Reiter «Kostenberechnung» eines Projekts ohne Kostenberechnung (Work), mit diesem Projekt.
@@ -59,23 +62,29 @@ async function start(){
   if(!sb||!R||!I){fehler('Office-Verbindung nicht verfügbar.');return}
   const {data,error}=await sb.auth.getSession();
   const session=data?.session;
-  if(error||!session){if(inApp){void window.WINDOW_NATIVE.call('session.signIn');fehler('Bitte in der App anmelden.');return}location.href='./';return}
+  if(error||!session){if(inApp){void window.WINDOW_NATIVE.call('session.signIn');fehler('Bitte in der App anmelden.');return}
+    if(IM_REITER){fehler('Bitte in TBA Office neu anmelden.');return}
+    location.href='./';return}
   nutzer=session.user;
   const {data:m,error:me}=await sb.from('office_members').select('role,display_name,is_active,must_change_password')
     .eq('user_id',nutzer.id).eq('is_active',true).maybeSingle();
   if(me||!m){fehler('Kein Zugriff auf TBA Office.');return}
-  if(m.must_change_password){if(inApp){fehler('Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.');return}location.href='./';return}
+  if(m.must_change_password){if(inApp||IM_REITER){fehler('Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.');return}location.href='./';return}
   mitglied=m;
   try{
     if(ID)await ladeKostenberechnung(ID);
     else if(MUSTER_ID)await ladeMuster(MUSTER_ID);
+    else if(NEU&&IM_REITER){
+      await ladeListe();history.replaceState(null,'',location.pathname);
+      root.innerHTML='<div class="kb-wrap"><p class="meta">Neue Kostenberechnung …</p></div>';dialogNeu(NEU);
+    }
     else{await zeigeListe();if(NEU){history.replaceState(null,'',location.pathname);dialogNeu(NEU)}}
   }catch(e){console.error('Kostenberechnung',e);fehler(e?.message||'Kostenberechnung nicht erreichbar.')}
 }
 
 // ---------- Liste ----------
 let listeDaten=null;
-async function zeigeListe(){
+async function ladeListe(){
   const [tp,ins,pr,pm,ar]=await Promise.all([
     sb.from('office_kosten_templates').select('id,title,version,norm,status,description,updated_at,state').eq('is_active',true).order('title'),
     sb.from('office_kosten_instances').select('id,project_id,project_number,project_name,phase,updated_at,state').eq('is_archived',false).order('updated_at',{ascending:false}).limit(200),
@@ -87,6 +96,9 @@ async function zeigeListe(){
   const team=new Set((pm.data||[]).map(x=>x.project_id));
   const projekte=(pr.data||[]).filter(p=>p.status==='aktiv'&&(mitglied.role==='admin'||p.projektleiter_id===nutzer.id||team.has(p.id)));
   listeDaten={muster:tp.data||[],instanzen:ins.data||[],projekte,archiv:ar.data||[]};
+}
+async function zeigeListe(){
+  await ladeListe();
   const karten=listeDaten.muster.map(t=>'<article class="card"><span class="nr">Muster · '+esc(t.norm)+'</span><h2>'+esc(t.title)+'</h2>'+
     '<p class="meta">Version '+esc(t.version)+' · '+esc(t.status)+' · schreibgeschützt</p><p class="meta">'+esc(t.description)+'</p>'+
     '<div class="acts"><a class="btn" href="./kostenberechnung.html?muster='+encodeURIComponent(t.id)+'">Muster ansehen</a></div></article>').join('')
@@ -172,6 +184,8 @@ function dialogNeu(vorwahl=null){
     '<label class="feld">Kostenstand<select name="kostenstand">'+quartale().map(x=>'<option value="'+x+'"'+(x===q?' selected':'')+'>'+esc(R.quartalText(x))+'</option>').join('')+'</select></label>'+
     '<p class="meta att" id="kbNeuFehler" role="alert"></p>'+
     '<div class="dlg-actions"><button type="button" class="btn" data-dlg="zu">Abbrechen</button><button class="btn btn-primary" type="submit">Anlegen</button></div></form>';
+  let angelegt=false;
+  if(IM_REITER)dialog.addEventListener('close',()=>{if(!angelegt)window.parent.postMessage({tbaOfficeTool:'abgebrochen'},location.origin)},{once:true});
   dialog.showModal();
   dialog.querySelector('#kbNeu').addEventListener('submit',async ev=>{
     ev.preventDefault();
@@ -183,6 +197,7 @@ function dialogNeu(vorwahl=null){
       const {data,error}=await sb.from('office_kosten_instances').insert({project_id:projekt.id,template_id:muster.id,template_version:muster.version,
         project_number:projekt.number,project_name:projekt.name,phase:'LPH3',owner_id:nutzer.id,state}).select('id').single();
       if(error||!data?.id)throw Error('Die Kostenberechnung konnte nicht angelegt werden.');
+      angelegt=true;
       location.assign('./kostenberechnung.html?id='+encodeURIComponent(data.id));
     }catch(e){f.querySelector('#kbNeuFehler').textContent=e?.message||'Fehler beim Anlegen.';knopf.disabled=false}
   });
@@ -248,6 +263,8 @@ async function speichern(){
 async function speichernJetzt(){clearTimeout(speichernTimer);while(laeuft)await new Promise(r=>setTimeout(r,80));if(ausstehend)await speichern()}
 function zeigeSpeicherstatus(){const el=document.getElementById('kbSave');if(el)el.textContent=istMuster?'':speicherText}
 window.addEventListener('beforeunload',e=>{if(ausstehend||laeuft){e.preventDefault();e.returnValue=''}});
+// Für Work (Reiter): Revision und ausstehende Speicherung abfragen; vor dem Schließen des Rahmens speichern.
+window.TBA_OFFICE_TOOL=Object.freeze({kind:'kosten',revision:()=>serverRevision,pending:()=>ausstehend||laeuft,flush:()=>speichernJetzt()});
 function sichernAlsDatei(){
   const blob=new Blob([JSON.stringify({kostenberechnung:doc?.id,revision:serverRevision,state:st},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Kostenberechnung-'+(doc?.project_number||'')+'-'+heuteIso()+'.json';

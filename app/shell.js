@@ -163,13 +163,14 @@ document.body.innerHTML = `
           <button data-work-view="overview" class="active">Panorama</button>
           <button data-work-view="desktop">Desktop</button>
           <button data-work-view="planner">Planner</button>
-          <button type="button" data-work-tool="terminplan" hidden>Terminplan</button>
-          <button type="button" data-work-tool="kosten" hidden>Kostenberechnung</button>
+          <button data-work-view="terminplan" hidden>Terminplan</button>
+          <button data-work-view="kosten" hidden>Kostenberechnung</button>
           <button data-work-view="knowledge" hidden>Wissen</button>
           <button data-work-view="threads">Threads</button>
         </div>
         <div id="workStatus" class="work-status" aria-live="polite"></div>
         <div id="workBody" class="work-body"><div class="surface-loading">Öffne Work …</div></div>
+        <div id="workToolHost" class="work-tool-host" hidden></div>
         <input id="workFileInput" class="hidden" type="file" multiple>
       </div>
     </section>

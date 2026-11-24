@@ -16,6 +16,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .kb{min-height:100vh;padding:26px clamp(14px,2.2vw,36px) 90px}
 .kb-wrap{max-width:2400px;margin:0 auto}
 .kb-back{display:inline-flex;align-items:center;min-height:44px;color:#657080;font-size:15px;margin-bottom:12px}
+/* Als Reiter in Work (Rahmen): ohne Rücksprung-Link, weniger Rand oben; Work zeigt schon Projekt und Reiter. */
+.im-reiter .kb-back{display:none}
+.im-reiter .kb{padding-top:18px}
 .kb-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:16px}
 .kb-head-text{flex:1 1 520px;min-width:0}
 .kicker{font-size:12px;letter-spacing:.14em;color:var(--kb-kicker);font-weight:700;margin:0;text-transform:uppercase}
