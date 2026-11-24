@@ -17,6 +17,21 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-24 · Planner-Filter, Reiter Terminplan und Kostenberechnung, kleine Anpassungen · Claude
+- Qué cambió y por qué: Garis OK zum Vorschlag (24.11.2026, «sí construye el filtro») und drei Anpassungen aus derselben Nachricht:
+  - **Filter im Planner:** über den Buckets «Alle / Nur meine», «Person», «Status», «Fällig» (überfällig, diese Woche, ohne Datum). Persönlich: er ändert nur, was man selbst sieht, je Projekt und Gerät gemerkt, und schreibt nichts. «Nur meine» folgt der Regel von Heute (Gari, 23.11.2026): verantwortlich, oder ohne Verantwortliche und selbst angelegt; dafür lädt der Planner den Ersteller (`user_id`) mit. Nicht passende Karten bleiben ausgeblendet im Bucket, damit Ziehen die Reihenfolge des ganzen Buckets behält; der Bucket zeigt «3 / 5», ein leerer Bucket «Keine passenden Aufgaben», die Leiste «3 von 5 Aufgaben» und «Filter zurücksetzen». Eine gemerkte Person, die nicht mehr im Team ist, fällt auf «Alle» zurück.
+  - **Reiter Terminplan und Kostenberechnung** in Work neben Planner (nur bei Projekten): öffnen direkt die des Projekts; bei mehreren eine kurze Wahl (Phase, Stand); ohne Kostenberechnung öffnet sich «Kostenberechnung anlegen» mit dem Projekt vorgewählt (`kostenberechnung.html?neu=<Projekt>`, einmalig), ohne Terminplan der Dialog «+ Terminplan».
+  - **«Kostenberechnung anlegen»:** der graue Hinweis, wer sie sieht und fortschreibt, steht nicht mehr im Dialog (die Anleitung erklärt es weiter).
+  - **Assistent der Kostenberechnung:** «auf Deutsch oder Spanisch» steht nicht mehr im Einstieg und nicht mehr in der Anleitung; er versteht weiter beide Sprachen.
+  - Für das Zeichen «In Bearbeitung» (Gari gefällt der halb gefüllte Kreis nicht) gingen vier Vorschläge an Gari (Etikett, Punkt mit Wort, Farbkante, Ring), nach Jira, Notion, Trello, Linear und GitLab; noch nichts geändert.
+- Archivos: `app/work.js` (`office52`), `app/shell.js` (`office53`), `app/work-polish.css` (`v=3`), `app/index.html`, `kostenberechnung.js` (`office10`), `kosten-assistent.js` (`office3`), `kostenberechnung.html`, `kostenberechnung-hilfe.html`; Tests: `tests/browser/office-planner-karten.chromium.mjs` (Filter, Reiter), `tests/browser/office-kostenberechnung.chromium.mjs` (`?neu=`), Texte und Versionen in Node-Tests.
+- Base de datos: keine Änderung.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (415); Chromium lokal grün: Planner-Karten mit Filter und Reitern (4), Kostenberechnung mit `?neu=` (11), Start, Muster-Planner, Terminplan-Abgleich, Planner-Board; Bildschirmfotos der Filterleiste am Desktop und in iPhone-Breite.
+- Quedó pendiente o sin probar: auf dem iPhone in der App. Zeichen für «In Bearbeitung»: Gari wählt. Die beiden Assistenten (Terminplan, Kostenberechnung) sehen verschieden aus, weil sie getrennt entstanden sind; eine gemeinsame Oberfläche ist als Vorschlag offen.
+- Riesgos o decisiones que necesitan a Gari: Zeichen für «In Bearbeitung»; ob die Assistenten eine gemeinsame Oberfläche bekommen.
+- PR: #152
+
 ### 2026-11-24 · Planner-Karten: alle Verantwortlichen, Status, Checkliste · Claude
 - Qué cambió y por qué: Garis Wünsche zu den Karten (24.11.2026), mit Recherche (Microsoft Planner, Avatargruppe im Fluent-Design, Linear, GitLab):
   - **Alle Verantwortlichen:** die Karte bildete die Initialen aus dem ganzen Namensstring, bei zwei Personen also nur den Kreis der ersten. Jetzt ein Kreis je Person, überlappend und farblich unterschieden, die erste vorn; ab fünf Personen drei Kreise und «+N», wie die Avatargruppe von Microsoft. Die Initialen kommen aus dem Namen im Team (ein Name aus einem Wort ergibt einen Buchstaben).

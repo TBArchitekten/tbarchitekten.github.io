@@ -161,6 +161,21 @@ test('Ablauf: anlegen, Mengen aus Archicad, Kennwert mit Herkunft, Vergleich, Be
   }finally{await ctx.close()}
 });
 
+test('Aus dem Reiter eines Projekts: ?neu= öffnet «Anlegen» mit diesem Projekt, ohne Hinweistext',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+  const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co/,r=>r.abort());
+  try{
+    await page.goto(adresse('kostenberechnung.html?neu=22222222-2222-4222-8222-222222222222'));
+    const dlg=page.locator('#kbNeu');await dlg.waitFor();
+    assert.equal(await dlg.locator('select[name="projekt"]').inputValue(),'22222222-2222-4222-8222-222222222222');
+    assert.equal(await dlg.locator('p.meta',{hasText:'Ansehen kann'}).count(),0,'kein Hinweistext im Dialog (Gari, 24.11.2026)');
+    assert.equal(new URL(page.url()).search,'','neu einmal: das Neuladen öffnet den Dialog nicht wieder');
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
 test('Jede Kostengruppe bis zur 3. Ebene steht in der Liste und im Bericht',async()=>{
   const {ctx,page,fehler}=await oeffne();
   try{

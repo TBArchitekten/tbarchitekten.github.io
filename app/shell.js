@@ -163,6 +163,8 @@ document.body.innerHTML = `
           <button data-work-view="overview" class="active">Panorama</button>
           <button data-work-view="desktop">Desktop</button>
           <button data-work-view="planner">Planner</button>
+          <button type="button" data-work-tool="terminplan" hidden>Terminplan</button>
+          <button type="button" data-work-tool="kosten" hidden>Kostenberechnung</button>
           <button data-work-view="knowledge" hidden>Wissen</button>
           <button data-work-view="threads">Threads</button>
         </div>

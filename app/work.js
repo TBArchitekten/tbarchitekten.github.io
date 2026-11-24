@@ -54,6 +54,7 @@ function bindStatic(){
     if(isMusterPlanner())history.replaceState(null,'','#section=work');
     projectKey=b.dataset.workProject;localStorage.setItem('minds-work-project',projectKey);if(projectKey===OFFICE_ROOT)view='desktop';folderId=null;activeThreadId=null;reviewReportLimit=20;void render()});
   $$('[data-work-view]').forEach(b=>b.onclick=()=>{view=b.dataset.workView;localStorage.setItem('minds-work-view',view);paintChrome();void render()});
+  $$('[data-work-tool]').forEach(b=>b.onclick=()=>void openProjectTool(b.dataset.workTool,b));
   const input=$('#workFileInput');if(input)input.onchange=()=>{const fs=[...(input.files||[])];input.value='';if(fs.length)void uploadFiles(fs)};
   const body=$('#workBody');
   body?.addEventListener('click',e=>{if(e.target.closest('[data-work-retry]'))void render()});
@@ -120,6 +121,7 @@ async function render(){
       const body=$('#workBody');
       if(body)body.innerHTML='<div class="work-empty" role="status"><p>Noch keine Projekte.</p><p class="small">Projekte legst du unter Tools → Projekte an.</p><a class="secondary" href="#section=projects">Projekte öffnen</a></div>';
       $$('[data-work-view]').forEach(b=>{b.hidden=b.dataset.workView!=='overview'});
+      $$('[data-work-tool]').forEach(b=>{b.hidden=true});
       return;
     }
     if(projectKey===OFFICE_ROOT)view='desktop';
@@ -127,6 +129,7 @@ async function render(){
     if(!latest())return;
     project=loadedProject;
     $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
+    $$('[data-work-tool]').forEach(b=>{b.hidden=projectKey===OFFICE_ROOT});
     paintChrome();
     const settings=project&&!OFFICE?await waitForWork(
       sb.from('minds_self_review_settings').select('enabled,timezone,local_hour,code_preparation_enabled')
@@ -754,7 +757,7 @@ async function loadPlanner(){
     }
   }
   buckets=b||[];
-  const {data:t,error:te}=await sb.from('isabella_tasks').select('id,client_key,title,due_date,completed_at,notes,work_bucket_id,work_status,priority,start_date,assignee,labels,checklist,attachments,links,sort_order,work_sort_order,assignee_person_id,metadata').eq('project_id',project.id).is('archived_at',null).order('work_sort_order',{ascending:true,nullsFirst:false}).order('sort_order').order('id');if(te)throw te;tasks=t||[];
+  const {data:t,error:te}=await sb.from('isabella_tasks').select('id,client_key,title,due_date,completed_at,notes,work_bucket_id,work_status,priority,start_date,assignee,labels,checklist,attachments,links,sort_order,work_sort_order,assignee_person_id,user_id,metadata').eq('project_id',project.id).is('archived_at',null).order('work_sort_order',{ascending:true,nullsFirst:false}).order('sort_order').order('id');if(te)throw te;tasks=t||[];
   if(tasks.length){
   const teamIdsFor=(links,primary)=>{
     const ids=[...new Set([...links].filter(x=>x.person_id)
@@ -800,6 +803,115 @@ function workIcon(name){
 }
 function workAvatarInitials(name){
  return String(name||'').split(/[\s,]+/).filter(Boolean).slice(0,2).map(s=>s[0]?.toLocaleUpperCase('de-DE')).join('')||'–'
+}
+// Terminplan and Kostenberechnung as tabs of the project (Gari, 24.11.2026): straight to the project's own,
+// a short choice when there are several, and creating one when there is none.
+function closeToolMenu(){document.querySelector('.work-tool-menu')?.remove()}
+async function openProjectTool(kind,button){
+ if(!project)return;
+ closeToolMenu();
+ const terminplan=kind==='terminplan',page=terminplan?'../terminplan.html':'../kostenberechnung.html';
+ const {data,error}=await sb.from(terminplan?'office_terminplan_instances':'office_kosten_instances')
+  .select('id,phase,updated_at').eq('project_id',project.id).eq('is_archived',false).order('updated_at',{ascending:false});
+ if(error){setStatus((terminplan?'Terminplan':'Kostenberechnung')+' nicht erreichbar: '+(error.message||error));return}
+ const rows=data||[];
+ if(rows.length===1){location.assign(page+'?id='+encodeURIComponent(rows[0].id));return}
+ if(!rows.length){
+  if(!terminplan){location.assign(page+'?neu='+encodeURIComponent(project.id));return}
+  if(window.TBA_OFFICE_PROJECTS?.openNewPlan)void window.TBA_OFFICE_PROJECTS.openNewPlan(project.id);
+  else setStatus('Noch kein Terminplan für dieses Projekt.');
+  return;
+ }
+ const stand=iso=>String(iso||'').slice(0,10).split('-').reverse().join('.');
+ const menu=document.createElement('div');menu.className='work-tool-menu';menu.setAttribute('role','menu');
+ menu.innerHTML=rows.map(r=>`<a role="menuitem" href="${page}?id=${encodeURIComponent(r.id)}"><span>${esc((terminplan?'Terminplan ':'Kostenberechnung ')+String(r.phase||'').replace('LPH','LPH '))}</span><small>Stand ${esc(stand(r.updated_at))}</small></a>`).join('');
+ const box=button.getBoundingClientRect();
+ menu.style.top=Math.round(box.bottom+6)+'px';menu.style.left=Math.round(Math.max(8,Math.min(box.left,innerWidth-268)))+'px';
+ document.body.append(menu);menu.querySelector('a')?.focus();
+ const away=e=>{if(e.type==='keydown'&&e.key!=='Escape')return;if(e.type==='pointerdown'&&menu.contains(e.target))return;
+  closeToolMenu();document.removeEventListener('pointerdown',away,true);document.removeEventListener('keydown',away,true)};
+ setTimeout(()=>{document.addEventListener('pointerdown',away,true);document.addEventListener('keydown',away,true)},0);
+}
+// Planner filter (Gari, 24.11.2026): personal, per project and device; it only changes what you see. Cards that do
+// not match stay in the page, hidden, so dragging keeps the order of the whole bucket.
+const PLANNER_FILTER_KEY='tba-office-planner-filter-v1';
+const PLANNER_FILTER_NONE={person:'all',status:'all',due:'all'};
+let plannerMe=null;
+function plannerFilter(){
+ try{const all=JSON.parse(localStorage.getItem(PLANNER_FILTER_KEY)||'{}');return {...PLANNER_FILTER_NONE,...(all[boardKey()]||{})}}
+ catch{return {...PLANNER_FILTER_NONE}}
+}
+function savePlannerFilter(f){
+ try{const all=JSON.parse(localStorage.getItem(PLANNER_FILTER_KEY)||'{}');all[boardKey()]=f;localStorage.setItem(PLANNER_FILTER_KEY,JSON.stringify(all))}catch{}
+}
+function plannerFilterActive(f){return f.person!=='all'||f.status!=='all'||f.due!=='all'}
+function plannerWeekEnd(today){
+ const d=new Date(today+'T12:00:00');d.setDate(d.getDate()+(7-d.getDay())%7);
+ return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')
+}
+// "Nur meine" follows the rule of Heute (Gari, 23.11.2026): responsible, or no responsibles and created by you.
+function plannerMatches(t,f,today){
+ const ids=t.assignee_person_ids||[];
+ if(f.person==='mine'&&!(ids.includes(plannerMe)||(!ids.length&&!!plannerMe&&t.user_id===plannerMe)))return false;
+ if(f.person==='none'&&ids.length)return false;
+ if(!['all','mine','none'].includes(f.person)&&!ids.includes(f.person))return false;
+ const status=t.completed_at?'completed':(t.work_status||'not_started');
+ if(f.status!=='all'&&status!==f.status)return false;
+ if(f.due==='overdue'&&!(t.due_date&&t.due_date<today&&!t.completed_at))return false;
+ if(f.due==='week'&&!(t.due_date&&t.due_date>=today&&t.due_date<=plannerWeekEnd(today)))return false;
+ if(f.due==='none'&&t.due_date)return false;
+ return true
+}
+function plannerFilterBar(f){
+ const opt=(v,label,cur)=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(label)}</option>`;
+ const person=['all','mine'].includes(f.person)?'':f.person;
+ return `<div class="work-planner-filter" role="group" aria-label="Aufgaben filtern">
+  <div class="work-filter-seg">${[['all','Alle'],['mine','Nur meine']].map(([v,l])=>`<button type="button" data-work-filter-person="${v}" aria-pressed="${f.person===v}">${l}</button>`).join('')}</div>
+  <label class="work-filter-field"><span>Person</span><select data-work-filter="person"><option value="">–</option>${team.map(p=>opt(p.id,p.name,person)).join('')}${opt('none','Ohne Verantwortliche',person)}</select></label>
+  <label class="work-filter-field"><span>Status</span><select data-work-filter="status">${opt('all','Alle',f.status)}${opt('not_started','Nicht begonnen',f.status)}${opt('in_progress','In Bearbeitung',f.status)}${opt('waiting','Warten',f.status)}</select></label>
+  <label class="work-filter-field"><span>Fällig</span><select data-work-filter="due">${opt('all','Alle',f.due)}${opt('overdue','Überfällig',f.due)}${opt('week','Diese Woche',f.due)}${opt('none','Ohne Datum',f.due)}</select></label>
+  <span class="work-filter-result" data-work-filter-result aria-live="polite"></span>
+  <button type="button" class="work-filter-reset" data-work-filter-reset hidden>Filter zurücksetzen</button>
+ </div>`
+}
+function applyPlannerFilter(body){
+ const bar=body.querySelector('.work-planner-filter');if(!bar)return;
+ const f=plannerFilter(),active=plannerFilterActive(f),today=localIso(),byId=new Map(tasks.map(t=>[t.id,t]));
+ bar.querySelectorAll('[data-work-filter-person]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.workFilterPerson===f.person)));
+ bar.querySelector('[data-work-filter="person"]').value=['all','mine'].includes(f.person)?'':f.person;
+ bar.querySelector('[data-work-filter="status"]').value=f.status;
+ bar.querySelector('[data-work-filter="due"]').value=f.due;
+ let shown=0,total=0;
+ body.querySelectorAll('.work-bucket').forEach(section=>{
+  let open=0,openAll=0,done=0,doneAll=0;
+  section.querySelectorAll('[data-work-task]').forEach(card=>{
+   const t=byId.get(card.dataset.workTask);if(!t)return;
+   const ok=!active||plannerMatches(t,f,today);card.hidden=!ok;total++;if(ok)shown++;
+   if(t.completed_at){doneAll++;if(ok)done++}else{openAll++;if(ok)open++}
+  });
+  const count=section.querySelector('.work-bucket-count');
+  if(count){count.textContent=active?open+' / '+openAll:String(openAll);
+   count.setAttribute('aria-label',active?open+' von '+openAll+' offenen Aufgaben':openAll+' offene Aufgaben')}
+  const details=section.querySelector('details.work-completed');
+  if(details){details.hidden=active&&!done;const n=details.querySelector('summary span');if(n)n.textContent=String(active?done:doneAll)}
+ });
+ body.querySelector('.work-board')?.classList.toggle('is-filtered',active);
+ bar.classList.toggle('is-active',active);
+ bar.querySelector('[data-work-filter-result]').textContent=active?shown+' von '+total+' Aufgaben':'';
+ bar.querySelector('[data-work-filter-reset]').hidden=!active;
+}
+function bindPlannerFilter(body){
+ const bar=body.querySelector('.work-planner-filter');if(!bar)return;
+ const set=patch=>{savePlannerFilter({...plannerFilter(),...patch});applyPlannerFilter(body)};
+ bar.addEventListener('click',e=>{
+  const b=e.target.closest('[data-work-filter-person]');if(b){set({person:b.dataset.workFilterPerson});return}
+  if(e.target.closest('[data-work-filter-reset]'))set({...PLANNER_FILTER_NONE});
+ });
+ bar.addEventListener('change',e=>{
+  const s=e.target.closest('[data-work-filter]');if(!s)return;
+  const key=s.dataset.workFilter;set({[key]:s.value||'all'});
+ });
+ applyPlannerFilter(body);
 }
 // Every responsible person gets an avatar (Gari, 24.11.2026), stacked like an avatar group; from five on: three and "+N".
 function workAssigneePeople(t){
@@ -911,12 +1023,16 @@ async function renderPlanner(preview=false){
     team=[];
   }else{
     await loadPlanner();team=await window.MINDS_WORK_TEAM.members(project.id);
+    plannerMe=(await getSession())?.user?.id||null;
+    const f=plannerFilter();
+    if(!['all','mine','none'].includes(f.person)&&!team.some(p=>p.id===f.person))savePlannerFilter({...f,person:'all'});
   }
   const body=$('#workBody'),unbucketed=tasks.some(t=>!t.work_bucket_id),columns=[...(unbucketed?[{id:'__none',name:'Ohne Bucket',virtual:true}]:[]),...buckets];
   rememberBoard(body);
   // Buckets side by side by default (scroll sideways on the phone); the list is opt-in.
   const mobileList=localStorage.getItem(WORK_MOBILE_LAYOUT_KEY)==='list';
   body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Listenansicht</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':(tasks.some(t=>window.TBAPlannerTerminplanSync?.linkOf(t))?'<button type="button" data-work-terminplan-sync title="Termine der verknüpften Aufgaben aus dem Projekt-Terminplan übernehmen">Termine aus Terminplan</button>':'')+'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
+    ${preview?'':plannerFilterBar(plannerFilter())}
     <div class="work-board ${mobileList?'mobile-stack':''}" data-work-board-project="${esc(String(preview?'muster':boardKey()||''))}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
       ${b.terminplan_ref?`<div class="work-bucket-pretitle">Abgabe / Planungspaket${preview?' · '+esc(b.id):''}</div>`:''}
       <header class="work-bucket-header">${b.virtual
@@ -960,6 +1076,7 @@ async function renderPlanner(preview=false){
     localStorage.setItem(WORK_MOBILE_LAYOUT_KEY,listMode?'list':'columns');
   });
   if(preview)return; // The Muster shares the real Planner renderer, but NEVER its write handlers.
+  bindPlannerFilter(body);
   $('[data-work-terminplan-sync]')?.addEventListener('click',()=>void syncFromTerminplan());
   $('[data-work-team]')?.addEventListener('click',()=>void window.MINDS_WORK_TEAM.open(project,()=>renderPlanner()).catch(e=>setStatus('Team: '+(e?.message||e))));
   $('[data-work-add-bucket]')?.addEventListener('click',()=>void addBucket());

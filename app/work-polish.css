@@ -411,3 +411,34 @@ body[data-section="work"] .work-task-toggle.is-waiting::before{
 #modal:has(.minds-task-detail) .minds-task-check-row textarea{
   font-family:inherit;font-size:13px;line-height:1.45;color:#343740}
 #modal:has(.minds-task-detail) .minds-task-check-row .minds-task-check-grip{height:31px}
+
+/* Planner filter (Gari, 24.11.2026): personal; hidden cards stay in the page for the bucket order. */
+body[data-section="work"] .work-planner-filter{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px;font-size:12px;color:#4b4f58}
+body[data-section="work"] .work-filter-seg{display:inline-flex;padding:2px;border-radius:10px;background:#eef0f3}
+body[data-section="work"] .work-filter-seg button{
+  border:0;background:transparent;border-radius:8px;padding:6px 11px;font:inherit;font-weight:600;color:#4b4f58;cursor:pointer}
+body[data-section="work"] .work-filter-seg button[aria-pressed="true"]{
+  background:#fff;color:#1f2228;box-shadow:0 1px 2px rgba(20,25,35,.14)}
+body[data-section="work"] .work-filter-field{display:inline-flex;align-items:center;gap:6px}
+body[data-section="work"] .work-filter-field span{color:#7a7f89}
+body[data-section="work"] .work-filter-field select{
+  font:inherit;font-weight:560;color:#2b2e35;border:1px solid #dfe2e7;border-radius:9px;background-color:#fff;
+  padding:5px 9px;min-height:30px;max-width:190px}
+body[data-section="work"] .work-filter-result{color:#0a64d6;font-weight:600}
+body[data-section="work"] .work-filter-reset{
+  border:0;background:transparent;color:#0a64d6;font:inherit;font-weight:600;cursor:pointer;padding:4px 2px}
+body[data-section="work"] .work-task-card[hidden],
+body[data-section="work"] details.work-completed[hidden]{display:none!important}
+body[data-section="work"] .work-board.is-filtered .work-task-list[data-work-task-list="open"]:not(:has(> [data-work-task]:not([hidden])))::after{
+  content:"Keine passenden Aufgaben";display:block;padding:10px 4px;color:#9a9ea7;font-size:12px}
+
+/* Terminplan and Kostenberechnung tabs: a short choice when a project has several. */
+.work-tool-menu{
+  position:fixed;z-index:1000;min-width:240px;max-width:260px;padding:6px;border-radius:12px;background:#fff;
+  border:1px solid rgba(30,35,45,.12);box-shadow:0 12px 32px rgba(20,25,35,.18)}
+.work-tool-menu a{
+  display:flex;flex-direction:column;gap:2px;padding:9px 10px;border-radius:8px;color:#1f2228;text-decoration:none;
+  font-size:13px;font-weight:600}
+.work-tool-menu a small{color:#7a7f89;font-weight:500;font-size:11px}
+.work-tool-menu a:hover,.work-tool-menu a:focus-visible{background:#f1f4f8;outline:none}
