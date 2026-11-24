@@ -6,7 +6,9 @@
   const P1='22222222-2222-4222-8222-222222222222',P2='33333333-3333-4333-8333-333333333333',P3='44444444-4444-4444-8444-444444444444';
   const L1='a1111111-1111-4111-8111-111111111111',L2='a2222222-2222-4222-8222-222222222222',S1='a3333333-3333-4333-8333-333333333333',
     A1='a4444444-4444-4444-8444-444444444444',D1='d1111111-1111-4111-8111-111111111111';
-  const KEY='tba_produkte_fake_db_v1';
+  // Herstellerkatalog (24.11.2026): H1 ist die Firma von S1, H2 ohne Produkt, H3 archiviert.
+  const H1='f1111111-1111-4111-8111-111111111111',H2='f2222222-2222-4222-8222-222222222222',H3='f3333333-3333-4333-8333-333333333333';
+  const KEY='tba_produkte_fake_db_v2';
   const session={access_token:'fake',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,
     user:{id:UID,email:'test@fixture.invalid',aud:'authenticated',role:'authenticated'}};
   const zeit=t=>new Date(t).toISOString();
@@ -15,7 +17,8 @@
   const preis=(produkt_id,betrag,stand,bez,mehr={})=>({id:crypto.randomUUID(),produkt_id,art:'ansatz_kobe',betrag,einheit:'m²',stand,
     quelle:'Kostenberechnung (Test)',projekt_bezeichnung:bez,kg:'353',created_by:ANDERE,created_at:zeit('2026-11-20'),...mehr});
   const start=()=>({
-    office_members:[{user_id:UID,email:'test@fixture.invalid',display_name:'Test Team',role:'member',is_active:true,must_change_password:false}],
+    office_members:[{user_id:UID,email:'test@fixture.invalid',display_name:'Test Team',role:'member',is_active:true,must_change_password:false},
+      {user_id:ANDERE,email:'andere@fixture.invalid',display_name:'Andere Person',role:'member',is_active:true,must_change_password:false}],
     office_projects:[{id:P1,number:'T-01',name:'Testhaus',status:'aktiv',projektleiter_id:ANDERE},
       {id:P2,number:'T-02',name:'Nachbarhaus',status:'aktiv',projektleiter_id:ANDERE},
       {id:P3,number:'T-03',name:'Archiv',status:'archiviert',projektleiter_id:UID}],
@@ -29,7 +32,7 @@
         archiviert:false,created_by:ANDERE,created_at:zeit('2026-11-20'),updated_at:zeit('2026-11-20')},
       {id:S1,typ:'produkt',kategorie:'bodenbelag',name:'Kalkstein, geschliffen',hersteller:'Hersteller B',serie:null,familie:'Naturstein',
         beschreibung:null,merkmale:[{feld:'Rutschhemmung',wert:'R10',seite:2,dokument_id:D1},{feld:'Stärke',wert:'20 mm',seite:1,dokument_id:D1}],
-        fehlend:['Emissionen'],farbe:'#d8cfbd',quelle_url:null,bestand:false,status:'geprueft',geprueft_von:ANDERE,geprueft_am:zeit('2026-11-19'),
+        fehlend:['Emissionen'],farbe:'#d8cfbd',quelle_url:null,bestand:false,status:'geprueft',geprueft_von:ANDERE,geprueft_am:zeit('2026-11-19'),hersteller_id:H1,
         archiviert:false,created_by:ANDERE,created_at:zeit('2026-11-19'),updated_at:zeit('2026-11-19')},
       {id:A1,typ:'produkt',kategorie:'bodenbelag',name:'Teppich, alt',hersteller:'Hersteller C',serie:null,familie:null,beschreibung:null,
         merkmale:[],fehlend:[],farbe:null,quelle_url:null,bestand:false,status:'entwurf',archiviert:true,created_by:ANDERE,
@@ -43,6 +46,20 @@
         dokument_id:D1,seite:2,created_by:UID,created_at:zeit('2026-11-19')}],
     office_produkt_verwendungen:[{id:crypto.randomUUID(),produkt_id:S1,projekt_id:P1,code:'BO-01',status:'bemustert',raeume:'Flur',menge:null,einheit:null,
       notiz:null,created_by:ANDERE,created_at:zeit('2026-11-19'),updated_at:zeit('2026-11-19')}],
+    office_hersteller:[
+      {id:H1,firma:'Hersteller B',typ:'hersteller',produkte:'Kalkstein, Treppenstufen',kategorien:['bodenbelag'],adresse:'Musterweg 1, 00000 Musterstadt',
+        telefon:'+49 000 1234-0',email:'info@hersteller-b.invalid',website:'https://hersteller-b.invalid',ansprechpartner:'Frau Muster (Vertrieb)',notiz:null,
+        archiviert:false,created_by:ANDERE,created_at:zeit('2026-11-24'),updated_at:zeit('2026-11-24')},
+      {id:H2,firma:'Werkstatt Terrazzo',typ:'ausfuehrender',produkte:'Ortterrazzo, Musterplatten',kategorien:['bodenbelag'],adresse:null,
+        telefon:'Tel. n. v.',email:null,website:'https://terrazzo.invalid',ansprechpartner:null,notiz:'Kontaktdaten nachrecherchieren',
+        archiviert:false,created_by:ANDERE,created_at:zeit('2026-11-24'),updated_at:zeit('2026-11-24')},
+      {id:H3,firma:'Alte Firma',typ:'vertrieb',produkte:null,kategorien:['sanitaer'],adresse:null,telefon:null,email:null,website:null,ansprechpartner:null,
+        notiz:null,archiviert:true,created_by:ANDERE,created_at:zeit('2026-11-01'),updated_at:zeit('2026-11-01')}],
+    office_hersteller_kontakte:[
+      {id:crypto.randomUUID(),hersteller_id:H1,projekt_id:P1,projekt_bezeichnung:null,person_id:ANDERE,art:'angebot',datum:'2026-11-08',
+        notiz:'Richtpreis erhalten',created_by:ANDERE,created_at:zeit('2026-11-24')},
+      {id:crypto.randomUUID(),hersteller_id:H2,projekt_id:null,projekt_bezeichnung:'Wettbewerb 2025',person_id:null,art:'recherche',datum:'2025-05-02',
+        notiz:null,created_by:ANDERE,created_at:zeit('2026-11-24')}],
     __dateien:{[pfad(S1,'b1111111-1111-4111-8111-111111111111')]:{type:'application/pdf',b64:PDF_B64}}
   });
   let db=null;try{db=JSON.parse(sessionStorage.getItem(KEY)||'null')}catch{}
@@ -51,7 +68,7 @@
   sichern();
   const kopie=x=>JSON.parse(JSON.stringify(x));
   const jetzt=()=>new Date().toISOString();
-  window.__fake={get db(){return db},sichern,aufrufe:[],fehler:null,leser:null,anfragen:[],UID,P1,P2,P3,L1,L2,S1,A1,D1};
+  window.__fake={get db(){return db},sichern,aufrufe:[],fehler:null,leser:null,anfragen:[],UID,P1,P2,P3,L1,L2,S1,A1,D1,H1,H2,H3};
 
   // Datenblatt-Leser: ein fester Vorschlag mit Seitenangaben, einer fehlenden Angabe und einem Listenpreis.
   const vorschlag=body=>({version:'office-produkt-ai-v1',authority:'none',model:'test-modell',quelle:body?.attachments?.[0]?.name||'',
@@ -93,8 +110,12 @@
             r.typ=r.typ||'produkt';r.status=r.status||'entwurf';r.bestand=!!r.bestand;
             if(r.status==='geprueft'){r.geprueft_von=UID;r.geprueft_am=jetzt()}}
           if(table==='office_produkt_verwendungen'){r.updated_at=jetzt();r.status=r.status||'vorgeschlagen'}
+          if(table==='office_hersteller'){r.updated_at=jetzt();r.archiviert=r.archiviert||false;r.kategorien=r.kategorien||[]}
           return r;
         });
+        if(table==='office_hersteller')for(const r of neu)
+          if(zeilen.some(x=>!x.archiviert&&String(x.firma).trim().toLowerCase()===String(r.firma).trim().toLowerCase()))
+            return {data:null,error:{code:'23505',message:'duplicate key value violates unique constraint'}};
         if(table==='office_produkt_verwendungen')for(const r of neu)
           if(r.code&&zeilen.some(x=>x.projekt_id===r.projekt_id&&x.code===r.code))
             return {data:null,error:{code:'23505',message:'duplicate key value violates unique constraint'}};

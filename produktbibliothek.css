@@ -168,3 +168,7 @@ label.btn:focus-within{outline:2px solid var(--pb-link);outline-offset:2px}
   .pb-gruppe>.pb-input{flex:1 1 auto}
   .pb-actions>.btn,.pb-actions>a.btn{flex:1 1 auto}
 }
+
+/* Kontakt des Herstellers aus dem Herstellerkatalog (24.11.2026) */
+.pb-hersteller{margin:0;font-size:13px;line-height:1.45;color:var(--pb-muted);overflow-wrap:anywhere}
+.pb-hersteller a{color:var(--pb-link)}

@@ -380,6 +380,10 @@ document.getElementById('officeToolsKosten')?.addEventListener('click',()=>{
 document.getElementById('officeToolsProdukte')?.addEventListener('click',()=>{
   window.location.href='../produktbibliothek.html';
 });
+// Herstellerkatalog: eigene Seite (herstellerkatalog.html im Wurzelverzeichnis): Firmen, Kontakt und Kontakte in Projekten.
+document.getElementById('officeToolsHersteller')?.addEventListener('click',()=>{
+  window.location.href='../herstellerkatalog.html';
+});
 document.getElementById('officePlansBack')?.addEventListener('click',()=>{window.ISABELLA_APP?.show?.('tools');history.replaceState(null,'','#section=tools')});
 document.getElementById('officePlansDrawer')?.addEventListener('click',()=>{
   document.getElementById('closeDrawer')?.click();openPlans();

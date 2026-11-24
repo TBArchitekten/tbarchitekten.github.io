@@ -151,18 +151,18 @@ test('Migration: RLS mit Office-Helfern, nichts Destruktives, privater Speicher'
 
 test('Seite und Werkzeugkarte: eigene Seite, gleicher Client wie die Kostenberechnung',()=>{
   assert.match(seite,/<html lang="de">/);
-  assert.match(seite,/<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office3">/);
+  assert.match(seite,/<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office4">/);
   assert.match(seite,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   assert.match(seite,/<script src="\.\/office-config\.js\?v=1"><\/script>/);
   assert.match(seite,/<script src="\.\/shared\/supabase-client\.js\?v=office4"><\/script>/);
-  assert.match(seite,/<script src="\.\/produktbibliothek\.js\?v=office5"><\/script>/);
+  assert.match(seite,/<script src="\.\/produktbibliothek\.js\?v=office6"><\/script>/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(shell,/id="officeToolsProdukte" aria-label="Produktbibliothek öffnen"/);
   assert.match(shell,/<strong>Produktbibliothek<\/strong><small>Materialien einmal erfassen, in jedem Projekt verwenden/);
   assert.match(shell,/NAV_ICONS\.produkte='<svg /);
   assert.match(projekte,/getElementById\('officeToolsProdukte'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/produktbibliothek\.html';/);
-  assert.match(index,/\.\/shell\.js\?v=office54/);
-  assert.match(index,/\.\/office-projects\.js\?v=office58/);
+  assert.match(index,/\.\/shell\.js\?v=office55/);
+  assert.match(index,/\.\/office-projects\.js\?v=office59/);
   // Client: Bucket, Leser-Version, nur geprüfte Antworten, nur eigener Pfad.
   assert.match(ui,/BUCKET='office-produkte',FUNKTION='office-produkt-ai',LESER_VERSION='office-produkt-ai-v1'/);
   assert.equal(VERSION,'office-produkt-ai-v1');

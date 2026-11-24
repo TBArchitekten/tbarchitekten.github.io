@@ -4,7 +4,9 @@
    Seite im Datenblatt, Dokumente, Preise, Verwendung in Projekten), Datenblatt prüfen und übernehmen (Romy liest, die
    Person prüft; gespeichert wird erst dann) und von Hand anlegen. Jeder Preis trägt Art, Stand und Quelle; ein Ansatz,
    der in mehreren alten Kostenberechnungen gleich steht, zählt als eine Quelle. Daten: office_produkte und Nachbarn
-   (Migration 20261123180000), Dateien im privaten Bucket «office-produkte», Leser: Edge Function office-produkt-ai. */
+   (Migration 20261123180000), Dateien im privaten Bucket «office-produkte», Leser: Edge Function office-produkt-ai.
+   Seit 24.11.2026 hängt ein Produkt an seiner Firma im Herstellerkatalog (hersteller_id): Karte und Produktblatt zeigen
+   deren Kontakt, ?hersteller=<id> zeigt die Produkte einer Firma. */
 (()=>{
 'use strict';
 const OFFICE=window.TBA_OFFICE_CONFIG;
@@ -14,7 +16,7 @@ const inApp=!!window.WINDOW_NATIVE?.available;
 const BUCKET='office-produkte',FUNKTION='office-produkt-ai',LESER_VERSION='office-produkt-ai-v1';
 const MAX_LESEN=8*1024*1024,MAX_DATEI=25*1024*1024;
 const params=new URLSearchParams(location.search);
-const ID=params.get('id'),NEU=params.get('neu'),BEARBEITEN=params.get('bearbeiten');
+const ID=params.get('id'),NEU=params.get('neu'),BEARBEITEN=params.get('bearbeiten'),HERSTELLER=params.get('hersteller');
 const root=document.getElementById('pb'),dialog=document.getElementById('pbDialog');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,10 +49,12 @@ const katEins=k=>KAT.get(k)?.eins||'Sonstiges';
 const KG_HINWEIS={bodenbelag:'die Kostengruppe ergibt sich aus der Verwendung: auf der Bodenplatte KG 324, auf Decken KG 353'};
 
 let nutzer=null,mitglied=null;
-const daten={produkte:[],preise:[],dokumente:[],verwendungen:[],projekte:[],team:new Set()};
-const ui={kategorie:'bodenbelag',suche:'',herkunft:'alle',projekt:'alle',sort:'zuletzt',archiv:false};
+const daten={produkte:[],preise:[],dokumente:[],verwendungen:[],projekte:[],team:new Set(),hersteller:[]};
+const ui={kategorie:'bodenbelag',suche:'',herkunft:'alle',projekt:'alle',sort:'zuletzt',archiv:false,hersteller:null};
 // Aus der Kostenberechnung (Datenpool): ?suche=… sucht in allen Kategorien.
 if(params.get('suche')){ui.suche=params.get('suche').slice(0,80);ui.kategorie='alle'}
+// Aus dem Herstellerkatalog: ?hersteller=<id> zeigt die Produkte dieser Firma in allen Kategorien.
+if(HERSTELLER&&/^[0-9a-f-]{36}$/i.test(HERSTELLER)){ui.hersteller=HERSTELLER;ui.kategorie='alle'}
 let bilder=new Map();
 
 function fehler(text){root.innerHTML='<div class="pb-wrap"><a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a><div class="pb-banner warn">'+esc(text)+'</div></div>'}
@@ -78,15 +82,18 @@ async function start(){
   }catch(e){console.error('Produktbibliothek',e);fehler(e?.message||'Produktbibliothek nicht erreichbar.')}
 }
 async function ladeAlles(){
-  const [pr,pe,dok,ver,proj,team]=await Promise.all([
+  const [pr,pe,dok,ver,proj,team,herst]=await Promise.all([
     sb.from('office_produkte').select('*').order('updated_at',{ascending:false}).limit(2000),
     sb.from('office_produkt_preise').select('*').order('stand',{ascending:false,nullsFirst:false}).limit(10000),
     sb.from('office_produkt_dokumente').select('*').order('created_at',{ascending:false}).limit(5000),
     sb.from('office_produkt_verwendungen').select('*').order('updated_at',{ascending:false}).limit(5000),
     sb.from('office_projects').select('id,number,name,status,projektleiter_id').order('number').limit(500),
-    sb.from('office_project_members').select('project_id').eq('user_id',nutzer.id).limit(500)
+    sb.from('office_project_members').select('project_id').eq('user_id',nutzer.id).limit(500),
+    sb.from('office_hersteller').select('id,firma,adresse,telefon,email,website,ansprechpartner,archiviert').order('firma').limit(3000)
   ]);
   const err=pr.error||pe.error||dok.error||ver.error||proj.error||team.error;if(err)throw err;
+  // Ohne Katalog (Tabelle noch nicht da oder kein Zugriff) bleibt die Bibliothek wie bisher.
+  daten.hersteller=herst.error?[]:(herst.data||[]);
   daten.produkte=pr.data||[];daten.preise=pe.data||[];daten.dokumente=dok.data||[];daten.verwendungen=ver.data||[];
   daten.projekte=proj.data||[];daten.team=new Set((team.data||[]).map(x=>x.project_id));
 }
@@ -95,6 +102,43 @@ const projektName=p=>p?[p.number,p.name].filter(Boolean).join(' · '):'';
 // Die Verwendung im Projekt ändern Projektteam und Projektleitung (wie die Policy in der Datenbank); Admins auch.
 const darfProjekt=p=>!!p&&p.status==='aktiv'&&(mitglied?.role==='admin'||p.projektleiter_id===nutzer?.id||daten.team.has(p.id));
 const eigeneProjekte=()=>daten.projekte.filter(darfProjekt);
+
+// ---------- Hersteller aus dem Katalog ----------
+const firmaVon=e=>e?.hersteller_id?daten.hersteller.find(h=>h.id===e.hersteller_id)||null:null;
+const normFirma=t=>String(t||'').toLowerCase().replace(/®|™/g,'').replace(/\b(gmbh|co|kg|ag|se|srl|s\.r\.l|ohg|e\.?\s?k)\b\.?/g,' ').replace(/[^a-z0-9äöüß]+/g,' ').trim();
+// Firma zum Herstellernamen: erst gleich geschrieben, sonst eindeutig am ersten Wort (z. B. «Geberit» → «Geberit Vertriebs GmbH»).
+function herstellerIdFuer(name){
+  const n=normFirma(name);if(!n)return null;
+  const aktiv=daten.hersteller.filter(h=>!h.archiviert);
+  const gleich=aktiv.filter(h=>normFirma(h.firma)===n);if(gleich.length===1)return gleich[0].id;
+  const wort=n.split(' ')[0];if(wort.length<4)return null;
+  const passend=aktiv.filter(h=>normFirma(h.firma).split(' ')[0]===wort);
+  return passend.length===1?passend[0].id:null;
+}
+const telVon=t=>{const nr=(String(t||'').match(/\+?[\d\s/().-]{6,}/)||[''])[0].replace(/[^\d+]/g,'');return nr.length>=6?'tel:'+nr:''};
+const ersteMail=t=>(String(t||'').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)||[''])[0];
+// Kurzer Kontakt auf der Karte: erste Telefonnummer, erste E-Mail, Link ins Katalogblatt.
+function kontaktKurz(e){
+  const h=firmaVon(e);if(!h)return '';
+  const tel=telVon(h.telefon),mail=ersteMail(h.email),teile=[];
+  if(tel)teile.push('<a href="'+esc(tel)+'">'+esc(String(h.telefon).split(/[;\n]/)[0].replace(/\s*\(.*$/,'').trim())+'</a>');
+  if(mail)teile.push('<a href="mailto:'+esc(mail)+'">'+esc(mail)+'</a>');
+  teile.push('<a href="./herstellerkatalog.html?id='+esc(h.id)+'">Kontakt</a>');
+  return '<p class="pb-hersteller">'+teile.join(' · ')+'</p>';
+}
+function herstellerBox(e){
+  const h=firmaVon(e);
+  if(!h)return e.typ==='produkt'?'<section class="card pb-box"><h2 class="pb-h2">Hersteller</h2><p class="meta">'+esc(e.hersteller||'Hersteller offen')+
+    ' · nicht im <a href="./herstellerkatalog.html'+(e.hersteller?'?suche='+encodeURIComponent(e.hersteller):'')+'">Herstellerkatalog</a> verknüpft.</p></section>':'';
+  const zeilen=[];
+  if(h.adresse)zeilen.push(['Adresse',esc(h.adresse)]);
+  if(h.telefon){const t=telVon(h.telefon);zeilen.push(['Telefon',t?'<a href="'+esc(t)+'">'+esc(h.telefon)+'</a>':esc(h.telefon)])}
+  if(h.email)zeilen.push(['E-Mail',esc(h.email).replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,m=>'<a href="mailto:'+m+'">'+m+'</a>')]);
+  if(h.website)zeilen.push(['Website','<a href="'+esc(h.website)+'" target="_blank" rel="noopener noreferrer">'+esc(String(h.website).replace(/^https:\/\/(www\.)?/,'').replace(/\/$/,''))+'</a>']);
+  if(h.ansprechpartner)zeilen.push(['Ansprechpartner',esc(h.ansprechpartner)]);
+  return '<section class="card pb-box"><div class="pb-box-kopf"><h2 class="pb-h2">Hersteller</h2><a class="meta" href="./herstellerkatalog.html?id='+esc(h.id)+'">im Herstellerkatalog</a></div>'+
+    '<p><b>'+esc(h.firma)+'</b></p>'+(zeilen.length?'<dl class="pb-merkmale">'+zeilen.map(([k,v])=>'<div><dt>'+k+'</dt><dd>'+v+'</dd></div>').join('')+'</dl>':'')+'</section>';
+}
 
 // ---------- Preise mit Herkunft ----------
 function quelleVon(x){return x.projekt_id?projektName(projekt(x.projekt_id)):(x.projekt_bezeichnung||'')}
@@ -241,6 +285,7 @@ async function zeigeListe(){
 function gefiltert(){
   const q=ui.suche.trim().toLowerCase();
   let liste=daten.produkte.filter(e=>(ui.archiv?e.archiviert:!e.archiviert)&&(ui.kategorie==='alle'||e.kategorie===ui.kategorie));
+  if(ui.hersteller)liste=liste.filter(e=>e.hersteller_id===ui.hersteller);
   if(q)liste=liste.filter(e=>[e.name,e.hersteller,e.serie,e.familie,e.beschreibung,...(e.merkmale||[]).map(m=>m.feld+' '+m.wert),
     ...kgVon(e).map(k=>'kg '+k)].filter(Boolean).join(' ').toLowerCase().includes(q));
   // Auswahl für ein Projekt: nur was dort gewählt ist, nach Code.
@@ -318,7 +363,8 @@ function renderErgebnis(){
   const el=root.querySelector('[data-ergebnis]');if(!el)return;
   const liste=gefiltert(),anzahl=root.querySelector('[data-zahl]');
   const fuer=ui.projekt!=='alle'?projekt(ui.projekt):null;
-  if(anzahl)anzahl.textContent=liste.length+' '+(liste.length===1?'Eintrag':'Einträge')+(fuer?' ausgewählt für '+projektName(fuer):'')+
+  const firma=ui.hersteller?daten.hersteller.find(h=>h.id===ui.hersteller):null;
+  if(anzahl)anzahl.textContent=liste.length+' '+(liste.length===1?'Eintrag':'Einträge')+(firma?' von '+firma.firma:'')+(fuer?' ausgewählt für '+projektName(fuer):'')+
     (ui.kategorie!=='alle'?' · '+katName(ui.kategorie):'')+(KG_HINWEIS[ui.kategorie]?' · '+KG_HINWEIS[ui.kategorie]:'');
   el.innerHTML=`${liste.length?'<div class="pb-grid">'+liste.map(karte).join('')+'</div>':
       '<div class="card pb-leer"><p>'+(fuer?'Für dieses Projekt ist hier noch nichts ausgewählt. «Zu Projekt» auf einer Karte wählt aus.':
@@ -338,6 +384,7 @@ function karte(e){
     <div class="pb-karte-text">
       <h2><a href="./produktbibliothek.html?id=${esc(e.id)}">${esc(e.name)}</a></h2>
       <p class="meta">${esc([unter,e.familie!==e.name?e.familie:'',kgText(e)].filter(Boolean).join(' · '))}</p>
+      ${kontaktKurz(e)}
       <p class="pb-preis${b.liste.length?'':' leer'}">${esc(b.haupt)}${b.zusatz?' <span>'+esc(b.zusatz)+'</span>':''}</p>
       <p class="meta">${esc(b.meta)}</p>
       ${badges.length?'<div class="pb-chips">'+badges.map(badge).join('')+'</div>':''}
@@ -373,6 +420,7 @@ function renderProdukt(e){
         ${swatch(e,'pb-swatch gross')}
         <label class="btn">${doks.some(d=>d.art==='bild')?'Weiteres Foto':'Foto hinzufügen'}<input type="file" class="pb-datei" accept="image/jpeg,image/png,image/webp" data-foto></label>
         ${e.beschreibung?'<section class="card pb-box"><p>'+esc(e.beschreibung)+'</p></section>':''}
+        ${herstellerBox(e)}
         <section class="card pb-box"><h2 class="pb-h2">Dokumente</h2>
           ${doks.length?'<ul class="pb-doks">'+doks.map(d=>`<li><span><b>${esc(DOKARTEN[d.art]||d.art)}</b><br><span class="meta">${esc(d.name)}${d.seiten?' · '+d.seiten+' S.':''}${d.gelesen_am?' · von Romy gelesen':''}</span></span>
             <span class="pb-dok-aktionen">${d.mime_type==='application/pdf'&&!d.gelesen_am&&d.size_bytes<=MAX_LESEN?'<button type="button" class="btn btn-quiet" data-dok-lesen="'+esc(d.id)+'">Romy lesen lassen</button>':''}<button type="button" class="btn btn-quiet" data-oeffnen="${esc(d.id)}">Öffnen</button>${d.created_by===nutzer.id||mitglied.role==='admin'?'<button type="button" class="btn btn-quiet btn-danger" data-dok-weg="'+esc(d.id)+'">Entfernen</button>':''}</span></li>`).join('')+'</ul>':'<p class="meta">Noch kein Dokument.</p>'}
@@ -693,7 +741,7 @@ function renderPruefen(){
             <label>Typ<select name="typ" class="pb-input"><option value="produkt">Produkt</option><option value="leistung">Leistung, kein Produkt</option></select></label>
             <label>Kategorie<select name="kategorie" class="pb-input">${KATEGORIEN.map(([k,,eins])=>'<option value="'+k+'"'+(k===(p.kategorie||leser.kategorie)?' selected':'')+'>'+esc(eins)+'</option>').join('')}</select></label>
             <label class="breit">Name<input name="name" class="pb-input" required maxlength="200" value="${esc(p.name)}"></label>
-            <label>Hersteller<input name="hersteller" class="pb-input" maxlength="160" value="${esc(p.hersteller)}"></label>
+            <label>Hersteller<input name="hersteller" class="pb-input" maxlength="160" list="pbFirmen" value="${esc(p.hersteller)}"></label>
             <label>Serie<input name="serie" class="pb-input" maxlength="160" value="${esc(p.serie)}"></label>
             <label class="breit">Familie (Element der Kostenberechnung)<input name="familie" class="pb-input" maxlength="160" list="pbFamilien" value="${esc(p.familie)}" placeholder="z. B. Parkett, vollflächig geklebt"></label>
             <label class="breit">Beschreibung<input name="beschreibung" class="pb-input" maxlength="600" value="${esc(p.beschreibung)}"></label>
@@ -701,6 +749,7 @@ function renderPruefen(){
             <label>Dokument<select name="dokart" class="pb-input">${Object.entries(DOKARTEN).filter(([k])=>k!=='bild').map(([k,t])=>'<option value="'+k+'"'+(k===r.dokument_art?' selected':'')+'>'+esc(t)+'</option>').join('')}</select></label>
           </div>
           <datalist id="pbFamilien">${familien.map(f=>'<option value="'+esc(f)+'"></option>').join('')}</datalist>
+          <datalist id="pbFirmen">${daten.hersteller.filter(h=>!h.archiviert).map(h=>'<option value="'+esc(h.firma)+'"></option>').join('')}</datalist>
           ${aehnlich.length?'<p class="pb-warn">Ähnlich in der Bibliothek: '+aehnlich.map(x=>'<a href="./produktbibliothek.html?id='+esc(x.id)+'">'+esc(x.name)+'</a>').join(', ')+'. Vielleicht gehört das Dokument dorthin.</p>':'<p class="meta">In der Bibliothek gibt es dieses Produkt noch nicht.</p>'}
           ${projekte.length?`<div class="pb-felder"><label class="breit">Gleich in ein Projekt (optional)<select name="projekt" class="pb-input"><option value="">kein Projekt</option>${projekte.map(x=>'<option value="'+esc(x.id)+'">'+esc(projektName(x))+'</option>').join('')}</select></label>
             <label>Code<input name="code" class="pb-input" maxlength="8" placeholder="z. B. BO-01"></label></div>`:''}`}
@@ -766,7 +815,7 @@ async function uebernehmen(form){
       const name=String(f.get('name')||'').trim();
       if(!name)throw Error('Bitte einen Namen angeben.');
       const {data,error}=await sb.from('office_produkte').insert({typ:f.get('typ'),kategorie:f.get('kategorie'),name:name.slice(0,200),
-        hersteller:String(f.get('hersteller')||'').trim()||null,serie:String(f.get('serie')||'').trim()||null,
+        hersteller:String(f.get('hersteller')||'').trim()||null,hersteller_id:herstellerIdFuer(f.get('hersteller')),serie:String(f.get('serie')||'').trim()||null,
         familie:String(f.get('familie')||'').trim()||null,beschreibung:String(f.get('beschreibung')||'').trim()||null,
         farbe:/^#[0-9a-f]{6}$/i.test(String(f.get('farbe')||''))?String(f.get('farbe')):null,
         merkmale,fehlend,status:'geprueft'}).select('*').single();
@@ -824,7 +873,7 @@ function zeigeFormular(e){
         <label>Typ<select name="typ" class="pb-input"><option value="produkt"${e?.typ!=='leistung'?' selected':''}>Produkt</option><option value="leistung"${e?.typ==='leistung'?' selected':''}>Leistung, kein Produkt</option></select></label>
         <label>Kategorie<select name="kategorie" class="pb-input">${KATEGORIEN.map(([k,,eins])=>'<option value="'+k+'"'+(k===(e?.kategorie||'bodenbelag')?' selected':'')+'>'+esc(eins)+'</option>').join('')}</select></label>
         <label class="breit">Name<input name="name" class="pb-input" required maxlength="200" value="${esc(e?.name||'')}"></label>
-        <label>Hersteller<input name="hersteller" class="pb-input" maxlength="160" value="${esc(e?.hersteller||'')}"></label>
+        <label>Hersteller<input name="hersteller" class="pb-input" maxlength="160" list="pbFirmen" value="${esc(e?.hersteller||firmaVon(e)?.firma||'')}"></label>
         <label>Serie<input name="serie" class="pb-input" maxlength="160" value="${esc(e?.serie||'')}"></label>
         <label class="breit">Familie (Element der Kostenberechnung)<input name="familie" class="pb-input" maxlength="160" list="pbFamilien" value="${esc(e?.familie||'')}"></label>
         <label class="breit">Beschreibung<input name="beschreibung" class="pb-input" maxlength="4000" value="${esc(e?.beschreibung||'')}"></label>
@@ -834,6 +883,7 @@ function zeigeFormular(e){
         <label class="pb-check"><input type="checkbox" name="bestand"${e?.bestand?' checked':''}> Leistung im Bestand</label>
       </div>
       <datalist id="pbFamilien">${familien.map(f=>'<option value="'+esc(f)+'"></option>').join('')}</datalist>
+      <datalist id="pbFirmen">${daten.hersteller.filter(h=>!h.archiviert).map(h=>'<option value="'+esc(h.firma)+'"></option>').join('')}</datalist>
       <h2 class="pb-h2">Technische Daten</h2>
       <div class="pb-merkmal-liste">${(m.length?m:[{feld:'',wert:'',seite:null}]).map((x,i)=>merkmalZeile(x,i,false)).join('')}</div>
       <button type="button" class="btn btn-quiet" data-merkmal-neu>Angabe hinzufügen</button>
@@ -856,7 +906,7 @@ function zeigeFormular(e){
     }
     const url=String(f.get('quelle_url')||'').trim();
     const zeile={typ:f.get('typ'),kategorie:f.get('kategorie'),name:String(f.get('name')||'').trim().slice(0,200),
-      hersteller:String(f.get('hersteller')||'').trim()||null,serie:String(f.get('serie')||'').trim()||null,familie:String(f.get('familie')||'').trim()||null,
+      hersteller:String(f.get('hersteller')||'').trim()||null,hersteller_id:herstellerIdFuer(f.get('hersteller')),serie:String(f.get('serie')||'').trim()||null,familie:String(f.get('familie')||'').trim()||null,
       beschreibung:String(f.get('beschreibung')||'').trim()||null,quelle_url:/^https:\/\//.test(url)?url:null,
       farbe:/^#[0-9a-f]{6}$/i.test(String(f.get('farbe')||''))?String(f.get('farbe')):null,status:f.get('status'),bestand:!!f.get('bestand'),merkmale,
       fehlend:(e?.fehlend||[]).filter(x=>!gesehen.has(String(x).toLowerCase()))};

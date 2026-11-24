@@ -52,6 +52,10 @@ jobs:
         env:
           CI: 'true'
         run: node --test tests/browser/office-produktbibliothek.chromium.mjs
+      - name: Exercise Herstellerkatalog (filters, company sheet, contacts per project, link to the library, iPhone width) with a synthetic Supabase
+        env:
+          CI: 'true'
+        run: node --test tests/browser/office-herstellerkatalog.chromium.mjs
       - name: Exercise Kostenarchiv and Datenpool (archive read-only, own-project unit prices with provenance, iPhone width) with a synthetic Supabase
         env:
           CI: 'true'
