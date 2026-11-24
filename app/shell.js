@@ -118,7 +118,7 @@ document.body.innerHTML = `
         </button>
         <button type="button" class="office-tools-card" id="officeToolsStart" aria-label="Projektstart öffnen">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
-          <span><strong>Projektstart</strong><small>Was ein Projekt an Information braucht, und fünf Bürovorlagen für die LPH 3 in Word und Excel: Projektstart, Planliste, Koordination, Kick-off, Entscheidungsvorlage.</small></span>
+          <span><strong>Projektstart</strong><small>Die Bürovorlagen LPH 3 als Dokumente des Projekts: Klärungsliste, Entscheidungsliste und Entscheidungsvorlagen im Office bearbeiten und als Excel, Word oder PDF ausgeben. Dazu das Muster mit fünf Bürovorlagen für die LPH 3.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
         <button type="button" class="office-tools-card office-tools-projects" id="officeToolsManage" aria-label="Projekte öffnen">

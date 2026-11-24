@@ -44,3 +44,7 @@ jobs:
         env:
           CI: 'true'
         run: node --test tests/browser/office-kostenarchiv.chromium.mjs
+      - name: Exercise Projektstart documents (clarification and decision lists, decision memo, Word and Excel, iPhone width) with a synthetic Supabase
+        env:
+          CI: 'true'
+        run: node --test tests/browser/office-projektdokumente.chromium.mjs
