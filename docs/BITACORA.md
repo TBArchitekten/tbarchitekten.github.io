@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: Probelauf mit Zusammenfassung (9 Karten, Prüfpunkte 10/5/10/10/10/10/10/7/7, Verknüpfungen gleich, 2 Grabsteine). Nach dem Lauf je Karte Prüfsummen von Titel, Prüfpunkten, Bibliotheksangaben, Arbeitsergebnis, Anwendbarkeit, fachlichem Kontext und Notiz gegen das aus `app/data/muster-planner-lph3-v0.3.json` erzeugte Skript: 9 von 9 gleich; nichts abgehakt, keine Verantwortlichen; `L3.MAT.1`/`L3.MUS.1` weg.
 - Quedó pendiente o sin probar: Ein Grabstein gilt nur für die Person, der die Karte gehört. Wer aus dem Team die beiden Karten schon im Kalender hatte, sieht sie dort womöglich weiter: `mergeRemoteEntities` in `app/sync.js` behält lokale Einträge, die der Server nicht mehr liefert, auch fremde (gilt für jede gelöschte Projektaufgabe, nicht nur hier). Der Planner selbst liest vom Server und zeigt den neuen Stand.
 - Riesgos o decisiones que necesitan a Gari: ob `sync.js` fremde Einträge, die der Server nicht mehr liefert, lokal verwerfen soll (kleine Korrektur mit Test).
-- PR: —
+- PR: #149
 
 ### 2026-11-24 · Projektstart: Zahlen der Varianten aus Produktbibliothek, Datenpool und Kostenberechnung · Claude
 - Qué cambió y por qué: siguiente paso del plan aprobado por Gari (boceto, 24.11. 06:45; «Continúa como lo has propuesto», 08:30): die Varianten der Entscheidungsvorlage mit Produktbibliothek und Kostenberechnung verbinden; Romy holt Mengen und Beträge mit Fundstelle, wie im Entwurf.
