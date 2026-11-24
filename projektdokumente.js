@@ -7,8 +7,8 @@
    Eine Klärung mit Verantwortlichem und Frist wird eine Aufgabe im Planner; ein Entscheidungspunkt des Auftraggebers
    wird eine Entscheidung; eine Entscheidung kommt in eine Vorlage. «entschieden» setzt nur das Projektteam, mit Datum,
    Entscheider und Entscheidung. Das Muster bleibt projektstart.html mit den Bürovorlagen zum Herunterladen.
-   Romy (office-dokumente-ai, ab #146): Vorschläge aus Protokollen, Mails und Plänen, jeder mit Fundstelle, grün in der
-   Liste; erst «Übernehmen» ändert eine Zeile (Verlauf: «Vorschlag von Romy, übernommen von …»). Dazu Fragen an die
+   Romy (office-dokumente-ai, ab #146): Vorschläge aus Protokollen, Mails und Plänen, jeder mit Fundstelle, blau markiert in
+   der Liste; erst «Übernehmen» ändert eine Zeile (Verlauf: «Vorschlag von Romy, übernommen von …»). Dazu Fragen an die
    Fachplaner, Fristen gegen den Terminplan, Bestätigung einer Entscheidung als Mail und Abschnitte der Vorlage neu
    formuliert (grün eingefügt, rot gestrichen). Eine Entscheidung trägt Romy nie ein.
    Zahlen der Varianten (zweiter Schritt, 24.11.2026): je Variante «Zahlen aus dem Office» – Produkt aus der
@@ -1180,7 +1180,7 @@ function romyBanner(art){
   if(vs.length){
     const quellen=[...new Set(vs.map(v=>v.quelle).filter(Boolean))];
     html+='<div class="pd-banner romy">Romy hat '+(quellen.length?'in '+quellen.map(q=>'«'+esc(q)+'»').join(', ')+' ':'')+vs.length+(vs.length===1?' Vorschlag':' Vorschläge')+
-      ' gemacht. Sie stehen grün in der Liste; jeden einzeln übernehmen oder verwerfen.<div class="pd-banner-actions">'+
+      ' gemacht. Sie stehen blau markiert in der Liste; jeden einzeln übernehmen oder verwerfen.<div class="pd-banner-actions">'+
       '<button type="button" class="btn btn-romy" data-act="vs-alle-ja">'+(vs.length===1?'Übernehmen':'Alle '+vs.length+' übernehmen')+'</button><button type="button" class="btn btn-quiet" data-act="vs-alle-nein">'+(vs.length===1?'Verwerfen':'Alle verwerfen')+'</button></div></div>';
   }
   const t=ui.romyText;

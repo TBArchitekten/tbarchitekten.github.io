@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Mit TBA Office verbinden</title>
+<link rel="stylesheet" href="./shared/minds-design-tokens.css?v=2">
 <style>
-  :root{--ink:#17181c;--soft:#6b7079;--line:#e6e8ec;--blue:#007aff;--bg:#f5f6f8;--card:#fff;--warn:#a76400}
+  /* Blau und Schrift aus shared/minds-design-tokens.css (24.11.2026) */
+  :root{--ink:#17181c;--soft:#6b7079;--line:#e6e8ec;--blue:var(--m-blue);--bg:#f5f6f8;--card:#fff;--warn:#a76400}
   @media (prefers-color-scheme:dark){:root{--ink:#f2f3f5;--soft:#a0a5ae;--line:#2c2f36;--bg:#111214;--card:#1b1d21;--warn:#e0a640}}
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:15px/1.5 var(--m-type-system);-webkit-font-smoothing:antialiased}
   main{min-height:100dvh;display:grid;place-items:center;padding:28px 16px}
   .card{width:min(440px,100%);background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px 26px 24px;box-shadow:0 24px 70px rgba(14,19,30,.10)}
   .brand{display:flex;align-items:center;gap:10px;margin-bottom:18px;font-weight:650;letter-spacing:-.01em}
@@ -26,12 +28,12 @@
   .actions{display:flex;gap:10px}
   button{flex:1;min-height:44px;border:0;border-radius:12px;font:600 15px/1 inherit;font-family:inherit;cursor:pointer}
   button.primary{background:var(--blue);color:#fff}
-  button.primary:hover{background:#0069db}
+  button.primary:hover{background:var(--m-blue-hover)}
   button.secondary{background:rgba(120,125,135,.14);color:var(--ink)}
   button:disabled{opacity:.55;cursor:default}
   label{display:block;font-size:12.5px;font-weight:560;color:var(--soft);margin:0 0 6px}
   input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--ink);font:500 15px/1.2 inherit;font-family:inherit;margin-bottom:12px}
-  input:focus{outline:3px solid rgba(0,122,255,.2);border-color:rgba(0,122,255,.6)}
+  input:focus{outline:3px solid rgba(0,98,204,.2);border-color:rgba(0,98,204,.6)}
   .status{min-height:20px;margin-top:12px;font-size:13px;color:var(--soft)}
   .status.error{color:#d73030}
   [hidden]{display:none!important}

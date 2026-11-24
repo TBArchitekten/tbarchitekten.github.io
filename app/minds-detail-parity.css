@@ -110,7 +110,7 @@ body[data-section="assistant"].desk-enabled .desk-add-task{
 body[data-section="assistant"].desk-enabled .desk-add-task:hover{
   background:#f1f3f6;
   border-color:rgba(37,45,59,.075);
-  color:#007aff;
+  color:var(--m-blue);
 }
 body[data-section="assistant"].desk-enabled .desk-add-task .desk-ui-icon{
   width:17px;height:17px;stroke-width:1.8;
@@ -144,12 +144,12 @@ body[data-section="assistant"].desk-enabled .desk-task-check{
   transition:background-color .14s ease,border-color .14s ease;
 }
 body[data-section="assistant"].desk-enabled .desk-task-row:not(.is-done) .desk-task-check:hover{
-  border-color:#007aff;
+  border-color:var(--m-blue);
   background:#f2f8ff;
 }
 body[data-section="assistant"].desk-enabled .desk-task-row.is-done .desk-task-check{
-  background:#007aff;
-  border-color:#007aff;
+  background:var(--m-blue);
+  border-color:var(--m-blue);
   color:#fff;
   box-shadow:none;
 }
@@ -282,7 +282,7 @@ body[data-section="assistant"].desk-enabled .desk-plan-task-row button{
 }
 body[data-section="assistant"].desk-enabled .desk-plan-task-row button:hover{
   background:#f1f3f6;
-  color:#007aff;
+  color:var(--m-blue);
   text-decoration:none;
 }
 
@@ -392,7 +392,7 @@ body[data-section="work"] .work-overview-task:hover{
   box-shadow:-10px 0 0 #f5f6f8,10px 0 0 #f5f6f8;
 }
 body[data-section="work"] .work-overview-task:focus-visible{
-  outline:3px solid rgba(0,122,255,.36);
+  outline:3px solid rgba(0,98,204,.36);
   outline-offset:-3px;
 }
 

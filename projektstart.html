@@ -4,52 +4,54 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Projektstart · Was ein Projekt braucht und Bürovorlagen LPH 3 | TBA Office</title>
 <meta name="description" content="TBA Office Projektstart: was ein Projekt an Information braucht, damit Romy mitarbeiten kann, und fünf Bürovorlagen für die LPH 3 in Word und Excel, belegt mit HOAI, BayBO und den Merkblättern der Bayerischen Architektenkammer.">
+<link rel="stylesheet" href="./shared/minds-design-tokens.css?v=2">
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#202823;background:#f9faf8;line-height:1.6}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0}a{color:#355b49;text-underline-offset:3px}
-header{border-bottom:1px solid #e3e7e2;background:white;position:sticky;top:0;z-index:2}
+/* Farben und Schrift aus shared/minds-design-tokens.css (24.11.2026: kein eigenes Grün mehr; Links blau). */
+:root{font-family:var(--m-type-system);color:var(--m-ink);background:var(--m-canvas);line-height:1.6}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0}a{color:var(--m-link);text-underline-offset:3px}a:hover{color:var(--m-link-hover)}
+header{border-bottom:1px solid var(--m-border);background:white;position:sticky;top:0;z-index:2}
 .head{max-width:1220px;margin:auto;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:14px}
-.brand{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:750;color:#60746a}
-.back{font-size:13px;white-space:nowrap;text-decoration:none;border:1px solid #dfe6df;padding:8px 12px;border-radius:6px}
+.brand{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:750;color:var(--m-ink-faint)}
+.back{font-size:13px;white-space:nowrap;text-decoration:none;border:1px solid var(--m-border);padding:8px 12px;border-radius:var(--m-radius-control);background:var(--m-paper)}
 .hero{max-width:1150px;margin:auto;padding:65px 28px 33px}
-.eyebrow{font-size:11px;font-weight:700;color:#60756a;letter-spacing:.15em;text-transform:uppercase}
+.eyebrow{font-size:11px;font-weight:700;color:var(--m-ink-faint);letter-spacing:.15em;text-transform:uppercase}
 h1{font-weight:675;letter-spacing:-.045em;font-size:clamp(36px,5vw,62px);line-height:1.1;margin:12px 0 16px;max-width:820px}
-.lead{max-width:820px;font-size:18px;color:#57655b;line-height:1.7}
+.lead{max-width:820px;font-size:18px;color:var(--m-ink-soft);line-height:1.7}
 .container{max-width:1150px;margin:auto;padding:0 28px 90px}
 .chapter-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:28px 0 70px}
-.chapter-menu a{text-decoration:none;color:inherit;border:1px solid #dfe5dc;background:#fff;padding:24px;border-radius:10px}
-.chapter-menu a:hover{border-color:#93afa0}
+.chapter-menu a{text-decoration:none;color:inherit;border:1px solid var(--m-border);background:var(--m-paper);padding:24px;border-radius:var(--m-radius-card)}
+.chapter-menu a:hover{border-color:var(--m-blue-line)}
 .chapter-menu strong{display:block;font-size:19px;margin:5px 0}
-.chapter-menu small{display:block;color:#69796f;line-height:1.5}
+.chapter-menu small{display:block;color:var(--m-ink-soft);line-height:1.5}
 h2{font-size:clamp(28px,3.5vw,40px);letter-spacing:-.035em;line-height:1.2;margin:10px 0 17px}
 h3{font-size:21px;letter-spacing:-.02em;margin:33px 0 12px}
 p{margin:0 0 18px;max-width:860px}section{scroll-margin-top:100px}
-.chapter{border-top:1px solid #dfe6df;padding-top:36px;margin-top:75px}
+.chapter{border-top:1px solid var(--m-border);padding-top:36px;margin-top:75px}
 .table-wrap{overflow-x:auto;max-width:1060px}
 .matrix{width:100%;max-width:1060px;border-collapse:collapse;font-size:13px;margin:22px 0 30px}
-.matrix th{text-align:left;font-size:12px;letter-spacing:.035em;background:#edf1ed}
-.matrix td,.matrix th{border-bottom:1px solid #dce4dc;padding:12px;vertical-align:top}
+.matrix th{text-align:left;font-size:12px;letter-spacing:.035em;background:var(--m-surface)}
+.matrix td,.matrix th{border-bottom:1px solid var(--m-border);padding:12px;vertical-align:top}
 .matrix .tier{white-space:nowrap;font-weight:650}
-.matrix code,.vorlage code{font-size:12px;background:#eef3ef;padding:1px 5px;border-radius:4px;white-space:nowrap}
-.note{max-width:970px;border:1px solid #dbe4dd;background:#fff;padding:20px 24px;border-radius:9px;margin:20px 0 26px;color:#3d5447}
+.matrix code,.vorlage code{font-size:12px;background:var(--m-fill);padding:1px 5px;border-radius:4px;white-space:nowrap}
+.note{max-width:970px;border:1px solid var(--m-border);background:var(--m-paper);padding:20px 24px;border-radius:var(--m-radius-card);margin:20px 0 26px;color:var(--m-ink)}
 .note strong{display:block;margin-bottom:6px}
-.small{font-size:13px;color:#6b796f}
+.small{font-size:13px;color:var(--m-ink-soft)}
 .vorlagen{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px;margin:26px 0 34px;max-width:1100px}
-.vorlage{border:1px solid #dfe6df;background:#fff;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:10px}
-.vorlage .typ{font-size:11px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;color:#60756a}
+.vorlage{border:1px solid var(--m-border);background:var(--m-paper);border-radius:var(--m-radius-card);padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+.vorlage .typ{font-size:11px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;color:var(--m-ink-faint)}
 .vorlage h3{margin:0;font-size:19px}
-.vorlage p{margin:0;font-size:14px;color:#3f4b43}
+.vorlage p{margin:0;font-size:14px;color:var(--m-ink)}
 .vorlage ul{margin:0;padding-left:18px;font-size:14px}
 .vorlage li{margin-bottom:5px;line-height:1.5}
-.vorlage .karten{font-size:12px;color:#5a6a60}
-.download{align-self:flex-start;margin-top:auto;text-decoration:none;font-size:14px;font-weight:650;border:1px solid #9fb8aa;background:#eef3ef;padding:9px 14px;border-radius:7px}
-.download:hover{background:#e2ebe4}
+.vorlage .karten{font-size:12px;color:var(--m-ink-soft)}
+.download{align-self:flex-start;margin-top:auto;text-decoration:none;font-size:14px;font-weight:650;color:var(--m-blue);border:1px solid var(--m-blue-line);background:var(--m-blue-soft);padding:9px 14px;border-radius:var(--m-radius-control)}
+.download:hover{background:var(--m-blue-soft-hover);color:var(--m-blue-hover)}
 .funde{counter-reset:fund;list-style:none;padding:0;max-width:900px}
 .funde li{counter-increment:fund;position:relative;padding:0 0 16px 44px}
-.funde li::before{content:counter(fund);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:#355b49;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.funde li::before{content:counter(fund);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--m-ink);color:var(--m-paper);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .quellen{font-size:13px;max-width:980px;padding-left:18px}
 .quellen li{margin-bottom:6px}
-footer{border-top:1px solid #e3e7e2;background:#fff;padding:28px;text-align:center}
+footer{border-top:1px solid var(--m-border);background:#fff;padding:28px;text-align:center}
 @media(max-width:900px){.chapter-menu{grid-template-columns:1fr}}
 @media(max-width:720px){.container,.hero,.head{padding-left:16px;padding-right:16px}.vorlagen{grid-template-columns:1fr}.matrix .tier{white-space:normal}.matrix td,.matrix th{padding:10px 7px}.matrix{font-size:12.5px}.back{padding:7px 9px}}
 </style>

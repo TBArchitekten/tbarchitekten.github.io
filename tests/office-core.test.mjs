@@ -232,10 +232,15 @@ test('Window design: sidebar of views, Mitglieder in the account menu, one id pe
   for(const view of ['work','tools'])assert.match(index,new RegExp(`class="lens-nav-item[^"]*" data-view="${view}"`));
   assert.match(index,/<div id="accountMenu" class="account-menu" role="menu" hidden>[\s\S]*data-view="members" data-admin-only hidden[\s\S]*id="changePasswordBtn"[\s\S]*id="logoutBtn"/);
   assert.match(index,/<section id="projectView"[\s\S]*id="projectNewPlanBtn" class="primary"/);
-  // One blue for actions, Window tokens, cards with a hairline.
-  assert.match(css,/--m-blue:#0062cc;/);
+  // One blue for actions, Window tokens, cards with a hairline. Since 24.11.2026 the values live only in the shared
+  // tokens file, which the page loads before style.css (Gari: one file so the pages cannot drift apart again).
+  const tokens=read('shared/minds-design-tokens.css');
+  assert.match(tokens,/--m-blue:#0062cc;/);
+  assert.match(tokens,/--m-type-system:-apple-system/);
+  assert.match(tokens,/--m-type:var\(--m-type-system\);/);
+  assert.match(index,/minds-design-tokens\.css\?v=\d+">\s*<link rel="stylesheet" href="\.\/style\.css/,'tokens before the page CSS');
+  assert.doesNotMatch(css,/--m-(blue|ink|paper|type)\s*:/,'style.css does not define its own colours or type');
   assert.match(css,/button\.primary\{[^}]*background:var\(--m-blue\)/);
-  assert.match(css,/--m-type:-apple-system/);
   assert.doesNotMatch(css,/Arial,Helvetica,sans-serif\}/,'no Arial page font');
   // Projects open their page; the dialog preselects the project.
   assert.match(app,/card\.onclick=\(\)=>switchView\('project',\{id:p\.id\}\)/);
@@ -245,9 +250,10 @@ test('Window design: sidebar of views, Mitglieder in the account menu, one id pe
 
 test('Window design: the editor uses the same chrome and returns to the Terminplan library',()=>{
   const editor=read('terminplan.html'),css=read('window-editor.css');
-  assert.match(editor,/<link rel="stylesheet" href="\.\/window-editor\.css\?v=1">/);
+  assert.match(editor,/<link rel="stylesheet" href="\.\/window-editor\.css\?v=2">/);
   assert.match(editor,/<a href="\.\/app\/#section=plans" id="officeBack">‹ Terminpläne<\/a>/);
   assert.match(editor,/back\.href='\.\/app\/#section=plans'/);
-  assert.match(css,/--accent:#0062cc;/);
+  assert.match(css,/--accent:var\(--m-blue\);/);
+  assert.match(editor,/<title>TBA Office · Terminplan<\/title>\n<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=\d+">\n<style>/,'tokens before the inline style');
   assert.match(css,/@media print\{html,body\{font-family:Arial,Helvetica,sans-serif\}\}/,'print layout keeps its font');
 });

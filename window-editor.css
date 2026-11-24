@@ -2,17 +2,18 @@
    Only the chrome changes (type, header, toolbar, buttons, fields); the Gantt grid,
    its bars and the print layout keep their own rules. */
 :root{
-  --bg:#f7f7f6;
-  --line:#e6e6e4;
-  --line-strong:#d3d4d2;
-  --text:#171717;
-  --muted:#60636a;
-  --accent:#0062cc;
+  /* Werte aus shared/minds-design-tokens.css (24.11.2026) */
+  --bg:var(--m-surface);
+  --line:var(--m-border);
+  --line-strong:var(--m-border-strong);
+  --text:var(--m-ink);
+  --muted:var(--m-ink-soft);
+  --accent:var(--m-blue);
 }
 html,body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased}
 .office-plan-head{height:52px;padding:0 20px;font-size:13px;border-bottom-color:rgba(37,45,59,.09)}
-.office-plan-head a{color:#0062cc;font-weight:500}
-.office-plan-head a:hover{color:#0055b3}
+.office-plan-head a{color:var(--m-blue);font-weight:500}
+.office-plan-head a:hover{color:var(--m-blue-hover)}
 .office-plan-head .plan-label{font-size:14px;font-weight:650;letter-spacing:-.006em}
 .office-plan-head .right{font-size:12.5px;color:#60636a}
 .toolbar{gap:8px;padding:10px 20px;border-bottom-color:rgba(37,45,59,.09)}
@@ -22,14 +23,14 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",
   box-shadow:0 1px 2px rgba(20,24,35,.025);transition:background-color .15s ease,border-color .15s ease,color .15s ease;
 }
 .btn:hover{background:#fafbfc;border-color:rgba(45,55,70,.17);color:#1d1d1f}
-.btn.primary{background:#0062cc;border-color:transparent;color:#fff;font-weight:600;box-shadow:0 2px 6px rgba(0,98,204,.18)}
-.btn.primary:hover{background:#0055b3;color:#fff}
-.btn.active{background:#eef5ff;border-color:rgba(0,98,204,.28);color:#0062cc}
+.btn.primary{background:var(--m-blue);border-color:transparent;color:#fff;font-weight:600;box-shadow:0 2px 6px rgba(0,98,204,.18)}
+.btn.primary:hover{background:var(--m-blue-hover);color:#fff}
+.btn.active{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue)}
 .search{height:34px;border-radius:10px;border-color:#d3d4d2}
 .search{font-size:13px}
-.search:focus{outline:none;border-color:#0062cc;box-shadow:0 0 0 3px rgba(0,98,204,.14)}
+.search:focus{outline:none;border-color:var(--m-blue);box-shadow:0 0 0 3px var(--m-blue-ring)}
 .toolbar label{font-size:12.5px;color:#60636a}
-.toggle{accent-color:#0062cc}
+.toggle{accent-color:var(--m-blue)}
 .statusbar{font-size:12px;color:#60636a;border-bottom-color:rgba(37,45,59,.09)}
 .left-head div{font-size:10.5px;font-weight:650;letter-spacing:.07em;color:#8a8f98}
 dialog{border:1px solid rgba(25,28,36,.086);border-radius:20px;box-shadow:0 25px 75px rgba(20,22,29,.20),0 5px 14px rgba(20,22,29,.08)}

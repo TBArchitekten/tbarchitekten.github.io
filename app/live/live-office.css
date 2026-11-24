@@ -1,0 +1,6 @@
+/* Romy Live im Office: live.css bleibt die gepinnte Kopie aus Window (docs/sync-window-app-manifest.json).
+   Hier nur, was die gemeinsame Gestaltung verlangt (24.11.2026, Option B): Schrift und das eine Blau für
+   alles, was man anklickt; Werte aus shared/minds-design-tokens.css. */
+:root{font-family:var(--m-type-system)}
+.live-actions .primary,.live-minds-actions button:first-child{background:var(--m-blue);color:var(--m-on-blue);border-color:var(--m-blue)}
+.live-consult,#liveMindsChat{color:var(--m-link)}

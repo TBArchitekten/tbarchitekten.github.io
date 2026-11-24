@@ -50,7 +50,7 @@ test("floating window does not resize the Gantt and supports collapsed/wide mode
  assert.match(css,/\.assistant-panel\.is-open/);
  assert.match(css,/\.assistant-panel\.is-wide/);
  assert.match(css,/@media print\{\.assistant-panel\{display:none!important\}\}/);
- assert.match(editor,/href="\.\/assistant-surface\.css\?v=office38"/);
+ assert.match(editor,/href="\.\/assistant-surface\.css\?v=office39"/);
  assert.match(editor,/id="assistantWide"/);
  assert.match(editor,/id="assistantClose"/);
  assert.match(editor,/if\(assistantWindow\)assistantWindow\.zeige\(assistantExpanded\);/);

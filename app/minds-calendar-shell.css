@@ -95,7 +95,7 @@ body .app .week-timegrid .wday{
   padding:6px 5px;
   border-left:1px solid rgba(37,45,59,.07);
 }
-body .app .week-timegrid .wday.week-drop-target{background:rgba(0,122,255,.05)}
+body .app .week-timegrid .wday.week-drop-target{background:rgba(0,98,204,.05)}
 body .app .week-timegrid .wk-body{padding-top:8px}
 body .app .week-timegrid .wk-hours{
   position:relative;
@@ -117,7 +117,7 @@ body .app .week-timegrid .wk-col{
     linear-gradient(to bottom,transparent calc(50% - .5px),rgba(37,45,59,.035) calc(50% - .5px),rgba(37,45,59,.035) calc(50% + .5px),transparent calc(50% + .5px));
   background-size:100% var(--wk-hour);
 }
-body .app .week-timegrid .wk-col.is-today{background-color:rgba(0,122,255,.022)}
+body .app .week-timegrid .wk-col.is-today{background-color:rgba(0,98,204,.022)}
 body .app .week-timegrid .wk-now{
   position:absolute;left:-1px;right:0;z-index:3;
   height:0;border-top:1.5px solid #c33c4a;
@@ -277,8 +277,8 @@ body .app .agenda-item .task-check{
   font-size:13px;font-weight:750;line-height:1;
   cursor:pointer;
 }
-body .app .agenda-item .task-check:hover{border-color:#007aff;background:#f2f8ff}
-body .app .agenda-item .task-check.checked{background:#007aff;border-color:#007aff}
+body .app .agenda-item .task-check:hover{border-color:var(--m-blue);background:#f2f8ff}
+body .app .agenda-item .task-check.checked{background:var(--m-blue);border-color:var(--m-blue)}
 body .app .agenda-item .atime{font-size:12px;color:#6b7079;font-variant-numeric:tabular-nums}
 body .app .agenda-item.is-span .atime{color:#8a8f98}
 body .app .agenda-item .drag-handle{color:#b4b9c1;font-size:16px;letter-spacing:normal}
@@ -319,16 +319,16 @@ body .app .month-session-link{
   font-family:inherit;font-size:14px;
 }
 #modal .form :is(input,select,textarea):focus{
-  outline:3px solid rgba(0,122,255,.18);border-color:rgba(0,122,255,.55);background:#fff;
+  outline:3px solid rgba(0,98,204,.18);border-color:rgba(0,98,204,.55);background:#fff;
 }
 #modal .primary,#drawer .primary{
   min-height:44px;
   border:0;border-radius:12px;
-  background:#007aff;color:#fff;
+  background:var(--m-blue);color:#fff;
   font-family:inherit;font-size:14px;font-weight:600;
-  box-shadow:0 2px 6px rgba(0,122,255,.17);
+  box-shadow:0 2px 6px rgba(0,98,204,.17);
 }
-#modal .primary:hover,#drawer .primary:hover{background:#0069db}
+#modal .primary:hover,#drawer .primary:hover{background:var(--m-blue-hover)}
 #modal .secondary,#drawer .secondary{
   min-height:44px;
   border:0;border-radius:12px;
@@ -343,11 +343,11 @@ body .app .month-session-link{
 :is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send{
   display:grid;place-items:center;
   border:0;border-radius:50%;
-  background:#007aff!important;
+  background:var(--m-blue)!important;
   color:#fff!important;
   box-shadow:none;
 }
-:is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send:hover{background:#0069db!important}
+:is(.idea-workspace-form,.feed-thread-form,.work-thread-composer) .send:hover{background:var(--m-blue-hover)!important}
 .idea-workspace-form .send,.feed-thread-form .send{width:46px;height:46px;min-width:46px;flex:none}
 .idea-markdown-render{font-size:14px;line-height:1.62;color:#2a3039}
 .idea-markdown-artifact .idea-markdown-render{
@@ -487,9 +487,9 @@ body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .compo
 #modal .credit-form label{font-size:12px;font-weight:560;color:#5d626a}
 #modal .credit-form-row{display:flex;gap:8px}
 #modal .credit-form input{flex:1 1 0%;width:0;min-width:0;min-height:42px;padding:10px 12px;border:1px solid #dadde4;border-radius:11px;background:#fbfbfd;color:#1d1d1f;font:500 14px/1.2 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
-#modal .credit-form input:focus{outline:3px solid rgba(0,122,255,.18);border-color:rgba(0,122,255,.55);background:#fff}
-#modal .credit-form button{min-height:42px;padding:0 18px;border:0;border-radius:11px;background:#007aff;color:#fff;font:600 14px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;cursor:pointer}
-#modal .credit-form button:hover{background:#0069db}
+#modal .credit-form input:focus{outline:3px solid rgba(0,98,204,.18);border-color:rgba(0,98,204,.55);background:#fff}
+#modal .credit-form button{min-height:42px;padding:0 18px;border:0;border-radius:11px;background:var(--m-blue);color:#fff;font:600 14px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;cursor:pointer}
+#modal .credit-form button:hover{background:var(--m-blue-hover)}
 #modal .credit-form small,#modal .credit-note{font-size:11.5px;line-height:1.45;color:#7a7f88}
 #modal .credit-form output{font-size:12px;color:#5d626a;min-height:0}
 #modal .credit-form output:empty{display:none}
@@ -498,7 +498,7 @@ body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .compo
 #modal .credit-day{display:grid;grid-template-rows:16px 1fr 16px;gap:4px;height:100%;min-width:0;text-align:center}
 #modal .credit-day-value{font-size:9.5px;color:#6b7079;white-space:nowrap;overflow:visible;font-variant-numeric:tabular-nums;align-self:end}
 #modal .credit-day-bar{position:relative;display:block;border-radius:5px;background:#f2f3f6;overflow:hidden}
-#modal .credit-day-bar i{position:absolute;left:0;right:0;bottom:0;border-radius:5px;background:#007aff}
+#modal .credit-day-bar i{position:absolute;left:0;right:0;bottom:0;border-radius:5px;background:var(--m-blue)}
 #modal .credit-day-label{font-size:9.5px;color:#8a8f98;white-space:nowrap;font-variant-numeric:tabular-nums}
 #modal .credit-day-flag,#modal .credit-note b{color:#d68a00;font-weight:750;margin-left:1px}
 #modal .credit-chart-wrap .credit-note{margin:10px 0 0}
@@ -515,7 +515,7 @@ body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .compo
 .app .situation-item.situation-credit strong::before{content:"";display:inline-block;width:7px;height:7px;margin:0 8px 1px 0;border-radius:50%;background:#d68a00;vertical-align:middle}
 .app .situation-item.situation-credit:is(.is-critical,.is-empty) strong::before{background:#d73030}
 .app .situation-item.situation-credit:hover{background:#f7f8fa}
-.app .situation-item.situation-credit:focus-visible{outline:2px solid #007aff;outline-offset:2px}
+.app .situation-item.situation-credit:focus-visible{outline:2px solid var(--m-blue);outline-offset:2px}
 
 /* 8. Work threads: replies Claude saved through the Window connector are signed. */
 .work-thread-message .work-thread-author{margin:0 0 4px;font-size:11px;font-weight:650;letter-spacing:.04em;color:#c96442}
@@ -550,7 +550,7 @@ body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .compo
 .work-akte-kind{font-size:10.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;color:#8a8f98}
 .work-akte-entry.is-proposed .work-akte-kind{color:#a76400}
 .work-akte-actions{display:flex;gap:8px;margin-top:8px}
-.work-akte-actions button{min-height:32px;padding:0 12px;border:0;border-radius:9px;background:#007aff;color:#fff;font:600 12.5px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;cursor:pointer}
+.work-akte-actions button{min-height:32px;padding:0 12px;border:0;border-radius:9px;background:var(--m-blue);color:#fff;font:600 12.5px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;cursor:pointer}
 .work-akte-actions button.secondary{background:#f1f3f6;color:#25262b}
 
 /* 11. Work scrolling. On wide screens the Work body is fixed-height for the planner board,
@@ -611,10 +611,10 @@ body[data-section="work"] #workBody.work-scroll-host{overflow-y:auto!important;o
 .cockpit-card small{font-size:12.5px;line-height:1.45;color:#5a5e66}
 .cockpit-detail{white-space:pre-wrap}
 .cockpit-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:4px}
-.cockpit-actions button{min-height:40px;padding:0 15px;border:0;border-radius:999px;background:#0062cc;color:#fff;font-size:13.5px;font-weight:600;cursor:pointer}
+.cockpit-actions button{min-height:40px;padding:0 15px;border:0;border-radius:999px;background:var(--m-blue);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer}
 .cockpit-actions button.secondary{background:#eceef2;color:#1d1d1f}
 .cockpit-actions button:disabled{opacity:.5}
-.cockpit-more{align-self:flex-start;border:0;background:transparent;color:#0062cc;font-size:13.5px;font-weight:500;padding:6px 0;cursor:pointer}
+.cockpit-more{align-self:flex-start;border:0;background:transparent;color:var(--m-blue);font-size:13.5px;font-weight:500;padding:6px 0;cursor:pointer}
 .cockpit-empty{margin:0;font-size:14px;line-height:1.5;color:#6b7079}
 .cockpit-row{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch}
 .cockpit-panel{display:flex;flex-direction:column;gap:6px;border:1px solid #e6e8ec;border-radius:18px;padding:18px 20px;min-width:0;background:#fff}
@@ -622,7 +622,7 @@ body[data-section="work"] #workBody.work-scroll-host{overflow-y:auto!important;o
 .cockpit-side{flex:1 1 320px;min-width:0}
 .cockpit-stack{display:flex;flex-direction:column;gap:18px}
 .cockpit-panel .cockpit-head{margin-bottom:6px}
-.cockpit-link{border:0;background:transparent;color:#0062cc;font-size:13.5px;font-weight:500;padding:4px 0;cursor:pointer}
+.cockpit-link{border:0;background:transparent;color:var(--m-blue);font-size:13.5px;font-weight:500;padding:4px 0;cursor:pointer}
 .cockpit-timeline{display:grid;grid-template-columns:96px minmax(0,1fr);column-gap:14px}
 .cockpit-day,.cockpit-day-items{padding:10px 0;border-top:1px solid #eef0f3}
 .cockpit-day strong{display:block;font-size:13.5px;text-transform:capitalize}
@@ -683,7 +683,7 @@ button.cockpit-line:hover .cockpit-line-title{text-decoration:underline}
 .kn-summary p,.kn-summary li{margin:0;font-size:13.5px;line-height:1.55;color:#3a3d44}
 .kn-summary ul{margin:0;padding-left:18px}
 .kn-tech{margin-top:6px;font-size:13px}
-.kn-tech summary{color:#0062cc;cursor:pointer}
+.kn-tech summary{color:var(--m-blue);cursor:pointer}
 .kn-layout{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
 .kn-aside{flex:1 1 200px;max-width:240px;display:flex;flex-direction:column;gap:2px}
 .kn-label{font-size:11.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:#6b7079;padding:14px 10px 6px}
@@ -702,8 +702,8 @@ button.cockpit-line:hover .cockpit-line-title{text-decoration:underline}
 .kn-group-head strong{font-size:14.5px;font-weight:650;overflow-wrap:anywhere}
 .kn-group-head span{font-size:12.5px;color:#6b7079}
 .kn-group-actions{display:flex;gap:6px;flex-wrap:wrap}
-.kn-link{min-height:36px;border:0;background:transparent;color:#0062cc;font-size:13px;font-weight:500;padding:0 8px;cursor:pointer}
-.kn-primary{min-height:36px;border:0;border-radius:999px;background:#0062cc;color:#fff;font-size:13px;font-weight:600;padding:0 14px;cursor:pointer}
+.kn-link{min-height:36px;border:0;background:transparent;color:var(--m-blue);font-size:13px;font-weight:500;padding:0 8px;cursor:pointer}
+.kn-primary{min-height:36px;border:0;border-radius:999px;background:var(--m-blue);color:#fff;font-size:13px;font-weight:600;padding:0 14px;cursor:pointer}
 .kn-row{display:flex;gap:12px;align-items:flex-start;padding:10px 16px;border-top:1px solid #eef0f3}
 .kn-row.is-frist{background:#fffaf2}
 .kn-type{flex:none;width:104px;margin-top:2px;font-size:11.5px;font-weight:600;color:#4a4e57;background:#eef0f3;border-radius:6px;padding:3px 6px;text-align:center;box-sizing:border-box}
@@ -723,10 +723,10 @@ button.cockpit-line:hover .cockpit-line-title{text-decoration:underline}
 .kn-icon:hover{background:#f3f8f4}
 .kn-icon.is-reject:hover{background:#f5f5f6}
 .kn-akte{min-height:38px;border:1px solid #d5d8de;border-radius:11px;background:#fff;color:#1d1d1f;font-size:12.5px;font-weight:500;padding:0 10px;cursor:pointer;white-space:nowrap}
-.kn-row.is-frist .kn-akte{background:#0062cc;border-color:#0062cc;color:#fff;font-weight:600}
+.kn-row.is-frist .kn-akte{background:var(--m-blue);border-color:var(--m-blue);color:#fff;font-weight:600}
 .kn-actions button:disabled{opacity:.45}
 .kn-note{margin:0;padding:10px 16px;font-size:12.5px;color:#6b7079;border-top:1px solid #eef0f3}
-.kn-more-groups{align-self:flex-start;border:0;background:transparent;color:#0062cc;font-size:13.5px;font-weight:500;padding:6px 0;cursor:pointer}
+.kn-more-groups{align-self:flex-start;border:0;background:transparent;color:var(--m-blue);font-size:13.5px;font-weight:500;padding:6px 0;cursor:pointer}
 @media(max-width:700px){.kn-aside{max-width:none;flex-basis:100%}.kn-row{flex-wrap:wrap}.kn-type{width:auto}.kn-actions{width:100%;justify-content:flex-end}}
 .kn-origin{margin:8px 0 0;font-size:12px;color:#6b7079}
 .cockpit-row.is-top{align-items:flex-start}
@@ -770,7 +770,7 @@ body .app .agenda-item.frist-item .meta{color:#b3261e}
 
 /* 15 · Panorama: why Isabella proposes an entry (explanation + quote from the source) */
 .cockpit-why{margin-top:2px;font-size:13.5px;color:#3d4046}
-.cockpit-why summary{cursor:pointer;min-height:32px;display:inline-flex;align-items:center;font-weight:600;color:#235c84;list-style:none}
+.cockpit-why summary{cursor:pointer;min-height:32px;display:inline-flex;align-items:center;font-weight:600;color:var(--m-information);list-style:none}
 .cockpit-why summary::-webkit-details-marker{display:none}
 .cockpit-why summary::after{content:"›";margin-left:6px;transition:transform var(--m-motion-fast,160ms)}
 .cockpit-why[open] summary::after{transform:rotate(90deg)}
@@ -803,4 +803,4 @@ body .app .agenda-item.other-account-entry .meta{color:#8a8f98}
 .app .who-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:16px;padding:0 4px;margin-right:5px;
   border-radius:8px;background:#1f2328;color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.03em;line-height:1;vertical-align:1px;flex:none}
 .app .minds-plan-mine{border:1px solid rgba(0,0,0,.14);background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
-.app .minds-plan-mine.is-on{background:#0062cc;border-color:#0062cc;color:#fff}
+.app .minds-plan-mine.is-on{background:var(--m-blue);border-color:var(--m-blue);color:#fff}

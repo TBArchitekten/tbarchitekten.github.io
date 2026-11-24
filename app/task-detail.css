@@ -37,9 +37,9 @@
 .minds-task-check-row .minds-task-check-grip{flex:none;display:grid;place-items:center;width:16px;height:29px;padding:0;
   color:#b3b7bf;cursor:grab;touch-action:none;border-radius:6px}
 .minds-task-check-row .minds-task-check-grip:active{cursor:grabbing}
-.minds-task-check-row .minds-task-check-grip:focus-visible{outline:2px solid rgba(0,122,255,.35);outline-offset:1px}
+.minds-task-check-row .minds-task-check-grip:focus-visible{outline:2px solid rgba(0,98,204,.35);outline-offset:1px}
 .minds-task-check-row.is-dragging{background:#f2f5fa;box-shadow:0 3px 12px rgba(20,30,50,.14)}
-.minds-task-check-row.is-dragging .minds-task-check-grip{color:#007aff;cursor:grabbing}
+.minds-task-check-row.is-dragging .minds-task-check-grip{color:var(--m-blue);cursor:grabbing}
 @media (hover:hover){
   .minds-task-check-row .minds-task-check-grip{opacity:0}
   .minds-task-check-row:hover .minds-task-check-grip,.minds-task-check-row .minds-task-check-grip:focus-visible,

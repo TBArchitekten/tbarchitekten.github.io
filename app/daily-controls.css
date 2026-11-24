@@ -3,7 +3,7 @@
  * its own visual language; only the calendar's shared semantic states match.
  */
 :root {
-  --m-calendar-selected:#1b1b1d;
+  --m-calendar-selected:var(--m-blue);
   --m-calendar-today:#d94b5b;
   --m-calendar-secondary:#70737c;
   --m-calendar-dot-outline:#ffffff;
@@ -47,8 +47,8 @@
     background:#e9e9eb;
   }
   body[data-section="assistant"].desk-enabled .desk-stage .desk-panel--chat .composer .send {
-    color:#fff;
-    background:#1b1b1d;
+    color:var(--m-on-blue);
+    background:var(--m-blue);
     font-size:24px;
     font-weight:500;
   }
