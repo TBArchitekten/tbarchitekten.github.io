@@ -30,7 +30,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün; in Produktion: alle 24 Produkte haben ein Foto, 44 Unterlagen, kein offener Import-Schlüssel.
 - Quedó pendiente o sin probar: —
 - Riesgos o decisiones que necesitan a Gari: Die Fotos von Hersteller- und Händlerseiten sind für die interne Bibliothek gedacht; vor einer Weitergabe nach außen die Rechte prüfen.
-- PR: #PRNR
+- PR: #160
 
 ### 2026-11-24 · Produktbibliothek: Kategorie «Licht», Dokumentarten «Angebot» und «Sicherheitsdatenblatt» · Claude
 - Qué cambió y por qué: Gari (24.11.2026, OK für genau diese Änderung): Vor dem Paket Licht braucht die Bibliothek die Kategorie «Licht» (der Herstellerkatalog kennt sie seit #157); Angebote und Sicherheitsdatenblätter lagen bisher als «Sonstiges» bei den Produkten.
