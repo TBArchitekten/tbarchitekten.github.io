@@ -104,7 +104,12 @@ async function route(){
     await ladeProjekt();
   }
   const liste=p.get('liste'),vorlage=p.get('vorlage');
-  if(vorlage){ui.ansicht='vorlage';ui.vorlage=vorlage;ui.staende=null;render();void ladeStaende(vorlage)}
+  if(vorlage){
+    const v=zeilen.entscheidungsvorlagen.find(x=>x.id===vorlage);
+    ui.ansicht=istMappe(v)?'mappe':'vorlage';ui.vorlage=vorlage;ui.staende=null;
+    if(ui.ansicht==='mappe'&&mm.offen!==vorlage){mm.offen=vorlage;mm.seite=null;mm.geladen=''}
+    render();void ladeStaende(vorlage);
+  }
   else if(LISTEN.includes(liste)){
     if(ui.art!==liste){ui.filter='alle';ui.disziplin='';ui.suche='';ui.detail=null}
     ui.ansicht='liste';ui.art=liste;render();
@@ -268,6 +273,7 @@ const url=p=>'?'+new URLSearchParams(Object.entries(p).filter(([,v])=>v)).toStri
 function render(){
   if(ui.ansicht==='liste')renderListe();
   else if(ui.ansicht==='vorlage')renderVorlage();
+  else if(ui.ansicht==='mappe')renderMappe();
   else renderUebersicht();
 }
 // Neu zeichnen, ohne Eingaben zu verlieren. Chrome meldet beim Ersetzen des DOM noch change und focusout der alten
@@ -313,7 +319,7 @@ function zeigeProjektwahl(hinweis=''){
 function renderUebersicht(){
   const zk=K.zaehle('klaerungsliste',zeilen.klaerungsliste),ze=K.zaehle('entscheidungsliste',zeilen.entscheidungsliste);
   const warten=K.wartendeEntscheidungspunkte(zeilen.klaerungsliste,zeilen.entscheidungsliste);
-  const vorlagen=zeilen.entscheidungsvorlagen;
+  const vorlagen=zeilen.entscheidungsvorlagen.filter(v=>!istMappe(v));
   const projektwahl='<label class="pd-projekt"><span>Projekt</span><select data-act="projekt">'+projekte.filter(p=>p.status==='aktiv'&&darf(p)).map(p=>
     '<option value="'+esc(p.id)+'"'+(p.id===projekt.id?' selected':'')+'>'+esc(p.number+' · '+p.name)+'</option>').join('')+'</select></label>';
   const karte=(art,code,zahlen,extra)=>{
@@ -345,6 +351,11 @@ function renderUebersicht(){
     '<section class="pd-abschnitt"><h2>Texte</h2><p class="meta">feste Abschnitte, Daten des Projekts schon eingesetzt · Ausgabe als Word oder PDF</p><div class="pd-grid">'+
     '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Entscheidungsvorlagen</h3><span class="pd-code">L3.ENV.1</span></div>'+vorlagenListe+
     '<div class="pd-karte-aktionen"><button type="button" class="btn btn-primary" data-act="neue-vorlage">Neue Vorlage</button></div></article>'+
+    '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Mustermappen</h3><span class="pd-code">L3.MAP.1</span></div>'+(mappen().length?'<ul class="pd-vorlagen">'+mappen().map(v=>
+      '<li><a href="'+esc(url({projekt:projekt.id,vorlage:v.id}))+'" data-nav>'+esc(v.daten.titel||'Mustermappe')+'</a> · '+(v.daten.punkte||[]).length+((v.daten.punkte||[]).length===1?' Position':' Positionen')+' · '+
+      (v.daten.status==='vorgelegt'?'vorgelegt am '+esc(K.datumKurz(v.daten.vorgelegt_am)):'in Arbeit')+'</li>').join('')+'</ul>'
+      :'<p class="meta">Eine Mappe je Themenpaket: Seiten A3 quer aus den Positionen und der Produktbibliothek, vorgestellt im Bemusterungstermin.</p>')+
+    '<div class="pd-karte-aktionen"><button type="button" class="btn btn-primary" data-act="mm-neu">Neue Mustermappe</button></div></article>'+
     folgt('Projektstartvermerk','L3.PSV.1 · M00','Projektdaten, Beteiligte, Termine und Vereinbarungen zum Start')+
     folgt('Kick-off Fachplanung','L3.A1.ABS','Tagesordnung und Protokoll des Kick-offs mit den Fachplanern')+
     '</div></section>'+
@@ -1066,6 +1077,7 @@ function wachse(t){t.style.height='auto';t.style.height=Math.max(t.scrollHeight,
 async function ladeStaende(vid){
   const {data,error}=await sb.from('office_projektdokument_staende').select('id,bezeichnung,inhalt,created_by,created_at').eq('zeile_id',vid).order('created_at',{ascending:false});
   ui.staende=error?[]:(data||[]);
+  if(ui.ansicht==='mappe'&&ui.vorlage===vid){if(!root.querySelector(':focus'))renderMappe();else{const el=root.querySelector('[data-staende]');if(el)el.innerHTML='<h2>Stände</h2>'+(ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button></li>').join('')+'</ul>':'<p class="meta">Noch kein Stand.</p>')}return}
   if(ui.ansicht==='vorlage'&&ui.vorlage===vid&&!root.querySelector(':focus'))renderVorlage();
   else if(ui.ansicht==='vorlage'){const el=root.querySelector('.pd-seite section:last-child');if(el)el.innerHTML='<h2>Stände</h2>'+(ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button><span>'+esc(K.datumLang(String(s.created_at).slice(0,10)))+'</span></li>').join('')+'</ul>':'<p class="meta">Noch kein Stand.</p>')}
 }
@@ -1076,9 +1088,10 @@ async function word(v){
   laden(dateiName(projekt.number+'_Entscheidungsvorlage_'+inh.nr+'_'+heute())+'.docx',bytes,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
 function vorlegenDialog(v){
-  const inh=inhaltVon(v);
-  dialog.innerHTML='<form method="dialog" class="pd-dlg"><h2>Vorlage '+esc(inh.nr)+' vorlegen</h2>'+
-    '<p>Der Stand wird festgehalten und bleibt unverändert. Die Entscheidungen der Vorlage stehen danach in der Entscheidungsliste als «vorgelegt», mit diesem Datum.</p>'+
+  const inh=inhaltVon(v),mappe=istMappe(v);
+  dialog.innerHTML='<form method="dialog" class="pd-dlg"><h2>'+(mappe?esc(v.daten.titel||'Mustermappe')+' vorlegen':'Vorlage '+esc(inh.nr)+' vorlegen')+'</h2>'+
+    (mappe?'<p>Der Stand der Mappe wird festgehalten und bleibt unverändert. Ihre Positionen stehen danach in der Entscheidungsliste als «vorgelegt», mit diesem Datum. Entschieden wird im Bemusterungstermin.</p>'
+      :'<p>Der Stand wird festgehalten und bleibt unverändert. Die Entscheidungen der Vorlage stehen danach in der Entscheidungsliste als «vorgelegt», mit diesem Datum.</p>')+
     '<label class="pd-feld"><span>vorgelegt am</span><input class="pd-in" name="am" value="'+esc(K.datumLang(heute()))+'" required></label>'+
     '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Vorlegen und Stand festhalten</button></div></form>';
   const form=dialog.querySelector('form');
@@ -1099,20 +1112,426 @@ async function vorlegen(v,am){
   v.daten={...v.daten,status:'vorgelegt',vorgelegt_am:am};markiere(v);
   await alleSpeichern();
   if(speicher.fehler)throw new Error('Erst speichern, dann vorlegen: '+speicher.fehler);
-  const inh=inhaltVon(v,am);
+  // Die Mappe hält ihren Inhalt mit dem übernommenen Stand der Bibliothek und den Pfaden der Fotos fest; angezeigt wird
+  // ein Stand immer aus diesem Inhalt (maskiert), nie aus dem gespeicherten HTML.
+  const mappe=istMappe(v),inh=mappe?mappeJetzt(v,am):inhaltVon(v,am);
   const {error}=await sb.from('office_projektdokument_staende').insert({dokument_id:dokumente.entscheidungsvorlagen.id,zeile_id:v.id,
-    bezeichnung:'Vorlage '+inh.nr+' · vorgelegt am '+K.datumLang(am),inhalt:inh,html:htmlAusBloecken(K.vorlageBloecke(inh))});
+    bezeichnung:(mappe?inh.titel:'Vorlage '+inh.nr)+' · vorgelegt am '+K.datumLang(am),inhalt:inh,html:mappe?M.mappeHtml(inh,{modus:'druck'}):htmlAusBloecken(K.vorlageBloecke(inh))});
   if(error)throw error;
   meldung('Vorgelegt; der Stand ist festgehalten.');
   ui.staende=null;render();void ladeStaende(v.id);
 }
 function standDialog(id){
   const s=(ui.staende||[]).find(x=>x.id===id);if(!s)return;
+  if(M&&s.inhalt?.schema===M.SCHEMA){void sicher(()=>mappeStandZeigen(s));return}
   dialog.innerHTML='<div class="pd-dlg pd-dlg-breit"><div class="pd-detail-kopf"><h2>'+esc(s.bezeichnung)+'</h2><button type="button" class="pd-x" data-dlg="zu" aria-label="Schließen">×</button></div>'+
     '<p class="meta">Festgehalten am '+esc(K.datumLang(String(s.created_at).slice(0,10)))+' von '+esc(name(s.created_by)||'jemandem')+'; dieser Stand ändert sich nicht.</p>'+
     '<div class="pd-papier pd-papier-stand">'+htmlAusBloecken(K.vorlageBloecke(s.inhalt||{punkte:[],projekt:{}}))+'</div></div>';
   dialog.querySelector('[data-dlg="zu"]').onclick=()=>dialog.close();
   dialog.showModal();
+}
+
+// ---------- Mustermappe (L3.MAP.1, 24.11.2026) ----------
+// Eine Entscheidungsvorlage in Seitenform (mustermappe-kern.js): jede Position ist eine Entscheidung der
+// Entscheidungsliste, ihre Kandidaten sind die Varianten mit Produkt aus der Produktbibliothek. Die Seite zeigt den
+// Stand der Bibliothek, der beim «Übernehmen» galt; ein neuerer steht als Hinweis daneben. Entschieden wird im
+// Bemusterungstermin (Gari, 24.11.2026), eingetragen in der Entscheidungsliste; die Seiten tragen keine Unterschrift.
+const M=window.TBA_MUSTERMAPPE;
+const PRODUKT_VOLL='id,name,hersteller,serie,familie,kategorie,beschreibung,merkmale,fehlend,status,updated_at';
+const PDFJS='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/';
+const mm={offen:'',seite:null,lesen:false,produkte:new Map(),fotos:new Map(),urls:new Map(),geladen:'',laedt:null,pdfjs:null};
+const istMappe=v=>!!M&&M.istMappe(v);
+const mappen=()=>zeilen.entscheidungsvorlagen.filter(istMappe);
+function mappePunkte(v){return (v?.daten?.punkte||[]).map(id=>zeilen.entscheidungsliste.find(z=>z.id===id)).filter(Boolean)}
+function bildUrl(pfad,bucket=M.BUCKET_PRODUKTE){const x=mm.urls.get(bucket+'|'+pfad);return x&&x.bis>Date.now()?x.url:''}
+// Signierte Adressen für eine Stunde; abgelaufene werden beim nächsten Zeichnen neu geholt.
+async function signiere(bucket,pfade){
+  const jetzt=Date.now(),offen=[...new Set((pfade||[]).filter(Boolean))].filter(p=>{const x=mm.urls.get(bucket+'|'+p);return !x||x.bis<jetzt+120000});
+  if(!offen.length||!sb.storage)return;
+  const {data,error}=await sb.storage.from(bucket).createSignedUrls(offen,3600);
+  if(error||!Array.isArray(data))return;
+  for(const x of data)if(x?.signedUrl&&x.path)mm.urls.set(bucket+'|'+x.path,{url:x.signedUrl,bis:jetzt+3500000});
+}
+function mappeJetzt(v,stand=heute()){
+  const inh=M.mappeInhalt(v,zeilen.entscheidungsliste,{projekt,stand,nummer:n=>K.nummer('entscheidungsliste',n)});
+  return M.mitStandardFotos(inh,id=>(mm.fotos.get(id)||[]).map(d=>({id:d.id,pfad:d.storage_path})));
+}
+async function mappeLaden(v,{neu=false}={}){
+  const ids=[...new Set(mappePunkte(v).flatMap(z=>K.optionen(z.daten).map(o=>o.produkt_id)).filter(Boolean))];
+  const fehlen=neu?ids:ids.filter(id=>!mm.produkte.has(id));
+  if(fehlen.length){
+    const [pr,dk]=await Promise.all([
+      sb.from('office_produkte').select(PRODUKT_VOLL).in('id',fehlen),
+      sb.from('office_produkt_dokumente').select('id,produkt_id,art,name,storage_path,created_at').in('produkt_id',fehlen).eq('art','bild').order('created_at')]);
+    if(pr.error)throw pr.error;
+    for(const p of pr.data||[])mm.produkte.set(p.id,p);
+    for(const id of fehlen)mm.fotos.set(id,(dk.data||[]).filter(d=>d.produkt_id===id));
+  }
+  const pf=M.allePfade(mappeJetzt(v));
+  const alle=[...pf.produkt,...ids.flatMap(id=>(mm.fotos.get(id)||[]).map(d=>d.storage_path))];
+  await Promise.all([signiere(M.BUCKET_PRODUKTE,alle),signiere(M.BUCKET,pf.mappe)]);
+}
+function mappeNachladen(v){
+  if(mm.geladen===v.id||mm.laedt)return;
+  mm.laedt=mappeLaden(v,{neu:true}).catch(e=>{console.warn('Mustermappe · Bibliothek',e);meldung('Die Produktbibliothek ist gerade nicht erreichbar; die Seiten zeigen den übernommenen Stand.','warn')})
+    .finally(()=>{mm.laedt=null;mm.geladen=v.id;if(ui.ansicht==='mappe')spaeterRendern()});
+}
+function seitenSetzen(v,liste){v.daten={...v.daten,seiten:liste};markiere(v)}
+function seitePatch(v,id,patch){seitenSetzen(v,M.seitenVon(v.daten).map(x=>x.id===id?{...x,...patch}:x))}
+function mmWachse(t){t.style.height='auto';t.style.height=t.scrollHeight+'px'}
+function mappeSeite(v){const l=M.seitenVon(v.daten);return l.find(x=>x.id===mm.seite)||l[0]||null}
+
+function renderMappe(){
+  const v=vorlageZeile();
+  if(!v||!istMappe(v)){renderVorlage();return}
+  mappeNachladen(v);
+  if(!quellen.daten&&!quellen.laedt)void ladeQuellen().then(()=>{if(ui.ansicht==='mappe')spaeterRendern()});
+  const inh=mappeJetzt(v),seiten=inh.seiten;
+  if(!seiten.some(x=>x.id===mm.seite))mm.seite=seiten[0]?.id||null;
+  const i=Math.max(0,seiten.findIndex(x=>x.id===mm.seite)),seite=seiten[i]||null;
+  const vorgelegt=v.daten.status==='vorgelegt';
+  const aktionen='<button type="button" class="btn" data-act="mm-pdf">PDF</button>'+
+    '<button type="button" class="btn btn-primary" data-act="vorlegen">'+(vorgelegt?'Erneut vorlegen':'Als vorgelegt markieren')+'</button>';
+  const meta=esc('Vorlage zur Bemusterung'+(inh.termin?' am '+K.datumLang(inh.termin):''))+' · '+(vorgelegt?'vorgelegt am '+esc(K.datumLang(v.daten.vorgelegt_am)):'Entwurf')+
+    ' · <span data-speicher>'+esc(speicherText())+'</span>';
+  const nav='<nav class="card mm-nav" aria-label="Seiten der Mappe"><h2>Seiten</h2><ol class="mm-seitenliste">'+seiten.map((x,j)=>{
+      const p=inh.punkte.find(q=>q.id===x.punkt),o=p?.optionen.find(q=>q.id===x.option),an=x.id===seite?.id;
+      return '<li class="'+(an?'active':'')+'"><button type="button" data-act="mm-seite" data-id="'+esc(x.id)+'"'+(an?' aria-current="page"':'')+'><span class="mm-nr">'+(j+1)+'</span><span>'+esc(M.seiteName(x,p,o))+'</span></button></li>';
+    }).join('')+'</ol>'+
+    '<label class="pd-feld"><span>Seite hinzufügen</span><select class="pd-in" data-act="mm-neue-seite"><option value="">wählen …</option>'+
+      '<option value="frei">Freie Seite · Bild oder PDF</option><option value="uebersicht">Übersicht</option><option value="deckblatt">Deckblatt</option>'+
+      inh.punkte.map(p=>'<option value="vergleich|'+esc(p.id)+'">'+esc((p.code||p.nr)+' · Vergleich')+'</option>'+
+        p.optionen.map(o=>'<option value="material|'+esc(p.id)+'|'+esc(o.id)+'">'+esc((p.code||p.nr)+' · '+o.id+' '+K.kurz(o.name,28)+' · Material')+'</option>').join('')).join('')+
+    '</select></label><button type="button" class="btn" data-act="mm-position-neu">Position hinzufügen</button></nav>';
+  const mitte='<section class="mm-mitte" aria-label="Seite '+(i+1)+' von '+seiten.length+'"><div class="mm-werkzeug"><span class="meta">Seite '+(i+1)+' von '+seiten.length+' · A3 quer · gestrichelt: Text der Mappe</span>'+
+    '<button type="button" class="btn" data-act="mm-zoom" aria-pressed="'+(mm.lesen?'true':'false')+'">'+(mm.lesen?'Ganze Seite':'Lesegröße')+'</button></div>'+
+    '<div class="mm-buehne'+(mm.lesen?' lesen':'')+'">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:seiten.length,modus:'bearbeiten',bild:bildUrl}):'<p class="meta">Die Mappe hat keine Seite.</p>')+'</div>'+
+    mappeHinweise(v,seite)+'</section>';
+  const fokus=vorZeichnen();
+  const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({projekt:projekt.id}),'‹ Projektstart'],
+    kicker:'Projektstart · '+projektName()+' · Mustermappe',titel:inh.titel,meta,aktionen})+
+    '<div class="mm">'+nav+mitte+'<aside class="mm-rechts" aria-label="Einstellungen">'+mappeSeitenleiste(v,inh,seite)+'</aside></div>'+
+    '<div class="pd-druck mm-druck" aria-hidden="true">'+M.mappeHtml(inh,{modus:'druck',bild:bildUrl})+'</div>'+(ui.detail?detailPanel('entscheidungsliste'):'')+'</div>';
+  zeichne(html,fokus);
+  for(const t of root.querySelectorAll('textarea.mm-text'))mmWachse(t);
+}
+// Was nur das Büro sieht: neuer Stand in der Bibliothek, Datenblatt, was im Datenblatt fehlt.
+function mappeHinweise(v,seite){
+  const z=seite&&['vergleich','material'].includes(seite.typ)?zeilen.entscheidungsliste.find(x=>x.id===seite.punkt):null;
+  if(!z)return '';
+  const opts=K.optionen(z.daten).filter(o=>o.produkt_id&&(seite.typ!=='material'||o.id===seite.option));
+  const li=[];
+  for(const o of opts){
+    const p=mm.produkte.get(o.produkt_id);
+    if(M.veraltet(o,p))li.push('<li class="mm-neu"><span><strong>'+esc(o.id)+': neuer Stand in der Bibliothek.</strong> Die Seite zeigt noch den Stand vom '+esc(K.datumLang(String(o.muster_produkt?.stand||'').slice(0,10)))+'.</span><span class="mm-knoepfe"><button type="button" class="btn btn-primary" data-act="mm-uebernehmen" data-z="'+z.id+'" data-o="'+esc(o.id)+'">Übernehmen</button><a class="btn" href="./produktbibliothek.html?id='+encodeURIComponent(o.produkt_id)+'" target="_blank" rel="noopener noreferrer">Ansehen</a></span></li>');
+    const fehlt=o.muster_produkt?.fehlend||[];
+    if(fehlt.length)li.push('<li>'+esc(o.id)+': nicht im Datenblatt: '+esc(fehlt.join(' · '))+'</li>');
+    if(!mm.produkte.has(o.produkt_id)&&mm.geladen===v.id)li.push('<li>'+esc(o.id)+': nicht mehr in der Produktbibliothek.</li>');
+  }
+  return li.length?'<div class="mm-intern"><strong>Nur im Büro sichtbar</strong><ul>'+li.join('')+'</ul></div>':'';
+}
+function mmFeld(z,k,l,{platz='',lang=false}={}){
+  const w=z.daten.muster?.[k]||'',id='mf-'+z.id+'-'+k;
+  return '<label class="pd-feld"><span>'+esc(l)+'</span>'+(lang?'<textarea class="pd-in" id="'+id+'" data-mmfeld="'+k+'" data-z="'+z.id+'" rows="2" placeholder="'+esc(platz)+'">'+esc(w)+'</textarea>'
+    :'<input class="pd-in" id="'+id+'" data-mmfeld="'+k+'" data-z="'+z.id+'" value="'+esc(w)+'" placeholder="'+esc(platz)+'" autocomplete="off">')+'</label>';
+}
+function kandidatenWahl(v,z){
+  const q=quellen.daten;
+  if(!q)return '<p class="meta">'+esc(quellen.fehler||'Produktbibliothek wird geladen …')+'</p>';
+  const schon=new Set(K.optionen(z.daten).map(o=>o.produkt_id).filter(Boolean));
+  const frei=q.produkte.filter(p=>!schon.has(p.id));
+  const imProjekt=frei.filter(p=>Z.verwendungIm(p.id,projekt.id,q.verwendungen));
+  const kat=M.KATEGORIEN[v.daten.themenpaket]||[];
+  const passend=frei.filter(p=>!imProjekt.includes(p)&&kat.includes(p.kategorie)),rest=frei.filter(p=>!imProjekt.includes(p)&&!passend.includes(p));
+  const opt=p=>'<option value="'+esc(p.id)+'">'+esc(K.kurz([p.name,p.hersteller].filter(Boolean).join(' · '),70))+'</option>';
+  const gruppe=(l,t)=>l.length?'<optgroup label="'+esc(t)+'">'+l.map(opt).join('')+'</optgroup>':'';
+  return '<label class="pd-feld"><span>Kandidat aus der Bibliothek</span><select class="pd-in" data-act="mm-kandidat" data-z="'+z.id+'"><option value="">wählen …</option>'+
+    gruppe(imProjekt,'Musterliste des Projekts')+gruppe(passend,'Produktbibliothek · '+(v.daten.themenpaket||''))+gruppe(rest,'weitere')+'</select></label>';
+}
+function fotoWahl(o){
+  const liste=mm.fotos.get(o.produkt_id)||[];
+  if(!liste.length)return '<p class="meta">'+esc(o.id)+': kein Foto in der Bibliothek.</p>';
+  const gew=Array.isArray(o.muster_fotos)?o.muster_fotos:[];
+  return '<div class="pd-feld"><span>Fotos '+esc(o.id)+(gew.length?'':' · automatisch das erste')+'</span><div class="mm-thumbs">'+liste.slice(0,8).map(d=>{
+    const n=gew.findIndex(f=>f.id===d.id),url=bildUrl(d.storage_path);
+    return '<button type="button" class="mm-thumb" data-act="mm-foto" data-z="'+esc(o._z)+'" data-o="'+esc(o.id)+'" data-d="'+esc(d.id)+'" aria-pressed="'+(n>=0?'true':'false')+'" aria-label="'+esc('Foto '+(d.name||'')+(n>=0?', Nummer '+(n+1):''))+'">'+
+      (url?'<img src="'+esc(url)+'" alt="">':'')+(n>=0?'<b>'+(n+1)+'</b>':'')+'</button>';
+  }).join('')+'</div></div>';
+}
+function mappeSeitenleiste(v,inh,seite){
+  const z=seite&&['vergleich','material'].includes(seite.typ)?zeilen.entscheidungsliste.find(x=>x.id===seite.punkt):null;
+  const opts=z?K.optionen(z.daten):[];
+  const zeige=(k,l)=>'<label><input type="checkbox" data-act="mm-zeige" data-k="'+k+'"'+(seite?.zeige?.[k]===false?'':' checked')+'> '+esc(l)+'</label>';
+  let karte='<section class="card"><h2>'+esc(seite?M.SEITEN[seite.typ]:'Seite')+'</h2>';
+  if(seite?.typ==='vergleich'){
+    const auf=Array.isArray(seite.optionen)?seite.optionen:opts.map(o=>o.id);
+    karte+=(opts.length?'<p class="meta">Kandidaten auf der Seite, höchstens drei</p><div class="mm-wahl">'+opts.map(o=>'<label><input type="checkbox" data-act="mm-seite-option" data-o="'+esc(o.id)+'"'+(auf.includes(o.id)?' checked':'')+'> '+esc(o.id+' · '+K.kurz(o.text||o.produkt,48))+'</label>').join('')+'</div>':'')+
+      '<p class="meta">Auf der Seite zeigen</p><div class="mm-wahl">'+zeige('kennwerte','Kennwerte')+zeige('kosten','Kosten')+zeige('empfehlung','Empfehlung')+'</div>'+
+      opts.filter(o=>o.produkt_id&&auf.includes(o.id)).map(o=>fotoWahl({...o,_z:z.id})).join('');
+  }else if(seite?.typ==='material'){
+    karte+='<label class="pd-feld"><span>Variante</span><select class="pd-in" data-act="mm-material-option">'+opts.map(o=>'<option value="'+esc(o.id)+'"'+(o.id===seite.option?' selected':'')+'>'+esc(o.id+' · '+K.kurz(o.text||o.produkt,48))+'</option>').join('')+'</select></label>'+
+      '<p class="meta">Auf der Seite zeigen</p><div class="mm-wahl">'+zeige('kennwerte','Kennwerte')+zeige('kosten','Kosten')+zeige('empfehlung','Empfehlung')+'</div>'+
+      opts.filter(o=>o.produkt_id&&o.id===seite.option).map(o=>fotoWahl({...o,_z:z.id})).join('');
+  }else if(seite?.typ==='frei'){
+    karte+='<p class="meta">Ein Bild oder ein PDF, etwa ein Plan aus Archicad oder eine Seite aus InDesign; vom PDF kommt eine Seite als Bild auf die Seite.</p>'+
+      '<label class="pd-feld"><span>Seite im PDF</span><input class="pd-in" type="number" min="1" max="2000" data-act="mm-pdf-seite" value="'+esc(seite.pdf_seite||1)+'"></label>'+
+      '<label class="btn">'+(seite.bild?.pfad?'Anderes Bild oder PDF':'Bild oder PDF hochladen')+'<input type="file" class="pb-datei" hidden accept="image/jpeg,image/png,image/webp,application/pdf" data-act="mm-datei"></label>'+
+      (seite.bild?.pfad?' <button type="button" class="btn" data-act="mm-bild-weg">Bild entfernen</button>':'');
+  }else karte+='<p class="meta">'+(seite?.typ==='uebersicht'?'Die Übersicht entsteht aus den Positionen; bei Strategie A und B getrennt.':'Titel, Projekt und Termin kommen aus den Angaben der Mappe.')+'</p>';
+  karte+='<div class="mm-knoepfe"><button type="button" class="btn" data-act="mm-hoch" aria-label="Seite nach oben">↑</button><button type="button" class="btn" data-act="mm-runter" aria-label="Seite nach unten">↓</button>'+
+    '<button type="button" class="btn" data-act="mm-seite-weg">Seite entfernen</button></div></section>';
+  let position='';
+  if(z){
+    const m=z.daten.muster||{};
+    position='<section class="card"><h2>Position '+esc(m.code||K.nummer('entscheidungsliste',z.nr))+'</h2>'+
+      '<div class="pd-zwei">'+mmFeld(z,'code','Code im Plan',{platz:'B2'})+mmFeld(z,'bezeichnung','Bezeichnung',{platz:'Holz – Eiche'})+'</div>'+
+      '<label class="pd-feld"><span>Strategie</span><select class="pd-in" id="mf-'+z.id+'-strategie" data-mmfeld="strategie" data-z="'+z.id+'">'+M.STRATEGIEN.map(([k,l])=>'<option value="'+k+'"'+(k===(m.strategie||'')?' selected':'')+'>'+esc(l)+'</option>').join('')+'</select></label>'+
+      mmFeld(z,'zonen','Zonen',{platz:'z. B. Ausstellung 537 m² · Kabinett 45'})+mmFeld(z,'flaeche','Fläche',{platz:'z. B. 630 m²'})+
+      mmFeld(z,'anforderungen','Anforderungen',{platz:'z. B. R9 · Aufbau ≤ 15 mm',lang:true})+mmFeld(z,'hinweise','Zu beachten',{platz:'für den Bauherrn',lang:true})+
+      '<div class="pd-zwei">'+mmFeld(z,'kosten','Kostenrahmen',{platz:'z. B. 60–215 €/m²'})+mmFeld(z,'kosten_beleg','Beleg',{platz:'z. B. Richtwerte'})+'</div>'+
+      '<label class="pd-feld"><span>Empfehlung des Büros</span><select class="pd-in" id="mf-'+z.id+'-empfehlung" data-mmfeld="empfehlung" data-z="'+z.id+'"><option value="">offen</option>'+opts.map(o=>'<option'+(o.id===z.daten.empfehlung?' selected':'')+'>'+esc(o.id)+'</option>').join('')+'</select></label>'+
+      '<h3>Kandidaten</h3><ul class="mm-kandliste">'+opts.map(o=>{
+        const p=mm.produkte.get(o.produkt_id);
+        return '<li><span><strong>'+esc(o.id)+'</strong> '+esc(K.kurz(o.text||o.produkt,60))+' '+produktMarke(o)+'</span>'+(M.veraltet(o,p)?'<span class="chip chip-att">neuer Stand in der Bibliothek</span>':'')+
+          '<span class="mm-knoepfe"><button type="button" class="pd-link" data-act="mm-material" data-z="'+z.id+'" data-o="'+esc(o.id)+'">Materialseite</button>'+
+          '<button type="button" class="pd-link" data-act="mm-kandidat-weg" data-z="'+z.id+'" data-o="'+esc(o.id)+'">entfernen</button></span></li>';
+      }).join('')+'</ul>'+kandidatenWahl(v,z)+
+      '<button type="button" class="pd-link" data-act="punkt-details" data-z="'+z.id+'">Varianten und Details in der Entscheidungsliste</button></section>';
+  }
+  const punkte=mappePunkte(v);
+  const positionen='<section class="card"><h2>Positionen</h2>'+(punkte.length?'<ul class="pd-punkte">'+punkte.map(x=>{
+      const m=x.daten.muster||{},s1=M.seitenVon(v.daten).find(y=>y.punkt===x.id);
+      return '<li><span class="pd-nr">'+esc(m.code||K.nummer('entscheidungsliste',x.nr))+'</span> '+esc(m.bezeichnung||x.daten.thema||'')+' · '+esc(x.daten.status||'')+
+        '<span class="pd-punkt-aktionen">'+(s1?'<button type="button" class="pd-link" data-act="mm-seite" data-id="'+esc(s1.id)+'">Seite</button>':'')+
+        (x.daten.status==='entschieden'?'<button type="button" class="pd-link" data-act="freigeben" data-z="'+x.id+'">In der Produktbibliothek freigeben</button>':'')+
+        '<button type="button" class="pd-link" data-act="mm-position-weg" data-z="'+x.id+'">aus der Mappe nehmen</button></span></li>';
+    }).join('')+'</ul>':'<p class="meta">Noch keine Position. Eine Position ist ein Eintrag der Entscheidungsliste mit Code aus dem Plan.</p>')+
+    '<button type="button" class="btn" data-act="mm-position-neu">Position hinzufügen</button></section>';
+  const ang=(k,l,ph='')=>'<label class="pd-feld"><span>'+esc(l)+'</span><input class="pd-in" id="m-'+k+'" data-vmeta="'+k+'" value="'+esc(k==='besprechung_am'?K.datumLang(v.daten[k]):v.daten[k])+'" placeholder="'+esc(ph)+'" autocomplete="off"></label>';
+  const angaben='<section class="card"><h2>Angaben der Mappe</h2>'+ang('titel','Titel')+
+    '<label class="pd-feld"><span>Themenpaket</span><select class="pd-in" id="m-themenpaket" data-vmeta="themenpaket">'+M.THEMEN.map(t=>'<option'+(t===v.daten.themenpaket?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'+
+    ang('besprechung_am','Bemusterungstermin','TT.MM.JJJJ')+ang('auftraggeber','Bauherr')+ang('strategie_a','Strategie A','kurz, z. B. Terrazzo und Eiche')+ang('strategie_b','Strategie B')+ang('verfasser','Verfasser')+'</section>';
+  const termin='<section class="card"><h2>Entschieden wird im Termin</h2><p class="meta">Die Mappe wird im Bemusterungstermin vorgestellt; dort wird entschieden, nicht auf dem Blatt. '+
+    'Eintragen in der Entscheidungsliste mit Datum, Entscheider und dem Termin als Fundstelle; danach «In der Produktbibliothek freigeben».</p></section>';
+  const staende=ui.staende===null?'<p class="meta">wird geladen …</p>':ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button><span>'+esc([K.datumLang(String(s.created_at).slice(0,10)),name(s.created_by)].filter(Boolean).join(' · '))+'</span></li>').join('')+'</ul>'
+    :'<p class="meta">Noch kein Stand. Beim Vorlegen wird der Stand festgehalten und bleibt unverändert.</p>';
+  return karte+position+positionen+angaben+termin+'<section class="card" data-staende><h2>Stände</h2>'+staende+'</section>';
+}
+function neueMappeDialog(){
+  dialog.innerHTML='<form method="dialog" class="pd-dlg"><h2>Neue Mustermappe</h2><p class="meta">Eine Mappe je Themenpaket. Die Positionen (Codes aus dem Plan) und ihre Kandidaten aus der Produktbibliothek kommen danach.</p>'+
+    '<label class="pd-feld"><span>Themenpaket</span><select class="pd-in" name="paket">'+M.THEMEN.map(t=>'<option>'+esc(t)+'</option>').join('')+'</select></label>'+
+    '<label class="pd-feld"><span>Bemusterungstermin (falls schon bekannt)</span><input class="pd-in" name="termin" placeholder="TT.MM.JJJJ" autocomplete="off"></label>'+
+    '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Mappe anlegen</button></div></form>';
+  const form=dialog.querySelector('form');
+  form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
+  form.onsubmit=e=>{
+    e.preventDefault();const t=K.leseDatum(form.termin.value);
+    if(t===null){dialog.querySelector('[data-dlg-fehler]').textContent='Datum bitte als TT.MM.JJJJ eingeben.';return}
+    dialog.close();
+    void sicher(async()=>{const v=await neueZeile('entscheidungsvorlagen',M.neueMappe({themenpaket:form.paket.value,verfasser:meinName(),termin:t}));gehe({projekt:projekt.id,vorlage:v.id})});
+  };
+  dialog.showModal();
+}
+function positionDialog(v){
+  dialog.innerHTML='<form method="dialog" class="pd-dlg"><h2>Position hinzufügen</h2><p class="meta">Eine Position ist ein Eintrag der Entscheidungsliste: Code aus dem Plan, Bezeichnung und Strategie. Die Kandidaten kommen danach aus der Produktbibliothek.</p>'+
+    '<div class="pd-zwei"><label class="pd-feld"><span>Code im Plan</span><input class="pd-in" name="code" placeholder="z. B. B2" required maxlength="12" autocomplete="off"></label>'+
+    '<label class="pd-feld"><span>Bezeichnung</span><input class="pd-in" name="bez" placeholder="z. B. Holz – Eiche" required maxlength="120" autocomplete="off"></label></div>'+
+    '<label class="pd-feld"><span>Strategie</span><select class="pd-in" name="strategie">'+M.STRATEGIEN.map(([k,l])=>'<option value="'+k+'">'+esc(l)+'</option>').join('')+'</select></label>'+
+    '<div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Position anlegen</button></div></form>';
+  const form=dialog.querySelector('form');
+  form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
+  form.onsubmit=e=>{
+    e.preventDefault();const code=form.code.value.trim(),bez=form.bez.value.trim();if(!code||!bez)return;
+    dialog.close();void sicher(()=>positionAnlegen(v,{code,bezeichnung:bez,strategie:form.strategie.value}));
+  };
+  dialog.showModal();
+}
+async function positionAnlegen(v,{code,bezeichnung,strategie}){
+  const z=await neueZeile('entscheidungsliste',M.neuePosition({code,bezeichnung,strategie,titel:v.daten.titel,vorlageId:v.id}));
+  const seite={id:M.neueId(),typ:'vergleich',punkt:z.id};
+  v.daten={...v.daten,punkte:[...(v.daten.punkte||[]),z.id],seiten:[...M.seitenVon(v.daten),seite]};markiere(v);
+  mm.seite=seite.id;meldung('Position '+code+' angelegt; sie steht auch in der Entscheidungsliste.');render();
+}
+function positionWeg(v,id){
+  const z=zeileVon(id);
+  v.daten={...v.daten,punkte:(v.daten.punkte||[]).filter(x=>x!==id)};
+  v.daten.seiten=M.seitenVon(v.daten);markiere(v);
+  if(z&&z.daten.vorlage_id===v.id){const d={...z.daten};delete d.vorlage_id;z.daten=d;markiere(z)}
+  if(ui.detail===id)ui.detail=null;
+  meldung('Aus der Mappe genommen; die Entscheidung bleibt in der Entscheidungsliste.');render();
+}
+async function kandidatHinzu(v,z,produktId){
+  await ladeQuellen();
+  const q=quellen.daten;if(!q)throw new Error(quellen.fehler||'Die Produktbibliothek ist gerade nicht erreichbar.');
+  const liste=K.optionen(z.daten);
+  if(liste.length>=8)throw new Error('Mehr als acht Kandidaten passen nicht in eine Position.');
+  const {data:p,error}=await sb.from('office_produkte').select(PRODUKT_VOLL).eq('id',produktId).maybeSingle();
+  if(error||!p)throw new Error('Das Produkt ist gerade nicht erreichbar.');
+  mm.produkte.set(p.id,p);
+  let ver=Z.verwendungIm(p.id,projekt.id,q.verwendungen);
+  // Jeder Kandidat steht in der Musterliste des Projekts (Verwendung «vorgeschlagen»), wie «In die Musterliste».
+  if(!ver)ver=await neueVerwendung(p,'vorgeschlagen','Kandidat für '+(z.daten.thema||K.nummer('entscheidungsliste',z.nr))+' in der Mustermappe');
+  if(!setze('entscheidungsliste',z,'optionen',[...K.optionen(z.daten),M.kandidat(K.optionen(z.daten),p,{produkt:Z.produktText(p,ver)})]))return;
+  const {data:dk}=await sb.from('office_produkt_dokumente').select('id,produkt_id,art,name,storage_path,created_at').eq('produkt_id',p.id).eq('art','bild').order('created_at');
+  mm.fotos.set(p.id,dk||[]);
+  await signiere(M.BUCKET_PRODUKTE,(dk||[]).map(d=>d.storage_path));
+  meldung(p.name+' ist Kandidat; in der Musterliste des Projekts «vorgeschlagen».');render();
+}
+function kandidatWeg(v,z,oid){
+  const o=K.optionen(z.daten).find(x=>x.id===oid);if(!o)return;
+  if(!window.confirm('Kandidat '+oid+' ('+(o.text||o.produkt||'')+') aus der Position nehmen? In der Musterliste bleibt das Produkt.'))return;
+  setze('entscheidungsliste',z,'optionen',K.optionen(z.daten).filter(x=>x.id!==oid));
+  if(z.daten.empfehlung===oid)setze('entscheidungsliste',z,'empfehlung','');
+  seitenSetzen(v,M.seitenVon(v.daten).filter(x=>!(x.typ==='material'&&x.punkt===z.id&&x.option===oid))
+    .map(x=>x.typ==='vergleich'&&x.punkt===z.id&&Array.isArray(x.optionen)?{...x,optionen:x.optionen.filter(i=>i!==oid)}:x));
+  render();
+}
+function optionenPatch(z,oid,f){
+  setze('entscheidungsliste',z,'optionen',K.optionen(z.daten).map(o=>o.id===oid?f({...o}):o));
+}
+function seiteNeu(v,wert){
+  const [typ,punkt,option]=String(wert||'').split('|');
+  if(!M.SEITEN[typ])return;
+  const seite={id:M.neueId(),typ,...(punkt?{punkt}:{}),...(option?{option}:{})};
+  const liste=M.seitenVon(v.daten),i=liste.findIndex(x=>x.id===mm.seite);
+  liste.splice(i<0?liste.length:i+1,0,seite);
+  seitenSetzen(v,liste);mm.seite=seite.id;render();
+}
+async function pdfAlsBild(datei,nr){
+  if(!mm.pdfjs){
+    try{mm.pdfjs=await import(PDFJS+'pdf.min.mjs');mm.pdfjs.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.mjs'}
+    catch(e){console.warn('pdf.js',e);throw new Error('Das PDF kann hier gerade nicht gelesen werden. Bitte die Seite als Bild (JPG oder PNG) exportieren.')}
+  }
+  const aufgabe=mm.pdfjs.getDocument({data:new Uint8Array(await datei.arrayBuffer())}),doc=await aufgabe.promise;
+  try{
+    const seite=Math.min(Math.max(1,Math.floor(nr)||1),doc.numPages);
+    const p=await doc.getPage(seite);
+    const v1=p.getViewport({scale:1}),scale=Math.min(4,3200/Math.max(v1.width,v1.height));
+    const vp=p.getViewport({scale});
+    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+    const ctx=c.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,c.width,c.height);
+    await p.render({canvas:c,canvasContext:ctx,viewport:vp}).promise;
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+    if(!blob)throw new Error('Die PDF-Seite konnte nicht als Bild gespeichert werden.');
+    return {blob,seite,seiten:doc.numPages};
+  }finally{void aufgabe.destroy?.()}
+}
+async function freiesBild(v,seiteId,datei){
+  if(!datei)return;
+  const seite=M.seitenVon(v.daten).find(x=>x.id===seiteId);if(!seite)return;
+  let blob=datei,typ=datei.type||'',name=datei.name||'Bild';
+  if(typ==='application/pdf'||/\.pdf$/i.test(name)){
+    if(datei.size>40*1024*1024)throw new Error('Das PDF ist größer als 40 MB.');
+    meldung('PDF wird gelesen …');
+    const r=await pdfAlsBild(datei,Number(seite.pdf_seite)||1);
+    blob=r.blob;typ='image/jpeg';name=name.replace(/\.pdf$/i,'')+' · Seite '+r.seite+' von '+r.seiten;
+  }
+  const f=M.bildPruefen(typ,blob.size);if(f)throw new Error(f);
+  const dok=await sichereDokument('entscheidungsvorlagen');
+  const pfad=M.dateiPfad(dok.id,nutzer.id,crypto.randomUUID(),typ);
+  const {error}=await sb.storage.from(M.BUCKET).upload(pfad,blob,{contentType:typ,upsert:false});
+  if(error)throw new Error('Das Bild wurde nicht hochgeladen: '+(error.message||'Fehler'));
+  seitePatch(v,seiteId,{bild:{pfad,name:String(name).slice(0,160)},titel:seite.titel||String(name).replace(/\.(jpe?g|png|webp)$/i,'').slice(0,120)});
+  await signiere(M.BUCKET,[pfad]);meldung('Das Bild steht auf der Seite.');render();
+}
+async function mappeDrucken(v){
+  await alleSpeichern();
+  try{await mappeLaden(v)}catch(e){console.warn('Mustermappe · Fotos',e)}
+  render();
+  const d=root.querySelector('.mm-druck');if(!d)return;
+  await Promise.all([...d.querySelectorAll('img')].map(i=>i.complete?null:new Promise(r=>{i.addEventListener('load',r,{once:true});i.addEventListener('error',r,{once:true})})));
+  // A3 quer nur für diesen Druck; die Entscheidungsvorlage bleibt A4.
+  const st=document.createElement('style');st.textContent='@page{size:A3 landscape;margin:0}';document.head.append(st);
+  document.documentElement.classList.add('mm-drucken');
+  window.addEventListener('afterprint',()=>{st.remove();document.documentElement.classList.remove('mm-drucken')},{once:true});
+  window.print();
+}
+async function mappeStandZeigen(st){
+  const inh=st.inhalt||{seiten:[],punkte:[],projekt:{}},pf=M.allePfade(inh);
+  await Promise.all([signiere(M.BUCKET_PRODUKTE,pf.produkt),signiere(M.BUCKET,pf.mappe)]);
+  dialog.innerHTML='<div class="pd-dlg pd-dlg-breit"><div class="pd-detail-kopf"><h2>'+esc(st.bezeichnung)+'</h2><button type="button" class="pd-x" data-dlg="zu" aria-label="Schließen">×</button></div>'+
+    '<p class="meta">Festgehalten am '+esc(K.datumLang(String(st.created_at).slice(0,10)))+' von '+esc(name(st.created_by)||'jemandem')+'; dieser Stand ändert sich nicht.</p>'+
+    '<div class="mm-stand">'+M.mappeHtml(inh,{modus:'druck',bild:bildUrl})+'</div></div>';
+  dialog.querySelector('[data-dlg="zu"]').onclick=()=>dialog.close();
+  dialog.showModal();
+}
+function mappeKlick(act,el){
+  const v=vorlageZeile();if(!v||!istMappe(v))return;
+  const z=el.dataset.z?zeileVon(el.dataset.z):null;
+  if(act==='mm-seite'){mm.seite=el.dataset.id;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
+  else if(act==='mm-zoom'){mm.lesen=!mm.lesen;render()}
+  else if(act==='mm-pdf')void sicher(()=>mappeDrucken(v));
+  else if(act==='mm-position-neu')positionDialog(v);
+  else if(act==='mm-position-weg'){if(window.confirm('Die Position aus der Mappe nehmen? In der Entscheidungsliste bleibt sie.'))positionWeg(v,el.dataset.z)}
+  else if(act==='mm-hoch'||act==='mm-runter'){seitenSetzen(v,M.seiteVerschieben(M.seitenVon(v.daten),mm.seite,act==='mm-hoch'?-1:1));render()}
+  else if(act==='mm-seite-weg'){
+    const l=M.seitenVon(v.daten);if(l.length<2){meldung('Eine Seite braucht die Mappe.','warn');return}
+    const i=l.findIndex(x=>x.id===mm.seite);if(i<0)return;
+    if(!window.confirm('Seite '+(i+1)+' entfernen? Die Position und ihre Kandidaten bleiben.'))return;
+    l.splice(i,1);seitenSetzen(v,l);mm.seite=(l[i]||l[i-1]).id;render();
+  }
+  else if(act==='mm-material'&&z){
+    const l=M.seitenVon(v.daten),da=l.find(x=>x.typ==='material'&&x.punkt===z.id&&x.option===el.dataset.o);
+    if(da){mm.seite=da.id;render();return}
+    const i=Math.max(...l.map((x,j)=>x.punkt===z.id?j:-1));
+    const seite={id:M.neueId(),typ:'material',punkt:z.id,option:el.dataset.o};
+    l.splice(i<0?l.length:i+1,0,seite);seitenSetzen(v,l);mm.seite=seite.id;render();
+  }
+  else if(act==='mm-kandidat-weg'&&z)kandidatWeg(v,z,el.dataset.o);
+  else if(act==='mm-uebernehmen'&&z){
+    optionenPatch(z,el.dataset.o,o=>{const p=mm.produkte.get(o.produkt_id);return p?{...o,muster_produkt:M.produktAuszug(p)}:o});
+    meldung('Neuer Stand übernommen.');render();
+  }
+  else if(act==='mm-foto'&&z){
+    const o=K.optionen(z.daten).find(x=>x.id===el.dataset.o),d=(mm.fotos.get(o?.produkt_id)||[]).find(x=>x.id===el.dataset.d);
+    if(o&&d){optionenPatch(z,o.id,x=>({...x,muster_fotos:M.fotosUmschalten(x.muster_fotos,{id:d.id,pfad:d.storage_path})}));render()}
+  }
+  else if(act==='mm-bild-weg'){const s1=mappeSeite(v);if(s1){const d={...s1};delete d.bild;seitenSetzen(v,M.seitenVon(v.daten).map(x=>x.id===s1.id?d:x));render()}}
+}
+function mappeAenderung(el){
+  const v=vorlageZeile();if(!v||!istMappe(v))return false;
+  const act=el.dataset.act;
+  if(act==='mm-neue-seite'){if(el.value)seiteNeu(v,el.value);return true}
+  if(act==='mm-kandidat'){const z=zeileVon(el.dataset.z);if(z&&el.value){const id=el.value;el.disabled=true;void sicher(()=>kandidatHinzu(v,z,id))}return true}
+  const seite=mappeSeite(v);
+  if(act==='mm-zeige'&&seite){seitePatch(v,seite.id,{zeige:{...(seite.zeige||{}),[el.dataset.k]:el.checked}});spaeterRendern();return true}
+  if(act==='mm-seite-option'&&seite){
+    const z=zeileVon(seite.punkt),alle=z?K.optionen(z.daten).map(o=>o.id):[];
+    let auf=Array.isArray(seite.optionen)?seite.optionen.filter(i=>alle.includes(i)):alle.slice(0,M.MAX_KANDIDATEN);
+    auf=el.checked?[...new Set([...auf,el.dataset.o])]:auf.filter(i=>i!==el.dataset.o);
+    if(auf.length>M.MAX_KANDIDATEN){meldung('Auf eine Vergleichsseite passen höchstens drei Kandidaten.','warn');el.checked=false;return true}
+    seitePatch(v,seite.id,{optionen:alle.filter(i=>auf.includes(i))});spaeterRendern();return true;
+  }
+  if(act==='mm-material-option'&&seite){seitePatch(v,seite.id,{option:el.value});spaeterRendern();return true}
+  if(act==='mm-pdf-seite'&&seite){seitePatch(v,seite.id,{pdf_seite:Math.max(1,Math.floor(Number(el.value))||1)});return true}
+  if(act==='mm-datei'&&seite){const f=el.files?.[0];if(f)void sicher(()=>freiesBild(v,seite.id,f));return true}
+  if(el.matches('[data-mmfeld]')){
+    const z=zeileVon(el.dataset.z);if(!z)return true;
+    const k=el.dataset.mmfeld;
+    if(k==='empfehlung'){setze('entscheidungsliste',z,'empfehlung',el.value);spaeterRendern();return true}
+    const m={...(z.daten.muster||{}),[k]:el.value.trim()};
+    if((z.daten.muster||{})[k]===m[k])return true;
+    setze('entscheidungsliste',z,'muster',m);
+    if(k==='code'||k==='bezeichnung')setze('entscheidungsliste',z,'thema',M.thema(m));
+    spaeterRendern();return true;
+  }
+  return false;
+}
+// Tippen auf der Seite: gespeichert wird nach einer kurzen Pause, neu gezeichnet erst beim Verlassen des Felds.
+function mappeEingabe(el){
+  const v=vorlageZeile();if(!v||!istMappe(v))return false;
+  if(el.matches('textarea[data-mmtext]')){const z=zeileVon(el.dataset.z);if(z){z.daten={...z.daten,[el.dataset.mmtext]:el.value};markiere(z)}}
+  else if(el.matches('textarea[data-mmopt]')){
+    const [zid,oid]=el.dataset.mmopt.split('|'),z=zeileVon(zid);
+    if(z){z.daten={...z.daten,optionen:K.optionen(z.daten).map(o=>o.id===oid?{...o,muster_text:el.value}:o)};markiere(z)}
+  }
+  else if(el.matches('textarea[data-mmseite]')){
+    const [sid,k]=el.dataset.mmseite.split('|');
+    v.daten={...v.daten,seiten:M.seitenVon(v.daten).map(x=>x.id===sid?{...x,[k]:el.value}:x)};markiere(v);
+  }
+  else if(el.matches('textarea[data-mmvorlage]')){v.daten={...v.daten,[el.dataset.mmvorlage]:el.value};markiere(v)}
+  else return false;
+  mmWachse(el);return true;
 }
 
 // ---------- Romy ----------
@@ -1315,6 +1734,8 @@ root.addEventListener('click',e=>{
     return;
   }
   const act=el.dataset.act,art=ui.art;
+  if(act==='mm-neu'){neueMappeDialog();return}
+  if(act.startsWith('mm-')&&ui.ansicht==='mappe'){if(el.matches('select,input'))return;mappeKlick(act,el);return}
   if(act==='filter'){ui.filter=el.dataset.f;renderListe()}
   else if(act==='spalten'){ui.alleSpalten=!ui.alleSpalten;renderListe()}
   else if(act==='excel')void sicher(()=>excel(el.dataset.art));
@@ -1349,7 +1770,7 @@ root.addEventListener('click',e=>{
   else if(act==='drucken')void sicher(async()=>{await alleSpeichern();renderVorlage();window.print()});
   else if(act==='vorlegen'){const v=vorlageZeile();if(v)vorlegenDialog(v)}
   else if(act==='stand')standDialog(el.dataset.id);
-  else if(act==='punkt-details'){const z=zeileVon(el.dataset.z);if(z){ui.detail=z.id;ui.verlauf=null;renderVorlage()}}
+  else if(act==='punkt-details'){const z=zeileVon(el.dataset.z);if(z){ui.detail=z.id;ui.verlauf=null;render()}}
   else if(act==='punkt-weg')void sicher(()=>punktWeg(el.dataset.z));
   else if(act==='romy')romyDialog(ui.art);
   else if(act==='vs-ja')void sicher(async()=>{const v=vorschlaege.find(x=>x.id===el.dataset.id);if(!v)return;el.disabled=true;await uebernehmen(v);meldung('Übernommen.');render()});
@@ -1375,6 +1796,7 @@ root.addEventListener('change',e=>{
   if(el.matches('[data-act="disziplin"]')){ui.disziplin=el.value;renderListe();return}
   if(el.matches('[data-act="runde"]')){void sicher(async()=>{await sichereDokument('klaerungsliste');await setzeMeta('klaerungsliste',{runde:el.value});renderListe()});return}
   if(el.matches('[data-act="punkt-neu"]')){if(el.value)void sicher(()=>punktNeu(el.value));return}
+  if(ui.ansicht==='mappe'&&el.matches('[data-act^="mm-"],[data-mmfeld]')&&mappeAenderung(el))return;
   // Eine Auswahl gilt sofort; die Zelle bleibt offen, bis Enter, Tab oder ein Klick daneben sie schließt.
   if(el.matches('select[data-edit]')){const r=uebernimmZelle(el);if(r==='dialog'){const z=zeileVon(el.dataset.z);ui.edit=null;renderListe();if(z)entscheidungDialog(z)}else zeigeSpeicherstand();return}
   if(el.matches('[data-feld]')){if(feldAusPanel(el))spaeterRendern();return}
@@ -1386,6 +1808,7 @@ root.addEventListener('input',e=>{
   if(zeichnet)return;
   const el=e.target;
   if(el.matches('[data-act="suche"]')){ui.suche=el.value;clearTimeout(el._t);el._t=setTimeout(()=>{renderListe();const s=root.querySelector('[data-act="suche"]');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length)}},250);return}
+  if(ui.ansicht==='mappe'&&el.matches('textarea.mm-text')){mappeEingabe(el);return}
   if(el.matches('textarea[data-vfeld]')){const z=zeileVon(el.dataset.z);if(z){z.daten={...z.daten,[el.dataset.vfeld]:el.value};if(Array.isArray(z.daten._romy))z.daten._romy=z.daten._romy.filter(k=>k!==el.dataset.vfeld);markiere(z)}wachse(el);return}
   if(el.matches('textarea.pd-in[data-edit]'))el.style.height=Math.max(el.scrollHeight,60)+'px';
 });
@@ -1454,6 +1877,7 @@ function vmeta(el){
   if(el.dataset.vmeta==='besprechung_am'){const iso=K.leseDatum(wert);if(iso===null){meldung('Datum bitte als TT.MM.JJJJ eingeben.','warn');return}wert=iso}
   if(gleich(v.daten[el.dataset.vmeta],wert))return;
   v.daten={...v.daten,[el.dataset.vmeta]:wert};markiere(v);
+  if(istMappe(v)){spaeterRendern();return}
   const d=root.querySelector('.pd-druck');if(d)d.innerHTML=htmlAusBloecken(K.vorlageBloecke(inhaltVon(v)));
 }
 async function punktNeu(id){

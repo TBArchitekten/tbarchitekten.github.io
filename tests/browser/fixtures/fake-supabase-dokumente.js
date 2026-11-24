@@ -24,11 +24,15 @@
     office_terminplan_instances:[{id:'55555555-5555-4555-8555-555555555555',project_id:PID,phase:'LPH3',is_archived:false,
       state:{tasks:[{id:'t1',name:'Vorabzug TWP',type:'milestone',start:'2026-12-04'}]}}],
     // Zahlen der Varianten: Produktbibliothek, Kostenberechnung des Testprojekts und zwei alte (Datenpool), erfunden.
-    office_produkte:[{id:PR1,typ:'produkt',kategorie:'bodenbelag',name:'Parkett Eiche geölt',hersteller:'Holz AG',serie:'',familie:'Parkett',beschreibung:'',status:'geprueft',archiviert:false},
-      {id:PR2,typ:'produkt',kategorie:'bodenbelag',name:'Naturstein Jura',hersteller:'Stein GmbH',serie:'',familie:'',beschreibung:'',status:'entwurf',archiviert:false}],
+    // Mustermappe: Merkmale mit Seite, Fehlendes und Stand der Bibliothek; ein Foto für das Parkett.
+    office_produkte:[{id:PR1,typ:'produkt',kategorie:'bodenbelag',name:'Parkett Eiche geölt',hersteller:'Holz AG',serie:'',familie:'Parkett',beschreibung:'Massivparkett Eiche, geölt.',status:'geprueft',archiviert:false,
+        merkmale:[{feld:'Aufbau',wert:'massiv 16 mm',seite:4},{feld:'Brandverhalten',wert:'Cfl-s1',seite:5}],fehlend:['R-Gruppe'],updated_at:'2026-11-20T10:00:00.000Z'},
+      {id:PR2,typ:'produkt',kategorie:'bodenbelag',name:'Naturstein Jura',hersteller:'Stein GmbH',serie:'',familie:'',beschreibung:'',status:'entwurf',archiviert:false,merkmale:[],fehlend:[],updated_at:'2026-11-18T10:00:00.000Z'}],
     office_produkt_preise:[{id:'66666666-6666-4666-8666-666666666671',produkt_id:PR1,art:'angebot_eingebaut',betrag:185,einheit:'m²',stand:'2025-11-10',quelle:'Angebot Schreinerei Test',projekt_bezeichnung:'T-90 Altbau',kg:'352',kommentar:''},
       {id:'66666666-6666-4666-8666-666666666672',produkt_id:PR1,art:'listenpreis_material',betrag:64.9,einheit:'m²',stand:'2026-05-02',quelle:'Preisliste 2026',projekt_bezeichnung:'',kg:'',kommentar:''}],
-    office_produkt_dokumente:[{id:'66666666-6666-4666-8666-666666666681',produkt_id:PR1,art:'datenblatt'}],
+    office_produkt_dokumente:[{id:'66666666-6666-4666-8666-666666666681',produkt_id:PR1,art:'datenblatt'},
+      {id:'66666666-6666-4666-8666-666666666682',produkt_id:PR1,art:'bild',name:'Eiche Oberfläche',storage_path:UID+'/'+PR1+'/eiche.jpg',created_at:'2026-11-20T10:00:00.000Z'}],
+    storage:{},
     office_produkt_verwendungen:[],
     office_kosten_templates:[{id:'66666666-6666-4666-8666-666666666691',is_active:true,state:{indizes:INDIZES,indexReihe:'Baupreisindex Test',ustProzent:'19'}}],
     office_kosten_instances:[
@@ -183,10 +187,28 @@
     }
     return {data:null,error:{message:'unbekannte Aktion'}};
   }
+  // Storage: hochgeladene Bilder als data-URL im sessionStorage; Fotos der Bibliothek als kleines SVG.
+  const FOTO='data:image/svg+xml;base64,'+btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><rect width="40" height="30" fill="#b9a27e"/></svg>');
+  const alsUrl=b=>new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=bad;r.readAsDataURL(b)});
+  function speicher(bucket){
+    const ablage=()=>db.storage||(db.storage={});
+    const url=p=>ablage()[bucket+'/'+p]?.url||(bucket==='office-produkte'?FOTO:null);
+    return {
+      async upload(pfad,datei,opt){
+        window.__fake.aufrufe.push({table:'storage:'+bucket,op:'upload',daten:{pfad,typ:opt?.contentType||datei.type,groesse:datei.size}});
+        if(ablage()[bucket+'/'+pfad])return {data:null,error:{message:'The resource already exists'}};
+        ablage()[bucket+'/'+pfad]={typ:opt?.contentType||datei.type,groesse:datei.size,url:await alsUrl(datei)};sichern();
+        return {data:{path:pfad},error:null};
+      },
+      async createSignedUrls(pfade){return {data:pfade.map(p=>({path:p,signedUrl:url(p),error:url(p)?null:'not found'})),error:null}},
+      async createSignedUrl(p){return url(p)?{data:{signedUrl:url(p)},error:null}:{data:null,error:{message:'not found'}}},
+      async remove(pfade){for(const p of pfade)delete ablage()[bucket+'/'+p];sichern();return {data:[],error:null}}
+    };
+  }
   const client={
     auth:{getSession:async()=>({data:{session},error:null}),getUser:async()=>({data:{user:session.user},error:null}),
       onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({error:null})},
-    from:t=>builder(t),rpc:async()=>({data:null,error:null}),functions:{invoke}
+    from:t=>builder(t),rpc:async()=>({data:null,error:null}),functions:{invoke},storage:{from:speicher}
   };
   window.supabase={createClient:()=>client};
 })();
