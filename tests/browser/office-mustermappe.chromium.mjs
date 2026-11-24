@@ -24,7 +24,8 @@ const server=http.createServer((req,res)=>{
 }).listen(0);
 // pdf.js kommt im Büro vom CDN; hier aus dem lokal installierten Paket, sonst wird der PDF-Teil übersprungen.
 let pdfjsOrdner='';
-try{pdfjsOrdner=path.dirname(createRequire(import.meta.url).resolve('pdfjs-dist/build/pdf.min.mjs'))}catch{}
+try{pdfjsOrdner=path.join(path.dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json')),'legacy','build')}catch{}
+if(pdfjsOrdner&&!fs.existsSync(path.join(pdfjsOrdner,'pdf.min.mjs')))pdfjsOrdner='';
 const browser=await chromium.launch({headless:true});
 let geteilt=null;
 test.after(async()=>{await geteilt?.ctx.close();await browser.close();server.close()});
@@ -55,7 +56,7 @@ async function oeffne(){
     page.on('pageerror',e=>fehler.push(e.message));
     page.on('dialog',d=>void d.accept());
     await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
-    await page.route(/cdn\.jsdelivr\.net\/npm\/pdfjs-dist@[^/]+\/build\/(pdf(\.worker)?\.min\.mjs)/,async r=>{
+    await page.route(/cdn\.jsdelivr\.net\/npm\/pdfjs-dist@[^/]+\/legacy\/build\/(pdf(\.worker)?\.min\.mjs)/,async r=>{
       if(!pdfjsOrdner){await r.abort();return}
       const datei=/build\/(.*)$/.exec(r.request().url())[1];
       // Wie jsDelivr: Module von einer anderen Herkunft brauchen CORS.
@@ -209,7 +210,9 @@ test('Freie Seite mit Bild und mit einer Seite aus einem PDF',async t=>{
   await page.locator('select[data-act="mm-neue-seite"]').selectOption('frei');
   await page.locator('input[data-act="mm-pdf-seite"]').fill('2');await page.locator('input[data-act="mm-pdf-seite"]').press('Tab');
   await page.locator('input[data-act="mm-datei"]').setInputFiles({name:'Plaene.pdf',mimeType:'application/pdf',buffer:pdfDatei()});
-  await page.locator('.pd-meldung',{hasText:'Das Bild steht auf der Seite.'}).waitFor({timeout:20000});
+  // Fertig ist es mit der Bestätigung oder einer Meldung; die Meldung steht dann in der Prüfung.
+  await page.waitForFunction(()=>{const t=document.querySelector('.pd-meldung')?.textContent||'';return !!t&&!/PDF wird gelesen/.test(t)},null,{timeout:30000});
+  assert.match(await page.locator('.pd-meldung').innerText(),/Das Bild steht auf der Seite\./);
   await gespeichert(page);
   d=await db(page);
   const jpg=Object.entries(d.storage).filter(([k])=>k.endsWith('.jpg'));

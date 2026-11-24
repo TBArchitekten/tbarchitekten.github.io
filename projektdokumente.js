@@ -1138,7 +1138,8 @@ function standDialog(id){
 // Bemusterungstermin (Gari, 24.11.2026), eingetragen in der Entscheidungsliste; die Seiten tragen keine Unterschrift.
 const M=window.TBA_MUSTERMAPPE;
 const PRODUKT_VOLL='id,name,hersteller,serie,familie,kategorie,beschreibung,merkmale,fehlend,status,updated_at';
-const PDFJS='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/';
+// pdf.js in der «legacy»-Fassung: läuft auch in etwas älteren Browsern (Safari, iPad) und im Chromium des CI.
+const PDFJS='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/legacy/build/';
 const mm={offen:'',seite:null,lesen:false,produkte:new Map(),fotos:new Map(),urls:new Map(),geladen:'',laedt:null,pdfjs:null};
 const istMappe=v=>!!M&&M.istMappe(v);
 const mappen=()=>zeilen.entscheidungsvorlagen.filter(istMappe);
