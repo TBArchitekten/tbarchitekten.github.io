@@ -29,7 +29,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `build.py` alle Prüfungen OK (52 Codes, jeder Stand genau einmal erzeugt, zyklenfrei, zeitlich konsistent, Konkordanz vollständig: BEM-03 bis -06 jetzt in den Paketen); `node --test tests/*.test.cjs tests/*.test.mjs` grün.
 - Quedó pendiente o sin probar: Planner des Projekts (siehe oben); Prüfpunkte, die nur unter einem Parameter gelten (Muster bei P-MUS = nein), stehen weiter im Text statt als Bedingung.
 - Riesgos o decisiones que necesitan a Gari: Die Zuweisungen der Pakete macht Gari selbst in den Karten.
-- PR: (dieser)
+- PR: #147
 
 ### 2026-11-24 · Projektstart: Romy propone en las listas y en la Entscheidungsvorlage · Claude
 - Qué cambió y por qué: segunda parte de lo aprobado por Gari (24.11., 06:45): Romy como en los programas de IA investigados (propuestas con Fundstelle, nada cambia sin «Übernehmen», historial de quién propuso y quién aceptó).
