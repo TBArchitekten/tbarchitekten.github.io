@@ -798,23 +798,43 @@ const WORK_ICON={
 function workIcon(name){
  return '<svg class="work-ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(WORK_ICON[name]||'')+'</svg>'
 }
-function workAssigneeName(t){
- const ids=t.assignee_person_ids||[];
- return ids.length?ids.map(id=>team.find(p=>p.id===id)?.name||'Unbekannt').join(', '):String(t.assignee||'').trim()
-}
 function workAvatarInitials(name){
  return String(name||'').split(/[\s,]+/).filter(Boolean).slice(0,2).map(s=>s[0]?.toLocaleUpperCase('de-DE')).join('')||'–'
+}
+// Every responsible person gets an avatar (Gari, 24.11.2026), stacked like an avatar group; from five on: three and "+N".
+function workAssigneePeople(t){
+ const ids=t.assignee_person_ids||[];
+ if(ids.length)return ids.map(id=>({id,name:team.find(p=>p.id===id)?.name||'Unbekannt'}));
+ const legacy=String(t.assignee||'').trim();
+ return legacy?[{id:'',name:legacy}]:[];
+}
+function workAvatarTone(key){
+ let h=0;for(const c of String(key||''))h=(h*31+c.charCodeAt(0))>>>0;return h%6
+}
+function workAvatars(people){
+ const shown=people.length>4?people.slice(0,3):people;
+ return '<span class="work-assignee-avatars" aria-hidden="true">'+
+  shown.map(p=>`<span class="work-assignee-avatar" data-tone="${workAvatarTone(p.id||p.name)}">${esc(workAvatarInitials(p.name))}</span>`).join('')+
+  (people.length>shown.length?`<span class="work-assignee-avatar is-more">+${people.length-shown.length}</span>`:'')+'</span>'
+}
+// Status on the card (Gari, 24.11.2026): half-filled circle = in progress (as in Microsoft Planner), pause = waiting.
+function workTaskState(t){
+ if(t.completed_at)return {key:'done',label:''};
+ if(t.work_status==='in_progress')return {key:'progress',label:'In Bearbeitung'};
+ if(t.work_status==='waiting')return {key:'waiting',label:'Wartet'};
+ return {key:'open',label:''}
 }
 function taskCard(t,preview=false){
   const checks=taskChecklist(t),done=checks.filter(x=>x?.done).length,attachments=taskAttachments(t);
   const firstImage=attachments.find(a=>a?.path&&String(a?.mime||a?.type||'').startsWith('image/')),cached=firstImage?cachedWorkUrl(firstImage.path):'';
   const due=t.due_date?new Date(t.due_date+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'short'}):'';
   const overdue=!!(t.due_date&&t.due_date<localIso()&&!t.completed_at);
-  const name=workAssigneeName(t);
+  const people=workAssigneePeople(t),name=people.map(p=>p.name).join(', '),state=workTaskState(t);
   const priority=t.priority&&t.priority!=='normal'
     ?t.priority==='urgent'?'Dringend':t.priority==='important'?'Wichtig':'Niedrig':'';
-  return `<article class="work-task-card ${t.completed_at?'is-done':''}" draggable="${!preview}" data-work-task="${t.id}" tabindex="0">
-    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''}" ${preview?'disabled title="Muster · nur Ansicht"':''} data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':'Erledigen'}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
+  const toggleTitle=preview?'Muster · nur Ansicht':state.label?state.label+' · anklicken zum Erledigen':'';
+  return `<article class="work-task-card ${t.completed_at?'is-done':''}" draggable="${!preview}" data-work-task="${t.id}" data-work-state="${state.key}" tabindex="0">
+    <div class="work-task-title-row"><button type="button" class="work-task-toggle ${t.completed_at?'is-checked':''} ${state.key==='progress'?'is-progress':''} ${state.key==='waiting'?'is-waiting':''}" ${preview?'disabled':''} ${toggleTitle?`title="${esc(toggleTitle)}"`:''} data-work-toggle="${t.id}" aria-label="${t.completed_at?'Wieder öffnen':(state.label?state.label+' · erledigen':'Erledigen')}: ${esc(t.title)}" aria-pressed="${!!t.completed_at}">${t.completed_at?'✓':''}</button><strong>${esc(t.title)}</strong></div>
     ${firstImage?`<img class="work-task-cover" loading="lazy" ${cached?`src="${esc(cached)}" data-loaded="1"`:''} data-work-task-image="${esc(firstImage.path)}" alt="${esc(firstImage.name||t.title)}">`:''}
     ${checks.length?`<div class="work-card-checks">${checks.slice(0,5).map(x=>`<div class="${x.done?'done':''}"><span class="work-subcheck" aria-hidden="true">${x.done?'✓':''}</span><span>${esc(x.text||'')}</span></div>`).join('')}${checks.length>5?`<div class="work-check-more">+${checks.length-5} weitere</div>`:''}</div>`:''}
     <footer>
@@ -824,7 +844,7 @@ function taskCard(t,preview=false){
         ${attachments.length?`<span class="work-meta-chip" title="${attachments.length} Anlagen">${workIcon('attachment')}${attachments.length}</span>`:''}
         ${priority?`<span class="work-meta-priority">${priority}</span>`:''}
       </div>
-      ${name?`<div class="work-card-assignee" aria-label="Verantwortlich: ${esc(name)}" title="Verantwortlich: ${esc(name)}"><span class="work-assignee-avatar" aria-hidden="true">${esc(workAvatarInitials(name))}</span><span class="work-assignee-name">${esc(name)}</span></div>`:''}
+      ${name?`<div class="work-card-assignee" aria-label="Verantwortlich: ${esc(name)}" title="Verantwortlich: ${esc(name)}">${workAvatars(people)}<span class="work-assignee-name">${esc(name)}</span></div>`:''}
     </footer>
   </article>`
 }

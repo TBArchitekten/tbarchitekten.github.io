@@ -179,9 +179,9 @@ test('Muster is rendered inside EXISTING Office Work Planner (no second custom b
   assert.match(detail,/function preview\(\{task,buckets=\[\],projectName='Muster LPH 3'/);
   assert.match(detail,/if\(ctx\.readOnly\)\{/);
   assert.match(detail,/return; \/\/ No autoguardado, Upload, Checklistenänderung, Archiv oder Zeitplanung/);
-  assert.match(index,/work\.js\?v=office50/);
+  assert.match(index,/work\.js\?v=office51/);
   assert.match(work,/fetch\('\.\/data\/muster-planner-lph3-v0\.3\.json/);
-  assert.match(index,/task-detail\.js\?v=office4/);
+  assert.match(index,/task-detail\.js\?v=office5/);
 });
 
 test('Original task editor gains only optional Office metadata and keeps its operational features',()=>{

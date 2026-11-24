@@ -376,3 +376,38 @@ body[data-section="work"] .work-task-toggle{margin-top:1px}
   #modal:has(.minds-task-detail) .minds-task-fields select,
   body[data-section="work"] .work-task-card{border-color:#737984}
 }
+
+/* Every responsible person on the card, stacked; tones keep people apart (Gari, 24.11.2026). */
+body[data-section="work"] .work-assignee-avatars{display:flex;flex:none;align-items:center}
+body[data-section="work"] .work-assignee-avatars .work-assignee-avatar{position:relative;box-shadow:0 0 0 2px #fff}
+body[data-section="work"] .work-assignee-avatars .work-assignee-avatar+.work-assignee-avatar{margin-left:-6px}
+/* The first person stays fully readable; the next ones tuck in behind. */
+body[data-section="work"] .work-assignee-avatars .work-assignee-avatar:nth-child(1){z-index:4}
+body[data-section="work"] .work-assignee-avatars .work-assignee-avatar:nth-child(2){z-index:3}
+body[data-section="work"] .work-assignee-avatars .work-assignee-avatar:nth-child(3){z-index:2}
+body[data-section="work"] .work-assignee-avatars .work-assignee-avatar:nth-child(4){z-index:1}
+/* Long checklist items on the card: the circle sits at the first line. */
+body[data-section="work"] .work-card-checks>div{align-items:start}
+body[data-section="work"] .work-card-checks .work-subcheck{margin-top:1px}
+body[data-section="work"] .work-assignee-avatar[data-tone="1"]{background:#dcefe6;color:#2e6a50}
+body[data-section="work"] .work-assignee-avatar[data-tone="2"]{background:#fbe6d6;color:#8a4a1c}
+body[data-section="work"] .work-assignee-avatar[data-tone="3"]{background:#dceaf8;color:#2b5d8e}
+body[data-section="work"] .work-assignee-avatar[data-tone="4"]{background:#f6dfe8;color:#8a3657}
+body[data-section="work"] .work-assignee-avatar[data-tone="5"]{background:#ece7d6;color:#6a5a26}
+body[data-section="work"] .work-assignee-avatar.is-more{background:#eceef2;color:#4b4f58}
+
+/* Status on the card: half-filled circle = In Bearbeitung (as in Microsoft Planner), pause = Wartet. */
+body[data-section="work"] .work-task-toggle.is-progress{
+  border-color:#007aff;background:linear-gradient(90deg,#007aff 50%,#fff 50%)}
+body[data-section="work"] .work-task-toggle.is-progress:hover{
+  background:linear-gradient(90deg,#007aff 50%,#f2f8ff 50%)}
+body[data-section="work"] .work-task-toggle.is-waiting{border-color:#c27a00}
+body[data-section="work"] .work-task-toggle.is-waiting::before{
+  content:"";width:3px;height:9px;border-left:2.5px solid #c27a00;border-right:2.5px solid #c27a00}
+
+/* Checklist in the task detail: steps wrap and can be moved. */
+#modal:has(.minds-task-detail) .minds-task-check-row{align-items:flex-start}
+#modal:has(.minds-task-detail) .minds-task-check-row input[type="checkbox"]{margin-top:6px}
+#modal:has(.minds-task-detail) .minds-task-check-row textarea{
+  font-family:inherit;font-size:13px;line-height:1.45;color:#343740}
+#modal:has(.minds-task-detail) .minds-task-check-row .minds-task-check-grip{height:31px}
