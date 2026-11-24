@@ -17,7 +17,9 @@ const lang='Entscheidungsfelder festgelegt: kostenrelevante Qualitäten je Baute
   'und Ausstattungsliste, damit jedes Feld genau einem Paket zugeordnet werden kann';
 const task=(id,extra)=>({id,client_key:id,title:'Aufgabe '+id,work_bucket_id:'b0',work_status:'not_started',priority:'normal',
   start_date:null,due_date:null,labels:[],checklist:[],attachments:[],links:[],metadata:{},completed_at:null,project_id:'p1',
-  updated_at:'2026-11-24T08:00:00Z',...extra});
+  user_id:'pa',updated_at:'2026-11-24T08:00:00Z',...extra});
+// Dates relative to today, as the browser sees it.
+const tag=n=>{const d=new Date();d.setDate(d.getDate()+n);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
 const people=[['pa','Gari Beispiel'],['pb','Ana Muster'],['pc','Carla Test'],['pd','Dora Probe'],['pe','Emil Beispiel']];
 const fixtures={
   isabella_projects:[{id:'p1',client_key:'p1',name:'Testprojekt',number:'0001',archived:false}],
@@ -25,17 +27,24 @@ const fixtures={
   isabella_tasks:[
     task('zwei',{work_status:'in_progress'}),
     task('fuenf',{work_status:'waiting'}),
-    task('liste',{checklist:[{id:'c1',done:false,text:lang},{id:'c2',done:false,text:'Muster angefragt'},{id:'c3',done:true,text:'Termine abgestimmt'}]})
+    task('liste',{checklist:[{id:'c1',done:false,text:lang},{id:'c2',done:false,text:'Muster angefragt'},{id:'c3',done:true,text:'Termine abgestimmt'}]}),
+    task('ueberfaellig',{due_date:tag(-10)}),
+    task('kollegin',{user_id:'pb',due_date:tag(0)})
   ],
   minds_work_task_assignees:[
     {task_id:'zwei',person_id:'pa',created_at:'2026-11-24T08:00:00Z'},{task_id:'zwei',person_id:'pb',created_at:'2026-11-24T08:01:00Z'},
-    ...people.map(([id],i)=>({task_id:'fuenf',person_id:id,created_at:'2026-11-24T08:0'+i+':00Z'}))
+    ...people.map(([id],i)=>({task_id:'fuenf',person_id:id,created_at:'2026-11-24T08:0'+i+':00Z'})),
+    {task_id:'ueberfaellig',person_id:'pb',created_at:'2026-11-24T08:00:00Z'}
+  ],
+  office_terminplan_instances:[
+    {id:'tp-lph3',project_id:'p1',phase:'LPH3',updated_at:'2026-11-20T10:00:00Z',is_archived:false},
+    {id:'tp-lph5',project_id:'p1',phase:'LPH5',updated_at:'2026-11-22T10:00:00Z',is_archived:false}
   ]
 };
 const harness=`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${pageCss}</head>
 <body data-section="work" class="office-app"><div class="app" id="app"><main id="swipeArea" class="swipe-area"><section id="workScreen" class="screen work-screen active" data-screen="work"><div class="work-shell">
 <div class="work-head"><div><h1 id="workProjectTitle">Work</h1></div><div class="work-project-switch"></div></div>
-<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button></div>
+<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button type="button" data-work-tool="terminplan" hidden>Terminplan</button><button type="button" data-work-tool="kosten" hidden>Kostenberechnung</button></div>
 <div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div></div></section></main></div>
 <div id="modalRoot" hidden></div>
 <script>
@@ -152,6 +161,72 @@ test('Checkliste: lange Punkte brechen um; verschieben mit Alt+Pfeil und am Grif
       const a=document.activeElement;return {n:rows.length,pos:rows.indexOf(a?.closest('[data-task-check-id]')),leer:a?.value===''}});
     assert.deepEqual(nachEnter,{n:4,pos:2,leer:true});
     assert.equal(await page.locator('#taskDetailChecks [data-task-check-id="c2"] textarea').inputValue(),'Muster angefragt');
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
+
+const sichtbar=page=>page.evaluate(()=>[...document.querySelectorAll('[data-work-task]')].filter(c=>!c.hidden&&c.offsetParent).map(c=>c.dataset.workTask).sort());
+const waehle=(page,key,value)=>page.locator(`.work-planner-filter [data-work-filter="${key}"]`).selectOption(value);
+
+test('Filter: Nur meine, Person, Status und Fällig; nur für mich, und das Gerät merkt ihn sich',async()=>{
+  const {page,errors}=await board();
+  try{
+    assert.deepEqual(await sichtbar(page),['fuenf','kollegin','liste','ueberfaellig','zwei']);
+    assert.equal(await page.locator('[data-work-filter-person="all"]').getAttribute('aria-pressed'),'true');
+    // Nur meine: verantwortlich, oder ohne Verantwortliche und von mir angelegt (wie Heute).
+    await page.locator('[data-work-filter-person="mine"]').click();
+    assert.deepEqual(await sichtbar(page),['fuenf','liste','zwei']);
+    assert.equal(await page.locator('[data-work-bucket-drop="b0"] .work-bucket-count').textContent(),'3 / 5');
+    assert.equal(await page.locator('[data-work-filter-result]').textContent(),'3 von 5 Aufgaben');
+    assert.equal(await page.locator('[data-work-filter-reset]').isVisible(),true);
+    assert.deepEqual(await page.evaluate(()=>window.__writes.length),0,'ein Filter schreibt nichts');
+    // Neu laden: der Filter bleibt auf diesem Gerät.
+    await page.reload();await page.locator('[data-work-task="liste"]').waitFor({state:'attached'});
+    assert.equal(await page.locator('[data-work-filter-person="mine"]').getAttribute('aria-pressed'),'true');
+    assert.deepEqual(await sichtbar(page),['fuenf','liste','zwei']);
+    // Eine Person; dann Ohne Verantwortliche.
+    await waehle(page,'person','pb');
+    assert.deepEqual(await sichtbar(page),['fuenf','ueberfaellig','zwei']);
+    assert.equal(await page.locator('[data-work-filter-person="mine"]').getAttribute('aria-pressed'),'false');
+    await waehle(page,'person','none');
+    assert.deepEqual(await sichtbar(page),['kollegin','liste']);
+    // Zurücksetzen, dann Status und Fällig.
+    await page.locator('[data-work-filter-reset]').click();
+    assert.deepEqual(await sichtbar(page),['fuenf','kollegin','liste','ueberfaellig','zwei']);
+    assert.equal(await page.locator('[data-work-bucket-drop="b0"] .work-bucket-count').textContent(),'5');
+    assert.equal(await page.locator('[data-work-filter-reset]').isVisible(),false);
+    await waehle(page,'status','in_progress');
+    assert.deepEqual(await sichtbar(page),['zwei']);
+    await waehle(page,'status','all');
+    await waehle(page,'due','overdue');
+    assert.deepEqual(await sichtbar(page),['ueberfaellig']);
+    await waehle(page,'due','week');
+    assert.deepEqual(await sichtbar(page),['kollegin']);
+    await waehle(page,'due','none');
+    assert.deepEqual(await sichtbar(page),['fuenf','liste','zwei']);
+    // Nichts passt: der Bucket sagt es.
+    await waehle(page,'status','waiting');await waehle(page,'person','none');
+    assert.deepEqual(await sichtbar(page),[]);
+    const leer=await page.evaluate(()=>getComputedStyle(document.querySelector('[data-work-bucket-drop="b0"] [data-work-task-list="open"]'),'::after').content);
+    assert.equal(leer,'"Keine passenden Aufgaben"');
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
+
+test('Reiter Terminplan und Kostenberechnung: mehrere zur Wahl, keine Kostenberechnung führt zum Anlegen',async()=>{
+  const {page,errors}=await board();
+  const geoeffnet=[];
+  await page.route(/\/(terminplan|kostenberechnung)\.html/,r=>{geoeffnet.push(new URL(r.request().url()).pathname+new URL(r.request().url()).search);r.fulfill({contentType:'text/html',body:'<p>ok</p>'})});
+  try{
+    assert.equal(await page.locator('[data-work-tool="terminplan"]').isVisible(),true);
+    await page.locator('[data-work-tool="terminplan"]').click();
+    const wahl=await page.locator('.work-tool-menu a').evaluateAll(a=>a.map(x=>[x.querySelector('span').textContent,x.getAttribute('href')]));
+    assert.deepEqual(wahl,[['Terminplan LPH 3','../terminplan.html?id=tp-lph3'],['Terminplan LPH 5','../terminplan.html?id=tp-lph5']]);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.work-tool-menu').count(),0,'Escape schließt die Wahl');
+    await page.locator('[data-work-tool="kosten"]').click();
+    await page.waitForURL(/kostenberechnung\.html/);
+    assert.deepEqual(geoeffnet,['/kostenberechnung.html?neu=p1']);
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });

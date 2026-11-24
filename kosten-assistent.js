@@ -154,7 +154,7 @@ function init(b){
   aside.id='kbAssistent';aside.className='inspektor assistent';aside.hidden=true;aside.setAttribute('aria-label','Assistent');
   aside.innerHTML='<div class="inspektor-kopf as-kopf"><div class="as-titel"><strong>Assistent</strong><span class="meta" id="asModell">KI · schlägt vor, du entscheidest</span></div>'+
     '<button type="button" class="inspektor-zu" data-as="zu" aria-label="Assistent schließen">×</button></div>'+
-    '<div class="as-body" id="asBody"><div class="as-leer" id="asLeer"><p class="as-lead">Frag, was du willst, auf Deutsch oder Spanisch: zu dieser Kostenberechnung, zu DIN 276 und HOAI, zu Bauteilen, Produkten und Preisen. '+
+    '<div class="as-body" id="asBody"><div class="as-leer" id="asLeer"><p class="as-lead">Frag, was du willst: zu dieser Kostenberechnung, zu DIN 276 und HOAI, zu Bauteilen, Produkten und Preisen. '+
     'Für Aktuelles sucht der Assistent im Internet und nennt die Quellen. Er wertet Angebote, Kostenbeiträge und das alte Büro-Excel aus und schlägt Positionen vor; '+
     'jeder Preis zeigt, woher er kommt, Schätzungen stehen als «Annahme KI» da. In die Kostenberechnung kommt nur, was du übernimmst.</p>'+
     '<div class="as-starts">'+[['fehlt','Was fehlt noch?'],['excel','Altes Büro-Excel übernehmen'],['angebot','Angebot oder Kostenbeitrag auswerten'],

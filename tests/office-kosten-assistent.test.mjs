@@ -285,9 +285,10 @@ test('Seite: Knopf «Assistent», Details gehen vor, übernehmen nur über geaen
   assert.match(client,/expected_revision:b\.revision\(\)/);
   assert.doesNotMatch(client,/\.from\('office_kosten_instances'\)/);
   assert.doesNotMatch(client,/localStorage/);
-  for(const t of ['Prüfen und übernehmen','Verwerfen','Rückgängig','Altes Büro-Excel übernehmen','Was fehlt noch?','auf Deutsch oder Spanisch',
+  for(const t of ['Prüfen und übernehmen','Verwerfen','Rückgängig','Altes Büro-Excel übernehmen','Was fehlt noch?','Frag, was du willst: zu dieser Kostenberechnung',
     'Für Aktuelles sucht der Assistent im Internet','nie der Projektname','«Annahme KI»','class="as-links"','rel="noopener noreferrer"'])
     assert.ok(client.includes(t),'fehlt: '+t);
+  assert.ok(!client.includes('willst, auf Deutsch oder Spanisch'),'keine Sprachen im Einstieg (Gari, 24.11.2026)');
   assert.doesNotMatch(client,/25 Anfragen|daily_ai_limit_reached/);
   assert.match(client,/const VERSION='office-kosten-ai-v2';/);
   for(const [name,txt] of [['kosten-assistent.js',client],['core.mjs',read('supabase/functions/office-kosten-ai/core.mjs')],['index.ts',edge]])

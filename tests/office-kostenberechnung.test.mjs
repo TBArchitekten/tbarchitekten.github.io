@@ -285,7 +285,7 @@ test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/<strong>Kostenberechnung<\/strong><small>Nach DIN 276 bis zur 3\. Ebene/);
   assert.match(shell,/NAV_ICONS\.kosten='<svg /);
   assert.match(projekte,/getElementById\('officeToolsKosten'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/kostenberechnung\.html';/);
-  assert.match(index,/\.\/shell\.js\?v=office52/);
+  assert.match(index,/\.\/shell\.js\?v=office53/);
   assert.match(index,/\.\/office-projects\.js\?v=office57/);
   assert.match(ui,/href="\.\/app\/#section=tools">‹ Werkzeuge/);
 });
@@ -295,7 +295,7 @@ test('die Seite lädt den Office-Client wie der Terminplan, und die Module mit V
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(seite,/@supabase\/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   for(const s of ['./office-config.js?v=1','./shared/supabase-client.js?v=office3','./kosten-rechnen.js?v=office5',
-    './kosten-import.js?v=office3','./kosten-assistent.js?v=office2','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office9','./kostenberechnung.css?v=office7'])
+    './kosten-import.js?v=office3','./kosten-assistent.js?v=office3','./kosten-pool.js?v=office3','./kostenberechnung.js?v=office10','./kostenberechnung.css?v=office7'])
     assert.ok(seite.includes(s),'fehlt: '+s);
   assert.ok(seite.indexOf('kosten-rechnen.js')<seite.indexOf('kosten-import.js')&&seite.indexOf('kosten-import.js')<seite.indexOf('kosten-assistent.js')&&
     seite.indexOf('kosten-assistent.js')<seite.indexOf('kosten-pool.js')&&seite.indexOf('kosten-pool.js')<seite.indexOf('kostenberechnung.js?'));
@@ -386,7 +386,7 @@ test('Anleitungen: Kostenberechnung neu, Terminplan überarbeitet, beide im Stil
   assert.match(read('app/office-projects.js'),/Anleitung zum Terminplan · Werkzeug, Assistent, LPH 3 und LPH 5/);
   for(const id of ['ablauf','kostengruppen','archicad','kennwerte','bericht','assistent','quellen'])assert.match(hilfe,new RegExp('id="'+id+'"'));
   // Assistent (Teil VI): was er kann, prüfen und übernehmen, keine Preise ohne Herkunft, Daten und Grenzen.
-  for(const t of ['Teil VI · Assistent','Altes Büro-Excel übernehmen','Prüfen und übernehmen','Rückgängig','auf Deutsch oder Spanisch',
+  for(const t of ['Teil VI · Assistent','Altes Büro-Excel übernehmen','Prüfen und übernehmen','Rückgängig','Du sprichst mit ihm wie mit einem Kollegen über diese Kostenberechnung',
     'Woher die Zahlen kommen','kommt der Preis als «Annahme KI», nicht als BKI oder Angebot','Er schreibt nie selbst in die Kostenberechnung',
     'Höchstens 80 Positionen je Vorschlag','nie der Projektname','Ein Tageslimit gibt es nicht; jede Anfrage wird gezählt.',
     '<tr><td>Internet</td>','<tr><td>Annahme KI</td>'])

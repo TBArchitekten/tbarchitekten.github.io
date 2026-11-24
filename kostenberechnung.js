@@ -13,6 +13,8 @@ const sb=window.MINDS_SUPABASE||(window.supabase&&OFFICE?window.supabase.createC
 const inApp=!!window.WINDOW_NATIVE?.available;
 const params=new URLSearchParams(location.search);
 const ID=params.get('id'),MUSTER_ID=params.get('muster');
+// ?neu=<Projekt-ID>: aus dem Reiter «Kostenberechnung» eines Projekts ohne Kostenberechnung (Work), mit diesem Projekt.
+const NEU=params.get('neu');
 const root=document.getElementById('kb'),dialog=document.getElementById('kbDialog');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const datum=iso=>{const d=new Date(iso);return Number.isFinite(d.getTime())?d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):''};
@@ -67,7 +69,7 @@ async function start(){
   try{
     if(ID)await ladeKostenberechnung(ID);
     else if(MUSTER_ID)await ladeMuster(MUSTER_ID);
-    else await zeigeListe();
+    else{await zeigeListe();if(NEU){history.replaceState(null,'',location.pathname);dialogNeu(NEU)}}
   }catch(e){console.error('Kostenberechnung',e);fehler(e?.message||'Kostenberechnung nicht erreichbar.')}
 }
 
@@ -161,14 +163,13 @@ function kostenarchiv(liste){
     '<p class="meta" style="margin-top:12px">Weitere alte Kostenberechnungen kommen über Claude ins Archiv: das Excel des Büros (sonst das PDF) wird Zeile für Zeile gelesen, '+
     'die Summen je Kostengruppe werden gegen das Original geprüft, und das Projekt wird als archiviert angelegt.</p>';
 }
-function dialogNeu(){
+function dialogNeu(vorwahl=null){
   const d=listeDaten;if(!d)return;
   const q=aktuellesQuartal();
   dialog.innerHTML='<form class="dlg" id="kbNeu" method="dialog"><h2>Kostenberechnung anlegen</h2>'+
-    '<label class="feld">Projekt<select name="projekt" required>'+d.projekte.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.number+' · '+p.name)+'</option>').join('')+'</select></label>'+
+    '<label class="feld">Projekt<select name="projekt" required>'+d.projekte.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===vorwahl?' selected':'')+'>'+esc(p.number+' · '+p.name)+'</option>').join('')+'</select></label>'+
     '<label class="feld">Muster<select name="muster" required>'+d.muster.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.title+' · '+t.version)+'</option>').join('')+'</select></label>'+
     '<label class="feld">Kostenstand<select name="kostenstand">'+quartale().map(x=>'<option value="'+x+'"'+(x===q?' selected':'')+'>'+esc(R.quartalText(x))+'</option>').join('')+'</select></label>'+
-    '<p class="meta">Das Muster bleibt unverändert. Ansehen kann die Kostenberechnung das ganze Office, wie den Terminplan; fortschreiben das Projektteam, die Projektleitung und wer sie anlegt.</p>'+
     '<p class="meta att" id="kbNeuFehler" role="alert"></p>'+
     '<div class="dlg-actions"><button type="button" class="btn" data-dlg="zu">Abbrechen</button><button class="btn btn-primary" type="submit">Anlegen</button></div></form>';
   dialog.showModal();

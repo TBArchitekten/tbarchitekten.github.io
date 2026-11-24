@@ -44,6 +44,7 @@ test('Kostenberechnung: lesen alle im Office, nur hinzugefügte Policies, Verlau
   assert.match(sql,/office_kosten_dialogue_office_read on public\.office_kosten_dialogue_messages\s+for select to authenticated using \(user_id = \(select auth\.uid\(\)\)/);
   // Kein neuer Schreibweg für die Kostenberechnung selbst.
   assert.doesNotMatch(sql,/on public\.office_kosten_(instances|versions)\s+for (insert|update|delete|all)/);
-  assert.match(read('kostenberechnung.js'),/Ansehen kann die Kostenberechnung das ganze Office, wie den Terminplan; fortschreiben das Projektteam/);
+  // Im Dialog «Kostenberechnung anlegen» steht dazu kein Text mehr (Gari, 24.11.2026); die Anleitung erklärt es.
+  assert.doesNotMatch(read('kostenberechnung.js'),/Ansehen kann die Kostenberechnung das ganze Office/);
   assert.match(read('kostenberechnung-hilfe.html'),/Ansehen kann die Kostenberechnung das ganze Office, wie den Terminplan; fortschreiben können das Projektteam/);
 });
