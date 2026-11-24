@@ -11,7 +11,17 @@
     window.MINDS_SUPABASE = null;
     return;
   }
-  const bridge = window.webkit?.messageHandlers?.windowNative;
+  // Terminplan und Kostenberechnung laufen in Work als Reiter, in einem Rahmen derselben Herkunft. Die iPhone-App
+  // nimmt Nachrichten nur vom Hauptrahmen an; dort leiht die Seite deshalb die Brücke der App (WINDOW_NATIVE des
+  // übergeordneten Fensters). Die App bleibt die einzige Besitzerin der Sitzung.
+  let bridge = null;
+  try {
+    const parentNative = window.parent !== window ? window.parent.WINDOW_NATIVE : null;
+    if (parentNative?.available && typeof parentNative.call === 'function') {
+      bridge = { postMessage: message => parentNative.call(message.type, message) };
+    }
+  } catch {}
+  if (!bridge) bridge = window.webkit?.messageHandlers?.windowNative;
   if (!bridge) {
     window.MINDS_SUPABASE = window.supabase.createClient(config.url, config.publishableKey, {
       auth: {

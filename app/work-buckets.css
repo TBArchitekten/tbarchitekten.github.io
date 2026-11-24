@@ -74,6 +74,21 @@
 .work-bucket-explanation{padding:0 4px 11px;font-size:11px;line-height:1.45;color:#7d8793}
 .work-bucket-explanation p{margin:1px 0 9px;overflow-wrap:anywhere}
 .work-bucket-plan-ref{display:inline-block;max-width:100%;padding:5px 8px;border-radius:7px;background:#e9eef3;color:#637992;font-size:10px;overflow-wrap:anywhere}
+/* Beschreibung auf dem Board (Gari, 24.11.2026): Sie nahm unter jedem Titel viel Platz. Jetzt erscheint sie beim Zeigen
+   auf den Titel als schwebender Hinweis unter dem Titel (über den Karten, ohne sie zu verschieben) und über «Info» im
+   Menü fest unter dem Titel, bis man sie wieder ausblendet. Im Muster-Planner bleibt sie sichtbar. Der Hinweis hängt
+   an einer Zeile ohne Höhe an seiner Stelle im Bucket; so steht er im Board (Flex) wie in der Liste unter dem Titel. */
+.work-bucket-explanation.is-tip{display:none}
+.work-bucket.is-info-open .work-bucket-explanation.is-tip{display:block}
+.work-bucket:not(.is-info-open):not(.is-bucket-dragging):has(.work-bucket-grab:hover) .work-bucket-explanation.is-tip{
+  display:block;position:relative;z-index:30;height:0;padding:0;overflow:visible}
+.work-bucket:not(.is-info-open):not(.is-bucket-dragging):has(.work-bucket-grab:hover) .work-bucket-explanation.is-tip .work-bucket-explanation-body{
+  position:absolute;top:-6px;left:0;right:0;padding:11px 13px 3px;
+  background:#fff;border:1px solid rgba(42,48,59,.12);border-radius:12px;color:#555c66;
+  box-shadow:0 12px 32px rgba(20,24,33,.14);pointer-events:none;animation:work-bucket-tip .14s ease .35s both}
+@keyframes work-bucket-tip{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.work-bucket-explanation-body{animation-duration:.01s!important}}
+.work-bucket-menu [data-work-bucket-info] span{pointer-events:none}
 .work-bucket-editor textarea{width:100%;resize:vertical;font:inherit;font-size:12px;line-height:1.5;padding:10px 11px;border:1px solid #dadde2;border-radius:11px;background:#fff;color:#333}
 .work-muster-preview .work-task-card{cursor:pointer}
 .work-muster-preview .work-task-card[draggable=false]{cursor:pointer}

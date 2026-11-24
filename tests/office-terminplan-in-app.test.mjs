@@ -8,10 +8,13 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('terminplan.html uses the bridged client and the app sign-in, and returns to the app', ()=>{
   const html=read('terminplan.html');
-  const client=html.indexOf('./shared/supabase-client.js?v=office3'),config=html.indexOf('./office-config.js'),inline=html.indexOf('const sb=window.MINDS_SUPABASE||');
+  const client=html.indexOf('./shared/supabase-client.js?v=office4'),config=html.indexOf('./office-config.js'),inline=html.indexOf('const sb=window.MINDS_SUPABASE||');
   assert.ok(config>0&&client>config&&inline>client,'config, then the shared client, then the page script');
   assert.match(html,/const inApp=!!window\.WINDOW_NATIVE\?\.available;/);
-  assert.match(html,/function needSignIn\(\)\{\n\s*if\(inApp\)\{void window\.WINDOW_NATIVE\.call\('session\.signIn'\);return\}\n\s*location\.href='\.\/';/);
+  assert.match(html,/function needSignIn\(\)\{\n\s*if\(inApp\)\{void window\.WINDOW_NATIVE\.call\('session\.signIn'\);return\}\n\s*if\(IN_WORK\)\{document\.body\.innerHTML='<div class="empty">Bitte in TBA Office neu anmelden\.<\/div>';return\}\n\s*location\.href='\.\/';/);
+  // Als Reiter in Work (Rahmen) springt die Seite nie zur Startseite oder in die App.
+  assert.match(html,/const IN_WORK=window\.self!==window\.top;/);
+  assert.match(html,/if\(IN_WORK\)\{document\.body\.innerHTML='<div class="empty">Kein Terminplan gewählt\.<\/div>';return\}\n\s*location\.href=inApp\?'\.\/app\/#section=plans':'\.\/';/);
   assert.match(html,/if\(sessionError\|\|!sessionData\.session\)\{\n\s*needSignIn\(\);/);
   assert.match(html,/location\.href=inApp\?'\.\/app\/#section=plans':'\.\/';/);
   // No other way back to the start page's sign-in from the plan.
@@ -20,7 +23,7 @@ test('terminplan.html uses the bridged client and the app sign-in, and returns t
 
 test('The start page (Mitglieder, Passwort ändern) borrows the app session too', ()=>{
   const index=read('index.html'),app=read('app.js');
-  assert.ok(index.indexOf('./shared/supabase-client.js?v=office3')>index.indexOf('./office-config.js'));
+  assert.ok(index.indexOf('./shared/supabase-client.js?v=office4')>index.indexOf('./office-config.js'));
   assert.ok(index.includes('./app.js?v=6'));
   assert.match(app,/const sb=window\.MINDS_SUPABASE\|\|supabase\.createClient\(/);
   assert.match(app,/if\(!session&&inApp\)\{void window\.WINDOW_NATIVE\.call\('session\.signIn'\);location\.replace\('\.\/app\/'\);return\}/);

@@ -396,14 +396,13 @@ body[data-section="work"] .work-assignee-avatar[data-tone="4"]{background:#f6dfe
 body[data-section="work"] .work-assignee-avatar[data-tone="5"]{background:#ece7d6;color:#6a5a26}
 body[data-section="work"] .work-assignee-avatar.is-more{background:#eceef2;color:#4b4f58}
 
-/* Status on the card: half-filled circle = In Bearbeitung (as in Microsoft Planner), pause = Wartet. */
-body[data-section="work"] .work-task-toggle.is-progress{
-  border-color:#007aff;background:linear-gradient(90deg,#007aff 50%,#fff 50%)}
-body[data-section="work"] .work-task-toggle.is-progress:hover{
-  background:linear-gradient(90deg,#007aff 50%,#f2f8ff 50%)}
-body[data-section="work"] .work-task-toggle.is-waiting{border-color:#c27a00}
-body[data-section="work"] .work-task-toggle.is-waiting::before{
-  content:"";width:3px;height:9px;border-left:2.5px solid #c27a00;border-right:2.5px solid #c27a00}
+/* Status auf der Karte als Etikett (Gari, 24.11.2026: Vorschlag A, wie Jira und Notion): das Wort, farbig hinterlegt,
+   neben dem Fälligkeitsdatum. Blau = In Bearbeitung, Bernstein = Wartet; offene Aufgaben ohne Etikett. */
+body[data-section="work"] .work-task-state{
+  display:inline-flex;align-items:center;min-height:24px;padding:3px 8px;border-radius:7px;
+  font-size:11px;font-weight:620;line-height:1.2;white-space:nowrap}
+body[data-section="work"] .work-task-state.is-progress{background:#e8f1ff;color:#1559c4}
+body[data-section="work"] .work-task-state.is-waiting{background:#fff1d9;color:#94590a}
 
 /* Checklist in the task detail: steps wrap and can be moved. */
 #modal:has(.minds-task-detail) .minds-task-check-row{align-items:flex-start}
@@ -442,3 +441,32 @@ body[data-section="work"] .work-board.is-filtered .work-task-list[data-work-task
   font-size:13px;font-weight:600}
 .work-tool-menu a small{color:#7a7f89;font-weight:500;font-size:11px}
 .work-tool-menu a:hover,.work-tool-menu a:focus-visible{background:#f1f4f8;outline:none}
+
+/* Terminplan und Kostenberechnung als Reiter (Gari, 24.11.2026): Die Werkzeugseite füllt den Platz unter den Reitern
+   und bleibt beim Wechsel offen. Mehrere Fassungen (z. B. LPH 3 und LPH 5) wählt man über der Seite. */
+body[data-section="work"] #workScreen #workBody[hidden],
+body[data-section="work"] #workScreen #workToolHost[hidden],
+body[data-section="work"] .work-tool-pane[hidden],
+body[data-section="work"] .work-tool-bar[hidden]{display:none!important}
+body[data-section="work"] .work-tool-host{
+  flex:1;min-height:0;display:flex;flex-direction:column;width:100%;margin:6px 0 0}
+body[data-section="work"] .work-tool-pane{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+body[data-section="work"] .work-tool-versions{display:flex;flex-wrap:wrap;gap:6px}
+body[data-section="work"] .work-tool-versions button{
+  border:1px solid #e2e4e9;background:#fff;color:#4a4d55;border-radius:999px;
+  padding:6px 12px;font:inherit;font-size:12px;font-weight:560;cursor:pointer}
+body[data-section="work"] .work-tool-versions button small{font-size:11px;font-weight:450;color:#7d818b}
+body[data-section="work"] .work-tool-versions button[aria-selected="true"]{
+  background:var(--work-accent-soft,rgba(0,122,255,.1));border-color:rgba(0,122,255,.28);color:var(--work-accent,#007aff)}
+body[data-section="work"] .work-tool-versions button[aria-selected="true"] small{color:inherit;opacity:.8}
+body[data-section="work"] .work-tool-stage{
+  flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+  background:#fafafa;border:1px solid rgba(42,48,59,.085);border-radius:14px}
+body[data-section="work"] .work-tool-frame{flex:1;min-height:0;width:100%;border:0;display:block;background:#fafafa}
+body[data-section="work"] .work-tool-empty{
+  display:flex;flex-direction:column;align-items:flex-start;gap:14px;padding:36px 28px;color:#676a72;font-size:14px}
+body[data-section="work"] .work-tool-empty p{margin:0}
+body[data-section="work"] .work-tool-create{
+  border:0;border-radius:999px;padding:10px 16px;background:var(--work-accent,#007aff);color:#fff;
+  font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+body[data-section="work"] .work-tool-create:hover{background:#0068d9}

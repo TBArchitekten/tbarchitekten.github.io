@@ -176,6 +176,55 @@ test('Aus dem Reiter eines Projekts: ?neu= öffnet «Anlegen» mit diesem Projek
   }finally{await ctx.close()}
 });
 
+// Als Reiter in Work (Gari, 24.11.2026): die Seite läuft in einem Rahmen der App. Sie leiht die Brücke der App (in der
+// iPhone-App nimmt die Brücke nur den Hauptrahmen an), zeigt keinen Rücksprung-Link, meldet ein abgebrochenes Anlegen
+// und speichert auf Zuruf, bevor Work den Rahmen schließt.
+const rahmenSeite=`<!doctype html><html lang="de"><body style="margin:0"><script>
+window.__nachrichten=[];window.__bruecke=[];
+addEventListener('message',e=>{if(e.origin===location.origin)window.__nachrichten.push(e.data)});
+window.WINDOW_NATIVE={available:true,version:1,call:async(type)=>{window.__bruecke.push(type);
+  if(type==='session.get')return {v:1,ok:true,session:{access_token:'fake',expires_at:Math.floor(Date.now()/1000)+3600,
+    user:{id:'11111111-1111-4111-8111-111111111111',email:'test@fixture.invalid'}}};
+  return {v:1,ok:true}}};
+</script><iframe id="f" style="width:1300px;height:900px;border:0" src="/kostenberechnung.html?neu=22222222-2222-4222-8222-222222222222"></iframe></body></html>`;
+test('Als Reiter in Work: Sitzung über die App, kein Rücksprung, Abbrechen gemeldet, Speichern auf Zuruf',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1320,height:940},deviceScaleFactor:1});
+  const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co/,r=>r.abort());
+  await page.route(/\/__rahmen__\.html$/,r=>r.fulfill({contentType:'text/html',body:rahmenSeite}));
+  try{
+    await page.goto(adresse('__rahmen__.html'));
+    const f=page.frameLocator('#f');
+    const rahmen=()=>page.frames().find(x=>/kostenberechnung\.html/.test(x.url()));
+    await f.locator('#kbNeu').waitFor();
+    assert.equal(await f.locator('#kbNeu select[name="projekt"]').inputValue(),'22222222-2222-4222-8222-222222222222');
+    assert.deepEqual(await rahmen().evaluate(()=>[document.documentElement.classList.contains('im-reiter'),!!window.WINDOW_NATIVE?.available]),[true,true]);
+    assert.ok((await page.evaluate(()=>window.__bruecke)).includes('session.get'),'die Sitzung kommt über die Brücke der App');
+    assert.equal(await f.locator('.liste').count(),0,'hinter dem Dialog keine Liste aller Projekte');
+    await f.locator('#kbNeu [data-dlg="zu"]').click();
+    await page.waitForFunction(()=>window.__nachrichten.length===1);
+    assert.deepEqual(await page.evaluate(()=>window.__nachrichten),[{tbaOfficeTool:'abgebrochen'}]);
+    // Anlegen: die Seite öffnet die neue Kostenberechnung im Rahmen, ohne «‹ Kostenberechnungen».
+    await rahmen().evaluate(()=>location.assign('/kostenberechnung.html?neu=22222222-2222-4222-8222-222222222222'));
+    await f.locator('#kbNeu button[type="submit"]').click();
+    await f.locator('h1',{hasText:'Testhaus'}).waitFor();
+    assert.match(rahmen().url(),/kostenberechnung\.html\?id=/);
+    assert.equal(await f.locator('.kb-back').evaluate(a=>getComputedStyle(a).display),'none');
+    assert.deepEqual(await page.evaluate(()=>window.__nachrichten),[{tbaOfficeTool:'abgebrochen'}],'Anlegen ist kein Abbruch');
+    assert.deepEqual(await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending()]),[1,false]);
+    // Eine Änderung steht aus; Work ruft flush, bevor es den Rahmen schließt: gespeichert, nichts mehr offen.
+    await f.locator('.tab[data-tab="quellen"]').click();
+    await f.locator('[data-key="st:bezug.BGF"]').fill('412,5');
+    await f.locator('[data-key="st:bezug.BGF"]').press('Tab');
+    assert.equal(await rahmen().evaluate(()=>window.TBA_OFFICE_TOOL.pending()),true);
+    await rahmen().evaluate(()=>window.TBA_OFFICE_TOOL.flush());
+    assert.deepEqual(await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending(),
+      window.__fake.db.office_kosten_instances[0].state.bezug.BGF]),[2,false,'412.5']);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
 test('Jede Kostengruppe bis zur 3. Ebene steht in der Liste und im Bericht',async()=>{
   const {ctx,page,fehler}=await oeffne();
   try{

@@ -195,7 +195,7 @@ async function refresh(){
     const plansStatus=document.getElementById('officePlansStatus');if(plansStatus)plansStatus.textContent=error?.message||'Terminpläne nicht erreichbar.'}
   finally{busy=false}
 }
-function newPlan(project){
+function newPlan(project,onCreated=null){
   const core=window.TBA_OFFICE_CORE;
   if(!core||!userId||project.status!=='aktiv'){status('Terminplan-Muster nicht verfügbar.');return}
   const available=templates.filter(x=>x.phase&&x.state);
@@ -274,6 +274,8 @@ function newPlan(project){
         phase:template.phase,owner_id:userId,state,source:'template'
       }).select('id').single();
       if(saveError||!data?.id)throw Error('Terminplan konnte nicht erstellt werden.');
+      // Aus Work (Reiter Terminplan): der neue Plan öffnet im Reiter, ohne Work zu verlassen.
+      if(typeof onCreated==='function'){window.ISABELLA_APP?.closeModal?.();onCreated(data.id);return}
       window.location.assign('../terminplan.html?id='+encodeURIComponent(data.id));
     }catch(e){error.textContent=e?.message||'Terminplan konnte nicht erstellt werden.';submit.disabled=false}
   });
@@ -394,9 +396,9 @@ async function openTeam(id,onSaved=null){
   if(!project){status('Projekt nicht gefunden.');return}
   manageMembers(project,onSaved);
 }
-async function openNewPlan(id){
+async function openNewPlan(id,options={}){
   const project=await projectById(id);
-  if(project)newPlan(project);
+  if(project)newPlan(project,options?.onCreated||null);
 }
 window.TBA_OFFICE_PROJECTS={render:refresh,open:openProjects,openPlans,openTeam,openNewPlan};
 })();
