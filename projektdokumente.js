@@ -6,7 +6,11 @@
    gleichzeitiger Bearbeitung werden die Felder zusammengeführt, K.zusammenfuehren). Den Verlauf schreibt die Datenbank.
    Eine Klärung mit Verantwortlichem und Frist wird eine Aufgabe im Planner; ein Entscheidungspunkt des Auftraggebers
    wird eine Entscheidung; eine Entscheidung kommt in eine Vorlage. «entschieden» setzt nur das Projektteam, mit Datum,
-   Entscheider und Entscheidung. Das Muster bleibt projektstart.html mit den Bürovorlagen zum Herunterladen. */
+   Entscheider und Entscheidung. Das Muster bleibt projektstart.html mit den Bürovorlagen zum Herunterladen.
+   Romy (office-dokumente-ai, ab #146): Vorschläge aus Protokollen, Mails und Plänen, jeder mit Fundstelle, grün in der
+   Liste; erst «Übernehmen» ändert eine Zeile (Verlauf: «Vorschlag von Romy, übernommen von …»). Dazu Fragen an die
+   Fachplaner, Fristen gegen den Terminplan, Bestätigung einer Entscheidung als Mail und Abschnitte der Vorlage neu
+   formuliert (grün eingefügt, rot gestrichen). Eine Entscheidung trägt Romy nie ein. */
 (()=>{
 'use strict';
 const K=window.TBA_PROJEKTDOKUMENTE,X=window.TBA_PROJEKTDOKUMENTE_EXPORT,OFFICE=window.TBA_OFFICE_CONFIG;
@@ -30,8 +34,12 @@ const NEU_FELD={klaerungsliste:'sachverhalt',entscheidungsliste:'thema'};
 let nutzer=null,mitglied=null,mitglieder=[],projekte=[],team=[];
 let projekt=null,dokumente={},zeilen=leer(),aufgaben=new Map(),geladenUm=0;
 const ui={ansicht:'',art:'',vorlage:null,filter:'alle',disziplin:'',suche:'',alleSpalten:false,auswahl:new Set(),detail:null,
-  verlauf:null,edit:null,meldung:'',meldungArt:'info',staende:null,spaeter:new Set()};
+  verlauf:null,edit:null,meldung:'',meldungArt:'info',staende:null,spaeter:new Set(),romyText:null};
 const speicher={laeuft:0,fehler:''};
+const VORSCHLAG='id,dokument_id,zeile_id,art,daten,fundstelle,begruendung,quelle,created_by,created_at';
+const romy={bereit:false};
+let vorschlaege=[];
+const offene=art=>vorschlaege.filter(v=>artVon(v.dokument_id)===art);
 function leer(){return {klaerungsliste:[],entscheidungsliste:[],entscheidungsvorlagen:[]}}
 const heute=()=>K.heuteIso();
 const name=id=>mitglieder.find(m=>m.user_id===id)?.display_name||'';
@@ -64,6 +72,7 @@ async function start(){
     window.addEventListener('popstate',()=>void route());
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&projekt&&Date.now()-geladenUm>30000)void auffrischen()});
     await route();
+    void romyStatus();
   }catch(e){console.error('Projektdokumente',e);fehler(e?.message||'Projektdokumente nicht erreichbar.')}
 }
 const params=()=>new URLSearchParams(location.search);
@@ -107,9 +116,12 @@ function lokal(r){return {...r,daten:kopie(r.daten),basis:kopie(r.daten),rev:r.s
 async function ladeZeilen(){
   const ids=Object.values(dokumente).map(d=>d.id);
   geladenUm=Date.now();
-  if(!ids.length)return;
-  const {data,error}=await sb.from('office_projektdokument_zeilen').select(ZEILE).in('dokument_id',ids).order('nr');
+  if(!ids.length){vorschlaege=[];return}
+  const [{data,error},vs]=await Promise.all([
+    sb.from('office_projektdokument_zeilen').select(ZEILE).in('dokument_id',ids).order('nr'),
+    sb.from('office_projektdokument_vorschlaege').select(VORSCHLAG).in('dokument_id',ids).eq('status','offen').order('created_at')]);
   if(error)throw error;
+  vorschlaege=vs.error?[]:(vs.data||[]);
   const neu=leer();
   for(const r of data||[]){
     const art=artVon(r.dokument_id);if(!art)continue;
@@ -300,8 +312,10 @@ function renderUebersicht(){
     '<option value="'+esc(p.id)+'"'+(p.id===projekt.id?' selected':'')+'>'+esc(p.number+' · '+p.name)+'</option>').join('')+'</select></label>';
   const karte=(art,code,zahlen,extra)=>{
     const da=!!dokumente[art];
+    const vs=offene(art),quellen=[...new Set(vs.map(v=>v.quelle).filter(Boolean))];
     return '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>'+esc(K.DOKUMENTE[art].kurz)+(art==='klaerungsliste'?' · Koordination':'')+'</h3><span class="pd-code">'+esc(code)+'</span></div>'+
-      '<p class="pd-karte-zahl">'+(da?esc(K.zusammenfassung(art,zahlen)):'Noch nicht angelegt.')+'</p>'+(extra||'')+
+      '<p class="pd-karte-zahl">'+(da?esc(K.zusammenfassung(art,zahlen)):'Noch nicht angelegt.')+'</p>'+
+      (vs.length?'<p class="pd-romy-hinweis">Romy: '+vs.length+(vs.length===1?' Vorschlag':' Vorschläge')+(quellen.length?' aus '+quellen.map(q=>'«'+esc(q)+'»').join(', '):'')+'</p>':'')+(extra||'')+
       '<div class="pd-karte-aktionen"><a class="btn btn-primary" href="'+esc(url({projekt:projekt.id,liste:art}))+'" data-nav>'+(da?'Öffnen':'Anlegen')+'</a>'+
       (da?'<button type="button" class="btn" data-act="excel" data-art="'+art+'">Excel</button>':'')+'</div></article>';
   };
@@ -330,7 +344,7 @@ function renderUebersicht(){
     '</div></section>'+
     '<section class="pd-abschnitt"><h2>So hängt es zusammen</h2><ol class="pd-kette">'+
     [['Eingang','Protokoll, Mail oder Plan im Schreibtisch des Projekts'],
-     ['Romy schlägt vor','neue Zeilen und Änderungen, jede mit Fundstelle; nichts ohne «Übernehmen» (kommt als Nächstes)'],
+     ['Romy schlägt vor','neue Zeilen und Änderungen, jede mit Fundstelle; nichts ohne «Übernehmen»'],
      ['Klärungsliste','verantwortlich und Frist → Aufgabe im Planner'],
      ['Entscheidungsliste','ein Entscheidungspunkt des Auftraggebers wird eine Entscheidung'],
      ['Entscheidungsvorlage','Varianten mit Kosten und Quelle, Folgen, Empfehlung; beim Vorlegen wird der Stand festgehalten'],
@@ -397,10 +411,10 @@ function zellInhalt(art,z,sp){
   }
   return html;
 }
-function zelle(art,z,sp){
+function zelle(art,z,sp,vorschlag=false){
   const romy=Array.isArray(z.daten._romy)&&z.daten._romy.includes(sp.key);
   if(ui.edit&&ui.edit.z===z.id&&ui.edit.k===sp.key)return '<td class="pd-c pd-c-edit pd-t-'+sp.typ+'">'+editor(art,z,sp)+'</td>';
-  return '<td class="pd-c pd-t-'+sp.typ+(romy?' pd-romy':'')+'" data-z="'+z.id+'" data-k="'+sp.key+'">'+zellInhalt(art,z,sp)+(romy?'<span class="pd-r" title="von Romy vorgeschlagen und übernommen">R</span>':'')+'</td>';
+  return '<td class="pd-c pd-t-'+sp.typ+(romy?' pd-romy':'')+(vorschlag?' pd-vs-zelle':'')+'" data-z="'+z.id+'" data-k="'+sp.key+'">'+zellInhalt(art,z,sp)+(romy?'<span class="pd-r" title="von Romy vorgeschlagen und übernommen">R</span>':'')+'</td>';
 }
 function editor(art,z,sp){
   const v=z.daten[sp.key];
@@ -420,23 +434,26 @@ function renderListe(){
   const runde=art==='klaerungsliste'?(dokumente[art]?.meta?.runde||'01'):'';
   const meta=(runde?'Runde '+esc(runde)+' · ':'')+esc(K.zusammenfassung(art,zahlen))+' · <span data-speicher>'+esc(speicherText())+'</span>';
   const aktionen='<button type="button" class="btn btn-primary" data-act="neu">+ '+(art==='klaerungsliste'?'Zeile':'Entscheidung')+'</button>'+
+    (romy.bereit?'<button type="button" class="btn btn-romy" data-act="romy">Romy fragen</button>':'')+
     '<button type="button" class="btn" data-act="spalten" aria-pressed="'+ui.alleSpalten+'">'+(ui.alleSpalten?'Kompakt':'Alle Spalten')+'</button>'+
     '<button type="button" class="btn" data-act="excel" data-art="'+art+'">Excel</button>';
   const filter='<div class="pd-filter">'+K.FILTER[art].map(([k,l])=>'<button type="button" class="chip" data-act="filter" data-f="'+esc(k)+'" aria-pressed="'+(ui.filter===k)+'">'+esc(l)+' '+fz[k]+'</button>').join('')+
     (art==='klaerungsliste'?'<label class="pd-sel"><span>Disziplin</span><select data-act="disziplin"><option value="">alle</option>'+K.DISZIPLINEN.filter(d=>d[0]!=='ALLE').map(([c,l])=>'<option value="'+c+'"'+(ui.disziplin===c?' selected':'')+' title="'+esc(l)+'">'+c+'</option>').join('')+'</select></label>'
       +'<label class="pd-sel"><span>Runde</span><select data-act="runde">'+K.RUNDEN.map(r=>'<option'+(r===runde?' selected':'')+'>'+r+'</option>').join('')+'</select></label>':'')+
     '<input type="search" class="pd-suche" id="pd-suche" data-act="suche" placeholder="Suchen" value="'+esc(ui.suche)+'" aria-label="In der Liste suchen"></div>';
-  let banner='';
+  let banner=romyBanner(art);
   if(art==='entscheidungsliste'){
     const warten=K.wartendeEntscheidungspunkte(zeilen.klaerungsliste,zeilen.entscheidungsliste).filter(z=>!ui.spaeter.has(z.id));
     const naechste=K.nummer('entscheidungsliste',(alle.reduce((m,z)=>Math.max(m,z.nr),0))+1);
-    banner=warten.map(z=>'<div class="pd-banner info">In der Klärungsliste ist Nr '+z.nr+' ('+esc(K.kurz(z.daten.sachverhalt,80))+') als Entscheidungspunkt des Auftraggebers markiert, steht aber noch nicht hier.'+
+    banner+=warten.map(z=>'<div class="pd-banner info">In der Klärungsliste ist Nr '+z.nr+' ('+esc(K.kurz(z.daten.sachverhalt,80))+') als Entscheidungspunkt des Auftraggebers markiert, steht aber noch nicht hier.'+
       '<div class="pd-banner-actions"><button type="button" class="btn" data-act="ep-uebernehmen" data-z="'+z.id+'">Als '+esc(naechste)+' übernehmen</button><button type="button" class="btn btn-quiet" data-act="ep-spaeter" data-z="'+z.id+'">Später</button></div></div>').join('');
   }
   const auswahl=[...ui.auswahl].map(id=>alle.find(z=>z.id===id)).filter(Boolean);
   const leiste=auswahl.length?'<div class="pd-auswahl" role="region" aria-label="Auswahl"><strong>'+auswahl.length+(auswahl.length===1?' Zeile':' Zeilen')+' ausgewählt</strong>'+
     (art==='klaerungsliste'?'<button type="button" class="btn" data-act="aufgaben">Aufgaben im Planner anlegen</button><button type="button" class="btn" data-act="in-entscheidungen">In die Entscheidungsliste</button>'
       :'<button type="button" class="btn" data-act="vorlage-auswahl">Vorlage aus der Auswahl</button>')+
+    (romy.bereit?'<span class="pd-auswahl-romy">Romy:</span>'+(art==='klaerungsliste'?'<button type="button" class="btn" data-act="romy-fachplaner">Frage an die Fachplaner formulieren</button><button type="button" class="btn" data-act="romy-fristen">Fristen mit dem Terminplan prüfen</button>'
+      :'<button type="button" class="btn" data-act="romy-bestaetigung">Bestätigung als Mail entwerfen</button>')+'<button type="button" class="btn" data-act="romy-frage">Frage stellen …</button>':'')+
     '<button type="button" class="btn btn-quiet" data-act="auswahl-weg">Auswahl aufheben</button></div>':'';
   const kopfzeile='<tr><th class="pd-check"><input type="checkbox" data-act="alle" aria-label="Alle auswählen"'+(sicht.length&&sicht.every(z=>ui.auswahl.has(z.id))?' checked':'')+'></th>'+
     spalten.map(sp=>'<th class="pd-t-'+sp.typ+'" scope="col">'+esc(kopfText(art,sp))+'</th>').join('')+'</tr>';
@@ -444,8 +461,8 @@ function renderListe(){
     const d=z.daten;
     const kl=['pd-zeile'];if(K.erledigt(art,d))kl.push('pd-erledigt');if(ui.detail===z.id)kl.push('pd-aktiv');if(K.ueberfaellig(art,d))kl.push('pd-ueber');
     return '<tr class="'+kl.join(' ')+'" data-zeile="'+z.id+'"><td class="pd-check"><input type="checkbox" data-act="waehle" data-z="'+z.id+'" aria-label="Zeile '+esc(K.nummer(art,z.nr))+' auswählen"'+(ui.auswahl.has(z.id)?' checked':'')+'></td>'+
-      spalten.map(sp=>zelle(art,z,sp)).join('')+'</tr>';
-  }).join('');
+      spalten.map(sp=>zelle(art,z,sp,geaendert(art,z).has(sp.key))).join('')+'</tr>'+aenderungsZeilen(art,z,spalten.length);
+  }).join('')+neueVorschlaege(art,spalten);
   const neuIndex=spalten.findIndex(sp=>sp.key===NEU_FELD[art]);
   const neuZeile='<tr class="pd-neu"><td class="pd-check"></td>'+spalten.map((sp,i)=>i===neuIndex?'<td class="pd-c" colspan="'+(spalten.length-i)+'"><input class="pd-in pd-neu-in" data-neu placeholder="Neue Zeile: '+(art==='klaerungsliste'?'Sachverhalt':'Thema')+' eintippen, Enter legt sie an und springt in die nächste Spalte" aria-label="Neue Zeile"></td>':i<neuIndex?'<td class="pd-c">'+(i===0?'<span class="pd-mute">'+esc(K.nummer(art,(alle.reduce((m,z)=>Math.max(m,z.nr),0))+1))+'</span>':'')+'</td>':'').join('')+'</tr>';
   const fuss='<p class="meta pd-fuss">'+(ui.alleSpalten?'Alle '+(spalten.length)+' Spalten wie in der Bürovorlage.':'Kompakt: '+KOMPAKT[art].filter(k=>k!=='_vorlage').length+' von '+K.SPALTEN[art].length+' Spalten. «Alle Spalten» zeigt alle Spalten der Bürovorlage.')+
@@ -557,6 +574,8 @@ function detailPanel(art){
   if(d.fundstelle)verknuepft.push('<li>Fundstelle: '+esc(d.fundstelle)+'</li>');
   return '<aside class="pd-detail" aria-label="Details"><div class="pd-detail-kopf"><h2>'+esc(K.DOKUMENTE[art].zeile)+' '+esc(K.nummer(art,z.nr))+' · Details</h2><button type="button" class="pd-x" data-act="detail-zu" aria-label="Details schließen">×</button></div>'+
     '<div class="pd-detail-inhalt">'+felder+'<h3>Verknüpft</h3><ul class="pd-verknuepft">'+verknuepft.join('')+'</ul>'+
+    (romy.bereit?'<h3>Romy</h3><div class="pd-feld"><label for="r-frage">Frage zu dieser Zeile</label><textarea class="pd-in" id="r-frage" rows="2" placeholder="z. B. Was ändert sich in der Kostenberechnung, wenn der Unterzug deckengleich wird?"></textarea>'+
+      '<button type="button" class="btn btn-romy" data-act="romy-frage-zeile" data-z="'+z.id+'">Romy zu dieser Zeile fragen</button></div>':'')+
     '<h3>Verlauf</h3><div data-verlauf>'+verlaufHtml(art,z)+'</div>'+
     '<div class="pd-detail-fuss"><button type="button" class="btn btn-danger" data-act="loeschen" data-z="'+z.id+'">'+esc(K.DOKUMENTE[art].zeile)+' löschen</button></div></div></aside>';
 }
@@ -576,15 +595,19 @@ function verlaufHtml(art,z){
   if(!e.length)return '<p class="meta">Noch kein Eintrag.</p>';
   return '<ol class="pd-verlauf">'+e.map(x=>{
     const wer=name(x.user_id)||'jemand',wann=K.datumKurz(String(x.created_at).slice(0,10));
-    const romy=x.quelle==='romy'?' · Vorschlag von Romy, übernommen von '+esc(wer):' · '+esc(wer);
+    const q=x.vorschlag_id&&ui.verlauf.quellen?.get(x.vorschlag_id);
+    const romy=x.quelle==='romy'?' · Vorschlag von Romy'+(q?.fundstelle?' ('+esc(q.fundstelle)+')':'')+', übernommen von '+esc(wer):' · '+esc(wer);
     if(x.vorgang==='angelegt')return '<li><span>'+esc(wann)+'</span> angelegt'+romy+'</li>';
     return '<li><span>'+esc(wann)+'</span> '+esc(K.feldName(art,x.feld))+': '+esc(wertText(art,x.feld,x.neu))+' <span class="pd-mute">(vorher '+esc(wertText(art,x.feld,x.alt))+')</span>'+romy+'</li>';
   }).join('')+'</ol>';
 }
 async function ladeVerlauf(z){
   ui.verlauf={id:z.id,eintraege:[],laedt:true};
-  const {data,error}=await sb.from('office_projektdokument_aenderungen').select('id,vorgang,feld,alt,neu,quelle,user_id,created_at').eq('zeile_id',z.id).order('id',{ascending:false}).limit(60);
-  ui.verlauf={id:z.id,eintraege:error?[]:(data||[]),fehler:!!error};
+  const {data,error}=await sb.from('office_projektdokument_aenderungen').select('id,vorgang,feld,alt,neu,quelle,vorschlag_id,user_id,created_at').eq('zeile_id',z.id).order('id',{ascending:false}).limit(60);
+  // Woher ein übernommener Vorschlag kam: Fundstelle des Vorschlags.
+  const quellen=new Map(),ids=[...new Set((data||[]).map(x=>x.vorschlag_id).filter(Boolean))];
+  if(ids.length){const {data:vs}=await sb.from('office_projektdokument_vorschlaege').select('id,fundstelle,quelle').in('id',ids);for(const v of vs||[])quellen.set(v.id,v)}
+  ui.verlauf={id:z.id,eintraege:error?[]:(data||[]),fehler:!!error,quellen};
   const el=root.querySelector('[data-verlauf]');
   if(el&&ui.detail===z.id)el.innerHTML=verlaufHtml(artVon(z.dokument_id),z);
 }
@@ -706,7 +729,8 @@ function bearbeitbar(bloecke){
     if(b.feld&&b.punkt){
       const z=zeilen.entscheidungsliste.find(x=>x.id===b.punkt);if(!z)return htmlAusBloecken([b]);
       const romy=Array.isArray(z.daten._romy)&&z.daten._romy.includes(b.feld);
-      const ta='<textarea class="dv-text'+(romy?' pd-romy':'')+'" id="v-'+z.id+'-'+b.feld+'" data-vfeld="'+b.feld+'" data-z="'+z.id+'" rows="2" placeholder="'+esc(TEXTFELDER[b.feld])+'">'+esc(z.daten[b.feld])+'</textarea>';
+      const vs=offene('entscheidungsliste').find(v=>v.art==='aenderung'&&v.zeile_id===z.id&&b.feld in (v.daten||{}));
+      const ta=vs?diffHtml(z.daten[b.feld],vs.daten[b.feld],vs):'<textarea class="dv-text'+(romy?' pd-romy':'')+'" id="v-'+z.id+'-'+b.feld+'" data-vfeld="'+b.feld+'" data-z="'+z.id+'" rows="2" placeholder="'+esc(TEXTFELDER[b.feld])+'">'+esc(z.daten[b.feld])+'</textarea>';
       if(b.feld==='begruendung'){
         const opts=K.optionen(z.daten);
         return '<p class="dv-empfehlung">Das Büro empfiehlt Variante <select class="pd-in" id="v-'+z.id+'-empfehlung" data-vfeld="empfehlung" data-z="'+z.id+'"><option value="">offen</option>'+
@@ -733,7 +757,7 @@ function renderVorlage(){
     return '<li><strong>'+esc(K.nummer('entscheidungsliste',z.nr)+' · '+o.id)+'</strong> '+(b.cent!==null?esc(K.euro(b.cent))+(b.berechnet?' (Kennwert × Menge)':''):'ohne Betrag')+
       '<span>'+esc(o.quelle||'Quelle fehlt')+'</span></li>';
   }));
-  const staende=ui.staende===null?'<p class="meta">wird geladen …</p>':ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button><span>'+esc(K.datumLang(String(s.created_at).slice(0,10)))+' · '+esc(name(s.created_by))+'</span></li>').join('')+'</ul>'
+  const staende=ui.staende===null?'<p class="meta">wird geladen …</p>':ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button><span>'+esc([K.datumLang(String(s.created_at).slice(0,10)),name(s.created_by)].filter(Boolean).join(' · '))+'</span></li>').join('')+'</ul>'
     :'<p class="meta">Noch kein Stand. Beim Vorlegen wird der Stand festgehalten und bleibt unverändert.</p>';
   const fokus=vorZeichnen();
   const html='<div class="pd-wrap pd-vorlage-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({projekt:projekt.id,liste:'entscheidungsliste'}),'‹ Entscheidungsliste'],
@@ -748,6 +772,12 @@ function renderVorlage(){
       (freie.length?'<label class="pd-feld"><span>Entscheidung hinzufügen</span><select class="pd-in" data-act="punkt-neu"><option value="">wählen …</option>'+freie.map(z=>'<option value="'+z.id+'">'+esc(K.nummer('entscheidungsliste',z.nr)+' · '+(z.daten.thema||'ohne Thema'))+'</option>').join('')+'</select></label>':'')+'</section>'+
     '<section class="card"><h2>Zahlen und Quellen</h2>'+(quellen.length?'<ul class="pd-quellen">'+quellen.join('')+'</ul>':'<p class="meta">Noch keine Beträge. Unter «Varianten und Details» je Variante Kennwert, Menge oder Betrag mit Quelle eintragen.</p>')+'</section>'+
     '<section class="card"><h2>Wenn der Auftraggeber entschieden hat</h2><p class="meta">In der Entscheidungsliste «Entscheidung eintragen»: mit Datum und Entscheider, danach die Bestätigung in Textform. Die Vorlage zeigt dann die Entscheidung statt der Ankreuzfelder.</p></section>'+
+    (romy.bereit&&punkte.length?'<section class="card"><h2>Romy</h2><p class="meta">Romy formuliert einen Abschnitt neu: grün eingefügt, rot gestrichen. Nichts ändert sich ohne «Übernehmen».</p>'+
+      '<label class="pd-feld"><span>Abschnitt</span><select class="pd-in" id="r-abschnitt">'+punkte.flatMap(z=>[['anlass','Anlass'],['frage','Frage an den Auftraggeber'],['begruendung','Empfehlung des Büros'],['festliegt','Was danach festliegt']]
+        .map(([f,l])=>'<option value="'+z.id+'|'+f+'">'+esc((punkte.length>1?K.nummer('entscheidungsliste',z.nr)+' · ':'')+l)+'</option>')).join('')+'</select></label>'+
+      '<label class="pd-feld"><span>Auftrag an Romy</span><input class="pd-in" id="r-auftrag" placeholder="z. B. kürzer und für den Bauherrn verständlich" autocomplete="off"></label>'+
+      '<button type="button" class="btn btn-romy" data-act="romy-abschnitt">Romy fragen</button>'+
+      (offene('entscheidungsliste').filter(v=>punkte.some(z=>z.id===v.zeile_id)).length?'<p class="meta pd-romy-hinweis">'+offene('entscheidungsliste').filter(v=>punkte.some(z=>z.id===v.zeile_id)).length+' Vorschlag offen</p>':'')+'</section>':'')+
     '<section class="card"><h2>Stände</h2>'+staende+'</section>'+
     '</aside></div><div class="pd-druck" aria-hidden="true">'+htmlAusBloecken(bl)+'</div>'+(ui.detail?detailPanel('entscheidungsliste'):'')+'</div>';
   zeichne(html,fokus);
@@ -806,6 +836,185 @@ function standDialog(id){
   dialog.showModal();
 }
 
+// ---------- Romy ----------
+const ROMY_FEHLER={no_terminplan:'Für dieses Projekt gibt es keinen Terminplan mit Terminen.',document_or_text_required:'Bitte eine Datei wählen oder Text einfügen.',
+  one_document_required:'Bitte nur eine Datei.',invalid_attachments:'Diese Datei kann Romy nicht lesen: PDF oder Bild bis 8 MB.',ai_not_configured:'Romy ist im Office noch nicht eingerichtet.',
+  no_access:'Kein Zugriff auf dieses Dokument.',ai_timeout_or_network:'Romy hat nicht rechtzeitig geantwortet. Bitte noch einmal versuchen.',rows_required:'Bitte zuerst Zeilen auswählen.',
+  instruction_required:'Bitte sagen, was Romy ändern soll.',question_required:'Bitte eine Frage eingeben.',invalid_task:'Das geht in dieser Liste nicht.'};
+async function romyStatus(){
+  try{const {data,error}=await sb.functions.invoke('office-dokumente-ai',{body:{action:'status'}});romy.bereit=!error&&data?.ready===true}catch{romy.bereit=false}
+  if(romy.bereit&&!ui.edit&&!dialog.open&&projekt)render();
+}
+async function romyAufruf(body){
+  const {data,error}=await sb.functions.invoke('office-dokumente-ai',{body});
+  if(error){
+    let code='';try{code=(await error.context?.json?.())?.error||''}catch{}
+    throw new Error(ROMY_FEHLER[code]||'Romy ist gerade nicht erreichbar.');
+  }
+  if(!data?.result)throw new Error('Romy ist gerade nicht erreichbar.');
+  return data;
+}
+// Vorschläge speichern: für alle im Projekt sichtbar, bis jemand sie übernimmt oder verwirft. Eine Entscheidung ist
+// nie dabei (die Datenbank lehnt sie auch ab).
+async function vorschlaegeSpeichern(art,liste,quelle){
+  const dok=dokumente[art];if(!dok)return 0;
+  const neu=(liste||[]).map(v=>({dokument_id:dok.id,zeile_id:v.art==='aenderung'?v.zeile_id:null,art:v.art,daten:K.ohneEntscheidung(v.daten),
+    fundstelle:String(v.fundstelle||'').slice(0,400),begruendung:String(v.begruendung||'').slice(0,2000),quelle:String(quelle||'').slice(0,300)}))
+    .filter(v=>['neu','aenderung'].includes(v.art)&&(v.art==='neu'||v.zeile_id)&&Object.keys(v.daten).length&&K.vorschlagErlaubt(v.daten));
+  if(!neu.length)return 0;
+  const {data,error}=await sb.from('office_projektdokument_vorschlaege').insert(neu).select(VORSCHLAG);
+  if(error)throw error;
+  vorschlaege.push(...(data||[]));
+  return (data||[]).length;
+}
+async function vorschlagStatus(v,status){
+  const {error}=await sb.from('office_projektdokument_vorschlaege').update({status}).eq('id',v.id);
+  if(error)throw error;
+  vorschlaege=vorschlaege.filter(x=>x.id!==v.id);
+}
+async function uebernehmen(v){
+  const art=artVon(v.dokument_id);if(!art)return;
+  await alleSpeichern();
+  if(v.art==='neu'){
+    const d={...K.leereZeile(art,{runde:dokumente[art]?.meta?.runde||''}),...v.daten,fundstelle:v.fundstelle,_romy:Object.keys(v.daten)};
+    await neueZeile(art,d,{vorschlagId:v.id});
+  }else{
+    const z=zeileVon(v.zeile_id);
+    if(!z){await vorschlagStatus(v,'verworfen');meldung('Die Zeile gibt es nicht mehr; der Vorschlag ist verworfen.','warn');return}
+    const neu={...z.daten,...v.daten};
+    if(art==='klaerungsliste'&&['gelöst','entfällt'].includes(v.daten.status)&&!neu.erledigt_am)neu.erledigt_am=heute();
+    if(art==='entscheidungsliste'&&v.daten.status==='vorgelegt'&&!neu.vorgelegt_am)neu.vorgelegt_am=heute();
+    neu._romy=[...new Set([...(Array.isArray(z.daten._romy)?z.daten._romy:[]),...Object.keys(v.daten)])];
+    const p=K.pruefe(art,neu);if(p)throw new Error(p);
+    z.daten=neu;
+    await speichere(z,{vorschlagId:v.id});
+    if(speicher.fehler)throw new Error('Nicht gespeichert: '+speicher.fehler);
+  }
+  await vorschlagStatus(v,'uebernommen');
+}
+function geaendert(art,z){return new Set(offene(art).filter(v=>v.art==='aenderung'&&v.zeile_id===z.id).flatMap(v=>Object.keys(v.daten||{})))}
+function vsKnoepfe(v){return '<span class="pd-vs-aktionen"><button type="button" class="btn btn-romy" data-act="vs-ja" data-id="'+esc(v.id)+'">Übernehmen</button><button type="button" class="btn btn-quiet" data-act="vs-nein" data-id="'+esc(v.id)+'">Verwerfen</button></span>'}
+function romyBanner(art){
+  const vs=offene(art);let html='';
+  if(vs.length){
+    const quellen=[...new Set(vs.map(v=>v.quelle).filter(Boolean))];
+    html+='<div class="pd-banner romy">Romy hat '+(quellen.length?'in '+quellen.map(q=>'«'+esc(q)+'»').join(', ')+' ':'')+vs.length+(vs.length===1?' Vorschlag':' Vorschläge')+
+      ' gemacht. Sie stehen grün in der Liste; jeden einzeln übernehmen oder verwerfen.<div class="pd-banner-actions">'+
+      '<button type="button" class="btn btn-romy" data-act="vs-alle-ja">'+(vs.length===1?'Übernehmen':'Alle '+vs.length+' übernehmen')+'</button><button type="button" class="btn btn-quiet" data-act="vs-alle-nein">'+(vs.length===1?'Verwerfen':'Alle verwerfen')+'</button></div></div>';
+  }
+  const t=ui.romyText;
+  if(t&&t.art===art)html+='<div class="pd-romy-antwort"><button type="button" class="pd-x" data-act="romy-text-zu" aria-label="Schließen">×</button><strong>Romy</strong> · '+esc(t.quelle)+': '+esc(t.text||'')+
+    (t.n===0?' Keine neuen Vorschläge.':'')+(t.hinweise.length?'<ul>'+t.hinweise.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul>':'')+'</div>';
+  return html;
+}
+function aenderungsZeilen(art,z,breite){
+  return offene(art).filter(v=>v.art==='aenderung'&&v.zeile_id===z.id).map(v=>'<tr class="pd-vorschlag pd-vs-aenderung" data-vorschlag="'+esc(v.id)+'"><td class="pd-check"></td>'+
+    '<td class="pd-c" colspan="'+breite+'"><strong>Romy schlägt für '+esc(K.nummer(art,z.nr))+' vor:</strong> '+esc(K.aenderungText(art,z.daten,v.daten))+
+    (v.begruendung?'<span class="pd-unter">'+esc(v.begruendung)+'</span>':'')+'<span class="pd-unter">Fundstelle: '+esc(v.fundstelle)+'</span>'+vsKnoepfe(v)+'</td></tr>').join('');
+}
+function neueVorschlaege(art,spalten){
+  return offene(art).filter(v=>v.art==='neu').map(v=>{
+    const z={id:'',nr:0,daten:v.daten||{},dokument_id:v.dokument_id};
+    return '<tr class="pd-vorschlag" data-vorschlag="'+esc(v.id)+'"><td class="pd-check"></td>'+spalten.map(sp=>{
+      if(sp.key==='nr')return '<td class="pd-c pd-t-nr"><span class="chip pd-neu-marke">neu</span></td>';
+      if(sp.key==='_vorlage')return '<td class="pd-c"></td>';
+      const inhalt=zellInhalt(art,z,sp);
+      if(sp.key===NEU_FELD[art])return '<td class="pd-c pd-t-'+sp.typ+'">'+inhalt+'<span class="pd-unter">Fundstelle: '+esc(v.fundstelle)+'</span>'+
+        (v.begruendung?'<span class="pd-unter">'+esc(v.begruendung)+'</span>':'')+vsKnoepfe(v)+'</td>';
+      return '<td class="pd-c pd-t-'+sp.typ+'">'+inhalt+'</td>';
+    }).join('')+'</tr>';
+  }).join('');
+}
+function diffHtml(alt,neu,v){
+  const teile=K.wortDiff(alt||'',neu||'');
+  return '<div class="pd-diff" aria-label="Vorschlag von Romy">'+teile.map(t=>t.typ==='gleich'?esc(t.text):t.typ==='neu'?'<ins>'+esc(t.text)+'</ins>':'<del>'+esc(t.text)+'</del>').join('')+'</div>'+
+    '<p class="pd-vs-zeile"><span>Romy: '+esc(v.begruendung||'neu formuliert')+'</span>'+vsKnoepfe(v)+'</p>';
+}
+const alsDataUrl=datei=>new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(String(r.result));r.onerror=()=>bad(new Error('Die Datei ist nicht lesbar.'));r.readAsDataURL(datei)});
+function romyDialog(art){
+  dialog.innerHTML='<form class="pd-dlg"><h2>Romy: Vorschläge aus einem Dokument</h2>'+
+    '<p class="meta">Romy liest ein Protokoll, eine Mail oder einen Plan und schlägt für die '+esc(K.DOKUMENTE[art].kurz)+' neue Zeilen und Änderungen vor, jede mit Fundstelle. Nichts ändert sich, bis jemand «Übernehmen» drückt.</p>'+
+    '<label class="pd-feld"><span>Quelle</span><input class="pd-in" name="quelle" placeholder="z. B. Protokoll Koordination 02" required autocomplete="off"></label>'+
+    '<label class="pd-feld"><span>Datei (PDF oder Bild, bis 8 MB)</span><input class="pd-in" type="file" name="datei" accept="application/pdf,image/png,image/jpeg,image/webp"></label>'+
+    '<label class="pd-feld"><span>oder Text einfügen</span><textarea class="pd-in" name="text" rows="6" placeholder="Text aus der Mail oder dem Protokoll"></textarea></label>'+
+    '<label class="pd-feld"><span>Hinweis an Romy (optional)</span><input class="pd-in" name="hinweis" placeholder="z. B. nur TOP 3 bis 7" autocomplete="off"></label>'+
+    '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Vorschläge holen</button></div></form>';
+  const form=dialog.querySelector('form'),f=dialog.querySelector('[data-dlg-fehler]');
+  form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
+  form.onsubmit=async e=>{
+    e.preventDefault();
+    const datei=form.datei.files[0],text=form.text.value.trim(),quelle=form.quelle.value.trim();
+    if(!datei&&!text){f.textContent='Bitte eine Datei wählen oder Text einfügen.';return}
+    if(datei&&datei.size>8*1024*1024){f.textContent='Die Datei ist größer als 8 MB.';return}
+    const knopf=form.querySelector('button[type="submit"]');knopf.disabled=true;knopf.textContent='Romy liest …';f.textContent='';
+    try{
+      const dok=await sichereDokument(art);
+      const attachments=datei?[{name:datei.name.slice(0,180),mime:datei.type,size:datei.size,data:await alsDataUrl(datei)}]:undefined;
+      const antwort=await romyAufruf({action:'vorschlaege',dokument_id:dok.id,quelle,text,hinweis:form.hinweis.value.trim(),attachments});
+      const q=antwort.quelle||quelle;
+      const n=await vorschlaegeSpeichern(art,antwort.result.vorschlaege,q);
+      ui.romyText={art,quelle:q,text:antwort.result.text||'',hinweise:antwort.result.hinweise||[],n};
+      dialog.close();render();
+    }catch(err){f.textContent=err?.message||'Romy ist gerade nicht erreichbar.';knopf.disabled=false;knopf.textContent='Vorschläge holen'}
+  };
+  dialog.showModal();
+}
+async function romyAuswahl(aufgabe,{frage='',ids=[...ui.auswahl]}={}){
+  const art=artVon(zeileVon(ids[0])?.dokument_id)||ui.art,dok=dokumente[art];
+  if(!dok||!ids.length){meldung('Bitte zuerst Zeilen auswählen.','warn');return}
+  meldung('Romy arbeitet …');
+  await alleSpeichern();
+  const antwort=await romyAufruf({action:'auswahl',aufgabe,dokument_id:dok.id,zeilen_ids:ids,frage});
+  ui.meldung='';
+  if(aufgabe==='fristen_terminplan'){
+    const n=await vorschlaegeSpeichern(art,antwort.result.vorschlaege,'Terminplan');
+    ui.romyText={art,quelle:'Terminplan',text:antwort.result.text||'',hinweise:antwort.result.hinweise||[],n};
+    render();return;
+  }
+  zeigeMeldung();
+  textDialog({frage_fachplaner:'Frage an die Fachplaner',bestaetigung:'Bestätigung in Textform',frage:'Romy antwortet'}[aufgabe]||'Romy',antwort.result.text,{mail:aufgabe!=='frage'});
+}
+function textDialog(titel,text,{mail=false}={}){
+  dialog.innerHTML='<div class="pd-dlg"><div class="pd-detail-kopf"><h2>'+esc(titel)+'</h2><button type="button" class="pd-x" data-dlg="zu" aria-label="Schließen">×</button></div>'+
+    '<p class="meta">Von Romy formuliert; vor dem Senden lesen und anpassen.</p><textarea class="pd-in pd-romy-ausgabe" rows="14" aria-label="Text von Romy">'+esc(text)+'</textarea>'+
+    '<div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="kopieren">Kopieren</button>'+(mail?'<a class="btn btn-primary" data-dlg="mail" href="mailto:">Als E-Mail öffnen</a>':'')+'</div></div>';
+  const ta=dialog.querySelector('textarea');
+  dialog.querySelector('[data-dlg="zu"]').onclick=()=>dialog.close();
+  dialog.querySelector('[data-dlg="kopieren"]').onclick=async e=>{try{await navigator.clipboard.writeText(ta.value);e.target.textContent='Kopiert'}catch{ta.select()}};
+  const a=dialog.querySelector('[data-dlg="mail"]');
+  if(a)a.onclick=()=>{const t=ta.value,m=/^Betreff:\s*(.+)\n+/.exec(t);a.href='mailto:?subject='+encodeURIComponent(m?m[1].trim():titel)+'&body='+encodeURIComponent(m?t.slice(m[0].length):t)};
+  dialog.showModal();
+}
+function frageDialog(fn){
+  dialog.innerHTML='<form class="pd-dlg"><h2>Romy fragen</h2><label class="pd-feld"><span>Frage zu den ausgewählten Zeilen</span><textarea class="pd-in" name="frage" rows="3" required placeholder="z. B. Was ändert sich in der Kostenberechnung, wenn der Unterzug deckengleich wird?"></textarea></label>'+
+    '<div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Fragen</button></div></form>';
+  const form=dialog.querySelector('form');
+  form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
+  form.onsubmit=e=>{e.preventDefault();const frage=form.frage.value.trim();if(!frage)return;dialog.close();void sicher(()=>fn(frage))};
+  dialog.showModal();
+}
+async function romyAbschnitt(zeileId,feld,auftrag){
+  const dok=dokumente.entscheidungsliste;if(!dok)return;
+  meldung('Romy arbeitet …');
+  await alleSpeichern();
+  const antwort=await romyAufruf({action:'text',dokument_id:dok.id,zeile_id:zeileId,feld,auftrag});
+  if(antwort.result.unveraendert){meldung('Romy hat nichts geändert.');return}
+  const n=await vorschlaegeSpeichern('entscheidungsliste',[{art:'aenderung',zeile_id:zeileId,daten:{[feld]:antwort.result.neu},
+    fundstelle:'Auftrag an Romy: «'+auftrag.slice(0,200)+'»',begruendung:antwort.result.begruendung}],'Entscheidungsvorlage');
+  meldung(n?'Romy hat einen Vorschlag gemacht: grün eingefügt, rot gestrichen.':'Romy hat nichts geändert.');
+  render();
+}
+async function alleVorschlaege(art,ja){
+  const liste=offene(art);
+  let n=0;
+  for(const v of [...liste.filter(x=>x.art==='neu'),...liste.filter(x=>x.art==='aenderung')]){
+    if(ja)await uebernehmen(v);else await vorschlagStatus(v,'verworfen');
+    n++;
+  }
+  meldung(n?(ja?(n===1?'Übernommen.':n+' Vorschläge übernommen.'):(n===1?'Verworfen.':n+' Vorschläge verworfen.')):'');
+  render();
+}
+
 // ---------- Ereignisse ----------
 async function sicher(f){try{await f()}catch(e){console.error('Projektdokumente',e);meldung(e?.message||'Das hat nicht geklappt.','warn');render()}}
 root.addEventListener('click',e=>{
@@ -858,6 +1067,22 @@ root.addEventListener('click',e=>{
   else if(act==='stand')standDialog(el.dataset.id);
   else if(act==='punkt-details'){const z=zeileVon(el.dataset.z);if(z){ui.detail=z.id;ui.verlauf=null;renderVorlage()}}
   else if(act==='punkt-weg')void sicher(()=>punktWeg(el.dataset.z));
+  else if(act==='romy')romyDialog(ui.art);
+  else if(act==='vs-ja')void sicher(async()=>{const v=vorschlaege.find(x=>x.id===el.dataset.id);if(!v)return;el.disabled=true;await uebernehmen(v);meldung('Übernommen.');render()});
+  else if(act==='vs-nein')void sicher(async()=>{const v=vorschlaege.find(x=>x.id===el.dataset.id);if(!v)return;el.disabled=true;await vorschlagStatus(v,'verworfen');meldung('Verworfen.');render()});
+  else if(act==='vs-alle-ja')void sicher(()=>alleVorschlaege(ui.art,true));
+  else if(act==='vs-alle-nein')void sicher(()=>alleVorschlaege(ui.art,false));
+  else if(act==='romy-text-zu'){ui.romyText=null;render()}
+  else if(act==='romy-fachplaner')void sicher(()=>romyAuswahl('frage_fachplaner'));
+  else if(act==='romy-fristen')void sicher(()=>romyAuswahl('fristen_terminplan'));
+  else if(act==='romy-bestaetigung')void sicher(()=>romyAuswahl('bestaetigung'));
+  else if(act==='romy-frage')frageDialog(frage=>romyAuswahl('frage',{frage}));
+  else if(act==='romy-frage-zeile'){const f=root.querySelector('#r-frage')?.value.trim();if(!f){meldung('Bitte eine Frage eingeben.','warn');return}void sicher(()=>romyAuswahl('frage',{frage:f,ids:[el.dataset.z]}))}
+  else if(act==='romy-abschnitt'){
+    const [zid,feld]=String(root.querySelector('#r-abschnitt')?.value||'').split('|'),auftrag=root.querySelector('#r-auftrag')?.value.trim();
+    if(!auftrag){meldung('Bitte sagen, was Romy ändern soll.','warn');return}
+    void sicher(()=>romyAbschnitt(zid,feld,auftrag));
+  }
 });
 root.addEventListener('change',e=>{
   if(zeichnet)return;

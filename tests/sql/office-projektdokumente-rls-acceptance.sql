@@ -1,4 +1,4 @@
--- Abnahme RLS · Projektdokumente v1 (Migration 20261124090000_office_projektdokumente_v1.sql), 24.11.2026.
+-- Abnahme RLS · Projektdokumente v1 (Migration 20261124065338_office_projektdokumente_v1.sql), 24.11.2026.
 -- Erfundene Personen und Projekte; alles läuft in einer Transaktion, die am Ende zurückgerollt wird.
 -- Läuft im CI auf der frisch migrierten Datenbank (verify.yml) und lässt sich ebenso gegen jede Datenbank
 -- mit der Migration ausführen: gezählt wird nur, was diese Datei selbst anlegt.

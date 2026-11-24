@@ -121,7 +121,7 @@ test('«entschieden» und Romy: Prüfung wie in der Datenbank',()=>{
   assert.equal(K.vorschlagErlaubt({bestaetigt_am:''}),false);
   assert.deepEqual(K.ohneEntscheidung({status:'entschieden',entscheidung:'B',frage:'F'}),{frage:'F'});
   // Dieselben Felder prüft die Migration.
-  const sql=read('supabase/migrations/20261124090000_office_projektdokumente_v1.sql');
+  const sql=read('supabase/migrations/20261124065338_office_projektdokumente_v1.sql');
   assert.ok(sql.includes("not (daten ?| array['"+K.NUR_VON_HAND.join("','")+"'])"));
 });
 
@@ -206,7 +206,7 @@ test('Excel und Word lassen sich lesen',async()=>{
 });
 
 test('Migration: neue Tabellen mit RLS, nichts Destruktives, Verlauf nur durch den Trigger',()=>{
-  const sql=read('supabase/migrations/20261124090000_office_projektdokumente_v1.sql');
+  const sql=read('supabase/migrations/20261124065338_office_projektdokumente_v1.sql');
   const tabellen=[...sql.matchAll(/create table public\.(\w+)/g)].map(m=>m[1]);
   assert.deepEqual(tabellen,['office_projektdokumente','office_projektdokument_zeilen','office_projektdokument_vorschlaege',
     'office_projektdokument_aenderungen','office_projektdokument_staende','office_projektdokument_ai_requests']);
@@ -229,7 +229,7 @@ test('Seite, Versionen und öffentliches Repository',()=>{
   for(const f of ['projektdokumente.css?v=','projektdokumente-kern.js?v=','projektdokumente-export.js?v=','projektdokumente.js?v='])assert.ok(html.includes(f),'fehlt: '+f);
   const TITEL=/Tragende Außenwände|Nichttragende Außenwände|Außenwandöffnungen|Außenwandbekleidungen|Deckenkonstruktionen|Deckenbeläge|Deckenbekleidungen|Dachkonstruktionen|Dachbeläge|Dachbekleidungen|Baugrube|\bGründung\b|Herrichten und Erschließen|Elementierte Außenwandkonstruktionen/;
   const dateien=['projektdokumente.html','projektdokumente.js','projektdokumente-kern.js','projektdokumente-export.js','projektdokumente.css',
-    'supabase/migrations/20261124090000_office_projektdokumente_v1.sql','tests/sql/office-projektdokumente-rls-acceptance.sql',
+    'supabase/migrations/20261124065338_office_projektdokumente_v1.sql','tests/sql/office-projektdokumente-rls-acceptance.sql',
     'tests/browser/office-projektdokumente.chromium.mjs','tests/browser/fixtures/fake-supabase-dokumente.js'];
   for(const name of dateien){
     const txt=read(name);

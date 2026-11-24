@@ -227,3 +227,26 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
   .pd-druck table{break-inside:avoid}
   .pd-druck p{margin:0 0 6pt}
 }
+
+/* Romy: Vorschläge grün, mit Fundstelle; erst «Übernehmen» ändert etwas (24.11.2026, #146) */
+.btn-romy{border-color:var(--pd-romy-line);background:var(--pd-romy-bg);color:var(--pd-romy)}
+.btn-romy:hover{background:#dcefe4;color:var(--pd-romy)}
+.pd-banner.romy{background:var(--pd-romy-bg);color:#17402e}
+.pd-romy-antwort{position:relative;background:#fff;border:1px solid var(--pd-romy-line);border-radius:12px;padding:10px 48px 10px 14px;margin:0 0 12px;font-size:14px;line-height:1.5}
+.pd-romy-antwort .pd-x{position:absolute;top:6px;right:6px;width:30px;height:30px;font-size:16px}
+.pd-romy-antwort ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--pd-meta)}
+.pd-vorschlag td{background:#f4faf6}
+.pd-vorschlag td:first-child{box-shadow:inset 3px 0 0 var(--pd-romy-line)}
+.pd-vs-aenderung td{font-size:13px}
+.pd-neu-marke{background:var(--pd-romy-bg);color:var(--pd-romy)}
+.pd-vs-aktionen{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.pd-vs-aktionen .btn{min-height:32px;padding:5px 10px;font-size:12px}
+.pd-vs-zelle{outline:1.5px dashed var(--pd-romy-line);outline-offset:-3px}
+.pd-romy-hinweis{font-size:13px;color:var(--pd-romy);margin:0}
+.pd-auswahl-romy{color:#b9dcc8;margin-left:6px}
+.pd-diff{border:1px dashed var(--pd-romy-line);border-radius:6px;padding:6px 8px;margin:0 0 6px;background:#fbfefc;white-space:pre-wrap;line-height:1.55}
+.pd-diff ins{background:#dcf1e4;color:#14492f;text-decoration:none}
+.pd-diff del{background:#fbe1dd;color:#8f2d1f}
+.pd-vs-zeile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--pd-romy);margin:0 0 12px!important}
+.pd-vs-zeile .pd-vs-aktionen{margin-top:0}
+.pd-romy-ausgabe{min-height:260px;font-size:14px;line-height:1.5}

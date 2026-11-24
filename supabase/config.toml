@@ -21,6 +21,10 @@ entrypoint = "./functions/office-kosten-ai/index.ts"
 verify_jwt = true
 entrypoint = "./functions/office-produkt-ai/index.ts"
 
+[functions.office-dokumente-ai]
+verify_jwt = true
+entrypoint = "./functions/office-dokumente-ai/index.ts"
+
 # Called by the database cron with its own secret header, not by browsers.
 [functions.office-romy-mission-runner]
 verify_jwt = false
