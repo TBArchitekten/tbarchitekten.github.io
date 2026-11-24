@@ -3676,6 +3676,8 @@ function editItem(kind,id){
 function duplicateItem(kind,id){
   const item=itemBy(kind,id);if(!item)return;
   const copy=clone(item);copy.id=uid();copy.title=item.title;copy.metadata={...(copy.metadata||{}),source:'manual-duplicate'};
+  // The copy is a new entry of your own that has not been on the server yet (sync keeps it until pushed).
+  delete copy.ownerId;delete copy.mine;
   if(kind==='task'){copy.done=false;copy.completedAt=null;copy.archivedAt=null;copy.sortOrder=nextTaskOrder(copy.date);state.tasks.push(copy)}
   else state.events.push(copy);
   mutation(kind,'create',null,copy,'manual');save();renderCalendar();closeModal();

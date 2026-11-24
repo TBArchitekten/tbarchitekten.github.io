@@ -10,6 +10,7 @@ const authButton=$('#authButton'),status=$('#syncStatus');
 let user=null,syncing=false,timer=null,hydrating=false,queuedSync=null;
 let queuedSyncWaiters=[];
 const pendingEntityMutations=new Set();
+const PULL_ROW_LIMIT=1000;
 const setStatus=t=>{if(status)status.textContent=t};
 const localDateTime=(date,time)=>new Date(date+'T'+(time||'09:00')+':00');
 const pad=n=>String(n).padStart(2,'0');
@@ -102,17 +103,22 @@ function shouldKeepLocalEntity(kind,local,remote){
   const localRevision=entityRevisionTime(local),remoteRevision=entityRevisionTime(remote);
   return localRevision>0&&localRevision>remoteRevision;
 }
-function mergeRemoteEntities(remote=[],local=[],kind='task'){
+// An entry the server no longer returns was deleted there (by its author, by the project lead, in the Planner)
+// or left your projects. Only what was never on the server (no ownerId: created here, not pushed yet) and what
+// is being saved right now stay; everything else goes, so a deleted task neither lingers in the Kalender of the
+// team nor comes back with the next push. A pull that may be cut off (complete=false) drops nothing.
+function mergeRemoteEntities(remote=[],local=[],kind='task',complete=true){
   const localById=new Map((local||[]).filter(x=>x?.id).map(x=>[x.id,x])),seen=new Set();
   const out=(remote||[]).map(x=>{
     seen.add(x.id);
     const localEntity=localById.get(x.id);
     return shouldKeepLocalEntity(kind,localEntity,x)?localEntity:x;
   });
-  for(const x of local||[])if(x?.id&&!seen.has(x.id))out.push(x);
+  for(const x of local||[])
+    if(x?.id&&!seen.has(x.id)&&(!complete||!x.ownerId||pendingEntityMutations.has(kind+':'+x.id)))out.push(x);
   return out;
 }
-function mergePulledEntityState(remoteTasks,remoteEvents,current,syncSnapshot){
+function mergePulledEntityState(remoteTasks,remoteEvents,current,syncSnapshot,complete={tasks:true,events:true}){
   const deletedTaskIds=new Set(syncSnapshot?.deletedTaskIds||[]),deletedEventIds=new Set(syncSnapshot?.deletedEventIds||[]);
   const freshest={
     ...current,
@@ -121,7 +127,8 @@ function mergePulledEntityState(remoteTasks,remoteEvents,current,syncSnapshot){
     deletedTaskIds:[...new Set([...(current?.deletedTaskIds||[]),...(syncSnapshot?.deletedTaskIds||[])])],
     deletedEventIds:[...new Set([...(current?.deletedEventIds||[]),...(syncSnapshot?.deletedEventIds||[])])]
   };
-  return {...freshest,tasks:mergeRemoteEntities(remoteTasks,freshest.tasks||[],'task'),events:mergeRemoteEntities(remoteEvents,freshest.events||[],'event')};
+  return {...freshest,tasks:mergeRemoteEntities(remoteTasks,freshest.tasks||[],'task',complete.tasks!==false),
+    events:mergeRemoteEntities(remoteEvents,freshest.events||[],'event',complete.events!==false)};
 }
 async function persistEntityMutation(detail){
   const kind=String(detail?.entityType||'');
@@ -265,7 +272,9 @@ async function pullState(local,maps){
   })).filter(a=>a.taskId);
   const remoteEvents=(events||[]).filter(e=>!deletedEventIds.has(e.client_key||e.id)).map(e=>{const s=new Date(e.starts_at),en=new Date(e.ends_at);return{id:e.client_key||e.id,title:e.title,date:isoDate(s),start:timeOf(s),duration:Math.max(1,Math.round((en-s)/60000)),allDay:!!e.all_day,categoryId:catKey.get(e.category_id)||'arbeit',projectId:projKey.get(e.project_id)||null,recurrence:e.recurrence||{},notes:e.notes||'',metadata:e.metadata||{},updatedAt:e.updated_at||null,ownerId:e.user_id||null,mine:e.user_id===user.id}});
   const remoteMemory=(mem||[]).map(m=>({id:m.client_key||m.id,kind:m.kind,subject:m.subject,content:m.content,status:m.status,confidence:Number(m.confidence),source:m.source,exposure_scope_key:m.exposure_scope_key||'global',provenance_class:m.provenance_class||'owner',metadata:m.metadata||{}}));
-  const freshest=mergePulledEntityState(remoteTasks,remoteEvents,app.getState(),local);
+  // The API answers with at most 1000 rows: a full answer may be cut off, and then nothing local is dropped.
+  const complete=rows=>(rows||[]).length<PULL_ROW_LIMIT;
+  const freshest=mergePulledEntityState(remoteTasks,remoteEvents,app.getState(),local,{tasks:complete(tasks),events:complete(events)});
   const remoteFeed=(pref?.status!=='rejected'&&pref?.value&&typeof pref.value==='object')?canonicalFeedPreferences(pref.value):canonicalFeedPreferences(freshest.feedPreferences);
   const remoteAssistant=(assistantPref?.status!=='rejected'&&assistantPref?.value&&typeof assistantPref.value==='object')?{...(freshest.assistantPreferences||{}),...assistantPref.value}:freshest.assistantPreferences;
   return {...freshest,projects:localProjects(maps),teamPeople:teamPeople||[],teamAllocations,memory:remoteMemory,feedPreferences:remoteFeed,
