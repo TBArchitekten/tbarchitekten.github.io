@@ -32,7 +32,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün; Chromium lokal: neuer Ablauf (Produkt, Preis fortgeschrieben 185,00 → 189,69 €/m², Menge aus der Kostenberechnung, Musterliste BO-01, Romy für B mit einem erfundenen Verweis für A, der wegfällt, Mehrkosten 10.218,60 € netto, Dokument ohne andere Projekte, Freigabe) und die bisherigen 8 Abläufe.
 - Quedó pendiente o sin probar: mit echten Daten. Die Produktbibliothek hat 33 Einträge ohne Datenblatt; das laufende Projekt hat noch keine Kostenberechnung, Mengen kommen also erst mit ihr. Dass die Kostenberechnung danach mit der entschiedenen Variante rechnet (Rückschreiben), ist noch nicht gebaut. Briefkopf für Word und PDF (kommt von Gari).
 - Riesgos o decisiones que necesitan a Gari: An Romy gehen Bezeichnungen aus alten Kostenberechnungen (ohne Projektnamen) und Produktnamen.
-- PR: (dieser)
+- PR: #148
 
 ### 2026-11-24 · Aufgabenbibliothek LPH 3 v0.3.5: Themenpakete von einer Person · Claude
 - Qué cambió y por qué: Garis Beobachtung (24.11.2026): Im Büro macht eine Person ein Paket komplett – die Bäder samt «Materialien und Produkte recherchieren und Varianten bewerten» und «Muster beschaffen, prüfen und dokumentieren» für die Bäder, ebenso die Treppen. A5 schnitt dieselbe Matrix zweimal (Themenkarten als Zeilen, `L3.MAT.1` und `L3.MUS.1` als Spalten); jede Zelle stand in zwei Karten, und `L3.MUS.1` wartete auf alle Themen. Vorschlag am 24.11. an Gari, von ihm bestätigt («OK»; «weitere» nach meinem Kriterium):
