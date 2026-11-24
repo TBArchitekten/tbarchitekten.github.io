@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (415); Chromium lokal grün (Start mit dem neuen Ablauf, Muster-Planner, Planner-Board, Terminplan-Abgleich, Romy: 18). Gegenprobe mit dem alten `sync.js`: 5 der 6 neuen Tests und der neue Chromium-Ablauf schlagen fehl.
 - Quedó pendiente o sin probar: mit echten Konten (die Projektleitung löscht die Aufgabe einer Kollegin, die Kollegin öffnet danach das Office). Ein Push, der genau während des Löschens im Planner läuft, kann die Aufgabe noch einmal anlegen (selten; dann erneut löschen). Ab 1000 Zeilen je Abruf fehlt ein seitenweiser Abruf.
 - Riesgos o decisiones que necesitan a Gari: —
-- PR: —
+- PR: #150
 
 ### 2026-11-24 · Planner des laufenden Projekts: A5 auf v0.3.5 · Claude
 - Qué cambió y por qué: Garis Auftrag (24.11.2026), nach der Bibliothek auch den Planner des laufenden Projekts umzustellen; `L3.MAT.1` und `L3.MUS.1` gelöscht mit seinem OK. Neun A5-Karten tragen jetzt Titel, Prüfpunkte und Bibliotheksangaben von v0.3.5 (`template_version` 0.3.5-draft): `L3.QUA.1`, `L3.MAP.1`, die fünf Themenpakete (Bäder, Treppen, Fassade, Licht, Bodenbeläge), `L3.A5.AUS` und `L3.A5.ABS`. «Fertig, wenn» wurde nur ersetzt, wo noch der Text der Vorlage stand; eine im Projekt geänderte Notiz blieb. `L3.WEI.1` wurde nicht angelegt (kein weiteres Entscheidungsfeld im Projekt), Verantwortliche wurden keine gesetzt: die Projektleitung trägt sie in den Karten ein.
