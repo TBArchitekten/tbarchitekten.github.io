@@ -53,6 +53,29 @@ for(const runtime of ['', 'legacy']){
   });
 }
 
+// A task deleted on the server leaves the local copy (Gari, 24.11.2026): from the Kalender of the team, and from
+// the copy of its author, which would otherwise push it back. What was never on the server stays until pushed.
+test('Sync drops what the server no longer returns and keeps what was never there',async()=>{
+  const page=await browser.newPage({viewport:{width:1600,height:1000}});
+  const errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co|fonts\.(googleapis|gstatic)/,r=>r.abort());
+  const me='11111111-1111-4111-8111-111111111111',colleague='22222222-2222-4222-8222-222222222222';
+  await page.addInitScript(([me,colleague])=>{try{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');
+    const task=(id,extra)=>({id,title:id,date:'2026-11-27',done:false,categoryId:'arbeit',projectId:null,...extra});
+    localStorage.setItem('tba-office-window-v1',JSON.stringify({officeOwner:me,deletedTaskIds:[],deletedEventIds:[],
+      tasks:[task('t1',{ownerId:me}),task('geloescht-eigen',{ownerId:me}),task('geloescht-kollegin',{ownerId:colleague}),task('neu-lokal',{})],
+      events:[{id:'termin-geloescht',title:'Termin',date:'2026-11-27',start:'09:00',duration:60,ownerId:colleague}]}))}}catch{}},[me,colleague]);
+  await page.goto(`http://localhost:${server.address().port}/app/`);
+  try{
+    await page.waitForFunction(()=>/Synchronisiert/.test(document.getElementById('syncStatus')?.textContent||''),null,{timeout:10000});
+    const left=await page.evaluate(()=>{const s=window.ISABELLA_APP.getState();return {tasks:s.tasks.map(t=>t.id).sort(),events:s.events.map(e=>e.id)}});
+    assert.deepEqual(left,{tasks:['neu-lokal','t1'],events:[]});
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
+
 test('Composer matches Isabella: no extra Live button; Live sits in the dictation overlay',async()=>{
   const {page,errors}=await boot('');
   try{
