@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs';
 import {ARTEN,MAX_BYTES,inhaltPasst,pfadFuer,pruefeAnfrage,schluesselForm,sha256Hex} from '../supabase/functions/office-produkt-import/core.mjs';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const mig=read('supabase/migrations/20261124180000_office_herstellerkatalog_v1.sql');
+const mig=read('supabase/migrations/20261124162311_office_herstellerkatalog_v1.sql');
 const fn=read('supabase/functions/office-produkt-import/index.ts');
 const seite=read('herstellerkatalog.html');
 const ui=read('herstellerkatalog.js');
@@ -98,7 +98,9 @@ test('Produktbibliothek: Karte und Produktblatt zeigen den Kontakt; Firma beim A
   assert.match(pb,/daten\.hersteller=herst\.error\?\[\]:\(herst\.data\|\|\[\]\);/,'ohne Katalog bleibt die Bibliothek wie bisher');
   assert.match(pb,/\$\{kontaktKurz\(e\)\}/);
   assert.match(pb,/\$\{herstellerBox\(e\)\}/);
-  assert.equal((pb.match(/hersteller_id:herstellerIdFuer\(f\.get\('hersteller'\)\)/g)||[]).length,2,'Leser und Formular');
+  assert.equal((pb.match(/hersteller_id:herstellerIdFuer\(f\.get\('hersteller'\)\)/g)||[]).length,1,'Leser: Firma über den Namen');
+  assert.match(pb,/hersteller_id:herstellerIdBeim\(f\.get\('hersteller'\),e\)/,'Formular: Verknüpfung bleibt bei gleichem Namen');
+  assert.match(pb,/const herstellerIdBeim=\(name,e\)=>herstellerIdFuer\(name\)\|\|\(e&&String\(name\|\|''\)\.trim\(\)===String\(e\.hersteller\|\|''\)\.trim\(\)\?e\.hersteller_id\|\|null:null\)/);
   assert.match(pb,/if\(ui\.hersteller\)liste=liste\.filter\(e=>e\.hersteller_id===ui\.hersteller\);/);
-  assert.match(read('produktbibliothek.html'),/produktbibliothek\.js\?v=office6/);
+  assert.match(read('produktbibliothek.html'),/produktbibliothek\.js\?v=office7/);
 });

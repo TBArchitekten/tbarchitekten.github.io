@@ -1,4 +1,4 @@
--- Abnahme · Herstellerkatalog (Migration 20261124180000_office_herstellerkatalog_v1.sql).
+-- Abnahme · Herstellerkatalog (Migration 20261124162311_office_herstellerkatalog_v1.sql).
 -- Erfundene Personen und Projekte; alles läuft in einer Transaktion, die am Ende zurückgerollt wird.
 -- B und T = Mitglieder, D = kein Office-Mitglied. Geprüft wird: der Katalog gehört dem Office (lesen, anlegen,
 -- verbessern jedes Mitglied; keine Firma löschen; eine Firma nur einmal); Kontakte ändert und entfernt nur, wer sie

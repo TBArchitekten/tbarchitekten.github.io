@@ -115,6 +115,8 @@ function herstellerIdFuer(name){
   const passend=aktiv.filter(h=>normFirma(h.firma).split(' ')[0]===wort);
   return passend.length===1?passend[0].id:null;
 }
+// Beim Bearbeiten bleibt die Verknüpfung, solange der Name gleich bleibt, auch wenn keine Firma eindeutig passt.
+const herstellerIdBeim=(name,e)=>herstellerIdFuer(name)||(e&&String(name||'').trim()===String(e.hersteller||'').trim()?e.hersteller_id||null:null);
 const telVon=t=>{const nr=(String(t||'').match(/\+?[\d\s/().-]{6,}/)||[''])[0].replace(/[^\d+]/g,'');return nr.length>=6?'tel:'+nr:''};
 const ersteMail=t=>(String(t||'').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)||[''])[0];
 // Kurzer Kontakt auf der Karte: erste Telefonnummer, erste E-Mail, Link ins Katalogblatt.
@@ -906,7 +908,7 @@ function zeigeFormular(e){
     }
     const url=String(f.get('quelle_url')||'').trim();
     const zeile={typ:f.get('typ'),kategorie:f.get('kategorie'),name:String(f.get('name')||'').trim().slice(0,200),
-      hersteller:String(f.get('hersteller')||'').trim()||null,hersteller_id:herstellerIdFuer(f.get('hersteller')),serie:String(f.get('serie')||'').trim()||null,familie:String(f.get('familie')||'').trim()||null,
+      hersteller:String(f.get('hersteller')||'').trim()||null,hersteller_id:herstellerIdBeim(f.get('hersteller'),e),serie:String(f.get('serie')||'').trim()||null,familie:String(f.get('familie')||'').trim()||null,
       beschreibung:String(f.get('beschreibung')||'').trim()||null,quelle_url:/^https:\/\//.test(url)?url:null,
       farbe:/^#[0-9a-f]{6}$/i.test(String(f.get('farbe')||''))?String(f.get('farbe')):null,status:f.get('status'),bestand:!!f.get('bestand'),merkmale,
       fehlend:(e?.fehlend||[]).filter(x=>!gesehen.has(String(x).toLowerCase()))};
