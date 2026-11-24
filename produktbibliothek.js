@@ -21,7 +21,7 @@ const root=document.getElementById('pb'),dialog=document.getElementById('pbDialo
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const KATEGORIEN=[['bodenbelag','Bodenbeläge','Bodenbelag','BO'],['wandbelag','Wandbeläge','Wandbelag','WA'],['decke','Decken','Decke','DE'],
-  ['fassade','Fassade','Fassade','FA'],['fenster_tueren','Fenster und Türen','Fenster und Türen','FE'],['sanitaer','Sanitär','Sanitär','SA'],
+  ['fassade','Fassade','Fassade','FA'],['fenster_tueren','Fenster und Türen','Fenster und Türen','FE'],['sanitaer','Sanitär','Sanitär','SA'],['licht','Licht','Licht','LI'],
   ['beschlaege','Beschläge','Beschlag','BE'],['sonstiges','Sonstiges','Sonstiges','SO']];
 const KAT=new Map(KATEGORIEN.map(([k,mehr,eins,kurz])=>[k,{mehr,eins,kurz}]));
 const PREISARTEN={listenpreis_material:'Listenpreis Material',angebot_material:'Angebot Material',angebot_eingebaut:'Angebot eingebaut',
@@ -29,7 +29,7 @@ const PREISARTEN={listenpreis_material:'Listenpreis Material',angebot_material:'
 const EINGEBAUT=new Set(['angebot_eingebaut','abrechnung','ansatz_kobe']);
 const MARKT=new Set(['angebot_eingebaut','abrechnung','angebot_material']);
 const DOKARTEN={datenblatt:'Datenblatt',preisliste:'Preisliste',verlegeanleitung:'Verlegeanleitung',pflegeanleitung:'Pflegeanleitung',
-  leistungserklaerung:'Leistungserklärung',epd:'Umweltdeklaration (EPD)',zertifikat:'Zertifikat',bild:'Bild',sonstiges:'Sonstiges'};
+  leistungserklaerung:'Leistungserklärung',epd:'Umweltdeklaration (EPD)',zertifikat:'Zertifikat',angebot:'Angebot',sicherheitsdatenblatt:'Sicherheitsdatenblatt',bild:'Bild',sonstiges:'Sonstiges'};
 const STATI=['vorgeschlagen','bemustert','freigegeben','ausgeschrieben','beauftragt','verworfen'];
 const EINHEITEN=['m²','m','m³','St','psch','kg','t','h'];
 const MIMES=['application/pdf','image/jpeg','image/png','image/webp'];

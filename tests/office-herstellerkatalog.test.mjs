@@ -57,13 +57,14 @@ test('Import: einmaliger Schlüssel (nur Hash mit Ablauf), strenge Prüfung von 
   assert.deepEqual(pruefeAnfrage(q({produkt:P,art:'datenblatt',name:'Datenblatt.pdf',seiten:'4'}),'application/pdf','1000'),
     {produkt:P,art:'datenblatt',name:'Datenblatt.pdf',seiten:4,mime:'application/pdf',endung:'pdf'});
   assert.equal(pruefeAnfrage(q({produkt:'x',art:'datenblatt',name:'a'}),'application/pdf','1').fehler,'invalid_product');
-  assert.equal(pruefeAnfrage(q({produkt:P,art:'angebot',name:'a'}),'application/pdf','1').fehler,'invalid_kind','nur Arten, die die Tabelle kennt');
+  assert.equal(pruefeAnfrage(q({produkt:P,art:'rechnung',name:'a'}),'application/pdf','1').fehler,'invalid_kind','nur Arten, die die Tabelle kennt');
+  for(const art of ['angebot','sicherheitsdatenblatt'])assert.equal(pruefeAnfrage(q({produkt:P,art,name:'a'}),'application/pdf','1').art,art,'seit 24.11.2026: '+art);
   assert.equal(pruefeAnfrage(q({produkt:P,art:'bild',name:'a'}),'application/pdf','1').fehler,'invalid_type');
   assert.equal(pruefeAnfrage(q({produkt:P,art:'sonstiges',name:'a'}),'text/html','1').fehler,'invalid_type');
   assert.equal(pruefeAnfrage(q({produkt:P,art:'sonstiges',name:'a',seiten:'0'}),'application/pdf','1').fehler,'invalid_pages');
   assert.equal(pruefeAnfrage(q({produkt:P,art:'sonstiges',name:'a'}),'application/pdf',String(MAX_BYTES+1)).fehler,'request_too_large');
   assert.equal(pruefeAnfrage(q({produkt:P,art:'sonstiges',name:''}),'application/pdf','1').fehler,'invalid_name');
-  assert.deepEqual([...ARTEN].sort(),['bild','datenblatt','epd','leistungserklaerung','pflegeanleitung','preisliste','sonstiges','verlegeanleitung','zertifikat']);
+  assert.deepEqual([...ARTEN].sort(),['angebot','bild','datenblatt','epd','leistungserklaerung','pflegeanleitung','preisliste','sicherheitsdatenblatt','sonstiges','verlegeanleitung','zertifikat']);
   // Inhalt passt zur Art.
   const pdf=new TextEncoder().encode('%PDF-1.7\n');
   assert.equal(inhaltPasst(pdf,'application/pdf'),true);
@@ -102,5 +103,29 @@ test('Produktbibliothek: Karte und Produktblatt zeigen den Kontakt; Firma beim A
   assert.match(pb,/hersteller_id:herstellerIdBeim\(f\.get\('hersteller'\),e\)/,'Formular: Verknüpfung bleibt bei gleichem Namen');
   assert.match(pb,/const herstellerIdBeim=\(name,e\)=>herstellerIdFuer\(name\)\|\|\(e&&String\(name\|\|''\)\.trim\(\)===String\(e\.hersteller\|\|''\)\.trim\(\)\?e\.hersteller_id\|\|null:null\)/);
   assert.match(pb,/if\(ui\.hersteller\)liste=liste\.filter\(e=>e\.hersteller_id===ui\.hersteller\);/);
-  assert.match(read('produktbibliothek.html'),/produktbibliothek\.js\?v=office7/);
+  assert.match(read('produktbibliothek.html'),/produktbibliothek\.js\?v=office8/);
+});
+
+test('Licht und Dokumentarten: Prüfregeln ersetzt, alle bisherigen Werte bleiben, Seite, Leser und Import kennen sie',()=>{
+  const sql=read('supabase/migrations/20261124190000_office_produkte_licht_dokumentarten.sql');
+  const ohne=sql.replace(/--.*$/gm,'');
+  // Nur die zwei Prüfregeln werden ersetzt (OK von Gari am 24.11.2026); keine Zeile wird gelöscht oder geändert.
+  assert.equal((ohne.match(/drop constraint/g)||[]).length,2);
+  assert.match(ohne,/drop constraint office_produkte_kategorie_check;/);
+  assert.match(ohne,/drop constraint office_produkt_dokumente_art_check;/);
+  assert.doesNotMatch(ohne,/\b(delete|update|truncate|drop table|drop column|drop policy)\b/i);
+  const alt={kategorie:['bodenbelag','wandbelag','decke','fassade','fenster_tueren','sanitaer','beschlaege','sonstiges'],
+    art:['datenblatt','preisliste','verlegeanleitung','pflegeanleitung','leistungserklaerung','epd','zertifikat','bild','sonstiges']};
+  const werte=feld=>[...ohne.match(new RegExp('check \\('+feld+' in \\(([^)]*)\\)'))[1].matchAll(/'([a-z_]+)'/g)].map(m=>m[1]);
+  for(const k of alt.kategorie)assert.ok(werte('kategorie').includes(k),'Kategorie bleibt: '+k);
+  for(const a of alt.art)assert.ok(werte('art').includes(a),'Art bleibt: '+a);
+  assert.ok(werte('kategorie').includes('licht'));
+  for(const a of ['angebot','sicherheitsdatenblatt'])assert.ok(werte('art').includes(a));
+  const pb=read('produktbibliothek.js');
+  assert.match(pb,/\['licht','Licht','Licht','LI'\]/);
+  assert.match(pb,/angebot:'Angebot',sicherheitsdatenblatt:'Sicherheitsdatenblatt'/);
+  assert.match(read('projektdokumente-zahlen.js'),/licht:'LI'/);
+  const ai=read('supabase/functions/office-produkt-ai/core.mjs');
+  assert.match(ai,/"sanitaer","licht","beschlaege"/);
+  assert.match(ai,/"zertifikat","angebot","sicherheitsdatenblatt","sonstiges"/);
 });
