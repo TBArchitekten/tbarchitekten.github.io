@@ -21,13 +21,31 @@
 .minds-task-section-head>span{font-size:10px;color:#94959b}
 .minds-task-inline-add{font-size:11px;border:0;background:transparent;color:#777980;cursor:pointer;padding:3px;text-align:left}
 .minds-task-inline-add:hover{color:#282a30}
-.minds-task-check-row{display:flex;align-items:center;gap:8px;min-height:29px}
-.minds-task-check-row input[type=checkbox]{appearance:none;width:17px;height:17px;border:1px solid #adb1b9;border-radius:50%;flex:none;cursor:pointer}
+.minds-task-check-row{display:flex;align-items:flex-start;gap:8px;min-height:29px;border-radius:9px}
+.minds-task-check-row input[type=checkbox]{appearance:none;width:17px;height:17px;border:1px solid #adb1b9;border-radius:50%;flex:none;cursor:pointer;margin-top:6px}
 .minds-task-check-row input[type=checkbox]:checked{background:#26292f;border-color:#26292f}
 .minds-task-check-row input[type=checkbox]:checked:after{content:'✓';color:white;display:block;text-align:center;font-size:11px}
 .minds-task-check-row input[type=text]{flex:1;min-width:0;border:0;background:transparent;font-size:12px;padding:5px 3px;color:#303138}
 .minds-task-check-row input[type=text]:focus{outline:none;border-bottom:1px solid #d2d4d9}
+/* Long steps wrap; the field grows with its text (task-detail.js fitCheck). */
+.minds-task-check-row textarea{flex:1;min-width:0;display:block;border:0;background:transparent;font:inherit;font-size:12px;line-height:1.45;
+  padding:5px 3px;color:#303138;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
+.minds-task-check-row textarea:focus{outline:none;box-shadow:inset 0 -1px 0 #d2d4d9}
 .minds-task-check-row button{border:0;background:transparent;color:#a5a5ab;cursor:pointer;font-size:16px}
+.minds-task-check-row [data-task-check-remove]{margin-top:2px}
+/* Handle to reorder steps: drag with mouse or finger. */
+.minds-task-check-row .minds-task-check-grip{flex:none;display:grid;place-items:center;width:16px;height:29px;padding:0;
+  color:#b3b7bf;cursor:grab;touch-action:none;border-radius:6px}
+.minds-task-check-row .minds-task-check-grip:active{cursor:grabbing}
+.minds-task-check-row .minds-task-check-grip:focus-visible{outline:2px solid rgba(0,122,255,.35);outline-offset:1px}
+.minds-task-check-row.is-dragging{background:#f2f5fa;box-shadow:0 3px 12px rgba(20,30,50,.14)}
+.minds-task-check-row.is-dragging .minds-task-check-grip{color:#007aff;cursor:grabbing}
+@media (hover:hover){
+  .minds-task-check-row .minds-task-check-grip{opacity:0}
+  .minds-task-check-row:hover .minds-task-check-grip,.minds-task-check-row .minds-task-check-grip:focus-visible,
+  .minds-task-check-row.is-dragging .minds-task-check-grip{opacity:1}
+}
+.minds-task-detail.is-muster-readonly .minds-task-check-grip{display:none}
 .minds-task-attachment,.minds-task-link,.minds-task-session{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;padding:4px 1px}
 .minds-task-attachment button,.minds-task-session button,.minds-task-link button{color:#555861;border:0;background:transparent;text-align:left;cursor:pointer;font-size:11px}
 .minds-task-link a{color:#555861;text-decoration:underline;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}

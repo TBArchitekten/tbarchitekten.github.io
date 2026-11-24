@@ -154,6 +154,7 @@ function render(ctx){
     (!ctx.task?'<button type="button" class="minds-task-create" id="taskDetailCreate">Aufgabe anlegen</button>':'')+
     '<button type="button" class="minds-task-reload hidden" id="taskDetailReload">Aktuelle Version laden</button></footer></div>';
   app()?.openModal?.(ctx.readOnly?'Muster-Aufgabe':ctx.task?'Aufgabe':'Neue Aufgabe',body);
+  fitChecks();requestAnimationFrame(fitChecks);
   if(ctx.readOnly){
     const host=$('[data-task-detail]');
     host?.classList.add('is-muster-readonly');
@@ -164,11 +165,65 @@ function render(ctx){
   bind(ctx);
   if(ctx.task)void loadSessions(ctx);
 }
+// Checklist (Gari, 24.11.2026): long steps wrap onto further lines instead of being cut off, and steps can be
+// reordered by dragging the handle (mouse and touch) or with Alt + arrow up/down, as in Microsoft Planner.
+const GRIP='<svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true"><g fill="currentColor">'+
+  '<circle cx="2.5" cy="3" r="1.3"/><circle cx="7.5" cy="3" r="1.3"/><circle cx="2.5" cy="8" r="1.3"/>'+
+  '<circle cx="7.5" cy="8" r="1.3"/><circle cx="2.5" cy="13" r="1.3"/><circle cx="7.5" cy="13" r="1.3"/></g></svg>';
 function checkRow(c){
   return '<div class="minds-task-check-row" data-task-check-id="'+E(c.id||uid())+'">'+
+    '<button type="button" class="minds-task-check-grip" data-task-check-grip title="Ziehen zum Verschieben" '+
+    'aria-label="Schritt verschieben (Alt und Pfeil nach oben oder unten)">'+GRIP+'</button>'+
     '<input type="checkbox" data-task-check-done aria-label="Schritt erledigt" '+(c.done?'checked':'')+'>'+
-    '<input type="text" data-task-check-text placeholder="Schritt hinzufügen …" value="'+E(c.text||'')+'">'+
+    '<textarea data-task-check-text rows="1" aria-label="Schritt" placeholder="Schritt hinzufügen …">'+E(c.text||'')+'</textarea>'+
     '<button type="button" data-task-check-remove title="Schritt entfernen">×</button></div>';
+}
+function fitCheck(node){if(!node)return;node.style.height='auto';node.style.height=node.scrollHeight+'px'}
+function fitChecks(){$$('#taskDetailChecks [data-task-check-text]').forEach(fitCheck)}
+function checkOrder(){return $$('#taskDetailChecks [data-task-check-id]').map(row=>row.dataset.taskCheckId).join('|')}
+function bindChecklist(ctx){
+  const list=$('#taskDetailChecks');if(!list)return;
+  list.addEventListener('input',event=>{if(event.target.matches('[data-task-check-text]'))fitCheck(event.target)});
+  list.addEventListener('keydown',event=>{
+    const row=event.target.closest('.minds-task-check-row');if(!row)return;
+    if(event.altKey&&(event.key==='ArrowUp'||event.key==='ArrowDown')){
+      event.preventDefault();
+      // The neighbour moves, not the focused step: focus and cursor stay where they are.
+      const other=event.key==='ArrowUp'?row.previousElementSibling:row.nextElementSibling;
+      if(!other)return;
+      if(event.key==='ArrowUp')row.after(other);else row.before(other);
+      void updateChecks(ctx);return;
+    }
+    if(event.key==='Enter'&&event.target.matches('[data-task-check-text]')&&!event.isComposing){
+      event.preventDefault();
+      row.insertAdjacentHTML('afterend',checkRow({id:uid(),text:'',done:false}));
+      row.nextElementSibling.querySelector('[data-task-check-text]')?.focus();
+    }
+  });
+  list.addEventListener('pointerdown',event=>{
+    const grip=event.target.closest('[data-task-check-grip]');
+    if(!grip||event.button>0)return;
+    const row=grip.closest('.minds-task-check-row'),start=checkOrder(),pointer=event.pointerId;
+    event.preventDefault();
+    row.classList.add('is-dragging');
+    // Listen on the document: moving the row in the DOM ends any pointer capture on the handle.
+    const move=e=>{
+      if(e.pointerId!==pointer)return;
+      const over=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.minds-task-check-row');
+      if(!over||over===row||over.parentElement!==list)return;
+      const box=over.getBoundingClientRect();
+      if(e.clientY<box.top+box.height/2)over.before(row);else over.after(row);
+    };
+    const end=e=>{
+      if(e.pointerId!==pointer)return;
+      document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',end);
+      document.removeEventListener('pointercancel',end);
+      row.classList.remove('is-dragging');
+      if(checkOrder()!==start)void updateChecks(ctx);
+    };
+    document.addEventListener('pointermove',move);document.addEventListener('pointerup',end);
+    document.addEventListener('pointercancel',end);
+  });
 }
 function bind(ctx){
   const field=(name,make)=>{const node=$(name);if(!node)return;
@@ -231,6 +286,7 @@ function bind(ctx){
   $('#taskDetailReload').onclick=()=>void open(ctx.task?{taskId:ctx.task.id}:ctx.opts);
   $('#taskDetailAddCheck').onclick=()=>{const list=$('#taskDetailChecks');list.insertAdjacentHTML('beforeend',checkRow({id:uid(),text:'',done:false}));
     list.lastElementChild.querySelector('[data-task-check-text]')?.focus()};
+  bindChecklist(ctx);
   $('#taskDetailChecks').addEventListener('change',event=>{if(event.target.matches('[data-task-check-done]'))void updateChecks(ctx)});
   $('#taskDetailChecks').addEventListener('focusout',event=>{if(event.target.matches('[data-task-check-text]'))void updateChecks(ctx)});
   $('#taskDetailChecks').addEventListener('click',event=>{
@@ -269,7 +325,7 @@ function bind(ctx){
 }
 function collectChecks(){
   return $$('#taskDetailChecks [data-task-check-id]').map(row=>({
-    id:row.dataset.taskCheckId,text:row.querySelector('[data-task-check-text]')?.value.trim()||'',
+    id:row.dataset.taskCheckId,text:(row.querySelector('[data-task-check-text]')?.value||'').replace(/\s+/g,' ').trim(),
     done:!!row.querySelector('[data-task-check-done]')?.checked
   })).filter(c=>c.text);
 }
