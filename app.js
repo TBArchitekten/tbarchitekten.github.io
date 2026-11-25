@@ -277,17 +277,48 @@
   };
   $('#hideStartPassword').onclick=()=>{$('#startPasswordBox').hidden=true;$('#startPasswordValue').textContent=''};
 
+  // Leitfaden «Was darf auf den Desktop?» (25.11.2026): hier freischalten und sehen, wer ihn bestätigt hat.
+  // Freigeschaltet zeigt das Office ihn allen einmal beim Öffnen (app/office-leitfaden.js). Fehlt die Tabelle, bleibt
+  // der Abschnitt verborgen.
+  const tagDe=iso=>{try{return new Date(iso).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}catch{return ''}};
+  async function loadLeitfaden(){
+    const section=$('#leitfadenSection');
+    try{
+      const {data:l,error}=await sb.from('office_leitfaeden').select('version,aktiv,geaendert_am').eq('leitfaden','desktop').maybeSingle();
+      if(error||!l){section.hidden=true;return null}
+      const {data:b,error:be}=await sb.from('office_leitfaden_bestaetigungen').select('user_id,bestaetigt_am')
+        .eq('leitfaden','desktop').eq('version',l.version);
+      const gelesen=new Map(be?[]:(b||[]).map(x=>[x.user_id,x.bestaetigt_am]));
+      $('#leitfadenStatus').textContent=l.aktiv
+        ?`Freigeschaltet seit ${tagDe(l.geaendert_am)} (Stand ${formatDate(l.version)}). Wer das Office öffnet, liest ihn einmal und bestätigt mit «Gelesen»; bei jedem Zugang steht, wann.`
+        :`Noch nicht freigeschaltet (Stand ${formatDate(l.version)}). Freigeschaltet zeigt das Office ihn allen einmal beim Öffnen; bestätigt wird mit «Gelesen».`;
+      const toggle=$('#leitfadenToggle');
+      toggle.textContent=l.aktiv?'Ausschalten':'Freischalten';
+      toggle.className=l.aktiv?'':'primary';
+      toggle.disabled=false;
+      toggle.onclick=async()=>{
+        toggle.disabled=true;$('#leitfadenMessage').textContent='';
+        const {data,error:ue}=await sb.from('office_leitfaeden').update({aktiv:!l.aktiv}).eq('leitfaden','desktop').select('aktiv');
+        if(ue||!data?.length){$('#leitfadenMessage').textContent='Das hat nicht geklappt. Freischalten kann nur die Administration.';toggle.disabled=false;return}
+        await loadMembers();
+      };
+      section.hidden=false;
+      return {aktiv:l.aktiv===true,gelesen};
+    }catch{section.hidden=true;return null}
+  }
   async function loadMembers(){
     if(member?.role!=='admin')return;
     const host=$('#memberList');host.innerHTML='<div class="empty">Lade Zugänge …</div>';
     try{
-      const {members:list}=await admin('list');
+      const [{members:list},leitfaden]=await Promise.all([admin('list'),loadLeitfaden()]);
       $('#memberCount').textContent=String(list.filter(m=>m.is_active).length);
       host.innerHTML='';
       for(const m of list){
         const row=document.createElement('div');row.className='row member-row'+(m.is_active?'':' is-inactive');
         const self=m.user_id===user.id;
-        row.innerHTML=`<span><div class="row-title">${esc(m.display_name)}</div><div class="row-sub">${esc(m.email)}</div></span>
+        const gelesen=leitfaden?.aktiv&&m.is_active
+          ?`<div class="row-sub member-leitfaden">${leitfaden.gelesen.has(m.user_id)?'Leitfaden gelesen am '+esc(tagDe(leitfaden.gelesen.get(m.user_id))):'Leitfaden noch nicht bestätigt'}</div>`:'';
+        row.innerHTML=`<span><div class="row-title">${esc(m.display_name)}</div><div class="row-sub">${esc(m.email)}</div>${gelesen}</span>
           <select data-role ${self?'disabled':''} aria-label="Rolle">${Object.entries(C.ROLE_LABELS).map(([v,l])=>`<option value="${v}" ${m.role===v?'selected':''}>${l}</option>`).join('')}</select>
           <div class="row-sub row-sub-date">${m.must_change_password?'Startpasswort aktiv':m.last_sign_in_at?'Zuletzt '+esc(formatDate(m.last_sign_in_at.slice(0,10))):'Noch nicht angemeldet'}</div>
           <button type="button" data-reset ${!m.is_active?'disabled':''}>Passwort zurücksetzen</button>

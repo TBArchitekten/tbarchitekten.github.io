@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Titus Bernhard Architekten · Office</title>
   <link rel="stylesheet" href="./shared/minds-design-tokens.css?v=3">
-  <link rel="stylesheet" href="./style.css?v=office26">
+  <link rel="stylesheet" href="./style.css?v=office27">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
   <script src="./office-config.js?v=1"></script>
   <script src="./shared/supabase-client.js?v=office4"></script>
@@ -183,6 +183,14 @@
             <button type="button" id="hideStartPassword">Ausblenden</button>
           </div>
         </div>
+        <section id="leitfadenSection" class="section" hidden>
+          <div class="section-title"><h2>Leitfaden «Was darf auf den Desktop?»</h2></div>
+          <div class="card leitfaden-card">
+            <p id="leitfadenStatus" class="muted"></p>
+            <button type="button" id="leitfadenToggle"></button>
+          </div>
+          <div id="leitfadenMessage" class="message" aria-live="polite"></div>
+        </section>
         <section class="section">
           <div class="section-title"><h2>Zugänge</h2><span id="memberCount" class="count">0</span></div>
           <div id="memberList" class="card row-list"></div>
@@ -253,6 +261,6 @@
 
 
   <script src="./office-core.js?v=5"></script>
-  <script src="./app.js?v=6"></script>
+  <script src="./app.js?v=7"></script>
 </body>
 </html>

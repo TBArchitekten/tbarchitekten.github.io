@@ -136,3 +136,54 @@
 }
 
 /* Romy Live · voluntary voice route; the existing microphone stays intact. */
+
+/* Leitfaden «Was darf auf den Desktop?» (25.11.2026): beim ersten Öffnen lesen und mit «Gelesen» bestätigen;
+   danach im Desktop jedes Projekts zum Nachlesen. Farben nur aus den Tokens; Grün, Gelb und Rot tragen immer ihr Wort. */
+.office-leitfaden{width:min(760px,calc(100vw - 32px));max-height:min(88vh,960px);padding:0;border:1px solid var(--m-border);
+ border-radius:var(--m-radius-overlay);background:var(--m-paper);color:var(--m-ink);font-family:var(--m-type)}
+.office-leitfaden[open]{display:flex;flex-direction:column}
+.office-leitfaden-kopf{display:flex;gap:var(--m-space-3);align-items:flex-start;justify-content:space-between;
+ padding:var(--m-space-5) var(--m-space-5) var(--m-space-3);border-bottom:1px solid var(--m-border-soft)}
+.office-leitfaden-kopf h2{margin:0;font-size:22px;line-height:1.25}
+.office-leitfaden-kopf p{margin:var(--m-space-1) 0 0;color:var(--m-ink-soft);font-size:var(--m-size-meta);line-height:1.45}
+.office-leitfaden-zu{flex:none;min-width:var(--m-touch);min-height:var(--m-touch);border:0;background:transparent;color:var(--m-blue);
+ font-size:26px;line-height:1;cursor:pointer}
+.office-leitfaden-text{flex:1 1 auto;min-height:0;overflow:auto;padding:var(--m-space-2) var(--m-space-5) var(--m-space-5);
+ font-size:15px;line-height:var(--m-leading-body);outline:none}
+.office-leitfaden-text h3{display:flex;gap:var(--m-space-2);align-items:center;margin:var(--m-space-5) 0 var(--m-space-2);font-size:var(--m-size-section)}
+.office-leitfaden-ton{flex:none;width:10px;height:10px;border-radius:var(--m-radius-pill);background:var(--m-ink-faint)}
+.office-leitfaden-text .is-gruen .office-leitfaden-ton{background:var(--m-success)}
+.office-leitfaden-text .is-gelb .office-leitfaden-ton{background:var(--m-attention)}
+.office-leitfaden-text .is-rot .office-leitfaden-ton{background:var(--m-error)}
+.office-leitfaden-text p,.office-leitfaden-text ul,.office-leitfaden-text ol{margin:0 0 var(--m-space-3)}
+.office-leitfaden-text ul,.office-leitfaden-text ol{padding-left:22px}
+.office-leitfaden-text li{margin:0 0 var(--m-space-1)}
+.office-leitfaden-text table{width:100%;margin:0 0 var(--m-space-3);border-collapse:collapse;font-size:14px;line-height:1.45}
+.office-leitfaden-text th,.office-leitfaden-text td{padding:var(--m-space-2);border:1px solid var(--m-border-soft);text-align:left;vertical-align:top}
+.office-leitfaden-text th{background:var(--m-surface);color:var(--m-ink-soft);font-weight:600}
+.office-leitfaden-text td:first-child{font-weight:600}
+.office-leitfaden-text h4{margin:var(--m-space-4) 0 var(--m-space-2);color:var(--m-ink-soft);font-size:var(--m-size-meta)}
+.office-leitfaden-klein,.office-leitfaden-quellen{color:var(--m-ink-soft);font-size:var(--m-size-meta)}
+.office-leitfaden-quellen a{color:var(--m-link)}
+.office-leitfaden-fuss{display:flex;flex-wrap:wrap;gap:var(--m-space-3);align-items:center;justify-content:flex-end;
+ padding:var(--m-space-3) var(--m-space-5);border-top:1px solid var(--m-border-soft);background:var(--m-surface)}
+.office-leitfaden-gelesen{display:flex;gap:var(--m-space-2);align-items:center;min-height:var(--m-touch);margin-right:auto;font-weight:600;cursor:pointer}
+.office-leitfaden-gelesen input{width:20px;height:20px;margin:0}
+.office-leitfaden-meldung{flex:1 1 100%;order:-1;margin:0;color:var(--m-error);font-size:var(--m-size-meta)}
+.office-leitfaden-meldung:empty{display:none}
+.office-leitfaden-hinweis{margin:0 auto 0 0;color:var(--m-ink-soft);font-size:var(--m-size-meta)}
+.office-leitfaden .primary:disabled{opacity:.45;cursor:default}
+.office-leitfaden-spaeter{min-height:var(--m-touch);padding:0 var(--m-space-4);border:1px solid var(--m-blue-line);border-radius:var(--m-radius-pill);
+ background:var(--m-paper);color:var(--m-blue);cursor:pointer}
+@media(max-width:640px){
+ .office-leitfaden{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border:0;border-radius:0}
+ .office-leitfaden-kopf,.office-leitfaden-text,.office-leitfaden-fuss{padding-left:var(--m-space-4);padding-right:var(--m-space-4)}
+ .office-leitfaden-text table,.office-leitfaden-text tbody,.office-leitfaden-text tr,.office-leitfaden-text td{display:block;width:auto}
+ .office-leitfaden-text thead{display:none}
+ .office-leitfaden-text tr{margin:0 0 var(--m-space-2);padding:var(--m-space-2) var(--m-space-3);border:1px solid var(--m-border-soft);border-radius:var(--m-radius-card)}
+ .office-leitfaden-text td{padding:var(--m-space-1) 0;border:0}
+ .office-leitfaden-text td:not(:first-child)::before{content:attr(data-spalte) ": ";color:var(--m-ink-soft);font-weight:600}
+}
+.work-desktop-leitfaden{margin:0 0 var(--m-space-3);font-size:var(--m-size-meta)}
+.work-desktop-leitfaden button{padding:0;border:0;background:none;color:var(--m-link);font:inherit;text-decoration:underline;
+ text-underline-offset:2px;cursor:pointer}

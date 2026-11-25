@@ -435,3 +435,10 @@ textarea{resize:vertical;min-height:72px;font-family:inherit}
   #appView>.lens-account .lens-copy{display:none}
   #appView .content{padding-bottom:calc(94px + env(safe-area-inset-bottom,0px))}
 }
+
+/* Leitfaden «Was darf auf den Desktop?» in «Mitglieder» (25.11.2026): freischalten und sehen, wer ihn bestätigt hat. */
+.leitfaden-card{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 16px}
+.leitfaden-card p{margin:0;font-size:13.5px}
+.leitfaden-card button{flex:none}
+.member-leitfaden{color:var(--m-ink-faint)}
+@media(max-width:760px){.leitfaden-card{flex-direction:column;align-items:stretch}}
