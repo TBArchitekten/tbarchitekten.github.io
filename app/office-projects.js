@@ -407,6 +407,11 @@ document.getElementById('officeToolsStart')?.addEventListener('click',()=>{
 document.getElementById('officeToolsKosten')?.addEventListener('click',()=>{
   window.location.href='../kostenberechnung.html';
 });
+// Controlling (Gari, 25.11.2026): eigene Seite (controlling.html im Wurzelverzeichnis): Honorar, Stunden, Zahlungen
+// und Prognose je Projekt; Sätze und Gehälter nur für Admins. Im Projekt steht es als Reiter in Work.
+document.getElementById('officeToolsControlling')?.addEventListener('click',()=>{
+  window.location.href='../controlling.html';
+});
 // Produktbibliothek: eigene Seite (produktbibliothek.html im Wurzelverzeichnis): Produkte und Leistungen mit
 // Datenblatt, Preisen mit Herkunft und Verwendung in Projekten.
 document.getElementById('officeToolsProdukte')?.addEventListener('click',()=>{

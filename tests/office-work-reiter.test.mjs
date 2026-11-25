@@ -10,7 +10,7 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const shell=read('app/shell.js'),work=read('app/work.js'),index=read('app/index.html');
 
 test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigenem Platz für die Werkzeugseite',()=>{
-  assert.match(shell,/<button data-work-view="planner">Planner<\/button>\s*<button data-work-view="terminplan" hidden>Terminplan<\/button>\s*<button data-work-view="kosten" hidden>Kostenberechnung<\/button>\s*<button data-work-view="mustermappe" hidden>Mustermappe<\/button>\s*<button data-work-view="produkte" hidden>Produkte<\/button>\s*<button data-work-view="hersteller" hidden>Hersteller<\/button>/);
+  assert.match(shell,/<button data-work-view="planner">Planner<\/button>\s*<button data-work-view="terminplan" hidden>Terminplan<\/button>\s*<button data-work-view="kosten" hidden>Kostenberechnung<\/button>\s*<button data-work-view="controlling" hidden>Controlling<\/button>\s*<button data-work-view="mustermappe" hidden>Mustermappe<\/button>\s*<button data-work-view="produkte" hidden>Produkte<\/button>\s*<button data-work-view="hersteller" hidden>Hersteller<\/button>/);
   assert.match(shell,/<div id="workBody" class="work-body">[^\n]*<\/div>\s*<div id="workToolHost" class="work-tool-host" hidden><\/div>/);
   assert.doesNotMatch(shell+work,/data-work-tool="|openProjectTool|work-tool-menu/,'kein Menü mehr, das Work verlässt');
   assert.match(work,/:isToolView\(view\)\?renderTool\(view\)/);
@@ -32,7 +32,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office54','shell.js?v=office56','office-projects.js?v=office61','work-polish.css?v=6','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office55','shell.js?v=office57','office-projects.js?v=office62','work-polish.css?v=6','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 
