@@ -28,6 +28,10 @@ jobs:
         env:
           CI: 'true'
         run: node --test tests/browser/romy-chat.chromium.mjs tests/browser/romy-live.chromium.mjs tests/browser/office-app-boot.chromium.mjs
+      - name: Exercise the guide «Was darf auf den Desktop?» (shown once when switched on, «Gelesen» before «Weiter», stays closed otherwise, read again, iPhone) with a synthetic Supabase
+        env:
+          CI: 'true'
+        run: node --test tests/browser/office-leitfaden.chromium.mjs
       - name: Exercise LPH3 Musterplanner read-only desktop and mobile board separately
         env:
           CI: 'true'

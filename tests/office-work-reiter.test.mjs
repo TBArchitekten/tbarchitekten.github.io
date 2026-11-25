@@ -32,7 +32,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office57','shell.js?v=office58','office-projects.js?v=office62','work-polish.css?v=7','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office58','shell.js?v=office58','office-projects.js?v=office62','work-polish.css?v=7','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 
