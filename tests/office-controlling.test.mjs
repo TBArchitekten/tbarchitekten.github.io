@@ -76,17 +76,18 @@ test('Sätze: der jüngste ab dem Tag gültige; Stundensatz aus dem Gehalt wie d
   assert.equal(K.gehaltSatz(0,{}),null);
 });
 
-test('Übersicht: laufende Pakete zuerst, darin die schlechteste Prognose oben',()=>{
-  const e=(status,prognose,b)=>({paket:{status,bezeichnung:b},k:{prognoseErgebnis:prognose}});
-  const l=[e('abgeschlossen',5000,'A'),e('beauftragt',2000,'B'),e('beauftragt',-3000,'C'),e('angeboten',null,'D'),e('beauftragt',null,'E')].sort(K.ordnung);
-  assert.deepEqual(l.map(x=>x.paket.bezeichnung),['C','B','E','D','A']);
+test('Übersicht nach Projektnummer (Gari, 25.11.2026): aufsteigend; im Projekt LPH 3 vor LPH 4; ohne Nummer ans Ende',()=>{
+  const e=(nummer,b,status='beauftragt')=>({nummer,paket:{status,bezeichnung:b},k:{}});
+  const l=[e('9212','Studie'),e('9101','LPH 4'),e('','Ohne'),e('9205','LPH 1–2','abgeschlossen'),e('9101','LPH 3'),e('T-10','a'),e('T-9','a')].sort(K.ordnung);
+  assert.deepEqual(l.map(x=>x.nummer+' '+x.paket.bezeichnung),['9101 LPH 3','9101 LPH 4','9205 LPH 1–2','9212 Studie','T-9 a','T-10 a',' Ohne']);
+  assert.match(read('controlling.js'),/const eintrag=p=>\(\{paket:p,k:kz\(p\),nummer:projekt\(p\.project_id\)\?\.number\|\|''\}\);/);
 });
 
 test('Seite: Tokens zuerst, Kern vor der Seite, Marke im Rahmen, Anmeldung wie die anderen Werkzeuge',()=>{
   const html=read('controlling.html'),js=read('controlling.js');
   assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office5">/);
   assert.match(html,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  assert.ok(html.indexOf('controlling-kern.js?v=office4')<html.indexOf('controlling.js?v=office5'));
+  assert.ok(html.indexOf('controlling-kern.js?v=office5')<html.indexOf('controlling.js?v=office6'));
   assert.ok(html.includes("<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>"));
   assert.match(js,/const IM_REITER=window\.self!==window\.top;/);
   assert.match(js,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
@@ -161,7 +162,7 @@ test('Tools und Work: Karte «Controlling», Reiter je Projekt nach der Kostenbe
 test('Keine Namen aus Projekten und Team, keine spanischen Wörter',()=>{
   for(const f of ['controlling.html','controlling.js','controlling-kern.js','controlling.css',MIGRATION,'tests/sql/office-controlling-acceptance.sql',
     'tests/browser/fixtures/fake-supabase-controlling.js','tests/browser/office-controlling.chromium.mjs',
-    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|controlling_annahmen|controlling_jahresstunden|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
+    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|controlling_annahmen|controlling_jahresstunden|controlling_urlaub|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
     const s=read(f);
     // Namen von Projekten, Bauherren und Kolleginnen nur als Prüfsumme (sha256, 16 Zeichen), damit sie selbst nicht im
     // öffentlichen Repo stehen.
@@ -223,7 +224,7 @@ test('Migration nur Liste: Sätze, Gehälter, Stunden je Person und Annahmen nur
 
 test('Teilzeit und Selbstkosten: Jahresstunden anteilig nach Wochenstunden, Faktor auf das Bruttogehalt allein (Gari, 25.11.2026)',()=>{
   const e={arbeitgeberanteil_prozent:21,jahresstunden:1600,vollzeit_wochenstunden:40,gemeinkostenfaktor:2};
-  assert.deepEqual(K.annahmen(null),{ag:21,jahresstunden:1600,vollzeit:40,faktor:null},'Standard wie die Datenbank, ohne Faktor');
+  assert.deepEqual(K.annahmen(null),{ag:21,jahresstunden:1600,vollzeit:40,faktor:null,urlaub:null,projektanteil:100},'Standard wie die Datenbank, ohne Faktor und ohne Urlaub des Büros');
   assert.equal(K.jahresstundenPerson(null,e),1600,'ohne Angabe Vollzeit');
   assert.equal(K.jahresstundenPerson(20,e),800);
   assert.equal(K.jahresstundenPerson(16,{...e,vollzeit_wochenstunden:32}),800,'Bezug ist die Vollzeit des Büros');
@@ -352,4 +353,34 @@ test('PDF über den Druckdialog: Zahlungen, Bericht und Übersicht; Vertrauliche
   assert.match(js,/\(voll\?'<label class="pb-check"><input type="checkbox" name="vertraulich">/);
   assert.match(js,/if\(!voll\)\{drucken\(name,druckUebersicht\(false\),true\);return\}/);
   assert.match(js,/\.replace\(\/\[\\\\\/:\*\?"<>\|\]\+\/g,'-'\)/,'Dateiname ohne Zeichen, die Dateisysteme ablehnen');
+});
+
+test('Urlaub je Person (Gari, 25.11.2026): eigene Jahresstunden, nur gegenüber dem Urlaub des Büros; anteiliger Urlaub ändert nichts',()=>{
+  const e={arbeitgeberanteil_prozent:21,jahresstunden:1600,vollzeit_wochenstunden:40,urlaubstage:30};
+  assert.equal(K.jahresstundenPerson(40,e,{urlaubstage:25}),1640,'5 Tage weniger Urlaub = 40 h mehr');
+  assert.equal(K.jahresstundenPerson(40,e,{urlaubstage:32}),1584);
+  assert.equal(K.jahresstundenPerson(16,e,{urlaubstage:12,arbeitstage_woche:2}),640,'Teilzeit an 2 Tagen mit anteiligen 12 Tagen: wie bisher');
+  assert.equal(K.jahresstundenPerson(20,e,{urlaubstage:25}),820,'20 h an 5 Tagen, 5 Tage weniger: 20 h mehr');
+  assert.equal(K.jahresstundenPerson(40,{...e,urlaubstage:null},{urlaubstage:25}),1600,'ohne Urlaub des Büros keine Korrektur');
+  assert.equal(K.jahresstundenPerson(40,{...e,projektanteil_prozent:90},{urlaubstage:25}),1636,'der Projektanteil gilt auch für die gewonnenen Tage');
+  assert.equal(K.gehaltSatz(4100,e,40,{urlaubstage:25}),36.3,'4.100 € bei 1.640 h wie 4.000 € bei 1.600 h');
+  // Wie A_s1_urlaub in der Abnahme: 20 von 40 h, 20 eigene Urlaubstage, Büro 30 Tage, 90 % Projektanteil, 1.650 Jahresstunden:
+  // 825 h + (30 × 4 − 20 × 4) × 0,9 = 861 h; 11 h × 58.080 € ÷ 861 h = 742,02 €.
+  const e2={arbeitgeberanteil_prozent:21,jahresstunden:1650,vollzeit_wochenstunden:40,urlaubstage:30,projektanteil_prozent:90};
+  const b=K.bewertung([{id:'s1',stichtag:'2026-11-01'}],[{stand_id:'s1',person_id:'a',stunden:11}],
+    [{person_id:'a',gueltig_ab:'2026-01-01',kalkulationssatz:100,monatsgehalt:4000,wochenstunden:20,urlaubstage:20,arbeitstage_woche:5}],e2,85);
+  assert.equal(b.staende[0].personalkosten,742.02);
+});
+
+test('Migration Urlaub: zwei leere Spalten an den Sätzen, Summen mit der Korrektur, gleiche Signatur; nichts entfernt',()=>{
+  const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_controlling_urlaub\.sql$/.test(f));
+  assert.equal(datei.length,1);
+  const sql=read('supabase/migrations/'+datei[0]),ohne=sql.replace(/--.*$/gm,'');
+  assert.doesNotMatch(ohne,/\b(drop|truncate|delete\s+from|alter\s+table\s+\S+\s+drop|default)\b/i,'nichts Destruktives, keine Standardwerte');
+  assert.match(sql,/add column urlaubstage numeric\(4,1\)\n    check \(urlaubstage is null or \(urlaubstage >= 0 and urlaubstage <= 60\)\)/);
+  assert.match(sql,/add column arbeitstage_woche numeric\(2,1\)/);
+  assert.match(sql,/case when sa\.urlaubstage is not null and e\.urlaubstage is not null/);
+  assert.match(sql,/- sa\.urlaubstage \* coalesce\(sa\.wochenstunden, e\.vollzeit_wochenstunden\) \/ coalesce\(sa\.arbeitstage_woche, 5\)\)/);
+  assert.match(sql,/returns table \(stand_id uuid, paket_id uuid, stichtag date, leistungsstand numeric,\n               stunden numeric, wert_kalkulation numeric, wert_gehalt numeric\)/);
+  assert.match(read('tests/sql/office-controlling-acceptance.sql'),/A_urlaub=2; A_s1_urlaub=742\.02; /);
 });

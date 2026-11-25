@@ -24,6 +24,8 @@
    Abends (Gari, 25.11.2026): «So gerechnet» erst auf Knopfdruck; die Stunden grün im Budget, orange leicht und rot
    deutlich darüber; die Jahresstunden aus dem Kalender hergeleitet (Feiertage in Augsburg, Urlaub, Krankheit, weitere
    Tage, Projektanteil); PDF über den Druckdialog für die Zahlungen, einen Bericht je Paket und die Übersicht.
+   Später (Gari, 25.11.2026): Urlaub je Person (eigene Jahresstunden, Spalten «Urlaub» und «Jahresstunden» unter «Sätze
+   und Gehälter»); die Übersicht nach Projektnummer.
    Rechnen: controlling-kern.js (window.TBA_CONTROLLING). */
 (()=>{
 'use strict';
@@ -147,6 +149,8 @@ const stundenVon=standId=>daten.stunden.filter(h=>h.stand_id===standId);
 // und Selbstkosten; ohne vollen Zugang gibt es dafür keine Daten.
 const bewVon=p=>voll?K.bewertung(summenVon(p).map(s=>({id:s.stand_id,stichtag:s.stichtag})),daten.stunden,daten.saetze,daten.einstellungen,p.kalkulationssatz):null;
 const kz=p=>K.kennzahlen(p,summenVon(p),zahlungenVon(p),bewVon(p));
+// Ein Paket für die Übersicht, mit der Nummer seines Projekts (geordnet nach Nummer, Gari 25.11.2026).
+const eintrag=p=>({paket:p,k:kz(p),nummer:projekt(p.project_id)?.number||''});
 const wer=h=>h.person_id?person(h.person_id)||'Person':h.person_name||'Team';
 const urlProjekt=(pid,mehr={})=>'./controlling.html?'+new URLSearchParams({projekt:pid,...mehr});
 
@@ -258,7 +262,7 @@ function offenText(k){
 
 // ---------- Übersicht ----------
 function renderUebersicht(){
-  const eintraege=daten.pakete.map(p=>({paket:p,k:kz(p)})).sort(K.ordnung);
+  const eintraege=daten.pakete.map(eintrag).sort(K.ordnung);
   const mitPaket=new Set(daten.pakete.map(p=>p.project_id));
   const ohne=voll?daten.projekte.filter(p=>p.status==='aktiv'&&!mitPaket.has(p.id)):[];
   root.innerHTML='<div class="pb-wrap">'+
@@ -480,11 +484,13 @@ function renderSaetze(){
   const reihen=aktive.map(x=>{
     const eigene=daten.saetze.filter(s=>s.person_id===x.user_id).sort((u,v)=>String(v.gueltig_ab).localeCompare(String(u.gueltig_ab)));
     const k=K.satzAm(daten.saetze,x.user_id,heute(),'kalkulationssatz'),g=K.gehaltAm(daten.saetze,x.user_id,heute());
-    const gs=g?K.gehaltSatz(g.monatsgehalt,e,g.wochenstunden):null,ss=g?K.selbstkostenSatz(g.monatsgehalt,e,g.wochenstunden):null;
+    const gs=g?K.gehaltSatz(g.monatsgehalt,e,g.wochenstunden,g):null,ss=g?K.selbstkostenSatz(g.monatsgehalt,e,g.wochenstunden,g):null;
+    const jahr=g?K.jahresstundenPerson(g.wochenstunden,e,g):null;
     const ab=eigene.find(s=>s.gueltig_ab<=heute())?.gueltig_ab;
     return '<tr><td>'+esc(x.display_name||'—')+(eigene.length>1?'<span class="ct-personen">'+eigene.length+' Einträge</span>':'')+'</td>'+
       '<td class="num">'+(k==null?'<span class="meta">Satz des Pakets</span>':esc(euro(k,k%1?2:0))+'/h')+'</td>'+
       '<td class="num">'+(g?esc(euro(g.monatsgehalt)):'—')+'</td><td class="num">'+(g?(g.wochenstunden!=null?esc(std(Number(g.wochenstunden))):'Vollzeit'):'—')+'</td>'+
+      '<td class="num">'+(g?urlaubText(g):'—')+'</td><td class="num">'+(jahr==null?'—':esc(std(Math.round(jahr))))+'</td>'+
       '<td class="num">'+(gs==null?'—':esc(euro(gs,2))+'/h')+'</td><td class="num">'+(ss==null?'—':esc(euro(ss,2))+'/h')+'</td>'+
       '<td>'+esc(ab?datum(ab):'—')+'</td><td><button type="button" class="btn btn-quiet" data-person="'+esc(x.user_id)+'">Sätze</button></td></tr>';
   }).join('');
@@ -496,8 +502,10 @@ function renderSaetze(){
     '<p class="pb-banner info" data-meldung hidden></p>'+
     '<section class="card pb-box"><h2 class="pb-h2">Personen</h2><div class="pb-tabelle ct-tabelle"><table><thead><tr><th>Person</th><th class="num">Kalkulationssatz</th>'+
     '<th class="num">Monatsgehalt<span class="ct-einheit">brutto</span></th><th class="num">Wochenstunden</th>'+
+    '<th class="num">Urlaub<span class="ct-einheit">Tage im Jahr</span></th><th class="num">Jahresstunden<span class="ct-einheit">der Person</span></th>'+
     '<th class="num">Stundensatz aus Gehalt<span class="ct-einheit">Personalkosten</span></th><th class="num">Selbstkostensatz<span class="ct-einheit">'+
-    esc(a.faktor?'Bruttogehalt × '+zahl(a.faktor,2):'ohne Gemeinkostenfaktor')+'</span></th><th>gültig ab</th><th></th></tr></thead><tbody>'+reihen+'</tbody></table></div></section>'+
+    esc(a.faktor?'Bruttogehalt × '+zahl(a.faktor,2):'ohne Gemeinkostenfaktor')+'</span></th><th>gültig ab</th><th></th></tr></thead><tbody>'+reihen+'</tbody></table></div>'+
+    urlaubHinweis(e,a,aktive)+'</section>'+
     annahmenBox(e,a)+fragenBox(a,aktive)+
     (istAdmin&&voll?zugangBox(aktive):'')+'</div>';
   root.querySelectorAll('[data-person]').forEach(b=>b.addEventListener('click',()=>satzFormular(b.dataset.person)));
@@ -531,6 +539,21 @@ function renderSaetze(){
     if(error){meldung('Nicht gespeichert: '+error.message,'warn');return}
     await neuLaden('Gespeichert.');
   });
+}
+// Urlaub je Person (Gari, 25.11.2026: nicht alle haben gleich viele Urlaubstage). Leer heißt: wie das Büro, in Teilzeit
+// anteilig. Eigene Tage zählen in den eigenen Arbeitstagen.
+function urlaubText(g){
+  if(g.urlaubstage==null)return '<span class="meta">wie das Büro</span>';
+  const t=Number(g.urlaubstage),d=g.arbeitstage_woche!=null?Number(g.arbeitstage_woche):null;
+  return esc(zahl(t,t%1?1:0)+' Tage')+(d&&d!==5?'<span class="ct-personen">bei '+esc(zahl(d,d%1?1:0))+' Tagen je Woche</span>':'');
+}
+function urlaubHinweis(e,a,aktive){
+  const mitEigenem=aktive.some(x=>K.gehaltAm(daten.saetze,x.user_id,heute())?.urlaubstage!=null);
+  const text=a.urlaub==null
+    ?(mitEigenem?'Eigene Urlaubstage zählen erst, wenn unter «Annahmen» die Urlaubstage des Büros eingetragen sind (Herleitung der Jahresstunden); bis dahin gilt für alle der Urlaub des Büros, in Teilzeit anteilig.':'')
+    :'Jahresstunden der Person: '+zahl(a.jahresstunden)+' h × Wochenstunden ÷ '+zahl(a.vollzeit,a.vollzeit%1?1:0)+'; wer mehr oder weniger Urlaub hat als das Büro ('+
+      zahl(a.urlaub,a.urlaub%1?1:0)+' Tage bei 5 Tagen, in Teilzeit anteilig), bekommt den Unterschied abgezogen oder dazu.';
+  return text?'<p class="meta" data-urlaub-hinweis>'+esc(text)+'</p>':'';
 }
 // Ein Gehalt zum Anfassen: was die Annahmen aus 4.000 € brutto in Vollzeit machen.
 function beispielText(e){
@@ -581,7 +604,7 @@ function herleitungBox(e,a){
     esc(zahl(kal.werktage))+' Werktage − '+esc(zahl(kal.feiertage))+' Feiertage = '+esc(zahl(kal.arbeitstage))+' Arbeitstage</summary>'+
     '<div class="ct-herleitung-inhalt"><label class="ct-herleitung-feld">Jahr<select name="jahr" class="pb-input">'+herleitungJahr().map(x=>'<option'+(x===j?' selected':'')+'>'+x+'</option>').join('')+'</select></label>'+
     '<p class="ct-feld-hilfe ct-herleitung-kalender" data-kalender></p>'+
-    feld('urlaub','Urlaubstage (Vollzeit)',wert(e.urlaubstage),'z. B. 30','In Teilzeit anteilig; das decken die Wochenstunden je Person ab.')+
+    feld('urlaub','Urlaubstage des Büros (Vollzeit)',wert(e.urlaubstage),'z. B. 30','Bezug für alle: in Teilzeit anteilig; wer mehr oder weniger hat, trägt es bei seinen Sätzen ein.')+
     feld('krank','Krankheitstage (Annahme)',wert(e.krankheitstage),'z. B. 15','Im Schnitt 2025: 14,6 Arbeitstage je Beschäftigten (Destatis).')+
     feld('weitere','Weitere Tage ohne Projekt',wert(e.weitere_tage),'z. B. 3','Fortbildung, Betriebsausflug, Heiligabend, Silvester.')+
     feld('anteil','Projektanteil der Arbeitszeit (%)',wert(e.projektanteil_prozent),'leer: 100','Ohne Akquise, Büroorganisation und interne Termine.')+
@@ -629,8 +652,8 @@ function fragenBox(a,aktive){
     ['jahresstunden','Sind '+h+' Stunden im Jahr die Projektstunden einer Vollzeitkraft? Mit wie vielen Urlaubstagen, Krankheitstagen und Tagen ohne Projekt rechnet das Büro, und welcher Anteil der Arbeitszeit geht in Projekte?',
       'Weniger Projektstunden heißen: jede Stunde kostet mehr. '+kalender.jahr+' hat Augsburg '+zahl(kalender.feiertage)+' Feiertage an Werktagen, also '+
       zahl(kalender.arbeitstage)+' Arbeitstage; die Herleitung oben rechnet daraus die Jahresstunden.',h+' h bei '+vz+' h in der Woche'+(herleitung?'; aus dem Kalender '+zahl(herleitung)+' h':'')+'.'],
-    ['wochenstunden','Stimmen die Wochenstunden je Person laut Vertrag, ist der Urlaub in Teilzeit anteilig, und wie zählen Überstunden?',
-      'Der Stundensatz einer Teilzeitkraft rechnet mit ihrem Anteil an den Jahresstunden; anteiliger Urlaub ist darin schon enthalten. Nur wer mehr oder weniger Urlaub hat, bräuchte einen eigenen Wert. Unbezahlte Überstunden senken die tatsächlichen Kosten je Stunde.',
+    ['wochenstunden','Stimmen Wochenstunden, Arbeitstage und Urlaubstage je Person laut Vertrag, und wie zählen Überstunden?',
+      'Der Stundensatz einer Teilzeitkraft rechnet mit ihrem Anteil an den Jahresstunden; anteiliger Urlaub ist darin schon enthalten. Wer mehr oder weniger Urlaub hat, bekommt eigene Jahresstunden (bei den Sätzen eintragen). Unbezahlte Überstunden senken die tatsächlichen Kosten je Stunde.',
       'je Person in der Tabelle oben; ohne Angabe Vollzeit'+(ohneWoche?' ('+ohneWoche+(ohneWoche===1?' Person':' Personen')+' mit Gehalt ohne Wochenstunden)':'')+'.'],
     ['sonderzahlungen','Gibt es ein 13. Gehalt, Urlaubsgeld, Boni oder Zuschüsse (etwa ein Jobticket), die nicht im Monatsgehalt stecken?',
       'Gerechnet wird Monatsgehalt × 12; ein 13. Gehalt macht jede Stunde gut 8 % teurer.','Monatsgehalt × 12, ohne Sonderzahlungen.'],
@@ -806,7 +829,7 @@ function berichtDialog(pr,p){
 }
 // Übersicht aller Pakete auf einem Blatt (quer), wie die Karten geordnet; mit vollem Zugang auf Wunsch der Gewinn.
 function druckUebersicht(mitGewinn){
-  const eintraege=daten.pakete.map(p=>({paket:p,k:kz(p)})).sort(K.ordnung);
+  const eintraege=daten.pakete.map(eintrag).sort(K.ordnung);
   const reihen=eintraege.map(({paket:p,k})=>{
     const pr=projekt(p.project_id),ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis,g=k.abgeschlossen?k.gewinn:k.prognoseGewinn;
     return '<tr><td>'+esc(pr?.number||'')+'</td><td>'+esc(pr?.name||'')+'<br><span class="ctd-klein">'+esc(p.bezeichnung)+' · '+esc(p.status)+(k.vorlaeufig?', vorläufig':'')+'</span></td>'+
@@ -1044,12 +1067,14 @@ function zahlungFormular(p,z){
 function satzFormular(personId){
   const e=daten.einstellungen||{},a=K.annahmen(e);
   const eigene=daten.saetze.filter(s=>s.person_id===personId).sort((x,y)=>String(y.gueltig_ab).localeCompare(String(x.gueltig_ab)));
-  const woche=eigene.find(s=>s.wochenstunden!=null)?.wochenstunden;
+  const woche=eigene.find(s=>s.wochenstunden!=null)?.wochenstunden,urlaub=eigene.find(s=>s.urlaubstage!=null)?.urlaubstage,
+    tage=eigene.find(s=>s.arbeitstage_woche!=null)?.arbeitstage_woche;
   const form=oeffneDialog('<form method="dialog" class="pb-form"><h2>Sätze</h2><p class="meta">'+esc(person(personId)||'Person')+'</p>'+
     (eigene.length?'<div class="pb-tabelle ct-tabelle"><table><thead><tr><th>gültig ab</th><th class="num">Kalkulationssatz</th><th class="num">Monatsgehalt</th>'+
-      '<th class="num">Wochenstunden</th><th></th></tr></thead><tbody>'+
+      '<th class="num">Wochenstunden</th><th class="num">Urlaub</th><th></th></tr></thead><tbody>'+
       eigene.map(s=>'<tr><td>'+esc(datum(s.gueltig_ab))+'</td><td class="num">'+esc(s.kalkulationssatz==null?'—':euro(s.kalkulationssatz,2)+'/h')+'</td>'+
         '<td class="num">'+esc(s.monatsgehalt==null?'—':euro(s.monatsgehalt))+'</td><td class="num">'+esc(s.wochenstunden==null?(s.monatsgehalt==null?'—':'Vollzeit'):std(Number(s.wochenstunden)))+'</td>'+
+        '<td class="num">'+(s.monatsgehalt==null?'—':urlaubText(s))+'</td>'+
         '<td><button type="button" class="btn btn-quiet btn-danger" data-satz-weg="'+esc(s.id)+'">Entfernen</button></td></tr>').join('')+
       '</tbody></table></div>':'<p class="meta">Noch kein eigener Satz: es gilt der Kalkulationssatz des Pakets.</p>')+
     '<h3 class="pb-h3">Neuer Eintrag</h3><div class="pb-felder">'+
@@ -1057,13 +1082,16 @@ function satzFormular(personId){
     '<label>Kalkulationssatz (€/h)<input name="satz" class="pb-input" inputmode="decimal" placeholder="leer: Satz des Pakets"></label>'+
     '<label>Monatsgehalt brutto (€)<input name="gehalt" class="pb-input" inputmode="decimal" placeholder="leer: unbekannt"></label>'+
     '<label>Wochenstunden laut Vertrag<input name="woche" class="pb-input" inputmode="decimal" value="'+esc(eingabe(woche))+'" placeholder="leer: Vollzeit ('+esc(zahl(a.vollzeit,a.vollzeit%1?1:0))+' h)"></label>'+
+    '<label>Urlaubstage im Jahr laut Vertrag<input name="urlaub" class="pb-input" inputmode="decimal" value="'+esc(eingabe(urlaub))+'" placeholder="leer: wie das Büro, anteilig"></label>'+
+    '<label>Arbeitstage je Woche<input name="tage" class="pb-input" inputmode="decimal" value="'+esc(eingabe(tage))+'" placeholder="leer: 5"></label>'+
     '<label class="breit">Notiz<input name="notiz" class="pb-input" maxlength="500"></label></div>'+
     '<p class="ct-vorschau" data-vorschau></p>'+knoepfe('Eintragen','')+'</form>');
   const vorschau=()=>{
     const g=K.leseZahl(form.gehalt.value),w=form.woche.value.trim()?K.leseZahl(form.woche.value):null;
-    const gs=g?K.gehaltSatz(g,e,w):null,ss=g?K.selbstkostenSatz(g,e,w):null;
+    const u={urlaubstage:form.urlaub.value.trim()?K.leseZahl(form.urlaub.value):null,arbeitstage_woche:form.tage.value.trim()?K.leseZahl(form.tage.value):null};
+    const gs=g?K.gehaltSatz(g,e,w,u):null,ss=g?K.selbstkostenSatz(g,e,w,u):null;
     dialog.querySelector('[data-vorschau]').textContent=gs==null?'':'Stundensatz aus Gehalt '+euro(gs,2)+'/h'+(ss!=null?', Selbstkostensatz '+euro(ss,2)+'/h':'')+
-      ' ('+zahl(K.jahresstundenPerson(w,e))+' Jahresstunden, '+proz(a.ag)+' Arbeitgeberanteil'+(a.faktor?', Faktor '+zahl(a.faktor,2):'')+')';
+      ' ('+zahl(Math.round(K.jahresstundenPerson(w,e,u)))+' Jahresstunden, '+proz(a.ag)+' Arbeitgeberanteil'+(a.faktor?', Faktor '+zahl(a.faktor,2):'')+')';
   };
   form.addEventListener('input',vorschau);
   dialog.querySelectorAll('[data-satz-weg]').forEach(b=>b.addEventListener('click',async()=>{
@@ -1075,14 +1103,17 @@ function satzFormular(personId){
   form.addEventListener('submit',async ev=>{
     if(ev.submitter?.value!=='speichern')return;
     ev.preventDefault();
-    const satzText=form.satz.value.trim(),gehaltText=form.gehalt.value.trim(),wocheText=form.woche.value.trim();
+    const satzText=form.satz.value.trim(),gehaltText=form.gehalt.value.trim(),wocheText=form.woche.value.trim(),urlaubText_=form.urlaub.value.trim(),tageText=form.tage.value.trim();
     const satz=satzText?K.leseZahl(satzText):null,gehalt=gehaltText?K.leseZahl(gehaltText):null,wochenstunden=wocheText?K.leseZahl(wocheText):null;
+    const urlaubstage=urlaubText_?K.leseZahl(urlaubText_):null,arbeitstage_woche=tageText?K.leseZahl(tageText):null;
     if(!satzText&&!gehaltText){zeigeFehler('Bitte einen Kalkulationssatz oder ein Monatsgehalt eintragen.');return}
     if(satzText&&!(satz>0)){zeigeFehler('Kalkulationssatz in Euro je Stunde, etwa 85.');return}
     if(gehaltText&&(gehalt==null||gehalt<0)){zeigeFehler('Monatsgehalt als Betrag in Euro.');return}
     if(wocheText&&(wochenstunden==null||wochenstunden<=0||wochenstunden>80)){zeigeFehler('Wochenstunden über 0 und höchstens 80, etwa 20.');return}
+    if(urlaubText_&&(urlaubstage==null||urlaubstage<0||urlaubstage>60)){zeigeFehler('Urlaubstage 0 bis 60, etwa 30 (in den eigenen Arbeitstagen).');return}
+    if(tageText&&(arbeitstage_woche==null||arbeitstage_woche<=0||arbeitstage_woche>6)){zeigeFehler('Arbeitstage je Woche über 0 und höchstens 6, etwa 2.');return}
     const {error}=await sb.from('office_controlling_saetze').insert({person_id:personId,gueltig_ab:form.ab.value,kalkulationssatz:satz,monatsgehalt:gehalt,
-      wochenstunden,notiz:form.notiz.value.trim()||null,created_by:nutzer.id});
+      wochenstunden,urlaubstage,arbeitstage_woche,notiz:form.notiz.value.trim()||null,created_by:nutzer.id});
     if(error){zeigeFehler(error.code==='23505'?'Für diesen Tag gibt es schon einen Eintrag; bitte ihn entfernen oder ein anderes Datum wählen.':'Nicht gespeichert: '+error.message);return}
     dialog.close();await neuLaden('Eingetragen.');
   });

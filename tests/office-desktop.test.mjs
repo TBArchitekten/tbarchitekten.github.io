@@ -13,7 +13,7 @@ test('Office Desktop has shared office root and per-project tree without activat
   assert.match(work,/project\?\.id\|\|null/);
   assert.match(shell,/data-work-view="desktop">Desktop/);
   assert.match(html,/office-desktop-ops\.js\?v=office3/);
-  assert.match(html,/work\.js\?v=office56/);
+  assert.match(html,/work\.js\?v=office57/);
   assert.match(work,/const SHOW_BURO=false;/,'Büro Desktop hidden for now (Gari, 07.11.2026)');
 });
 test('Nested folder operations are real and deletion requires explicit confirmation',()=>{
@@ -46,4 +46,20 @@ test('Desktop exposes task attachments without loading personal Window data',()=
   assert.match(work,/project\?\.client_key\|\|'office'/);
   assert.match(work,/storage\.from\('minds-work'\)\.upload/);
   assert.match(work,/createSignedUrl/);
+});
+
+test('Desktop des Projektteams (Gari, 25.11.2026): Leiste nennt das Team, Dateien nennen, wer sie abgelegt hat; löschen nur eigene',()=>{
+  const work=read('app/work.js'),ops=read('app/office-desktop-ops.js'),css=read('app/office.css');
+  assert.match(work,/sb\.from\('office_project_members'\)\.select\('user_id'\)\.eq\('project_id',id\)/);
+  assert.match(work,/Gemeinsamer Desktop des Projektteams: \$\{esc\(team\.namen\.join\(', '\)\)\}/);
+  assert.match(work,/team\.namen\.length>1&&team\.person\.get\(f\.user_id\)\?`<small class="work-file-von">von \$\{esc\(team\.person\.get\(f\.user_id\)\)\}<\/small>`/);
+  assert.match(ops,/create\('Löschen',\(\)=>isFolder\?removeFolder\(item\):removeFile\(item\),true\)/);
+  assert.match(css,/\.office-desktop-actions button\.is-danger\{color:#aa3434\}/);
+  assert.doesNotMatch(css,/\.office-desktop-actions button:last-child/,'Rot nur für Löschen, nicht für den letzten Knopf');
+  // Storage lässt nur die Person löschen, die hochgeladen hat (erstes Pfadstück); vorher blieb die Datei liegen.
+  assert.match(ops,/const ownUpload=item=>String\(item\?\.storage_path\|\|''\)\.split\('\/'\)\[0\]===userId;/);
+  assert.match(ops,/if\(!office&&!ownUpload\(item\)\)\{setStatus\('Löschen kann diese Datei nur, wer sie hochgeladen hat\.'\);return\}/);
+  assert.match(ops,/if\(isFolder\|\|office\|\|ownUpload\(item\)\)create\('Löschen'/);
+  assert.match(work,/rows=gewaehlt\.filter\(f=>String\(f\.storage_path\|\|''\)\.split\('\/'\)\[0\]===uid\)/);
+  assert.match(read('app/index.html'),/office-desktop-ops\.js\?v=office39/);
 });

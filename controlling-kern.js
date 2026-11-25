@@ -8,7 +8,9 @@
    Seit 25.11.2026 (Gari, nachmittags): Wochenstunden je Person (Teilzeit hat ihren Anteil an den Jahresstunden), die
    Selbstkosten einer Stunde mit dem Gemeinkostenfaktor des Büros auf das Bruttogehalt allein, die Bewertung der Stunden
    je Person wie in office_controlling_summen (bewertung) und die Lage auf einen Blick (lage). Dazu die Jahresstunden aus
-   dem Kalender (Werktage, Feiertage am Sitz des Büros in Augsburg, Urlaub, Krankheit, weitere Tage, Projektanteil).
+   dem Kalender (Werktage, Feiertage am Sitz des Büros in Augsburg, Urlaub, Krankheit, weitere Tage, Projektanteil) und,
+   seit 25.11.2026 abends, Urlaub je Person (eigene Jahresstunden, wenn jemand mehr oder weniger Urlaub hat als das Büro).
+   Die Übersicht ordnet nach Projektnummer (Gari).
    Ohne DOM: im Browser window.TBA_CONTROLLING, in Node module.exports (Tests). */
 (function(root){
 'use strict';
@@ -96,38 +98,50 @@ function kennzahlen(paket,staende=[],zahlungen=[],bew=null){
     vorlaeufig:!!paket?.vorlaeufig||(zahlungen||[]).some(z=>z.vorlaeufig)
   };
 }
-// Reihenfolge in der Übersicht: laufende Pakete zuerst, darin die mit der schlechtesten Prognose; ohne Prognose ans Ende.
-// a und b: {paket, k} mit k aus kennzahlen().
+// Reihenfolge in der Übersicht (Gari, 25.11.2026): aufsteigend nach Projektnummer (natürlich: T-9 vor T-10), ohne Nummer ans Ende; im
+// selben Projekt die Pakete nach Bezeichnung (LPH 3 vor LPH 4), dann nach Anlage. a und b: {nummer, paket, k}.
+const natuerlich=(x,y)=>String(x).localeCompare(String(y),'de',{numeric:true,sensitivity:'base'});
 function ordnung(a,b){
-  const status=x=>({beauftragt:0,angeboten:1,abgeschlossen:2}[x?.paket?.status]??3);
-  const prognose=x=>x?.k?.prognoseErgebnis??x?.k?.ergebnisBisher??Infinity;
-  return status(a)-status(b)||prognose(a)-prognose(b)||String(a?.paket?.bezeichnung||'').localeCompare(String(b?.paket?.bezeichnung||''),'de');
+  const na=String(a?.nummer??'').trim(),nb=String(b?.nummer??'').trim();
+  if(!na!==!nb)return na?-1:1;
+  return natuerlich(na,nb)||natuerlich(a?.paket?.bezeichnung||'',b?.paket?.bezeichnung||'')||
+    String(a?.paket?.created_at||'').localeCompare(String(b?.paket?.created_at||''));
 }
 // Annahmen für die Sätze aus dem Gehalt (office_controlling_einstellungen; was fehlt, mit den Standardwerten der
 // Datenbank). Der Gemeinkostenfaktor hat keinen Standard: ohne ihn keine Selbstkosten.
 function annahmen(e){
   const wert=(x,d)=>{const v=Number(x);return x!=null&&x!==''&&Number.isFinite(v)?v:d};
   const faktor=wert(e?.gemeinkostenfaktor,null);
+  const anteil=wert(e?.projektanteil_prozent,null);
   return {ag:wert(e?.arbeitgeberanteil_prozent,21),jahresstunden:wert(e?.jahresstunden,1600),vollzeit:wert(e?.vollzeit_wochenstunden,40),
-    faktor:faktor>0?faktor:null};
+    faktor:faktor>0?faktor:null,urlaub:wert(e?.urlaubstage,null),projektanteil:anteil>0?Math.min(anteil,100):100};
 }
-// Jahresstunden einer Person: die der Vollzeit, anteilig nach ihren Wochenstunden (leer: Vollzeit).
-function jahresstundenPerson(wochenstunden,einstellungen){
+// Jahresstunden einer Person: die der Vollzeit, anteilig nach ihren Wochenstunden (leer: Vollzeit). Hat sie eigenen
+// Urlaub (urlaub: Eintrag mit urlaubstage und arbeitstage_woche) und das Büro seine Urlaubstage eingetragen, zählt der
+// Unterschied: (Urlaub des Büros × Wochenstunden ÷ 5 − eigener Urlaub × Wochenstunden ÷ Arbeitstage) × Projektanteil.
+// Anteiliger Urlaub in Teilzeit (12 Tage bei 2 Arbeitstagen, wenn das Büro 30 gibt) ändert also nichts.
+function jahresstundenPerson(wochenstunden,einstellungen,urlaub=null){
   const a=annahmen(einstellungen),w=Number(wochenstunden);
   const woche=wochenstunden!=null&&wochenstunden!==''&&w>0?w:a.vollzeit;
-  return a.vollzeit>0?a.jahresstunden*woche/a.vollzeit:0;
+  let h=a.vollzeit>0?a.jahresstunden*woche/a.vollzeit:0;
+  const eigen=urlaub?.urlaubstage;
+  if(eigen!=null&&eigen!==''&&Number.isFinite(Number(eigen))&&a.urlaub!=null){
+    const tage=Number(urlaub.arbeitstage_woche)>0?Number(urlaub.arbeitstage_woche):5;
+    h+=(a.urlaub*woche/5-Number(eigen)*woche/tage)*a.projektanteil/100;
+  }
+  return h;
 }
 // Personalkosten je Stunde (Stundensatz aus dem Gehalt): Bruttogehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden der
 // Person, ungerundet wie in der Datenbank.
-function gehaltSatzRoh(monatsgehalt,einstellungen,wochenstunden){
-  const g=Number(monatsgehalt),h=jahresstundenPerson(wochenstunden,einstellungen);
+function gehaltSatzRoh(monatsgehalt,einstellungen,wochenstunden,urlaub=null){
+  const g=Number(monatsgehalt),h=jahresstundenPerson(wochenstunden,einstellungen,urlaub);
   if(monatsgehalt==null||!Number.isFinite(g)||g<=0||!(h>0))return null;
   return g*12*(1+annahmen(einstellungen).ag/100)/h;
 }
 // Selbstkosten je Stunde: Bruttogehalt × 12 × Gemeinkostenfaktor ÷ Jahresstunden der Person. Der Faktor gilt für das
 // Bruttogehalt allein (Gari, 25.11.2026); ob er den Arbeitgeberanteil schon enthält, steht unter «Zu klären».
-function selbstkostenSatzRoh(monatsgehalt,einstellungen,wochenstunden){
-  const g=Number(monatsgehalt),h=jahresstundenPerson(wochenstunden,einstellungen),f=annahmen(einstellungen).faktor;
+function selbstkostenSatzRoh(monatsgehalt,einstellungen,wochenstunden,urlaub=null){
+  const g=Number(monatsgehalt),h=jahresstundenPerson(wochenstunden,einstellungen,urlaub),f=annahmen(einstellungen).faktor;
   if(monatsgehalt==null||!Number.isFinite(g)||g<=0||!(h>0)||f==null)return null;
   return g*12*f/h;
 }
@@ -176,7 +190,7 @@ function bewertung(staende,stunden,saetze,einstellungen,paketSatz){
       wertK+=delta*((p.person_id?satzAm(saetze,p.person_id,s.stichtag,'kalkulationssatz'):null)??satzPaket);
       if(delta===0)continue;
       const g=p.person_id?gehaltAm(saetze,p.person_id,s.stichtag):null;
-      const sg=g?gehaltSatzRoh(g.monatsgehalt,einstellungen,g.wochenstunden):null,ss=g?selbstkostenSatzRoh(g.monatsgehalt,einstellungen,g.wochenstunden):null;
+      const sg=g?gehaltSatzRoh(g.monatsgehalt,einstellungen,g.wochenstunden,g):null,ss=g?selbstkostenSatzRoh(g.monatsgehalt,einstellungen,g.wochenstunden,g):null;
       if(sg==null){pkVoll=false;p.ohneGehalt=true}else{pk+=delta*sg;p.personalkosten+=delta*sg;p.saetzeG.add(r2(sg))}
       if(ss==null){skVoll=false;p.ohneSelbstkosten=true}else{sk+=delta*ss;p.selbstkosten+=delta*ss;p.saetzeS.add(r2(ss))}
     }

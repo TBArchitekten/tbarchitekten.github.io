@@ -707,7 +707,10 @@ async function duplicatesPanel(){
     // Two taps: the first only asks for confirmation.
     if(!button.dataset.confirm){button.dataset.confirm='1';button.textContent='Sicher? '+ids.length+' endgültig löschen';return}
     button.disabled=true;button.textContent='Lösche …';
-    const rows=copies.filter(f=>ids.includes(f.id));
+    const uid=(await getSession())?.user?.id;
+    const gewaehlt=copies.filter(f=>ids.includes(f.id)),rows=gewaehlt.filter(f=>String(f.storage_path||'').split('/')[0]===uid);
+    if(rows.length<gewaehlt.length)setStatus('Löschen kann eine Datei nur, wer sie hochgeladen hat: '+(gewaehlt.length-rows.length)+' Kopie(n) bleiben.');
+    if(!rows.length){button.disabled=false;button.textContent='Nichts gelöscht';return}
     const removal=await sb.storage.from('minds-work').remove(rows.map(f=>f.storage_path).filter(Boolean));
     if(removal.error){button.disabled=false;button.textContent='Erneut versuchen';setStatus('Die Dateien konnten nicht gelöscht werden.');return}
     const {error}=await sb.from('minds_work_files').delete().in('id',rows.map(f=>f.id));
@@ -716,19 +719,38 @@ async function duplicatesPanel(){
     await renderDesktop();
   };
 }
+// Der Desktop eines Projekts ist der des ganzen Projektteams (Gari, 25.11.2026: alle im Projekt sollen ihn sehen): die
+// Datenbank zeigt jedem im Team alle Ordner und Dateien des Projekts, gleich wer sie abgelegt hat. Damit das sichtbar
+// ist, nennt die Leiste das Team und jede Datei, wer sie abgelegt hat. Löschen kann eine Datei nur, wer sie hochgeladen
+// hat (Storage); umbenennen und verschieben alle im Team.
+let desktopTeam={id:undefined,namen:[],person:new Map()};
+async function loadDesktopTeam(){
+  const id=project?.id||null;
+  if(desktopTeam.id===id)return desktopTeam;
+  desktopTeam={id,namen:[],person:new Map()};
+  try{
+    const [m,p]=await Promise.all([id?sb.from('office_project_members').select('user_id').eq('project_id',id).limit(500):Promise.resolve({data:[]}),
+      sb.from('office_members').select('user_id,display_name').limit(500)]);
+    const person=new Map((p.data||[]).map(x=>[x.user_id,x.display_name||'']));
+    desktopTeam={id,person,namen:(m.data||[]).map(x=>person.get(x.user_id)).filter(Boolean).sort((a,b)=>a.localeCompare(b,'de'))};
+  }catch{}
+  return desktopTeam;
+}
 async function renderDesktop(){
   await loadFolders();
+  const team=await loadDesktopTeam();
   if(folderId&&!folders.some(f=>f.id===folderId))folderId=null;
   let fq=documentScope(sb.from('minds_work_files').select('id,user_id,folder_id,name,mime_type,size_bytes,source_kind,index_status,metadata,storage_path,created_at')).order('created_at',{ascending:false});
   fq=folderId?fq.eq('folder_id',folderId):fq.is('folder_id',null);
   const {data:fileRows,error:fe}=await fq;if(fe)throw fe;files=fileRows||[];
   const childFolders=folders.filter(x=>(x.parent_id||null)===(folderId||null)),trail=folderTrail(),body=$('#workBody');
   body.innerHTML=`<div class="work-desktop-toolbar"><div class="work-breadcrumb"><button data-work-project-root>${esc(project?.name||'Büro')}</button>${trail.map(f=>`<span>›</span><button data-work-crumb="${f.id}">${esc(f.name)}</button>`).join('')}</div><div class="work-toolbar-actions"><button data-work-dupes hidden>Duplikate</button><button data-work-new-folder>＋ Ordner</button><button data-work-upload>↑ Dateien</button></div></div>
+    ${project?.id&&team.namen.length?`<p class="small work-desktop-team" data-work-team>Gemeinsamer Desktop des Projektteams: ${esc(team.namen.join(', '))}. Alle im Team sehen dieselben Ordner und Dateien.</p>`:''}
     <div class="work-drop-hint">Dateien, PDFs, Word, Excel, Bilder oder E-Mails hierher ziehen</div>
     <div class="work-files">
       ${folderId?`<button class="work-file work-folder work-up" data-work-up><span class="work-file-icon">${workTileIcon('back')}</span><strong>Zurück</strong><small>Ordner</small></button>`:''}
       ${childFolders.map(f=>`<button class="work-file work-folder" data-work-folder="${f.id}"><span class="work-file-icon">${workTileIcon('folder')}</span><strong>${esc(f.name)}</strong><small>Ordner</small></button>`).join('')}
-      ${files.map(f=>`<button class="work-file" data-work-file="${f.id}"><span class="work-file-icon">${workTileIcon(f.source_kind==='email'?'email':f.source_kind==='image'?'image':'file',f)}</span><strong>${esc(f.name)}</strong><small>${esc(workFileTypeLabel(f))} · ${Math.max(1,Math.round(Number(f.size_bytes||0)/1024))} KB · ${esc(workKnowledgeStatus(f))}</small></button>`).join('')}
+      ${files.map(f=>`<button class="work-file" data-work-file="${f.id}"><span class="work-file-icon">${workTileIcon(f.source_kind==='email'?'email':f.source_kind==='image'?'image':'file',f)}</span><strong>${esc(f.name)}</strong><small>${esc(workFileTypeLabel(f))} · ${Math.max(1,Math.round(Number(f.size_bytes||0)/1024))} KB · ${esc(workKnowledgeStatus(f))}</small>${team.namen.length>1&&team.person.get(f.user_id)?`<small class="work-file-von">von ${esc(team.person.get(f.user_id))}</small>`:''}</button>`).join('')}
       ${!childFolders.length&&!files.length&&!folderId?'<div class="work-empty work-empty-wide">Dieser Desktop ist leer. Einen Ordner anlegen oder die ersten Unterlagen hierher ziehen.</div>':''}
     </div>`;
   $('[data-work-upload]')?.addEventListener('click',()=>$('#workFileInput')?.click());
