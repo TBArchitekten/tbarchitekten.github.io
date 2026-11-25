@@ -192,6 +192,7 @@ document.body.innerHTML = `
           <button data-work-view="hersteller" hidden>Hersteller</button>
           <button data-work-view="knowledge" hidden>Wissen</button>
           <button data-work-view="threads">Threads</button>
+          <button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" title="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden>+</button>
         </div>
         <div id="workStatus" class="work-status" aria-live="polite"></div>
         <div id="workBody" class="work-body"><div class="surface-loading">Öffne Work …</div></div>

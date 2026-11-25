@@ -8,9 +8,12 @@
    Zahlungen. Begriffe wie in der Projektübersicht von untermStrich: erarbeitetes Honorar = Honorar × Leistungsstand,
    Prognose = bisheriger Wert ÷ Leistungsstand.
    Sichtbarkeit (Gari): Alle im Projekt sehen Honorar, Zahlungen, Stunden und das Ergebnis; Sätze und Gehälter der
-   Personen und das Ergebnis zum Gehalt nur Admins. Die Datenbank setzt das durch (Migration 20261125085053): Stunden je
-   Person, Sätze, Gehälter und Einstellungen liest nur ein Admin, die Summen je Stand kommen aus office_controlling_summen.
-   Eintragen und ändern: nur Admins.
+   Personen und das Ergebnis zum Gehalt nur mit vollem Zugang: Admins und, wer in office_controlling_zugang steht (die
+   Buchhaltung, Gari 25.11.2026; sie sieht alle Projekte, wird aber nicht Admin des Office). Die Datenbank setzt das
+   durch (Migrationen 20261125085053 und office_controlling_zugang): Stunden je Person, Sätze, Gehälter und
+   Einstellungen liest nur voller Zugang, die Summen je Stand kommen aus office_controlling_summen. Eintragen und ändern:
+   nur voller Zugang; den Zugang vergeben nur Admins (Ansicht «Sätze und Gehälter»).
+   Karten (Gari, 25.11.2026): fett das Projekt, darunter das Paket; die ganze Karte öffnet das Projektblatt.
    Ansichten: Übersicht (ohne Parameter), Projektblatt (?projekt=<id>, auch als Reiter «Controlling» eines Projekts in
    Work; ?paket= und ?reiter=zahlungen wählen vor), Sätze und Gehälter (?ansicht=saetze, nur Admins).
    Rechnen: controlling-kern.js (window.TBA_CONTROLLING). */
@@ -40,8 +43,9 @@ const heute=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 const STATUS=[['angeboten','angeboten'],['beauftragt','beauftragt'],['abgeschlossen','abgeschlossen']];
 const ZAHLUNG=[['bezahlt','bezahlt'],['gestellt','gestellt, noch offen']];
 
-let nutzer=null,admin=false;
-const daten={projekte:[],pakete:[],staende:[],summen:[],zahlungen:[],stunden:[],saetze:[],einstellungen:null,personen:[],team:[]};
+// voll: voller Zugang zum Controlling (Admin oder Eintrag in office_controlling_zugang); istAdmin: vergibt den Zugang.
+let nutzer=null,voll=false,istAdmin=false;
+const daten={projekte:[],pakete:[],staende:[],summen:[],zahlungen:[],stunden:[],saetze:[],einstellungen:null,personen:[],team:[],zugang:[]};
 const ui={paket:UUID.test(params.get('paket')||'')?params.get('paket'):null,reiter:params.get('reiter')==='zahlungen'?'zahlungen':'staende'};
 
 // Work fragt vor dem Schließen des Rahmens, ob etwas aussteht: hier wird jede Eingabe im Dialog sofort gespeichert.
@@ -65,10 +69,16 @@ async function start(){
     .eq('user_id',nutzer.id).eq('is_active',true).maybeSingle();
   if(me||!m){fehler('Kein Zugriff auf TBA Office.');return}
   if(m.must_change_password){if(inApp||IM_REITER){fehler('Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.');return}location.href='./';return}
-  admin=m.role==='admin';
+  istAdmin=m.role==='admin';
+  voll=istAdmin||await hatZugang();
   try{await ladeAlles();zeichne()}catch(e){console.error('Controlling',e);fehler(e?.message||'Controlling nicht erreichbar.')}
 }
 const leer=()=>Promise.resolve({data:[],error:null});
+// Eigener Eintrag in office_controlling_zugang (jede Person sieht nur ihren eigenen); ohne Tabelle: kein Zugang.
+async function hatZugang(){
+  try{const {data,error}=await sb.from('office_controlling_zugang').select('user_id').eq('user_id',nutzer.id).maybeSingle();return !error&&!!data}
+  catch{return false}
+}
 async function ladeAlles(){
   const projekte=sb.from('office_projects').select('id,number,name,status,projektleiter_id');
   const pakete=sb.from('office_controlling_pakete').select('*');
@@ -76,7 +86,7 @@ async function ladeAlles(){
     (PROJEKT?projekte.eq('id',PROJEKT):projekte.order('number')).limit(500),
     (PROJEKT?pakete.eq('project_id',PROJEKT):pakete).order('created_at').limit(500),
     sb.from('office_members').select('user_id,display_name,role,is_active').limit(500),
-    PROJEKT&&admin?sb.from('office_project_members').select('project_id,user_id').eq('project_id',PROJEKT).limit(500):leer()
+    PROJEKT&&voll?sb.from('office_project_members').select('project_id,user_id').eq('project_id',PROJEKT).limit(500):leer()
   ]);
   const err=proj.error||pak.error||mi.error||te.error;if(err)throw err;
   daten.projekte=proj.data||[];daten.pakete=pak.data||[];daten.personen=mi.data||[];daten.team=(te.data||[]).map(t=>t.user_id);
@@ -89,7 +99,7 @@ async function ladeAlles(){
   const err2=st.error||za.error||su.find(x=>x.error)?.error;if(err2)throw err2;
   daten.staende=st.data||[];daten.zahlungen=za.data||[];daten.summen=su.flatMap(x=>x.data||[]);
   daten.stunden=[];daten.saetze=[];daten.einstellungen=null;
-  if(admin){
+  if(voll){
     const standIds=daten.staende.map(s=>s.id);
     const [h,sa,ei]=await Promise.all([
       standIds.length?sb.from('office_controlling_stunden').select('*').in('stand_id',standIds).limit(10000):leer(),
@@ -99,9 +109,14 @@ async function ladeAlles(){
     const err3=h.error||sa.error||ei.error;if(err3)throw err3;
     daten.stunden=h.data||[];daten.saetze=sa.data||[];daten.einstellungen=(ei.data||[])[0]||null;
   }
+  daten.zugang=[];
+  if(istAdmin&&ANSICHT==='saetze'){
+    const zu=await sb.from('office_controlling_zugang').select('user_id,created_at').limit(500);
+    if(!zu.error)daten.zugang=zu.data||[];
+  }
 }
 function zeichne(){
-  if(ANSICHT==='saetze'){if(admin)renderSaetze();else fehler('Sätze und Gehälter sehen nur Admins.');return}
+  if(ANSICHT==='saetze'){if(voll)renderSaetze();else fehler('Sätze und Gehälter sind nur mit vollem Zugang zum Controlling sichtbar.');return}
   if(ANSICHT==='projekt'){const p=projekt(PROJEKT);if(p)renderProjekt(p);else fehler('Dieses Projekt ist nicht erreichbar oder gehört nicht zum eigenen Team.');return}
   renderUebersicht();
 }
@@ -163,17 +178,17 @@ function offenText(k){
 function renderUebersicht(){
   const eintraege=daten.pakete.map(p=>({paket:p,k:kz(p)})).sort(K.ordnung);
   const mitPaket=new Set(daten.pakete.map(p=>p.project_id));
-  const ohne=admin?daten.projekte.filter(p=>p.status==='aktiv'&&!mitPaket.has(p.id)):[];
+  const ohne=voll?daten.projekte.filter(p=>p.status==='aktiv'&&!mitPaket.has(p.id)):[];
   root.innerHTML='<div class="pb-wrap">'+
     '<a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a>'+
     '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling</p><h1>Controlling</h1>'+
     '<p class="pb-intro">Honorar laut Vertrag gegen die Stunden im Projekt. Die Kalkulation rechnet mit dem Kalkulationssatz (85 €/h, je Person änderbar); '+
     'erarbeitet ist das Honorar mal Leistungsstand, die Prognose rechnet die bisherigen Stunden auf 100 % hoch.</p></div>'+
-    (admin?'<div class="pb-actions"><a class="btn" href="./controlling.html?ansicht=saetze">Sätze und Gehälter</a><button type="button" class="btn btn-primary" data-paket-neu>Neues Honorarpaket</button></div>':'')+
+    (voll?'<div class="pb-actions"><a class="btn" href="./controlling.html?ansicht=saetze">Sätze und Gehälter</a><button type="button" class="btn btn-primary" data-paket-neu>Neues Honorarpaket</button></div>':'')+
     '</header><p class="pb-banner info" data-meldung hidden></p>'+
     (eintraege.length?'<div class="ct-grid">'+eintraege.map(karte).join('')+'</div>'
       :'<div class="card ct-leer"><p><strong>Noch kein Honorar erfasst.</strong></p><p class="meta">'+
-        (admin?'Ein Honorarpaket je Auftrag: Honorar laut Vertrag, Nebenkosten und Kalkulationssatz.':'Das Controlling zeigt die Projekte des eigenen Teams, sobald ein Admin das Honorar eingetragen hat.')+'</p></div>')+
+        (voll?'Ein Honorarpaket je Auftrag: Honorar laut Vertrag, Nebenkosten und Kalkulationssatz.':'Das Controlling zeigt die Projekte des eigenen Teams, sobald ein Admin das Honorar eingetragen hat.')+'</p></div>')+
     (ohne.length?'<p class="ct-ohne">Noch ohne Honorar: '+ohne.map(p=>'<a href="'+esc(urlProjekt(p.id))+'">'+esc(projektName(p))+'</a>').join(', ')+'</p>':'')+
     '</div>';
   root.querySelector('[data-paket-neu]')?.addEventListener('click',()=>paketFormular(null,null));
@@ -181,8 +196,12 @@ function renderUebersicht(){
 function karte({paket:p,k}){
   const pr=projekt(p.project_id);
   const ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis;
-  return '<article class="card ct-karte" data-paket="'+esc(p.id)+'"><p class="meta">'+esc(projektName(pr)||'Projekt')+'</p>'+
-    '<h2><a href="'+esc(urlProjekt(p.project_id,{paket:p.id}))+'">'+esc(p.bezeichnung)+'</a></h2>'+
+  // Gari (25.11.2026): fett steht das Projekt, darunter das Paket; die ganze Karte öffnet das Projektblatt (der Link
+  // im Titel deckt die Karte ab, siehe .ct-karte h2 a::after).
+  return '<article class="card ct-karte" data-paket="'+esc(p.id)+'">'+(pr?.number?'<p class="meta ct-nummer">'+esc(pr.number)+'</p>':'')+
+    '<h2><a href="'+esc(urlProjekt(p.project_id,{paket:p.id}))+'"><span data-titel>'+esc(pr?.name||'Projekt')+'</span>'+
+    '<span class="sr"> · '+esc(p.bezeichnung)+'</span></a></h2>'+
+    '<p class="ct-paket">'+esc(p.bezeichnung)+(p.leistung?' <span class="meta">· '+esc(p.leistung)+'</span>':'')+'</p>'+
     '<div class="pb-chips">'+chips(p,k)+'</div>'+balkenStunden(k)+balkenHonorar(k)+
     '<dl class="ct-zahlen">'+
     '<div><dt>'+(k.abgeschlossen?'Ergebnis':'Prognose am Ende')+'</dt><dd class="'+plusKlasse(ergebnis).trim()+'" data-ergebnis>'+esc(plus(ergebnis))+'</dd></div>'+
@@ -199,13 +218,13 @@ function renderProjekt(pr){
     '<a class="pb-back ct-zur-uebersicht" href="./controlling.html">‹ Controlling</a>'+
     '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling</p><h1>'+esc(projektName(pr))+'</h1>'+
     '<p class="pb-intro">Honorar laut Vertrag, Stunden und Zahlungen. Ergebnis gegenüber der Kalkulation: erarbeitetes Honorar minus Wert der Stunden zum Kalkulationssatz.</p></div>'+
-    (admin?'<div class="pb-actions"><button type="button" class="btn'+(p?'':' btn-primary')+'" data-paket-neu>Neues Honorarpaket</button></div>':'')+
+    (voll?'<div class="pb-actions"><button type="button" class="btn'+(p?'':' btn-primary')+'" data-paket-neu>Neues Honorarpaket</button></div>':'')+
     '</header><p class="pb-banner info" data-meldung hidden></p>'+
     (pakete.length>1?'<div class="pb-pills" role="group" aria-label="Honorarpakete">'+pakete.map(x=>
       '<button type="button" class="pill" data-paket-wahl="'+esc(x.id)+'" aria-pressed="'+(x.id===ui.paket)+'">'+esc(x.bezeichnung)+'</button>').join('')+'</div>':'')+
     (p?paketBlatt(p):'<div class="card ct-leer"><p><strong>Für dieses Projekt ist noch kein Honorar erfasst.</strong></p><p class="meta">'+
-      (admin?'Ein Honorarpaket je Auftrag, etwa «LPH 3» oder «Machbarkeitsstudie».':'Eintragen können nur Admins.')+'</p>'+
-      (admin?'<button type="button" class="btn btn-primary" data-paket-neu>Honorarpaket anlegen</button>':'')+'</div>')+
+      (voll?'Ein Honorarpaket je Auftrag, etwa «LPH 3» oder «Machbarkeitsstudie».':'Eintragen können Admins und wer vollen Zugang zum Controlling hat.')+'</p>'+
+      (voll?'<button type="button" class="btn btn-primary" data-paket-neu>Honorarpaket anlegen</button>':'')+'</div>')+
     '</div>';
   root.querySelectorAll('[data-paket-neu]').forEach(b=>b.addEventListener('click',()=>paketFormular(null,pr.id)));
   root.querySelectorAll('[data-paket-wahl]').forEach(b=>b.addEventListener('click',()=>{ui.paket=b.dataset.paketWahl;adresse();renderProjekt(pr)}));
@@ -241,16 +260,16 @@ function paketBlatt(p){
     ['Zahlungen',[zeile('Bezahlt (Honorar)',k.zahlungen?esc(euro(k.bezahlt)):'noch nicht erfasst'),
       ...(k.gestellt?[zeile('Gestellt, noch offen',esc(euro(k.gestellt)))]:[]),zeile('Erarbeitet, nicht bezahlt',esc(offenText(k)))]]
   ];
-  if(admin)gruppen.push(['Zum Gehalt',[zeile('Wert der Stunden',k.gehalt==null?'Gehälter unvollständig':esc(euro(k.gehalt))),
+  if(voll)gruppen.push(['Zum Gehalt',[zeile('Wert der Stunden',k.gehalt==null?'Gehälter unvollständig':esc(euro(k.gehalt))),
     zeile('Ergebnis bisher',esc(plus(k.ergebnisGehalt)),plusKlasse(k.ergebnisGehalt)),
     zeile('Prognose am Ende',esc(plus(k.prognoseGehalt)),plusKlasse(k.prognoseGehalt))],true]);
   return '<section class="card pb-box" aria-label="Kennzahlen"><div class="ct-kopf-zeile"><div><h2 class="pb-h2">'+esc(p.bezeichnung)+'</h2>'+
     (p.leistung?'<p class="meta">'+esc(p.leistung)+'</p>':'')+'</div><div class="pb-chips">'+chips(p,k)+'</div></div>'+
     '<div class="ct-balken-paar">'+balkenStunden(k)+balkenHonorar(k)+'</div>'+
     '<div class="ct-gruppen">'+gruppen.map(([titel,zeilen,nurAdmin])=>'<div class="ct-gruppe"><h3 class="pb-h3">'+esc(titel)+
-      (nurAdmin?' <span class="ct-nur-admin">nur Admins</span>':'')+'</h3><dl class="pb-merkmale">'+zeilen.join('')+'</dl></div>').join('')+'</div>'+
+      (nurAdmin?' <span class="ct-nur-admin">vertraulich</span>':'')+'</h3><dl class="pb-merkmale">'+zeilen.join('')+'</dl></div>').join('')+'</div>'+
     (p.notiz?'<p class="meta">'+esc(p.notiz)+'</p>':'')+
-    (admin?'<button type="button" class="btn" data-paket-bearbeiten>Paket bearbeiten</button>':'')+'</section>'+
+    (voll?'<button type="button" class="btn" data-paket-bearbeiten>Paket bearbeiten</button>':'')+'</section>'+
     '<div class="ct-reiter" role="tablist" aria-label="Paket">'+
     '<button type="button" role="tab" data-reiter="staende" aria-selected="'+(ui.reiter==='staende')+'">Stände und Stunden</button>'+
     '<button type="button" role="tab" data-reiter="zahlungen" aria-selected="'+(ui.reiter==='zahlungen')+'">Zahlungen</button></div>'+
@@ -260,21 +279,21 @@ function staendeTabelle(p){
   const reihen=summenVon(p).reverse();
   const honorar=Number(p.honorar_netto)||0,abgeschlossen=p.status==='abgeschlossen';
   const kopf='<tr><th>Stichtag</th><th class="num">Leistungsstand</th><th class="num">Stunden</th><th class="num">Wert (Kalkulation)</th>'+
-    '<th class="num">Erarbeitet</th><th class="num">Ergebnis</th>'+(admin?'<th class="num">Wert (Gehalt)</th><th></th>':'')+'</tr>';
+    '<th class="num">Erarbeitet</th><th class="num">Ergebnis</th>'+(voll?'<th class="num">Wert (Gehalt)</th><th></th>':'')+'</tr>';
   const body=reihen.map((s,i)=>{
     const ls=abgeschlossen&&i===0?100:s.leistungsstand;
     const erarbeitet=ls!=null?honorar*Number(ls)/100:null,ergebnis=erarbeitet!=null?erarbeitet-Number(s.wert_kalkulation||0):null;
     const notiz=standZeile(s.stand_id)?.notiz;
-    const je=admin?stundenVon(s.stand_id).map(h=>wer(h)+' '+std(Number(h.stunden))).join(' · '):'';
+    const je=voll?stundenVon(s.stand_id).map(h=>wer(h)+' '+std(Number(h.stunden))).join(' · '):'';
     return '<tr><td>'+esc(datum(s.stichtag))+(notiz?'<span class="ct-personen">'+esc(notiz)+'</span>':'')+(je?'<span class="ct-personen" data-je-person>'+esc(je)+'</span>':'')+'</td>'+
       '<td class="num">'+esc(proz(ls))+'</td><td class="num">'+esc(std(Number(s.stunden)))+'</td><td class="num">'+esc(euro(s.wert_kalkulation))+'</td>'+
       '<td class="num">'+esc(euro(erarbeitet))+'</td><td class="num'+plusKlasse(ergebnis)+'">'+esc(plus(ergebnis))+'</td>'+
-      (admin?'<td class="num">'+esc(s.wert_gehalt==null?'—':euro(s.wert_gehalt))+'</td><td><button type="button" class="btn btn-quiet" data-stand="'+esc(s.stand_id)+'">Bearbeiten</button></td>':'')+'</tr>';
+      (voll?'<td class="num">'+esc(s.wert_gehalt==null?'—':euro(s.wert_gehalt))+'</td><td><button type="button" class="btn btn-quiet" data-stand="'+esc(s.stand_id)+'">Bearbeiten</button></td>':'')+'</tr>';
   }).join('');
   return '<section class="card pb-box" role="tabpanel" aria-label="Stände und Stunden"><div class="pb-box-kopf"><h2 class="pb-h2">Stände und Stunden</h2>'+
-    (admin?'<button type="button" class="btn btn-primary" data-stand-neu>Neuer Stand</button>':'')+'</div>'+
+    (voll?'<button type="button" class="btn btn-primary" data-stand-neu>Neuer Stand</button>':'')+'</div>'+
     '<p class="meta">Je Stand die Stunden seit Beginn des Pakets bis zum Stichtag und der geschätzte Leistungsstand. '+
-    (admin?'Stunden je Person und der Wert zum Gehalt sind nur für Admins sichtbar.':'Die Aufteilung auf Personen sehen nur Admins.')+'</p>'+
+    (voll?'Stunden je Person und der Wert zum Gehalt sind vertraulich: sichtbar nur für Admins und mit vollem Zugang.':'Die Aufteilung auf Personen ist vertraulich.')+'</p>'+
     (reihen.length?'<div class="pb-tabelle ct-tabelle"><table><thead>'+kopf+'</thead><tbody>'+body+'</tbody></table></div>'
       :'<p class="meta">Noch kein Stand erfasst.</p>')+'</section>';
 }
@@ -282,20 +301,20 @@ function zahlungenTabelle(p,k){
   const liste=zahlungenVon(p),nk=Number(p.nebenkosten_prozent)||0;
   const summe=f=>liste.reduce((s,z)=>s+f(z),0);
   const kopf='<tr><th>Datum</th><th>Bezeichnung</th><th class="num">Netto</th><th class="num">davon Honorar</th><th class="num">davon Nebenkosten</th>'+
-    '<th class="num">MwSt</th><th class="num">Brutto</th><th>Status</th>'+(admin?'<th></th>':'')+'</tr>';
+    '<th class="num">MwSt</th><th class="num">Brutto</th><th>Status</th>'+(voll?'<th></th>':'')+'</tr>';
   const body=liste.map(z=>{
     const netto=Number(z.netto)||0,mwst=Number(z.mwst)||0,h=K.honorarAnteil(netto,nk);
     return '<tr><td>'+esc(datum(z.datum)||'offen')+'</td><td>'+esc(z.bezeichnung||'')+(z.notiz?'<span class="ct-personen">'+esc(z.notiz)+'</span>':'')+'</td>'+
       '<td class="num">'+esc(euro(netto,2))+'</td><td class="num">'+esc(euro(h,2))+'</td><td class="num">'+esc(euro(K.r2(netto-h),2))+'</td>'+
       '<td class="num">'+esc(euro(mwst,2))+'</td><td class="num">'+esc(euro(K.r2(netto+mwst),2))+'</td>'+
       '<td><span class="chip'+(z.status==='bezahlt'?' chip-ok':' chip-att')+'">'+esc(z.status)+'</span>'+(z.vorlaeufig?' <span class="chip chip-att">vorläufig</span>':'')+'</td>'+
-      (admin?'<td><button type="button" class="btn btn-quiet" data-zahlung="'+esc(z.id)+'">Bearbeiten</button></td>':'')+'</tr>';
+      (voll?'<td><button type="button" class="btn btn-quiet" data-zahlung="'+esc(z.id)+'">Bearbeiten</button></td>':'')+'</tr>';
   }).join('');
   const fuss=liste.length?'<tfoot><tr><td colspan="2">Summe</td><td class="num">'+esc(euro(summe(z=>Number(z.netto)||0),2))+'</td>'+
     '<td class="num">'+esc(euro(summe(z=>K.honorarAnteil(z.netto,nk)),2))+'</td><td class="num">'+esc(euro(summe(z=>(Number(z.netto)||0)-K.honorarAnteil(z.netto,nk)),2))+'</td>'+
-    '<td class="num">'+esc(euro(summe(z=>Number(z.mwst)||0),2))+'</td><td class="num">'+esc(euro(summe(z=>(Number(z.netto)||0)+(Number(z.mwst)||0)),2))+'</td><td></td>'+(admin?'<td></td>':'')+'</tr></tfoot>':'';
+    '<td class="num">'+esc(euro(summe(z=>Number(z.mwst)||0),2))+'</td><td class="num">'+esc(euro(summe(z=>(Number(z.netto)||0)+(Number(z.mwst)||0)),2))+'</td><td></td>'+(voll?'<td></td>':'')+'</tr></tfoot>':'';
   return '<section class="card pb-box" role="tabpanel" aria-label="Zahlungen"><div class="pb-box-kopf"><h2 class="pb-h2">Zahlungen</h2>'+
-    (admin?'<button type="button" class="btn btn-primary" data-zahlung-neu>Zahlung erfassen</button>':'')+'</div>'+
+    (voll?'<button type="button" class="btn btn-primary" data-zahlung-neu>Zahlung erfassen</button>':'')+'</div>'+
     '<p class="meta">Abschläge und Schlussrechnung: netto mit Nebenkosten, dazu die MwSt. Das Controlling zählt den Honoraranteil (netto ÷ '+
     esc(zahl(1+nk/100,2))+'); bezahlt '+esc(euro(k.bezahlt))+(k.gestellt?', gestellt '+esc(euro(k.gestellt)):'')+'.</p>'+
     (liste.length?'<div class="pb-tabelle ct-tabelle"><table><thead>'+kopf+'</thead><tbody>'+body+'</tbody>'+fuss+'</table></div>'
@@ -316,7 +335,7 @@ function renderSaetze(){
       '<td>'+esc(ab?datum(ab):'—')+'</td><td><button type="button" class="btn btn-quiet" data-person="'+esc(x.user_id)+'">Sätze</button></td></tr>';
   }).join('');
   root.innerHTML='<div class="pb-wrap"><a class="pb-back" href="./controlling.html">‹ Controlling</a>'+
-    '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling · nur Admins</p><h1>Sätze und Gehälter</h1>'+
+    '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling · vertraulich</p><h1>Sätze und Gehälter</h1>'+
     '<p class="pb-intro">Der Kalkulationssatz bewertet die Stunden einer Person; ohne eigenen Satz gilt der des Pakets. Aus dem Monatsgehalt rechnet das Controlling '+
     'einen Stundensatz: Gehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden. Ein neuer Satz gilt ab seinem Datum und bewertet frühere Stunden nicht neu.</p></div></header>'+
     '<p class="pb-banner info" data-meldung hidden></p>'+
@@ -326,8 +345,10 @@ function renderSaetze(){
     '<label>Arbeitgeberanteil (%)<input name="ag" class="pb-input" inputmode="decimal" required value="'+esc(eingabe(e.arbeitgeberanteil_prozent))+'"></label>'+
     '<label>Jahresstunden (produktiv)<input name="h" class="pb-input" inputmode="decimal" required value="'+esc(eingabe(e.jahresstunden))+'"></label>'+
     '<label class="breit"><span class="meta">Arbeitgeberanteil: Sozialversicherung und Umlagen auf das Bruttogehalt. Jahresstunden: bezahlte Stunden abzüglich Urlaub, Feiertage und Krankheit.</span></label>'+
-    '<div class="pb-actions"><button class="btn btn-primary">Speichern</button></div></form></section></div>';
+    '<div class="pb-actions"><button class="btn btn-primary">Speichern</button></div></form></section>'+
+    (istAdmin?zugangBox(aktive):'')+'</div>';
   root.querySelectorAll('[data-person]').forEach(b=>b.addEventListener('click',()=>satzFormular(b.dataset.person)));
+  bindeZugang();
   root.querySelector('[data-einstellungen]').addEventListener('submit',async ev=>{
     ev.preventDefault();
     const f=ev.currentTarget,ag=K.leseZahl(f.ag.value),h=K.leseZahl(f.h.value);
@@ -336,6 +357,34 @@ function renderSaetze(){
     if(error){meldung('Nicht gespeichert: '+error.message,'warn');return}
     await neuLaden('Gespeichert.');
   });
+}
+
+// Voller Zugang zum Controlling (nur Admins vergeben ihn): Admins haben ihn immer; zusätzlich etwa die Buchhaltung.
+// Wer ihn hat, sieht alle Projekte, Stunden je Person, Sätze und Gehälter und trägt ein, wird aber nicht Admin des Office.
+function zugangBox(aktive){
+  const mit=new Set(daten.zugang.map(z=>z.user_id));
+  const admins=aktive.filter(x=>x.role==='admin'),weitere=aktive.filter(x=>x.role!=='admin'&&mit.has(x.user_id));
+  const ohne=aktive.filter(x=>x.role!=='admin'&&!mit.has(x.user_id));
+  return '<section class="card pb-box" data-zugang><h2 class="pb-h2">Voller Zugang zum Controlling</h2>'+
+    '<p class="meta">Sieht alle Projekte, Stunden je Person, Sätze und Gehälter und kann eintragen, etwa die Buchhaltung. Admin des Office wird die Person dadurch nicht.</p>'+
+    '<ul class="ct-zugang">'+admins.map(x=>'<li><span>'+esc(x.display_name||'—')+'</span><span class="meta">Admin, immer</span></li>').join('')+
+    weitere.map(x=>'<li><span>'+esc(x.display_name||'—')+'</span><button type="button" class="btn btn-quiet btn-danger" data-zugang-weg="'+esc(x.user_id)+'">Entfernen</button></li>').join('')+'</ul>'+
+    (ohne.length?'<div class="pb-dok-neu"><select class="pb-input" data-zugang-person aria-label="Person">'+ohne.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.display_name||'—')+'</option>').join('')+'</select>'+
+      '<button type="button" class="btn" data-zugang-geben>Zugang geben</button></div>':'')+'</section>';
+}
+function bindeZugang(){
+  root.querySelector('[data-zugang-geben]')?.addEventListener('click',async()=>{
+    const id=root.querySelector('[data-zugang-person]')?.value;if(!id)return;
+    const {error}=await sb.from('office_controlling_zugang').insert({user_id:id,created_by:nutzer.id});
+    if(error){meldung('Nicht gespeichert: '+error.message,'warn');return}
+    await neuLaden(person(id)+' hat jetzt vollen Zugang zum Controlling.');
+  });
+  root.querySelectorAll('[data-zugang-weg]').forEach(b=>b.addEventListener('click',async()=>{
+    if(b.dataset.sicher!=='1'){b.dataset.sicher='1';b.textContent='Wirklich entfernen?';return}
+    const {error}=await sb.from('office_controlling_zugang').delete().eq('user_id',b.dataset.zugangWeg);
+    if(error){meldung('Nicht entfernt: '+error.message,'warn');return}
+    await neuLaden('Zugang entfernt.');
+  }));
 }
 
 // ---------- Formulare ----------

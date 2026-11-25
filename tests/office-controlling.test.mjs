@@ -4,7 +4,7 @@
 // tests/sql/office-controlling-acceptance.sql im isolierten Supabase, die Seite tests/browser/office-controlling.chromium.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const K=require('../controlling-kern.js');
@@ -80,9 +80,9 @@ test('Übersicht: laufende Pakete zuerst, darin die schlechteste Prognose oben',
 
 test('Seite: Tokens zuerst, Kern vor der Seite, Marke im Rahmen, Anmeldung wie die anderen Werkzeuge',()=>{
   const html=read('controlling.html'),js=read('controlling.js');
-  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=2">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office1">/);
+  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=2">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office2">/);
   assert.match(html,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  assert.ok(html.indexOf('controlling-kern.js?v=office1')<html.indexOf('controlling.js?v=office1'));
+  assert.ok(html.indexOf('controlling-kern.js?v=office1')<html.indexOf('controlling.js?v=office2'));
   assert.ok(html.includes("<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>"));
   assert.match(js,/const IM_REITER=window\.self!==window\.top;/);
   assert.match(js,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
@@ -92,18 +92,38 @@ test('Seite: Tokens zuerst, Kern vor der Seite, Marke im Rahmen, Anmeldung wie d
   assert.ok(!/'\+(p|z|s|x|pr)\.(bezeichnung|leistung|notiz|name|display_name)\+'/.test(js),'unmaskierter Text');
 });
 
-test('Sichtbarkeit: Personen, Sätze, Gehälter und Einstellungen fragt die Seite nur als Admin ab; schreiben nur Admins',()=>{
+test('Sichtbarkeit: Personen, Sätze, Gehälter und Einstellungen fragt die Seite nur mit vollem Zugang ab; schreiben ebenso',()=>{
   const js=read('controlling.js');
   const laden=js.slice(js.indexOf('async function ladeAlles'),js.indexOf('function zeichne'));
-  const adminTeil=laden.slice(laden.indexOf('if(admin){'));
+  const vollTeil=laden.slice(laden.indexOf('if(voll){'));
   for(const t of ['office_controlling_stunden','office_controlling_saetze','office_controlling_einstellungen']){
-    assert.ok(adminTeil.includes("sb.from('"+t+"')"),t);
-    assert.equal(laden.indexOf("sb.from('"+t+"')"),laden.indexOf('if(admin){')+adminTeil.indexOf("sb.from('"+t+"')"),'nur im Admin-Teil: '+t);
+    assert.ok(vollTeil.includes("sb.from('"+t+"')"),t);
+    assert.equal(laden.indexOf("sb.from('"+t+"')"),laden.indexOf('if(voll){')+vollTeil.indexOf("sb.from('"+t+"')"),'nur mit vollem Zugang: '+t);
   }
   assert.match(js,/sb\.rpc\('office_controlling_summen',\{p_project:id\}\)/);
-  // Bearbeiten-Knöpfe nur für Admins.
+  // Voller Zugang: Admin oder eigener Eintrag in office_controlling_zugang; den Zugang vergeben nur Admins.
+  assert.match(js,/istAdmin=m\.role==='admin';\n  voll=istAdmin\|\|await hatZugang\(\);/);
+  assert.match(js,/\(istAdmin\?zugangBox\(aktive\):''\)/);
+  // Bearbeiten-Knöpfe nur mit vollem Zugang.
   for(const k of ['data-stand-neu','data-zahlung-neu','data-paket-bearbeiten','data-paket-neu'])
-    assert.match(js,new RegExp("admin\\?[^:]*"+k),k);
+    assert.match(js,new RegExp("voll\\?[^:]*"+k),k);
+});
+
+test('Migration Zugang: Buchhaltung sieht und schreibt wie ein Admin, ohne Admin zu werden; nichts wird entfernt',()=>{
+  const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_controlling_zugang\.sql$/.test(f));
+  assert.equal(datei.length,1);
+  const sql=read('supabase/migrations/'+datei[0]),ohne=sql.replace(/--.*$/gm,'');
+  assert.doesNotMatch(ohne,/\b(drop|truncate|delete\s+from|alter\s+table\s+\S+\s+drop)\b/i,'nichts Destruktives');
+  assert.match(sql,/create table public\.office_controlling_zugang \(\n  user_id uuid primary key references public\.office_members\(user_id\) on delete cascade,/);
+  assert.match(sql,/for insert to authenticated with check \(\(select private\.office_is_admin\(\)\) and created_by = \(select auth\.uid\(\)\)\);/);
+  assert.match(sql,/or exists \(select 1 from public\.office_controlling_zugang z\n                 join public\.office_members m on m\.user_id = z\.user_id\n                 where z\.user_id = \(select auth\.uid\(\)\) and m\.is_active\)/);
+  assert.match(sql,/\(select private\.office_controlling_voll\(\)\) as admin/);
+  for(const t of ['stunden','saetze'])assert.match(sql,new RegExp('create policy office_controlling_'+t+'_voll_lesen on public\\.office_controlling_'+t));
+  for(const t of ['pakete','staende','zahlungen','stunden','saetze'])for(const a of ['anlegen','aendern','entfernen'])
+    assert.match(sql,new RegExp('create policy office_controlling_'+t+'_voll_'+a+' '),t+' '+a);
+  const abnahme=read('tests/sql/office-controlling-acceptance.sql');
+  assert.match(abnahme,/D_pakete=1; D_stunden=4; D_saetze=2; D_einstellungen=1; D_s1_gehalt=363\.00; D_zugang_eigen=1; D_zahlung_anlegen=ok; /);
+  assert.match(abnahme,/D_zugang_vergeben=verweigert; C_zugang=0; C_pakete_danach=0; /);
 });
 
 test('Migration: neue Tabellen mit RLS, Lesen über das Projekt, Personen und Sätze nur Admins, Summen ohne Personen',()=>{
@@ -135,7 +155,8 @@ test('Tools und Work: Karte «Controlling», Reiter je Projekt nach der Kostenbe
 
 test('Keine Namen aus Projekten und Team, keine spanischen Wörter',()=>{
   for(const f of ['controlling.html','controlling.js','controlling-kern.js','controlling.css',MIGRATION,'tests/sql/office-controlling-acceptance.sql',
-    'tests/browser/fixtures/fake-supabase-controlling.js','tests/browser/office-controlling.chromium.mjs']){
+    'tests/browser/fixtures/fake-supabase-controlling.js','tests/browser/office-controlling.chromium.mjs',
+    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
     const s=read(f);
     assert.doesNotMatch(s,/Bernried|Schwarz|Yvonne|Antonia|Höhenweg|Reichenau|Titus/,f);
     assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(s.replace(/@supabase\/supabase-js@2\.57\.0/g,'').replace(/[\w.+-]+@[\w-]+\.invalid\b/g,'')),f+' enthält eine E-Mail-Adresse');

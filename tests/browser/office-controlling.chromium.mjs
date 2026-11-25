@@ -44,7 +44,7 @@ async function oeffne(ziel='controlling.html',{rolle='admin',viewport={width:144
   return {ctx,page,fehler};
 }
 const db=page=>page.evaluate(()=>window.__fake.db);
-const karte=(page,name)=>page.locator('.ct-karte',{has:page.locator('h2',{hasText:name})});
+const karte=(page,name)=>page.locator('.ct-karte',{has:page.locator('[data-titel]',{hasText:name})});
 const text=async l=>(await l.textContent()).replace(/\s+/g,' ').trim();
 const merkmal=(page,gruppe,feld)=>page.locator('.ct-gruppe',{has:page.locator('h3',{hasText:gruppe})}).locator('.pb-merkmale div',{has:page.locator('dt',{hasText:new RegExp('^'+feld+'$')})}).locator('dd');
 const ohneQuerscrollen=page=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1);
@@ -53,9 +53,12 @@ test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst'
   const {ctx,page,fehler}=await oeffne();
   try{
     assert.equal(await page.locator('h1').textContent(),'Controlling');
-    assert.deepEqual(await page.locator('.ct-karte h2').allTextContents(),['LPH 3','LPH 1–2'],'beauftragt vor abgeschlossen');
-    const k1=karte(page,'LPH 3');
-    assert.equal(await text(k1.locator('.meta').first()),'T-01 · Testhaus');
+    // Fett das Projekt, darunter das Paket (Gari, 25.11.2026).
+    assert.deepEqual(await page.locator('.ct-karte [data-titel]').allTextContents(),['Testhaus','Nachbarhaus'],'beauftragt vor abgeschlossen');
+    const k1=karte(page,'Testhaus');
+    assert.equal(await text(k1.locator('.ct-nummer')),'T-01');
+    assert.equal(await text(k1.locator('.ct-paket')),'LPH 3 · Entwurfsplanung');
+    assert.equal(await text(k1.locator('h2 a')),'Testhaus · LPH 3','der Link nennt Projekt und Paket');
     assert.deepEqual(await k1.locator('.chip').allTextContents(),['beauftragt','vorläufig','Stand 01.11.2026']);
     // 100.000 € ÷ 80 €/h = 1.250 h; 300 + 250 h; Soll bei 40 %: 500 h – darüber.
     const stunden=k1.locator('.ct-balken-block').first();
@@ -73,7 +76,7 @@ test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst'
     assert.equal(await text(k1.locator('.ct-zahlen div').nth(1).locator('dd')),'73 €/h','40.000 € erarbeitet ÷ 550 h');
     assert.equal(await text(k1.locator('.ct-zahlen div').nth(2).locator('dd')),'20.000 €');
     // Abgeschlossen: Leistungsstand 100 %, 400 h × 80 € = 32.000 € gegen 50.000 € → + 18.000 €; keine Zahlungen erfasst.
-    const k2=karte(page,'LPH 1–2');
+    const k2=karte(page,'Nachbarhaus');
     assert.equal(await text(k2.locator('[data-ergebnis]')),'+ 18.000 €');
     assert.equal(await k2.locator('.ct-zahlen dt').first().textContent(),'Ergebnis');
     assert.equal(await text(k2.locator('.ct-zahlen div').nth(1).locator('dd')),'125 €/h');
@@ -84,6 +87,11 @@ test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst'
     assert.equal(await page.locator('[data-paket-neu]').textContent(),'Neues Honorarpaket');
     assert.equal(await text(page.locator('.ct-ohne')),'Noch ohne Honorar: T-03 · Studie');
     await foto(page,'uebersicht');
+    // Die ganze Karte öffnet das Projektblatt, auch ein Klick auf den Balken.
+    const balken=await k2.locator('.ct-balken').first().boundingBox();
+    await page.mouse.click(balken.x+balken.width/2,balken.y+balken.height/2);
+    await page.waitForURL(/controlling\.html\?projekt=a2222222-2222-4222-8222-222222222222&paket=b2222222-2222-4222-8222-222222222222$/);
+    await page.locator('h1',{hasText:'T-02 · Nachbarhaus'}).waitFor();
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
@@ -99,8 +107,8 @@ test('Projektblatt als Admin: Kennzahlen, Stände mit Personen, Zahlungen; Stand
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Honorar je Stunde')),'72,73 €/h');
     assert.equal(await text(merkmal(page,'Prognose am Ende','Stunden')),'1.375 h');
     assert.equal(await text(merkmal(page,'Zahlungen','Erarbeitet, nicht bezahlt')),'20.000 €');
-    // Zum Gehalt (nur Admins): 300 h × 36,30 €/h + 250 h × 27,225 €/h = 17.696,25 € → Ergebnis 40.000 − 17.696 €.
-    assert.match(await text(page.locator('.ct-gruppe h3',{hasText:'Zum Gehalt'})),/nur Admins/);
+    // Zum Gehalt (vertraulich): 300 h × 36,30 €/h + 250 h × 27,225 €/h = 17.696,25 € → Ergebnis 40.000 − 17.696 €.
+    assert.match(await text(page.locator('.ct-gruppe h3',{hasText:'Zum Gehalt'})),/vertraulich/);
     assert.equal(await text(merkmal(page,'Zum Gehalt','Wert der Stunden')),'17.696 €');
     assert.equal(await text(merkmal(page,'Zum Gehalt','Ergebnis bisher')),'+ 22.304 €');
     assert.equal(await text(page.locator('[data-je-person]')),'Test Admin 300 h · Person B 250 h');
@@ -178,10 +186,35 @@ test('Als Mitglied: Honorar, Stunden, Zahlungen und Ergebnis ja; Personen, Sätz
     for(const t of ['office_controlling_stunden','office_controlling_saetze','office_controlling_einstellungen'])assert.ok(!tabellen.includes(t),t);
     await page.goto(adresse('controlling.html?ansicht=saetze'));
     await page.locator('.pb-banner.warn').waitFor();
-    assert.equal(await text(page.locator('.pb-banner.warn')),'Sätze und Gehälter sehen nur Admins.');
+    assert.equal(await text(page.locator('.pb-banner.warn')),'Sätze und Gehälter sind nur mit vollem Zugang zum Controlling sichtbar.');
     await page.goto(adresse('controlling.html'));
     await page.locator('.ct-karte').first().waitFor();
     assert.equal(await page.locator('a[href="./controlling.html?ansicht=saetze"],[data-paket-neu],.ct-ohne').count(),0);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+test('Buchhaltung mit vollem Zugang: alle Projekte, Personen und Gehalt, eintragen; den Zugang vergibt sie nicht',async()=>{
+  const {ctx,page,fehler}=await oeffne('controlling.html',{rolle:'buchhaltung'});
+  try{
+    // Nicht im Team und keine Projektleitung, trotzdem beide Pakete und die Projekte ohne Honorar.
+    assert.deepEqual(await page.locator('.ct-karte [data-titel]').allTextContents(),['Testhaus','Nachbarhaus']);
+    assert.equal(await page.locator('a[href="./controlling.html?ansicht=saetze"]').count(),1);
+    await page.goto(adresse('controlling.html?projekt='+P1));
+    await page.locator('h1',{hasText:'T-01 · Testhaus'}).waitFor();
+    assert.equal(await text(page.locator('[data-je-person]')),'Test Admin 300 h · Person B 250 h');
+    assert.equal(await text(merkmal(page,'Zum Gehalt','Wert der Stunden')),'17.696 €');
+    await page.locator('[data-reiter="zahlungen"]').click();
+    await page.locator('[data-zahlung-neu]').click();
+    const d=page.locator('#ctDialog');
+    await d.locator('[name="brutto"]').fill('1.190');
+    await d.locator('button[value="speichern"]').click();
+    await page.locator('[data-meldung]:not([hidden])',{hasText:'Zahlung erfasst.'}).waitFor();
+    assert.equal((await db(page)).office_controlling_zahlungen.filter(z=>z.netto===1000&&z.mwst===190).length,1);
+    // Sätze und Gehälter ja, den Zugang vergeben nein.
+    await page.goto(adresse('controlling.html?ansicht=saetze'));
+    await page.locator('h1',{hasText:'Sätze und Gehälter'}).waitFor();
+    assert.equal(await page.locator('[data-zugang]').count(),0);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
@@ -208,7 +241,20 @@ test('Sätze und Gehälter: Stundensatz aus dem Gehalt, neuer Satz ab Datum, Ann
     await page.locator('[data-einstellungen] button').click();
     await page.locator('[data-meldung]:not([hidden])').waitFor();
     assert.equal(await text(reihe('Person B').locator('td').nth(3)),'29,04 €/h');
+    // Voller Zugang (nur Admins vergeben ihn): Person C bekommt ihn und verliert ihn wieder.
+    const zugang=page.locator('[data-zugang]');
+    assert.deepEqual(await zugang.locator('li').allTextContents(),['Test AdminAdmin, immer']);
+    assert.deepEqual(await zugang.locator('[data-zugang-person] option').allTextContents(),['Person B','Person C']);
+    await zugang.locator('[data-zugang-person]').selectOption({label:'Person C'});
+    await zugang.locator('[data-zugang-geben]').click();
+    await page.locator('[data-meldung]:not([hidden])',{hasText:'Person C hat jetzt vollen Zugang zum Controlling.'}).waitFor();
+    assert.equal(await page.locator('[data-zugang] [data-zugang-weg]').count(),1);
+    assert.deepEqual((await db(page)).office_controlling_zugang.map(z=>z.user_id),[await page.evaluate(()=>window.__fake.C)]);
     await foto(page,'saetze');
+    const weg=page.locator('[data-zugang] [data-zugang-weg]');
+    await weg.click();assert.equal(await weg.textContent(),'Wirklich entfernen?');await weg.click();
+    await page.locator('[data-meldung]:not([hidden])',{hasText:'Zugang entfernt.'}).waitFor();
+    assert.equal((await db(page)).office_controlling_zugang.length,0);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

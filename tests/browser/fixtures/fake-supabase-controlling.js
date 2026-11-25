@@ -1,11 +1,12 @@
 // Synthetischer Supabase-Ersatz für das Controlling in Chromium (25.11.2026). Kein Netz, keine echten Daten: Projekte,
 // Personen und Beträge sind erfunden. Daten überleben Seitenwechsel im selben Tab (sessionStorage). Nachgebildet wie in
-// der Datenbank (Migration 20261125085053): Rolle aus window.__ctRolle ('admin' oder 'member'); Stunden je Person, Sätze
-// und Einstellungen liest nur ein Admin, schreiben darf nur ein Admin; office_controlling_summen rechnet wie die
+// der Datenbank (Migrationen 20261125085053 und office_controlling_zugang): Rolle aus window.__ctRolle ('admin', 'member'
+// oder 'buchhaltung' = Mitglied außerhalb der Teams mit vollem Zugang); Stunden je Person, Sätze und Einstellungen liest
+// nur voller Zugang, schreiben darf nur voller Zugang, den Zugang vergeben nur Admins; office_controlling_summen rechnet wie die
 // Funktion (Stunden kumuliert, fehlende Person zählt weiter, Zuwachs zum Satz am Stichtag, Gehalt nur für Admins und
 // nur vollständig). Eindeutig: ein Stand je Paket und Tag, eine Zeile je Person und Stand, ein Satz je Person und Tag.
 (function(){
-  const ROLLE=window.__ctRolle==='member'?'member':'admin';
+  const ROLLE=['member','buchhaltung'].includes(window.__ctRolle)?window.__ctRolle:'admin';
   const UID='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222',C='33333333-3333-4333-8333-333333333333';
   const P1='a1111111-1111-4111-8111-111111111111',P2='a2222222-2222-4222-8222-222222222222',P3='a3333333-3333-4333-8333-333333333333';
   const K1='b1111111-1111-4111-8111-111111111111',K2='b2222222-2222-4222-8222-222222222222';
@@ -40,26 +41,35 @@
     office_controlling_saetze:[
       {id:crypto.randomUUID(),person_id:B,gueltig_ab:'2026-01-01',kalkulationssatz:90,monatsgehalt:3000,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')},
       {id:crypto.randomUUID(),person_id:UID,gueltig_ab:'2026-01-01',kalkulationssatz:null,monatsgehalt:4000,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')}],
-    office_controlling_einstellungen:[{id:true,arbeitgeberanteil_prozent:21,jahresstunden:1600,updated_at:zeit('2026-11-01')}]
+    office_controlling_einstellungen:[{id:true,arbeitgeberanteil_prozent:21,jahresstunden:1600,updated_at:zeit('2026-11-01')}],
+    office_controlling_zugang:[]
   });
   let db=null;try{db=JSON.parse(sessionStorage.getItem(KEY)||'null')}catch{}
   if(!db)db=start();
-  db.office_members.find(m=>m.user_id===UID).role=ROLLE;
+  db.office_members.find(m=>m.user_id===UID).role=ROLLE==='admin'?'admin':'member';
+  // Buchhaltung: in keinem Team, leitet kein Projekt, steht in office_controlling_zugang.
+  if(ROLLE==='buchhaltung'){
+    db.office_project_members=db.office_project_members.filter(m=>m.user_id!==UID);
+    for(const p of db.office_projects)if(p.projektleiter_id===UID)p.projektleiter_id=B;
+    if(!db.office_controlling_zugang.some(z=>z.user_id===UID))db.office_controlling_zugang.push({user_id:UID,created_by:B,created_at:zeit('2026-11-25')});
+  }
   const sichern=()=>{try{sessionStorage.setItem(KEY,JSON.stringify(db))}catch{}};
   sichern();
   const kopie=x=>JSON.parse(JSON.stringify(x));
   const jetzt=()=>new Date().toISOString();
   window.__fake={get db(){return db},sichern,aufrufe:[],UID,B,C,P1,P2,P3,K1,K2,S1,S2,ROLLE};
 
-  const admin=ROLLE==='admin';
-  const imTeam=pid=>admin||db.office_projects.some(p=>p.id===pid&&p.projektleiter_id===UID)||db.office_project_members.some(m=>m.project_id===pid&&m.user_id===UID);
+  const istAdmin=ROLLE==='admin';
+  const voll=istAdmin||db.office_controlling_zugang.some(z=>z.user_id===UID);
+  const imTeam=pid=>voll||db.office_projects.some(p=>p.id===pid&&p.projektleiter_id===UID)||db.office_project_members.some(m=>m.project_id===pid&&m.user_id===UID);
   const paketLesbar=kid=>{const k=db.office_controlling_pakete.find(x=>x.id===kid);return !!k&&imTeam(k.project_id)};
   const standLesbar=sid=>{const s=db.office_controlling_staende.find(x=>x.id===sid);return !!s&&paketLesbar(s.paket_id)};
   const NUR_ADMIN=new Set(['office_controlling_stunden','office_controlling_saetze','office_controlling_einstellungen']);
   function sichtbar(table,r){
     if(table==='office_controlling_pakete')return imTeam(r.project_id);
     if(table==='office_controlling_staende'||table==='office_controlling_zahlungen')return paketLesbar(r.paket_id);
-    if(NUR_ADMIN.has(table))return admin;
+    if(NUR_ADMIN.has(table))return voll;
+    if(table==='office_controlling_zugang')return istAdmin||r.user_id===UID;
     return true;
   }
   const rls={data:null,error:{code:'42501',message:'new row violates row-level security policy'}};
@@ -99,7 +109,8 @@
       window.__fake.aufrufe.push({table,op,daten:daten?kopie(daten):null});
       const zeilen=db[table]||(db[table]=[]);
       const controlling=table.startsWith('office_controlling_');
-      if(op!=='select'&&controlling&&!admin)return rls;
+      if(op!=='select'&&table==='office_controlling_zugang'&&!istAdmin)return rls;
+      if(op!=='select'&&controlling&&!voll)return rls;
       if(op==='insert'){
         const neu=(Array.isArray(daten)?daten:[daten]).map(p=>{
           const r={id:crypto.randomUUID(),created_by:UID,created_at:jetzt(),...kopie(p)};
@@ -146,7 +157,7 @@
       const st=db.office_controlling_staende.filter(s=>s.paket_id===k.id).sort((a,b)=>a.stichtag.localeCompare(b.stichtag));
       const ids=new Set(st.map(s=>s.id)),hs=db.office_controlling_stunden.filter(h=>ids.has(h.stand_id));
       const personen=new Map();for(const h of hs)personen.set(pkey(h),h.person_id||null);
-      const letzte=new Map();let wertK=0,wertG=0,voll=true;
+      const letzte=new Map();let wertK=0,wertG=0,vollstaendig=true;
       for(const s of st){
         let stunden=0,hier=true,zuG=0;
         for(const [key,personId] of personen){
@@ -158,10 +169,10 @@
           wertK+=delta*satzK;
           if(g==null){if(delta!==0)hier=false}else zuG+=delta*g*12*(1+Number(e.arbeitgeberanteil_prozent)/100)/Number(e.jahresstunden);
         }
-        if(!hier)voll=false;
+        if(!hier)vollstaendig=false;
         wertG+=zuG;
         out.push({stand_id:s.id,paket_id:k.id,stichtag:s.stichtag,leistungsstand:s.leistungsstand,stunden,wert_kalkulation:r2(wertK),
-          wert_gehalt:admin&&voll?r2(wertG):null});
+          wert_gehalt:voll&&vollstaendig?r2(wertG):null});
       }
     }
     return out;
