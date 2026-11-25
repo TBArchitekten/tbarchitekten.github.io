@@ -13,7 +13,7 @@ test('Assistant reuses Window chat rather than building another UI',()=>{
     assert.ok(shell.includes(needle),'Window shell missing '+needle);
   }
   assert.ok(!shell.includes('data-nav="assistant" aria-label="Assistent" hidden'));
-  for(const needle of ['office-assistant.js?v=office37','office-assistant.css?v=office8','app.js?v=office56']){
+  for(const needle of ['office-assistant.js?v=office37','office-assistant.css?v=office8','app.js?v=office57']){
     assert.ok(html.includes(needle),'asset cache not bumped '+needle);
   }
   for(const needle of ['office_assistant_conversations','office_assistant_messages','app()?.setOfficeMessages','window.TBA_OFFICE_ASSISTANT']){
@@ -88,4 +88,18 @@ test('Romy tools, model routing and streaming are connected on the server',()=>{
  assert.ok(!edge.includes('.limit(16)'));
  assert.ok(!edge.includes('.slice(0, 3000)'));
  assert.ok(!edge.includes('message.length > 4000'));
+});
+
+// Termin doppelt (Gari, 25.11.2026): Romy legte den Termin direkt an, die Karte desselben Zugs bot trotzdem
+// «Vorschlag prüfen»; Bestätigen legte eine zweite Kopie unter «Persönlich» an. Das Verhalten prüft der
+// Chromium-Test office-app-boot («Romy legte den Termin schon an …»).
+test('Direkte Anlage: die Karte ist erledigt, nie eine zweite Kopie, in der Office unter «Arbeit»',()=>{
+  const app=read('app/app.js');
+  assert.match(app,/function directlyApplied\(p\)\{[\s\S]{0,400}const key='direct:'\+id;\n  return \(p\.kind==='event'\?state\.events:state\.tasks\)\.some\(x=>x\?\.id===key\|\|x\?\.metadata\?\.direct_request_id===id\);/);
+  assert.match(app,/function applyProposal\(p,opts=\{\}\)\{\n  if\(directlyApplied\(p\)\)\{\n    finalizeInlineReview\(p,'applied_direct'\);closeModal\(\);/);
+  assert.match(app,/!m\.metadata\?\.review_state&&!allDirectlyApplied\(m\.metadata\.review_proposals\)\?`<div class="message-review-action">/);
+  assert.match(app,/if\(committed\.length\)finalizeInlineReview\(directBatch\.filter\(p=>committed\.some\(c=>c\.request_id===p\.request_id\)\),'applied_direct'\);/);
+  assert.match(app,/const createCategoryId=categoryId\|\|\(OFFICE\?'arbeit':'personal'\);/);
+  assert.match(app,/sayEvent\(OFFICE\?'Eingetragen\.':'Agregado\.'\)/);
+  assert.match(read('app/index.html'),/app\.js\?v=office57/);
 });

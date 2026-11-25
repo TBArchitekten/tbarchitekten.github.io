@@ -54,6 +54,7 @@ function messageRenderKey(messages){
     (m.sources||[]).map(s=>[s.url,s.title]),
     !!m.metadata?.incomplete_response,
     (m.metadata?.review_proposals||[]).map(p=>p.request_id),
+    allDirectlyApplied(m.metadata?.review_proposals)?1:0,
     m.metadata?.review_state||'',m.metadata?.direct_undo?.status||'',m.metadata?.direct_undo?.expires_at||'',
     (m.quickReplies||[]).map(q=>[q.label,q.value])
   ]));
@@ -1362,9 +1363,20 @@ function restoreAssistantScroll(snapshot,force=false){
 }
 function scrollAssistantToLatest(force=false){restoreAssistantScroll({nearBottom:true},force)}
 
+// Direct creation (Gari, 25.11.2026): Romy created the entry herself (client_key «direct:<request_id>»), but the
+// server also keeps the card of the same turn with «Vorschlag prüfen». Confirming it created a second entry, and
+// in «Persönlich» (Termin am 25.11. doppelt im Kalender). Such a card is settled: no button, never a second write.
+function directlyApplied(p){
+  const id=String(p?.request_id||'');
+  if(!id||(p?.action||'create')!=='create'||!['task','event'].includes(p?.kind))return false;
+  const key='direct:'+id;
+  return (p.kind==='event'?state.events:state.tasks).some(x=>x?.id===key||x?.metadata?.direct_request_id===id);
+}
+function allDirectlyApplied(items){return Array.isArray(items)&&items.length>0&&items.every(directlyApplied)}
 function resolvedReviewText(m){
   const state=m?.metadata?.review_state,items=m?.metadata?.review_proposals;
   if(!Array.isArray(items)||!items.length)return null;
+  if(state==='applied_direct'||(!state&&allDirectlyApplied(items)))return OFFICE?'Eingetragen.':'Guardado.';
   if(state==='applied_verified')return confirmationText(items);
   if(state==='rejected')return typeof window!=='undefined'&&window.APP_PROFILE==='office' ? window.ASSISTANT_I18N?.t('review_cancelled')||'Vorschlag verworfen. Es wurde nichts geändert.' : 'Vorschlag verworfen. Es wurde nichts geändert.';
   if(state==='reviewed_locally')return typeof window!=='undefined'&&window.APP_PROFILE==='office' ? window.ASSISTANT_I18N?.t('review_locally')||'Erledigt. Wirf kurz einen Blick darauf, ob es so passt.' : 'Erledigt. Wirf kurz einen Blick darauf, ob es so passt.';
@@ -1457,7 +1469,7 @@ function renderMessages(forceBottom=false){
     const deliverables=artifactSurface.deliverables.length?`<div class="message-artifacts">${artifactSurface.deliverables.slice(0,8).map(a=>artifactMarkup(a,true)).join('')}</div>`:'';
     const event=isEventMessage(m);
     return `<div class="message ${m.role}${event?' is-event':''}" data-message-id="${esc(m.id||'')}">${reply}${Array.isArray(m.attachments)&&m.attachments.length?`<div class="message-attachments">${m.attachments.map(a=>{const path=String(a.path||''),mime=String(a.mime||''),name=String(a.name||'Archivo');if(mime.startsWith('image/'))return `<img loading="lazy" data-chat-image-path="${esc(path)}" alt="${esc(name)}">`;const ext=(name.split('.').pop()||'FILE').toUpperCase();return `<a class="message-file" data-chat-file-path="${esc(path)}" data-chat-file-name="${esc(name)}" target="_blank" rel="noopener"><span>${esc(ext)}</span><strong>${esc(name)}</strong></a>`}).join('')}</div>`:''}${displayText?`<span class="message-text">${formatMessageText(displayText)}</span>`:''}${m.role==='assistant'&&m.metadata?.incomplete_response?`<div class="message-incomplete" role="status">${esc('Antwort unterbrochen. Der erhaltene Text ist unvollständig.')}<button type="button" data-continue-incomplete="${esc(m.id||'')}">${esc('Antwort fortsetzen')}</button></div>`:''}${previews}${deliverables}${directUndo?`<div class="message-review-action"><button type="button" class="secondary" data-direct-undo-message="${esc(m.id||'')}">${esc('Rückgängig')}</button></div>`:''}${m.role==='assistant'&&Array.isArray(m.metadata?.review_proposals)&&m.metadata.review_proposals.length&&
-      !m.metadata?.review_state?`<div class="message-review-action"><button type="button" class="secondary" data-review-message="${esc(m.id||'')}">${esc('Vorschlag prüfen')}</button></div>`:''}${m.role==='assistant'&&!event&&m.reaction?`<button type="button" class="message-reaction-badge" data-message-react="${esc(m.id||'')}" aria-label="${esc('Reaktion ändern')}">${typographicReaction(m.reaction,true)}</button>`:''}${m.role==='assistant'&&!event?`<div class="message-actions"><button class="message-react" data-message-react="${esc(m.id||'')}" aria-label="Reaccionar">＋</button><button class="message-reply" data-message-reply="${esc(m.id||'')}" aria-label="${esc('Auf diese Nachricht antworten')}">↩︎</button></div>`:''}${Array.isArray(m.sources)&&m.sources.length?`<div class="message-sources">${m.sources.map(s=>`<a href="${/^https?:\/\//i.test(String(s.url||''))?esc(s.url):'#'}" target="_blank" rel="noopener">${esc(s.title||'Fuente')}</a>`).join('')}</div>`:''}${m.role==='assistant'&&Array.isArray(m.quickReplies)&&m.quickReplies.length?`<div class="message-quick-replies">${m.quickReplies.map((q,i)=>`<button data-quick-message="${esc(m.id||'')}" data-quick-index="${i}">${esc(q.label)}</button>`).join('')}</div>`:''}</div>`;
+      !m.metadata?.review_state&&!allDirectlyApplied(m.metadata.review_proposals)?`<div class="message-review-action"><button type="button" class="secondary" data-review-message="${esc(m.id||'')}">${esc('Vorschlag prüfen')}</button></div>`:''}${m.role==='assistant'&&!event&&m.reaction?`<button type="button" class="message-reaction-badge" data-message-react="${esc(m.id||'')}" aria-label="${esc('Reaktion ändern')}">${typographicReaction(m.reaction,true)}</button>`:''}${m.role==='assistant'&&!event?`<div class="message-actions"><button class="message-react" data-message-react="${esc(m.id||'')}" aria-label="Reaccionar">＋</button><button class="message-reply" data-message-reply="${esc(m.id||'')}" aria-label="${esc('Auf diese Nachricht antworten')}">↩︎</button></div>`:''}${Array.isArray(m.sources)&&m.sources.length?`<div class="message-sources">${m.sources.map(s=>`<a href="${/^https?:\/\//i.test(String(s.url||''))?esc(s.url):'#'}" target="_blank" rel="noopener">${esc(s.title||'Fuente')}</a>`).join('')}</div>`:''}${m.role==='assistant'&&Array.isArray(m.quickReplies)&&m.quickReplies.length?`<div class="message-quick-replies">${m.quickReplies.map((q,i)=>`<button data-quick-message="${esc(m.id||'')}" data-quick-index="${i}">${esc(q.label)}</button>`).join('')}</div>`:''}</div>`;
   }).join('');
   lastMessagesRenderKey=nextRenderKey;
   if(typeof window!=='undefined'&&window.APP_PROFILE==='office')box.querySelectorAll('.message-react').forEach(el=>el.setAttribute('aria-label','Reagieren'));
@@ -1477,7 +1489,7 @@ function renderMessages(forceBottom=false){
   document.querySelectorAll('[data-review-message]').forEach(b=>b.onclick=()=>{
     const m=state.messages.find(x=>x.id===b.dataset.reviewMessage);
     const items=Array.isArray(m?.metadata?.review_proposals)?m.metadata.review_proposals:[];
-    if(m?.role!=='assistant'||m.metadata?.review_state||!items.length)return;
+    if(m?.role!=='assistant'||m.metadata?.review_state||!items.length||allDirectlyApplied(items))return;
     confirmProposals(items);
   });
   document.querySelectorAll('[data-continue-incomplete]').forEach(b=>b.onclick=()=>{
@@ -2439,6 +2451,10 @@ function directCreationBatch(result,integrity){
   return proposals;
 }
 function applyProposal(p,opts={}){
+  if(directlyApplied(p)){
+    finalizeInlineReview(p,'applied_direct');closeModal();
+    sayEvent(OFFICE?'Steht schon im Kalender.':'Ya está en tu calendario.');return;
+  }
   if(p.kind==='task'&&(p.action||'create')==='update')
     return applyVerifiedTaskUpdate(p,opts);
   if(p.kind==='task'&&(p.action||'create')==='create')
@@ -2467,7 +2483,7 @@ function applyProposal(p,opts={}){
     if(action==='archive'&&p.kind==='task'){
       target.archivedAt=new Date().toISOString();
       mutation('task','archive',before,target,'assistant');
-      save();renderCalendar();closeModal();sayEvent('Archivada.');return;
+      save();renderCalendar();closeModal();sayEvent(OFFICE?'Archiviert.':'Archivada.');return;
     }
     if(action==='delete'){
       const list=p.kind==='task'?state.tasks:state.events;
@@ -2475,7 +2491,7 @@ function applyProposal(p,opts={}){
       if(idx>=0)list.splice(idx,1);
       tombstone(p.kind,target.id);
       mutation(p.kind,'delete',before,null,'assistant');
-      save();renderCalendar();closeModal();sayEvent('Eliminado.');return;
+      save();renderCalendar();closeModal();sayEvent(OFFICE?'Gelöscht.':'Eliminado.');return;
     }
     if(p.title!=null&&String(p.title).trim())target.title=String(p.title).trim();
     if(p.kind==='task'&&p.clear_date)target.date=null;
@@ -2494,9 +2510,9 @@ function applyProposal(p,opts={}){
     if(p.recurrence!==undefined&&p.recurrence!==null)target.recurrence=p.recurrence?{text:p.recurrence}:{};
     if(p.notes!==undefined&&p.notes!==null)target.notes=p.notes||'';
     mutation(p.kind,'update',before,target,'assistant');
-    save();renderCalendar();closeModal();sayEvent('Actualizado.');return;
+    save();renderCalendar();closeModal();sayEvent(OFFICE?'Aktualisiert.':'Actualizado.');return;
   }
-  const createCategoryId=categoryId||'personal';
+  const createCategoryId=categoryId||(OFFICE?'arbeit':'personal');
   if(p.kind==='event'){
     if(!p.time){closeModal();sayEvent('Die Uhrzeit des Termins fehlt.');return}
     const item={id:uid(),title:p.title||'Evento',date,start:p.time,duration:Number(p.duration_minutes||60),allDay:!!p.all_day,categoryId:createCategoryId,projectId:projectId||null,recurrence:p.recurrence?{text:p.recurrence}:{},notes:p.notes||'',metadata:{source:'isabella'}};
@@ -2505,7 +2521,7 @@ function applyProposal(p,opts={}){
     const item={id:uid(),title:p.title||'Tarea',date,done:false,completedAt:null,archivedAt:null,sortOrder:nextTaskOrder(date),categoryId:createCategoryId,projectId:projectId||null,recurrence:p.recurrence?{text:p.recurrence}:{},reminderTime:date?(p.reminder_time||null):null,notes:p.notes||'',metadata:{source:'isabella'}};
     state.tasks.push(item);mutation('task','create',null,item,'assistant');
   }
-  save();renderCalendar();closeModal();sayEvent('Agregado.');
+  save();renderCalendar();closeModal();sayEvent(OFFICE?'Eingetragen.':'Agregado.');
 }
 async function acknowledgeIntentDelivery(delivery){
   const sb=window.MINDS_SUPABASE;if(!sb)return;
@@ -2684,6 +2700,7 @@ async function handle(text,attachments=[],replyTo=null,options={}){
           catch(e){failed.push({proposal:p,reason:String(e?.message||e)})}
         }
         const text=committed.length?confirmationText(committed):'';
+        if(committed.length)finalizeInlineReview(directBatch.filter(p=>committed.some(c=>c.request_id===p.request_id)),'applied_direct');
         const missing=failed.map(x=>'«'+String(x.proposal?.title||'sin título')+'»');
         const report=failed.length
           ?(text?text+' ':'')+'Nicht gespeichert: '+naturalList(missing)+'. '+(failed.length===1?'Es gilt nicht als erledigt':'Sie gelten nicht als erledigt')+'. Unten kannst du es prüfen.'

@@ -17,6 +17,20 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-25 · Romy: ein direkt angelegter Termin steht nicht mehr doppelt im Kalender · Claude
+- Qué cambió y por qué: Gari (25.11.2026): Ein Termin, den Romy angelegt hatte, stand zweimal im Kalender, einmal unter «Arbeit», einmal unter «Persönlich». Ursache: Romy legt Termine und Aufgaben direkt an (Schlüssel «direct:<request_id>»), der Server speichert für die Office aber zusätzlich die Karte desselben Zugs mit den Vorschlägen («Anlage freigegeben, Bestätigung steht noch aus.») und «Vorschlag prüfen». Wer dort bestätigte, legte über den alten lokalen Weg eine zweite Kopie an, und zwar ohne Kategorie, also «Persönlich».
+  - Eine Karte, deren Einträge Romy schon angelegt hat, ist erledigt: kein «Vorschlag prüfen», der Text lautet «Eingetragen.»; sie wird gleich nach der direkten Anlage so markiert und auch, wenn sie erst später aus dem Verlauf kommt.
+  - Bestätigen legt nie eine zweite Kopie an, auch wenn der Dialog schon offen war («Steht schon im Kalender.»).
+  - Was in der Office über eine Karte bestätigt wird, steht unter «Arbeit» (wie von Hand angelegte und synchronisierte Einträge).
+  - Die kurzen Quittungen dieses Wegs («Eingetragen.», «Aktualisiert.», «Gelöscht.», «Archiviert.») entstehen deutsch an ihrer Quelle (die Übersetzungstabelle wächst nicht).
+- Archivos: `app/app.js` (`?v=office57`), `app/index.html`, `tests/browser/office-app-boot.chromium.mjs` (neuer Test), `tests/office-assistant.test.mjs`, Versionen in sechs weiteren Tests, `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: ninguna migración. Die vorhandene Kopie vom 24.11. (unter «Persönlich») löscht Gari im Kalender selbst, damit es auf allen Geräten ankommt.
+- Deploy de funciones: ninguno.
+- Cómo se probó: Ursache in den Daten bestätigt (zwei Zeilen im Abstand von 17 s, eine mit Beleg der direkten Anlage, eine ohne, mit Kategorie «Persönlich»). `node --test tests/*.test.cjs tests/*.test.mjs` grün (449); Chromium `office-app-boot` mit neuem Test grün (ohne die Korrektur rot), `romy-chat` und `romy-live` grün.
+- Quedó pendiente o sin probar: Der Server könnte die Karte bei direkter Anlage gleich ohne Vorschläge speichern; nicht nötig, solange die App sie als erledigt erkennt.
+- Riesgos o decisiones que necesitan a Gari: —
+- PR: #165
+
 ### 2026-11-25 · Mustermappe als Werkzeug; Reiter Mustermappe, Produkte und Hersteller in Work · Claude
 - Qué cambió y por qué: Gari (25.11.2026): Die Mustermappe gehört unter Werkzeuge wie die anderen Werkzeuge und im Projekt als Reiter in Work, wie Terminplan und Kostenberechnung; dazu in Work je Projekt die Produkte, die in der Produktbibliothek dafür ausgewählt sind, und ebenso die Hersteller.
   - **Werkzeuge › Mustermappe** (neue Karte): `projektdokumente.html?werkzeug=mustermappe` – Projekt wählen (oder das zuletzt geöffnete), dann die Mappen des Projekts als Karten mit Positionen, Seiten, Bemusterungstermin und Stand; «Neue Mustermappe». Die Mappe führt mit «‹ Mustermappen» zurück. Die Karte «Mustermappen» im Projektstart entfällt.
