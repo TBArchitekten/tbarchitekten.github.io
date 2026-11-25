@@ -9,7 +9,7 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const K=require('../controlling-kern.js');
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const MIGRATION='supabase/migrations/20261125100000_office_controlling_v1.sql';
+const MIGRATION='supabase/migrations/20261125085053_office_controlling_v1.sql';
 
 test('Zahlen wie im Büro eingegeben: Tausenderpunkt, Komma, Euro',()=>{
   assert.equal(K.leseZahl('112.000'),112000);

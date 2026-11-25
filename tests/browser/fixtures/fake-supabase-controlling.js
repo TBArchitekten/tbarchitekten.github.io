@@ -1,6 +1,6 @@
 // Synthetischer Supabase-Ersatz für das Controlling in Chromium (25.11.2026). Kein Netz, keine echten Daten: Projekte,
 // Personen und Beträge sind erfunden. Daten überleben Seitenwechsel im selben Tab (sessionStorage). Nachgebildet wie in
-// der Datenbank (Migration 20261125100000): Rolle aus window.__ctRolle ('admin' oder 'member'); Stunden je Person, Sätze
+// der Datenbank (Migration 20261125085053): Rolle aus window.__ctRolle ('admin' oder 'member'); Stunden je Person, Sätze
 // und Einstellungen liest nur ein Admin, schreiben darf nur ein Admin; office_controlling_summen rechnet wie die
 // Funktion (Stunden kumuliert, fehlende Person zählt weiter, Zuwachs zum Satz am Stichtag, Gehalt nur für Admins und
 // nur vollständig). Eindeutig: ein Stand je Paket und Tag, eine Zeile je Person und Stand, ein Satz je Person und Tag.

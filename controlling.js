@@ -8,7 +8,7 @@
    Zahlungen. Begriffe wie in der Projektübersicht von untermStrich: erarbeitetes Honorar = Honorar × Leistungsstand,
    Prognose = bisheriger Wert ÷ Leistungsstand.
    Sichtbarkeit (Gari): Alle im Projekt sehen Honorar, Zahlungen, Stunden und das Ergebnis; Sätze und Gehälter der
-   Personen und das Ergebnis zum Gehalt nur Admins. Die Datenbank setzt das durch (Migration 20261125100000): Stunden je
+   Personen und das Ergebnis zum Gehalt nur Admins. Die Datenbank setzt das durch (Migration 20261125085053): Stunden je
    Person, Sätze, Gehälter und Einstellungen liest nur ein Admin, die Summen je Stand kommen aus office_controlling_summen.
    Eintragen und ändern: nur Admins.
    Ansichten: Übersicht (ohne Parameter), Projektblatt (?projekt=<id>, auch als Reiter «Controlling» eines Projekts in

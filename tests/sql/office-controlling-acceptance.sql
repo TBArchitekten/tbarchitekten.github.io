@@ -1,4 +1,4 @@
--- Abnahme · Controlling (Migration 20261125100000_office_controlling_v1.sql).
+-- Abnahme · Controlling (Migration 20261125085053_office_controlling_v1.sql).
 -- Erfundene Personen, Projekte und Beträge; alles läuft in einer Transaktion, die am Ende zurückgerollt wird.
 -- A und A2 = Admins, B = Mitglied im Projektteam, C = Mitglied außerhalb des Teams. Geprüft wird: Pakete, Stände und
 -- Zahlungen liest das Projekt (B), nicht C und nicht anon; Stunden je Person, Sätze und Einstellungen nur Admins;
