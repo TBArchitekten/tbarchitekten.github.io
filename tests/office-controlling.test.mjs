@@ -6,10 +6,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
 const require=createRequire(import.meta.url);
 const K=require('../controlling-kern.js');
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const MIGRATION='supabase/migrations/20261125085053_office_controlling_v1.sql';
+const NAMEN=new Set(['dd428b9e787711c2','2993f8453f06da87','879d13f4257efdfd','9b7a0f2e159a5d55','bd84dc633654d437','eb203bf139e410c2','a3e187e1bef887dd','a19d126e91d01af4']);
 
 test('Zahlen wie im Büro eingegeben: Tausenderpunkt, Komma, Euro',()=>{
   assert.equal(K.leseZahl('112.000'),112000);
@@ -159,7 +161,10 @@ test('Keine Namen aus Projekten und Team, keine spanischen Wörter',()=>{
     'tests/browser/fixtures/fake-supabase-controlling.js','tests/browser/office-controlling.chromium.mjs',
     ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
     const s=read(f);
-    assert.doesNotMatch(s,/Bernried|Schwarz|Yvonne|Antonia|Regina|Höhenweg|Reichenau|Titus/,f);
+    // Namen von Projekten, Bauherren und Kolleginnen nur als Prüfsumme (sha256, 16 Zeichen), damit sie selbst nicht im
+    // öffentlichen Repo stehen.
+    for(const w of new Set(s.toLowerCase().match(/[a-zäöüß]+/g)||[]))
+      assert.ok(!NAMEN.has(createHash('sha256').update(w).digest('hex').slice(0,16)),f+' enthält einen Namen aus dem Büro');
     assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(s.replace(/@supabase\/supabase-js@2\.57\.0/g,'').replace(/[\w.+-]+@[\w-]+\.invalid\b/g,'')),f+' enthält eine E-Mail-Adresse');
     assert.ok(!/\b(para|que|como|desde|proyecto|pagos|horas|sueldo|también|cálculo)\b/i.test(s),'spanische Wörter in '+f);
   }
