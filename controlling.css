@@ -1,7 +1,10 @@
 /* TBA Office · Controlling (25.11.2026, Claude). Gleiche Gestalt wie Produktbibliothek und Herstellerkatalog (deren
    Stile lädt die Seite); hier die Karten der Übersicht mit zwei Balken (Vorschlag B), das Projektblatt (Vorschlag C),
    die Reiter «Stände und Stunden» und «Zahlungen» und die Zeilen je Person. Farben nur aus shared/minds-design-tokens.css:
-   Blau bleibt dem Klickbaren; die Balken sind grau, über dem Soll bernsteinfarben; Gewinn grün, Verlust rot. */
+   Blau bleibt dem Klickbaren; die Balken sind grau, über dem Soll bernsteinfarben; Gewinn grün, Verlust rot.
+   Seit 25.11.2026 nachmittags: die Lage auf einen Blick (Stufe als Zeichen und Wort in den gedämpften Statusfarben,
+   Leistung, Stunden und Bezahltes auf einer Skala, Kacheln), der vertrauliche Teil als Tabelle mit «So gerechnet», die
+   Annahmen mit Erklärung und «Zu klären»; Nebenknöpfe blau (Gari: klickbar heißt blau). */
 .ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
 /* Die ganze Karte ist der Link zum Projektblatt (Gari, 25.11.2026): der Link im Titel spannt sich über die Karte. */
 .ct-karte{position:relative;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0;cursor:pointer;
@@ -25,6 +28,7 @@
 .ct-balken>span{position:absolute;left:0;top:0;bottom:0;border-radius:var(--m-radius-pill)}
 .ct-fuellung{background:var(--m-ink-soft)}
 .ct-balken.ueber .ct-fuellung{background:var(--m-attention)}
+.ct-balken.kritisch .ct-fuellung{background:var(--m-error)}
 .ct-erarbeitet{background:var(--m-border-strong)}
 .ct-bezahlt{background:var(--m-ink-soft)}
 .ct-marke{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--m-ink);border-radius:1px}
@@ -46,6 +50,7 @@
 .ct-gruppe .pb-h3{margin:0 0 2px;font-size:13px;color:var(--m-ink-soft);font-weight:650;text-transform:uppercase;letter-spacing:.08em}
 .ct-gruppe .pb-merkmale{grid-template-columns:minmax(0,1fr)}
 .ct-gruppe .pb-merkmale dd{font-variant-numeric:tabular-nums}
+.ct-gruppe .pb-merkmale dd.ct-wert{white-space:nowrap;overflow-wrap:normal}
 .ct-nur-admin{font-size:12px;color:var(--m-decision);background:var(--m-decision-soft);border-radius:var(--m-radius-pill);padding:2px 8px;font-weight:600}
 .ct-kopf-zeile{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px 16px}
 .ct-kopf-zeile h2{margin:0}
@@ -112,5 +117,86 @@
   .ct-zahlen{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ct-person input[name="stunden"]{flex:1 1 90px}
 }
+/* Nebenknöpfe blau wie alles Klickbare (Gari, 25.11.2026: «Paket bearbeiten» sollte blau sein); wie in den Projektdokumenten. */
+.ct .btn:not(.btn-primary):not(.btn-quiet),#ctDialog .btn:not(.btn-primary):not(.btn-quiet){background:var(--m-paper);color:var(--m-link);border-color:var(--m-blue-line)}
+.ct .btn:not(.btn-primary):not(.btn-quiet):hover,#ctDialog .btn:not(.btn-primary):not(.btn-quiet):hover{background:var(--m-blue-soft);color:var(--m-link-hover);border-color:var(--m-blue-line)}
+
+/* Lage auf einen Blick: die Stufe immer mit Zeichen und Wort (Haken, Dreieck, Achteck, Strich), nie nur als Farbe. */
+.ct-lage{display:flex;flex-direction:column;gap:14px;padding:14px 0 16px;border-top:1px solid var(--m-border-soft);border-bottom:1px solid var(--m-border-soft)}
+.ct-lage-kopf{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.ct-lage-titel{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0;padding:6px 14px 6px 10px;border-radius:var(--m-radius-pill);font-size:15px;line-height:1.3}
+.ct-lage-titel svg,.ct-lage-chip svg{flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ct-lage-titel svg{width:18px;height:18px}
+.ct-lage-chip{gap:5px}
+.ct-lage-chip svg{width:13px;height:13px;margin-left:-2px}
+.ct-lage-gut{background:var(--m-success-soft);color:var(--m-success)}
+.ct-lage-achtung{background:var(--m-attention-soft);color:var(--m-attention)}
+.ct-lage-kritisch{background:var(--m-error-soft);color:var(--m-error)}
+.ct-lage-offen{background:var(--m-fill);color:var(--m-ink-soft)}
+.ct-lage-satz{margin:0;font-size:15px;line-height:1.45;color:var(--m-ink);max-width:72ch}
+/* Leistung, Stunden, Bezahlt: eine Skala, die Balken untereinander bündig; der Strich ist der Leistungsstand. */
+.ct-meter-liste{display:flex;flex-direction:column;gap:9px}
+.ct-meter{display:grid;grid-template-columns:76px minmax(0,1fr) 230px;align-items:center;gap:12px;font-size:13px}
+.ct-meter-name{color:var(--m-ink-soft)}
+.ct-meter-spur{position:relative;height:10px;border-radius:var(--m-radius-pill);background:var(--m-fill)}
+.ct-meter-fuellung{position:absolute;left:0;top:0;bottom:0;border-radius:var(--m-radius-pill);background:var(--m-ink-soft)}
+.ct-meter-spur.achtung .ct-meter-fuellung{background:var(--m-attention)}
+.ct-meter-spur.kritisch .ct-meter-fuellung{background:var(--m-error)}
+.ct-meter-marke{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--m-ink);border-radius:1px}
+.ct-meter-zahl{color:var(--m-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ct-meter-legende{display:flex;align-items:center;gap:8px;margin:0}
+.ct-meter-legende i{display:inline-block;flex:0 0 auto;width:2px;height:14px;background:var(--m-ink);border-radius:1px}
+.ct-kacheln{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px}
+.ct-kachel{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--m-border-soft);border-radius:var(--m-radius-control);background:var(--m-surface);min-width:0}
+.ct-kachel-name{font-size:12px;color:var(--m-ink-soft)}
+.ct-kachel-name .ct-nur-admin{font-size:11px;padding:1px 6px}
+.ct-kachel-wert{font-size:22px;line-height:1.2;font-weight:650;letter-spacing:-.01em;color:var(--m-ink);white-space:nowrap}
+.ct-kachel-unter{font-size:12px;line-height:1.35;color:var(--m-ink-soft)}
+@media (max-width:560px){
+  .ct-meter{grid-template-columns:minmax(0,1fr) auto;row-gap:5px}
+  .ct-meter-name{grid-column:1;grid-row:1}
+  .ct-meter-zahl{grid-column:2;grid-row:1;white-space:normal;text-align:right}
+  .ct-meter-spur{grid-column:1/-1;grid-row:2}
+  .ct-kacheln{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ct-kachel-wert{font-size:19px;white-space:normal}
+}
+
+/* Zum Gehalt (vertraulich): je Wert bis jetzt, am Ende und wie er gerechnet ist (Gari, 25.11.2026). */
+.ct-vertraulich{display:flex;flex-direction:column;gap:8px}
+.ct-vertraulich .pb-h3{margin:4px 0 0;font-size:13px;color:var(--m-ink-soft);font-weight:650;text-transform:uppercase;letter-spacing:.08em}
+.ct-vertraulich-tabelle table{width:100%;border-collapse:collapse;font-size:14px}
+.ct-vertraulich-tabelle th,.ct-vertraulich-tabelle td{padding:9px 10px;border-bottom:1px solid var(--m-border-soft);vertical-align:top;text-align:left}
+.ct-vertraulich-tabelle thead th{font-size:12px;font-weight:600;color:var(--m-ink-soft);padding-top:4px}
+.ct-vertraulich-tabelle tbody th{font-weight:600;color:var(--m-ink);padding-left:0;min-width:170px}
+.ct-vertraulich-tabelle .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.ct-vertraulich .ct-klein{font-size:12.5px;font-weight:500;color:var(--m-ink-soft);white-space:normal}
+.ct-so{font-size:12.5px;line-height:1.5;color:var(--m-ink-soft);width:44%}
+.ct-so-teil{display:block}
+.ct-annahmen-hinweis{margin:0}
+@media (max-width:720px){
+  .ct-vertraulich-tabelle thead{display:none}
+  .ct-vertraulich-tabelle tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--m-border-soft)}
+  .ct-vertraulich-tabelle th,.ct-vertraulich-tabelle td{border:0;padding:0}
+  .ct-vertraulich-tabelle tbody th{grid-column:1/-1;min-width:0}
+  .ct-vertraulich-tabelle .num{text-align:left;white-space:normal}
+  .ct-vertraulich-tabelle .num::before{content:attr(data-label);display:block;font-size:11px;font-weight:500;color:var(--m-ink-soft)}
+  .ct-so{grid-column:1/-1;width:auto}
+}
+
+/* Annahmen mit Erklärung je Feld und die Fragen, die noch zu klären sind. */
+.ct-erklaerung{font-size:14px;line-height:1.55;color:var(--m-ink);max-width:78ch}
+.ct-annahmen{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px 20px}
+.ct-feld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ct-feld label{font-size:13px;font-weight:600;color:var(--m-ink)}
+.ct-feld .pb-input{width:100%}
+.ct-feld-hilfe{margin:0;font-size:12.5px;line-height:1.45;color:var(--m-ink-soft)}
+.ct-annahmen .breit{grid-column:1/-1}
+.ct-fragen{margin:0;padding:0 0 0 22px;display:flex;flex-direction:column;gap:14px}
+.ct-fragen li{padding-left:2px}
+.ct-fragen li::marker{font-weight:650;color:var(--m-ink-soft)}
+.ct-fragen li strong{display:block;font-size:14px;line-height:1.4}
+.ct-fragen li span{display:block;margin-top:3px;font-size:13px;line-height:1.45;color:var(--m-ink-soft)}
+.ct-fragen em{font-style:normal;font-weight:600;color:var(--m-ink)}
+
 /* Als Reiter «Controlling» eines Projekts in Work: Work nennt das Projekt schon; kein Weg zur Übersicht aller Projekte. */
 .im-reiter .ct-zur-uebersicht{display:none}

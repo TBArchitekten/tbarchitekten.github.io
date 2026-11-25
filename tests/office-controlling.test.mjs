@@ -11,6 +11,8 @@ const require=createRequire(import.meta.url);
 const K=require('../controlling-kern.js');
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const MIGRATION='supabase/migrations/20261125085053_office_controlling_v1.sql';
+// Der Gemeinkostenfaktor des Büros steht nur in der Datenbank, nicht im Repo; auch er nur als Prüfsumme.
+const ZAHLEN=new Set(['3d42633ed8b40fc5','b77f563a64247a38']);
 const NAMEN=new Set(['dd428b9e787711c2','2993f8453f06da87','879d13f4257efdfd','9b7a0f2e159a5d55','bd84dc633654d437','eb203bf139e410c2','a3e187e1bef887dd','a19d126e91d01af4']);
 
 test('Zahlen wie im Büro eingegeben: Tausenderpunkt, Komma, Euro',()=>{
@@ -82,9 +84,9 @@ test('Übersicht: laufende Pakete zuerst, darin die schlechteste Prognose oben',
 
 test('Seite: Tokens zuerst, Kern vor der Seite, Marke im Rahmen, Anmeldung wie die anderen Werkzeuge',()=>{
   const html=read('controlling.html'),js=read('controlling.js');
-  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=2">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office3">/);
+  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=2">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office4">/);
   assert.match(html,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  assert.ok(html.indexOf('controlling-kern.js?v=office2')<html.indexOf('controlling.js?v=office3'));
+  assert.ok(html.indexOf('controlling-kern.js?v=office3')<html.indexOf('controlling.js?v=office4'));
   assert.ok(html.includes("<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>"));
   assert.match(js,/const IM_REITER=window\.self!==window\.top;/);
   assert.match(js,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
@@ -159,7 +161,7 @@ test('Tools und Work: Karte «Controlling», Reiter je Projekt nach der Kostenbe
 test('Keine Namen aus Projekten und Team, keine spanischen Wörter',()=>{
   for(const f of ['controlling.html','controlling.js','controlling-kern.js','controlling.css',MIGRATION,'tests/sql/office-controlling-acceptance.sql',
     'tests/browser/fixtures/fake-supabase-controlling.js','tests/browser/office-controlling.chromium.mjs',
-    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
+    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|controlling_annahmen|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
     const s=read(f);
     // Namen von Projekten, Bauherren und Kolleginnen nur als Prüfsumme (sha256, 16 Zeichen), damit sie selbst nicht im
     // öffentlichen Repo stehen.
@@ -168,6 +170,10 @@ test('Keine Namen aus Projekten und Team, keine spanischen Wörter',()=>{
     assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(s.replace(/@supabase\/supabase-js@2\.57\.0/g,'').replace(/[\w.+-]+@[\w-]+\.invalid\b/g,'')),f+' enthält eine E-Mail-Adresse');
     assert.ok(!/\b(para|que|como|desde|proyecto|pagos|horas|sueldo|también|cálculo)\b/i.test(s),'spanische Wörter in '+f);
   }
+  for(const f of ['controlling.js','controlling-kern.js','tests/browser/fixtures/fake-supabase-controlling.js','tests/sql/office-controlling-acceptance.sql','docs/BITACORA.md','docs/ESTADO.md',
+    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_controlling_/.test(f)).map(f=>'supabase/migrations/'+f)])
+    for(const z of new Set(read(f).match(/\d+[.,]\d+/g)||[]))
+      assert.ok(!ZAHLEN.has(createHash('sha256').update(z).digest('hex').slice(0,16)),f+' nennt den Gemeinkostenfaktor des Büros');
 });
 
 test('Rechnung wie die des Büros: Abschlag zzgl. Nebenkosten = Netto, zzgl. MwSt = Brutto, aus jedem Eingang auf den Cent',()=>{
@@ -213,4 +219,88 @@ test('Migration nur Liste: Sätze, Gehälter, Stunden je Person und Annahmen nur
   assert.match(sql,/office_controlling_zugang_nur_liste_vergeben on public\.office_controlling_zugang\n  as restrictive for insert/);
   const abnahme=read('tests/sql/office-controlling-acceptance.sql');
   assert.match(abnahme,/A2_stunden=0; A2_saetze=0; A2_einstellungen=0; A2_s1_gehalt=null; A2_aendert_ohne_liste=0; A2_selbst=verweigert; A_nimmt_A2_auf=ok; /);
+});
+
+test('Teilzeit und Selbstkosten: Jahresstunden anteilig nach Wochenstunden, Faktor auf das Bruttogehalt allein (Gari, 25.11.2026)',()=>{
+  const e={arbeitgeberanteil_prozent:21,jahresstunden:1600,vollzeit_wochenstunden:40,gemeinkostenfaktor:2};
+  assert.deepEqual(K.annahmen(null),{ag:21,jahresstunden:1600,vollzeit:40,faktor:null},'Standard wie die Datenbank, ohne Faktor');
+  assert.equal(K.jahresstundenPerson(null,e),1600,'ohne Angabe Vollzeit');
+  assert.equal(K.jahresstundenPerson(20,e),800);
+  assert.equal(K.jahresstundenPerson(16,{...e,vollzeit_wochenstunden:32}),800,'Bezug ist die Vollzeit des Büros');
+  assert.equal(K.gehaltSatz(4000,e),36.3);
+  assert.equal(K.gehaltSatz(2000,e,20),36.3,'halbe Stelle, halbes Gehalt: derselbe Satz');
+  assert.equal(K.gehaltSatz(3000,e,25),43.56,'3.000 × 12 × 1,21 ÷ 1.000 h');
+  assert.equal(K.selbstkostenSatz(4000,e),60,'4.000 × 12 × 2 ÷ 1.600 h, der Arbeitgeberanteil zählt hier nicht');
+  assert.equal(K.selbstkostenSatz(3000,e,25),72);
+  assert.equal(K.selbstkostenSatz(4000,{...e,gemeinkostenfaktor:null}),null,'ohne Faktor keine Selbstkosten');
+  assert.equal(K.deckungBisGehalt(85,e),5666.67,'85 €/h × 1.600 h ÷ (12 × 2): bis dahin deckt der Kalkulationssatz die Selbstkosten');
+  assert.equal(K.deckungBisGehalt(85,{}),null);
+});
+
+test('Bewertung je Person wie office_controlling_summen (Abnahme): Fortschreibung, Satz am Stichtag, Gehalt nur vollständig',()=>{
+  const st=[{id:'s1',stichtag:'2026-11-01'},{id:'s2',stichtag:'2026-11-20'},{id:'s3',stichtag:'2026-11-25'}];
+  const h=[{stand_id:'s1',person_id:'a',stunden:10},{stand_id:'s2',person_id:'a',stunden:30},{stand_id:'s2',person_id:'b',stunden:20},{stand_id:'s3',person_id:'b',stunden:25}];
+  const sa=[{person_id:'a',gueltig_ab:'2026-01-01',kalkulationssatz:100,monatsgehalt:4000},{person_id:'a',gueltig_ab:'2026-11-15',kalkulationssatz:120,monatsgehalt:4000}];
+  const e={arbeitgeberanteil_prozent:21,jahresstunden:1600};
+  const b=K.bewertung(st,h,sa,e,85);
+  // Wie B_s2, B_s3, A_s1_gehalt und A_s2_gehalt in tests/sql/office-controlling-acceptance.sql.
+  assert.deepEqual(b.staende.map(x=>[x.stunden,x.wertKalkulation,x.personalkosten,x.selbstkosten]),[[10,1000,363,null],[50,5100,null,null],[55,5525,null,null]]);
+  assert.deepEqual(b.personen.map(p=>[p.schluessel,p.stunden,p.personalkosten]),[['a',30,1089],['b',25,null]]);
+  // Teilzeit wie A_s1_teilzeit: 20 h in der Woche bei 1.650 Jahresstunden; Stand 1 hat dort inzwischen 11 h → 11 h × 70,40 €/h.
+  const t=K.bewertung(st,h.map(x=>x.stand_id==='s1'?{...x,stunden:11}:x),sa.map(s=>({...s,wochenstunden:20})),{...e,jahresstunden:1650},85);
+  assert.equal(t.staende[0].personalkosten,774.4);
+});
+
+test('Personalkosten, Selbstkosten und Gewinn je Paket: bis jetzt und hochgerechnet; Team ohne Gehalt bleibt offen',()=>{
+  const e={arbeitgeberanteil_prozent:21,jahresstunden:1600,vollzeit_wochenstunden:40,gemeinkostenfaktor:2};
+  const h=[{stand_id:'s1',person_id:'u',stunden:300},{stand_id:'s1',person_id:'b',stunden:250}];
+  const sa=[{person_id:'b',gueltig_ab:'2026-01-01',kalkulationssatz:90,monatsgehalt:3000,wochenstunden:25},{person_id:'u',gueltig_ab:'2026-01-01',kalkulationssatz:null,monatsgehalt:4000}];
+  const b=K.bewertung([{id:'s1',stichtag:'2026-11-01'}],h,sa,e,80);
+  assert.deepEqual(b.staende[0],{stand_id:'s1',stichtag:'2026-11-01',stunden:550,wertKalkulation:46500,personalkosten:21780,selbstkosten:36000});
+  assert.deepEqual(b.personen.map(p=>[p.stunden,p.satzGehalt,p.satzSelbstkosten]),[[300,36.3,60],[250,43.56,72]]);
+  const paket={honorar_netto:100000,nebenkosten_prozent:5,kalkulationssatz:80,status:'beauftragt'};
+  const k=K.kennzahlen(paket,[{stichtag:'2026-11-01',leistungsstand:40,stunden:550,wert_kalkulation:46500,wert_gehalt:99}],[],b);
+  assert.deepEqual([k.gehalt,k.ergebnisGehalt,k.prognosePersonalkosten,k.prognoseGehalt],[21780,18220,54450,45550],'aus der Bewertung, nicht aus wert_gehalt');
+  assert.deepEqual([k.selbstkosten,k.gewinn,k.prognoseSelbstkosten,k.prognoseGewinn],[36000,4000,90000,10000]);
+  const ohne=K.kennzahlen(paket,[{stichtag:'2026-11-01',leistungsstand:40,stunden:550,wert_kalkulation:46500,wert_gehalt:null}],[]);
+  assert.deepEqual([ohne.selbstkosten,ohne.gewinn,ohne.prognoseGewinn],[null,null,null],'ohne Bewertung keine Selbstkosten');
+  const team=K.bewertung([{id:'s1',stichtag:'2026-11-01'}],[...h,{stand_id:'s1',person_id:null,person_name:null,stunden:40}],sa,e,80);
+  assert.deepEqual([team.staende[0].personalkosten,team.staende[0].selbstkosten,team.staende[0].wertKalkulation],[null,null,49700]);
+  assert.equal(team.personen.find(p=>p.schluessel==='team').personalkosten,null);
+  const ohneFaktor=K.bewertung([{id:'s1',stichtag:'2026-11-01'}],h,sa,{...e,gemeinkostenfaktor:null},80);
+  assert.deepEqual([ohneFaktor.staende[0].personalkosten,ohneFaktor.staende[0].selbstkosten,ohneFaktor.faktor],[21780,null,null]);
+});
+
+test('Lage auf einen Blick: im Budget, leicht oder deutlich über Budget, offen (Gari, 25.11.2026)',()=>{
+  const k=(ls,stunden,status='beauftragt',honorar=100000)=>K.kennzahlen({honorar_netto:honorar,nebenkosten_prozent:5,kalkulationssatz:85,status},
+    [{stichtag:'2026-11-25',leistungsstand:ls,stunden,wert_kalkulation:stunden*85}],[]);
+  const gut=K.lage(k(50,500));
+  assert.deepEqual([gut.stufe,gut.ergebnis,gut.restBudget,gut.restNoetig],['gut',15000,676.47,500]);
+  const leicht=K.lage(k(50,600));
+  assert.deepEqual([leicht.stufe,leicht.ergebnis,leicht.anteil,leicht.restBudget,leicht.restNoetig],['achtung',-2000,-0.02,576.47,600]);
+  assert.equal(K.lage(k(50,647.0588235294118)).stufe,'achtung','genau 10 % unter der Kalkulation: noch leicht');
+  assert.equal(K.lage(k(40,550)).stufe,'kritisch');
+  assert.equal(K.LAGE_GRENZE,-0.1);
+  assert.deepEqual(K.lage(k(null,500)),{stufe:'offen',grund:'leistungsstand'});
+  assert.deepEqual(K.lage(K.kennzahlen({honorar_netto:100000,kalkulationssatz:85,status:'beauftragt'},[],[])),{stufe:'offen',grund:'stand'});
+  assert.deepEqual(K.lage(k(50,500,'beauftragt',0)),{stufe:'offen',grund:'honorar'});
+  // Abgeschlossen zählt das Ergebnis, auch ohne geschätzten Leistungsstand.
+  const fertig=K.lage(k(null,400,'abgeschlossen',50000));
+  assert.deepEqual([fertig.stufe,fertig.ergebnis],['gut',16000]);
+});
+
+test('Migration Annahmen: Wochenstunden, Vollzeit, Faktor ohne Wert im Repo, Summen mit den Jahresstunden der Person; nichts entfernt',()=>{
+  const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_controlling_annahmen\.sql$/.test(f));
+  assert.equal(datei.length,1);
+  const sql=read('supabase/migrations/'+datei[0]),ohne=sql.replace(/--.*$/gm,'');
+  assert.doesNotMatch(ohne,/\b(drop|truncate|delete\s+from|alter\s+table\s+\S+\s+drop)\b/i,'nichts Destruktives');
+  assert.match(sql,/alter table public\.office_controlling_saetze\n  add column wochenstunden numeric\(4,1\)\n/);
+  assert.match(sql,/add column vollzeit_wochenstunden numeric\(4,1\) not null default 40\n/);
+  assert.match(sql,/add column gemeinkostenfaktor numeric\(4,2\)\n    check/,'der Faktor ohne Standardwert');
+  assert.match(sql,/add column annahmen_bestaetigt date;/);
+  assert.match(sql,/\/ \(e\.jahresstunden \* coalesce\(sa\.wochenstunden, e\.vollzeit_wochenstunden\) \/ e\.vollzeit_wochenstunden\)/);
+  assert.match(sql,/create or replace function public\.office_controlling_summen\(p_project uuid\)\nreturns table \(stand_id uuid, paket_id uuid, stichtag date, leistungsstand numeric,\n               stunden numeric, wert_kalkulation numeric, wert_gehalt numeric\)/,'gleiche Signatur');
+  assert.match(sql,/case when \(select admin from zugang\) and l\.gehalt_vollstaendig then round\(coalesce\(l\.wert_g, 0\), 2\) end/);
+  const abnahme=read('tests/sql/office-controlling-acceptance.sql');
+  assert.match(abnahme,/A_teilzeit=2; A_s1_teilzeit=774\.40; A_faktor=1; faktor_grenze=verweigert; B_faktor=0; /);
 });

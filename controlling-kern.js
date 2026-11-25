@@ -4,7 +4,10 @@
    Honorar, bezahlt, offen, Wert der Stunden, Ergebnis bisher, Prognose und Honorar je Stunde.
    Begriffe wie in der Projektübersicht von untermStrich: erarbeitetes Honorar = Honorar × Leistungsstand;
    Prognose = Stunden (oder ihr Wert) ÷ Leistungsstand. Das Ergebnis steht gegenüber der Kalkulation (85 €/h ist ein
-   Kalkulationssatz, kein Gehalt); das Ergebnis zum Gehalt rechnet nur für Admins.
+   Kalkulationssatz, kein Gehalt); das Ergebnis zum Gehalt rechnet nur mit vollem Zugang.
+   Seit 25.11.2026 (Gari, nachmittags): Wochenstunden je Person (Teilzeit hat ihren Anteil an den Jahresstunden), die
+   Selbstkosten einer Stunde mit dem Gemeinkostenfaktor des Büros auf das Bruttogehalt allein, die Bewertung der Stunden
+   je Person wie in office_controlling_summen (bewertung) und die Lage auf einen Blick (lage).
    Ohne DOM: im Browser window.TBA_CONTROLLING, in Node module.exports (Tests). */
 (function(root){
 'use strict';
@@ -44,7 +47,9 @@ function rechnung(eingabe,nkProzent,mwstProzent=MWST_PROZENT){
   return {abschlag:a,nebenkosten:r2(n-a),netto:n,mwst:mw,brutto:r2(n+mw)};
 }
 
-function kennzahlen(paket,staende=[],zahlungen=[]){
+// bew: Ergebnis von bewertung() (nur mit vollem Zugang); dann kommen Personalkosten und Selbstkosten von dort, sonst die
+// Personalkosten aus den Summen der Datenbank (wert_gehalt).
+function kennzahlen(paket,staende=[],zahlungen=[],bew=null){
   const honorar=zahl(paket?.honorar_netto),satz=zahl(paket?.kalkulationssatz)||85,nk=zahl(paket?.nebenkosten_prozent);
   const liste=[...(staende||[])].sort((a,b)=>String(a.stichtag).localeCompare(String(b.stichtag)));
   const letzter=liste[liste.length-1]||null;
@@ -60,7 +65,9 @@ function kennzahlen(paket,staende=[],zahlungen=[]){
   const bezahlt=summe('bezahlt',z=>honorarAnteil(z.netto,nk)),gestellt=summe('gestellt',z=>honorarAnteil(z.netto,nk));
   const erarbeitet=leistungsstand!=null?r2(honorar*leistungsstand/100):null;
   const prozent=leistungsstand!=null&&leistungsstand>0?leistungsstand:null;
-  const gehalt=letzter&&letzter.wert_gehalt!=null?zahl(letzter.wert_gehalt):null;
+  const b=bew&&bew.staende&&bew.staende.length?bew.staende[bew.staende.length-1]:null;
+  const gehalt=bew?(b&&b.personalkosten!=null?b.personalkosten:null):letzter&&letzter.wert_gehalt!=null?zahl(letzter.wert_gehalt):null;
+  const selbstkosten=b&&b.selbstkosten!=null?b.selbstkosten:null;
   return {
     honorar,nebenkosten:r2(honorar*nk/100),nebenkostenProzent:nk,satz,budget:r2(budget),
     stand:letzter?.stichtag||null,stunden:r2(stunden),wert:r2(wert),leistungsstand,geschaetzt,abgeschlossen,
@@ -78,6 +85,12 @@ function kennzahlen(paket,staende=[],zahlungen=[]){
     gehalt,
     ergebnisGehalt:gehalt!=null&&erarbeitet!=null?r2(erarbeitet-gehalt):null,
     prognoseGehalt:gehalt!=null&&prozent?r2(honorar-gehalt*100/prozent):null,
+    prognosePersonalkosten:gehalt!=null&&prozent?r2(gehalt*100/prozent):null,
+    // Selbstkosten: Gehalt mal Gemeinkostenfaktor; was vom erarbeiteten Honorar danach bleibt, ist der Gewinn.
+    selbstkosten,
+    gewinn:selbstkosten!=null&&erarbeitet!=null?r2(erarbeitet-selbstkosten):null,
+    prognoseSelbstkosten:selbstkosten!=null&&prozent?r2(selbstkosten*100/prozent):null,
+    prognoseGewinn:selbstkosten!=null&&prozent?r2(honorar-selbstkosten*100/prozent):null,
     zahlungen:(zahlungen||[]).length,
     vorlaeufig:!!paket?.vorlaeufig||(zahlungen||[]).some(z=>z.vorlaeufig)
   };
@@ -89,11 +102,40 @@ function ordnung(a,b){
   const prognose=x=>x?.k?.prognoseErgebnis??x?.k?.ergebnisBisher??Infinity;
   return status(a)-status(b)||prognose(a)-prognose(b)||String(a?.paket?.bezeichnung||'').localeCompare(String(b?.paket?.bezeichnung||''),'de');
 }
-// Stundensatz aus dem Monatsgehalt: Gehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden (wie die Datenbank).
-function gehaltSatz(monatsgehalt,einstellungen){
-  const g=Number(monatsgehalt),ag=zahl(einstellungen?.arbeitgeberanteil_prozent??21),h=zahl(einstellungen?.jahresstunden??1600);
-  if(!Number.isFinite(g)||g<=0||h<=0)return null;
-  return r2(g*12*(1+ag/100)/h);
+// Annahmen für die Sätze aus dem Gehalt (office_controlling_einstellungen; was fehlt, mit den Standardwerten der
+// Datenbank). Der Gemeinkostenfaktor hat keinen Standard: ohne ihn keine Selbstkosten.
+function annahmen(e){
+  const wert=(x,d)=>{const v=Number(x);return x!=null&&x!==''&&Number.isFinite(v)?v:d};
+  const faktor=wert(e?.gemeinkostenfaktor,null);
+  return {ag:wert(e?.arbeitgeberanteil_prozent,21),jahresstunden:wert(e?.jahresstunden,1600),vollzeit:wert(e?.vollzeit_wochenstunden,40),
+    faktor:faktor>0?faktor:null};
+}
+// Jahresstunden einer Person: die der Vollzeit, anteilig nach ihren Wochenstunden (leer: Vollzeit).
+function jahresstundenPerson(wochenstunden,einstellungen){
+  const a=annahmen(einstellungen),w=Number(wochenstunden);
+  const woche=wochenstunden!=null&&wochenstunden!==''&&w>0?w:a.vollzeit;
+  return a.vollzeit>0?a.jahresstunden*woche/a.vollzeit:0;
+}
+// Personalkosten je Stunde (Stundensatz aus dem Gehalt): Bruttogehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden der
+// Person, ungerundet wie in der Datenbank.
+function gehaltSatzRoh(monatsgehalt,einstellungen,wochenstunden){
+  const g=Number(monatsgehalt),h=jahresstundenPerson(wochenstunden,einstellungen);
+  if(monatsgehalt==null||!Number.isFinite(g)||g<=0||!(h>0))return null;
+  return g*12*(1+annahmen(einstellungen).ag/100)/h;
+}
+// Selbstkosten je Stunde: Bruttogehalt × 12 × Gemeinkostenfaktor ÷ Jahresstunden der Person. Der Faktor gilt für das
+// Bruttogehalt allein (Gari, 25.11.2026); ob er den Arbeitgeberanteil schon enthält, steht unter «Zu klären».
+function selbstkostenSatzRoh(monatsgehalt,einstellungen,wochenstunden){
+  const g=Number(monatsgehalt),h=jahresstundenPerson(wochenstunden,einstellungen),f=annahmen(einstellungen).faktor;
+  if(monatsgehalt==null||!Number.isFinite(g)||g<=0||!(h>0)||f==null)return null;
+  return g*12*f/h;
+}
+const gerundet=f=>(...a)=>{const v=f(...a);return v==null?null:r2(v)};
+const gehaltSatz=gerundet(gehaltSatzRoh),selbstkostenSatz=gerundet(selbstkostenSatzRoh);
+// Bis zu welchem Bruttogehalt (Vollzeit) deckt ein Kalkulationssatz die Selbstkosten einer Stunde?
+function deckungBisGehalt(kalkulationssatz,einstellungen){
+  const a=annahmen(einstellungen),s=zahl(kalkulationssatz);
+  return a.faktor&&s>0?r2(s*a.jahresstunden/(12*a.faktor)):null;
 }
 // Der Satz einer Person an einem Tag: der jüngste ab diesem Tag gültige (wie die Datenbank).
 function satzAm(saetze,personId,tag,feld='kalkulationssatz'){
@@ -101,8 +143,70 @@ function satzAm(saetze,personId,tag,feld='kalkulationssatz'){
     .sort((a,b)=>String(b.gueltig_ab).localeCompare(String(a.gueltig_ab)));
   return l.length?zahl(l[0][feld]):null;
 }
+// Der Eintrag mit Gehalt, der an einem Tag gilt, mit seinen Wochenstunden (wie die Datenbank: Gehalt und Wochenstunden
+// aus demselben Eintrag).
+function gehaltAm(saetze,personId,tag){
+  const l=(saetze||[]).filter(s=>s.person_id===personId&&s.monatsgehalt!=null&&String(s.gueltig_ab)<=String(tag))
+    .sort((a,b)=>String(b.gueltig_ab).localeCompare(String(a.gueltig_ab)));
+  return l[0]||null;
+}
+const personSchluessel=h=>h.person_id||(h.person_name?'name:'+String(h.person_name).trim().toLowerCase():'team');
 
-const api={MWST_PROZENT,STATUS,leseZahl,ausBrutto,honorarAnteil,rechnung,kennzahlen,ordnung,gehaltSatz,satzAm,r2};
+// Die Stunden eines Pakets je Person bewertet, wie office_controlling_summen in der Datenbank (nur mit vollem Zugang,
+// denn nur dann gibt es Stunden je Person und Sätze): je Person die Stunden seit Beginn bis zum Stichtag (fehlt sie in
+// einem Stand, zählt ihr letzter Wert weiter); der Zuwachs seit dem vorigen Stand zählt zum Satz, der am Stichtag gilt.
+// Personalkosten und Selbstkosten sind nur vollständig, wenn jeder Zuwachs ein Gehalt hat (Team- und Namenszeilen haben
+// keins); einmal unvollständig, bleibt es für die folgenden Stände. staende: [{id, stichtag}].
+function bewertung(staende,stunden,saetze,einstellungen,paketSatz){
+  const a=annahmen(einstellungen),satzPaket=zahl(paketSatz)||85;
+  const liste=[...(staende||[])].sort((x,y)=>String(x.stichtag).localeCompare(String(y.stichtag)));
+  const ids=new Set(liste.map(s=>s.id)),zeilen=(stunden||[]).filter(h=>ids.has(h.stand_id));
+  const personen=new Map();
+  for(const h of zeilen){const k=personSchluessel(h);if(!personen.has(k))personen.set(k,{schluessel:k,person_id:h.person_id||null,
+    name:h.person_name||null,stunden:0,personalkosten:0,selbstkosten:0,ohneGehalt:false,ohneSelbstkosten:false,saetzeG:new Set(),saetzeS:new Set()})}
+  const letzte=new Map(),je=[];
+  let wertK=0,pk=0,sk=0,pkVoll=true,skVoll=true;
+  for(const s of liste){
+    let summe=0;
+    for(const [k,p] of personen){
+      const z=zeilen.find(h=>h.stand_id===s.id&&personSchluessel(h)===k);
+      const vor=letzte.get(k)||0,kum=z?zahl(z.stunden):vor,delta=kum-vor;
+      letzte.set(k,kum);summe+=kum;p.stunden=kum;
+      wertK+=delta*((p.person_id?satzAm(saetze,p.person_id,s.stichtag,'kalkulationssatz'):null)??satzPaket);
+      if(delta===0)continue;
+      const g=p.person_id?gehaltAm(saetze,p.person_id,s.stichtag):null;
+      const sg=g?gehaltSatzRoh(g.monatsgehalt,einstellungen,g.wochenstunden):null,ss=g?selbstkostenSatzRoh(g.monatsgehalt,einstellungen,g.wochenstunden):null;
+      if(sg==null){pkVoll=false;p.ohneGehalt=true}else{pk+=delta*sg;p.personalkosten+=delta*sg;p.saetzeG.add(r2(sg))}
+      if(ss==null){skVoll=false;p.ohneSelbstkosten=true}else{sk+=delta*ss;p.selbstkosten+=delta*ss;p.saetzeS.add(r2(ss))}
+    }
+    je.push({stand_id:s.id,stichtag:s.stichtag,stunden:r2(summe),wertKalkulation:r2(wertK),
+      personalkosten:pkVoll?r2(pk):null,selbstkosten:skVoll?r2(sk):null});
+  }
+  const einer=m=>m.size===1?[...m][0]:null;
+  return {staende:je,faktor:a.faktor,annahmen:a,
+    personen:[...personen.values()].map(p=>({schluessel:p.schluessel,person_id:p.person_id,name:p.name,stunden:r2(p.stunden),
+      personalkosten:p.ohneGehalt?null:r2(p.personalkosten),selbstkosten:p.ohneSelbstkosten?null:r2(p.selbstkosten),
+      satzGehalt:p.ohneGehalt?null:einer(p.saetzeG),satzSelbstkosten:p.ohneSelbstkosten?null:einer(p.saetzeS)}))};
+}
+
+// Lage auf einen Blick (Gari, 25.11.2026: das Projektblatt öffnen und sofort sehen, wie das Projekt läuft): die
+// Hochrechnung gegenüber der Kalkulation, gemessen am Honorar. Im Budget: am Ende bleibt nichts im Minus; leicht über
+// Budget: bis 10 % des Honorars im Minus; deutlich darüber: mehr. Abgeschlossen zählt das Ergebnis. Ohne Honorar, Stand
+// oder Leistungsstand: offen.
+const LAGE_GRENZE=-0.1;
+function lage(k){
+  const honorar=zahl(k?.honorar);
+  if(!k||!(honorar>0))return {stufe:'offen',grund:'honorar'};
+  if(!k.stand)return {stufe:'offen',grund:'stand'};
+  const ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis;
+  if(ergebnis==null)return {stufe:'offen',grund:'leistungsstand'};
+  const anteil=ergebnis/honorar;
+  return {stufe:anteil>=0?'gut':anteil>=LAGE_GRENZE?'achtung':'kritisch',grund:null,ergebnis,anteil,
+    restBudget:r2(zahl(k.budget)-zahl(k.stunden)),restNoetig:k.prognoseStunden!=null?r2(k.prognoseStunden-zahl(k.stunden)):null};
+}
+
+const api={MWST_PROZENT,STATUS,LAGE_GRENZE,leseZahl,ausBrutto,honorarAnteil,rechnung,kennzahlen,ordnung,annahmen,jahresstundenPerson,
+  gehaltSatz,selbstkostenSatz,deckungBisGehalt,satzAm,gehaltAm,bewertung,lage,r2};
 if(typeof module==='object'&&module.exports)module.exports=api;
 else root.TBA_CONTROLLING=api;
 })(typeof window!=='undefined'?window:globalThis);
