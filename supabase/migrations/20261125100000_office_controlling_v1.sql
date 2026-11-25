@@ -109,14 +109,20 @@ begin
   if new.created_by is distinct from old.created_by or new.created_at is distinct from old.created_at then
     raise exception 'Wer einen Eintrag angelegt hat, bleibt unverändert.' using errcode = '23514';
   end if;
-  if tg_table_name = 'office_controlling_pakete' and new.project_id is distinct from old.project_id then
-    raise exception 'Ein Honorarpaket bleibt an seinem Projekt.' using errcode = '23514';
-  end if;
-  if tg_table_name in ('office_controlling_staende','office_controlling_zahlungen') and new.paket_id is distinct from old.paket_id then
-    raise exception 'Ein Stand und eine Zahlung bleiben an ihrem Paket.' using errcode = '23514';
-  end if;
-  if tg_table_name = 'office_controlling_stunden' and new.stand_id is distinct from old.stand_id then
-    raise exception 'Stunden bleiben an ihrem Stand.' using errcode = '23514';
+  -- Verschachtelt: PL/pgSQL plant einen Ausdruck erst, wenn er dran ist; ein Feld, das die Tabelle nicht hat,
+  -- darf deshalb nur im Zweig dieser Tabelle stehen.
+  if tg_table_name = 'office_controlling_pakete' then
+    if new.project_id is distinct from old.project_id then
+      raise exception 'Ein Honorarpaket bleibt an seinem Projekt.' using errcode = '23514';
+    end if;
+  elsif tg_table_name in ('office_controlling_staende','office_controlling_zahlungen') then
+    if new.paket_id is distinct from old.paket_id then
+      raise exception 'Ein Stand und eine Zahlung bleiben an ihrem Paket.' using errcode = '23514';
+    end if;
+  elsif tg_table_name = 'office_controlling_stunden' then
+    if new.stand_id is distinct from old.stand_id then
+      raise exception 'Stunden bleiben an ihrem Stand.' using errcode = '23514';
+    end if;
   end if;
   return new;
 end;
