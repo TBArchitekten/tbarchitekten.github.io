@@ -11,7 +11,8 @@
 -- Controlling (Buchhaltung). D liest alles wie ein Admin, auch Stunden je Person, Sätze und den Wert zum Gehalt, und
 -- schreibt; den Zugang vergeben nur Admins; C sieht weiter nichts, auch nicht, wer Zugang hat.
 -- Seit der Migration office_controlling_annahmen (25.11.2026): Teilzeit rechnet mit dem Anteil an den Jahresstunden;
--- die Annahmen (mit dem Gemeinkostenfaktor) ändert nur die Liste, der Faktor bleibt zwischen 1 und 5.
+-- die Annahmen (mit dem Gemeinkostenfaktor) ändert nur die Liste, der Faktor bleibt zwischen 1 und 5. Seit
+-- office_controlling_jahresstunden auch die Angaben der Herleitung (Urlaub höchstens 60 Tage).
 begin;
 insert into auth.users(id,aud,role,email,instance_id) values
  ('a7000000-0000-4000-8000-00000000000a','authenticated','authenticated','ct-a@example.invalid','00000000-0000-0000-0000-000000000000'),
@@ -44,7 +45,8 @@ declare
     || 'D_zugang_vergeben=verweigert; C_zugang=0; C_pakete_danach=0; '
     || 'A2_stunden=0; A2_saetze=0; A2_einstellungen=0; A2_s1_gehalt=null; A2_aendert_ohne_liste=0; A2_selbst=verweigert; A_nimmt_A2_auf=ok; '
     || 'A2_aendert_A=1; projekt_fest=verweigert; urheber_fest=verweigert; doppelt=verweigert; A_einstellungen=1; '
-    || 'A_teilzeit=2; A_s1_teilzeit=774.40; A_faktor=1; faktor_grenze=verweigert; B_faktor=0; ';
+    || 'A_teilzeit=2; A_s1_teilzeit=774.40; A_faktor=1; faktor_grenze=verweigert; B_faktor=0; '
+    || 'A_kalender=1; kalender_grenze=verweigert; B_kalender=0; ';
   ua constant text := '{"sub":"a7000000-0000-4000-8000-00000000000a","role":"authenticated"}';
   ua2 constant text := '{"sub":"a7000000-0000-4000-8000-0000000000a2","role":"authenticated"}';
   ub constant text := '{"sub":"b7000000-0000-4000-8000-00000000000b","role":"authenticated"}';
@@ -204,6 +206,21 @@ begin
   execute 'set local role authenticated';
   update public.office_controlling_einstellungen set gemeinkostenfaktor = 3;
   get diagnostics n = row_count; r := r || 'B_faktor=' || n || '; ';
+  execute 'reset role';
+
+  -- Herleitung der Jahresstunden (Migration office_controlling_jahresstunden): A hält Urlaub, Krankheit, weitere Tage und
+  -- Projektanteil fest; mehr als 60 Urlaubstage lehnt die Datenbank ab; B ändert nichts.
+  perform set_config('request.jwt.claims', ua, true);
+  execute 'set local role authenticated';
+  update public.office_controlling_einstellungen set urlaubstage = 30, krankheitstage = 15, weitere_tage = 3, projektanteil_prozent = 90;
+  get diagnostics n = row_count; r := r || 'A_kalender=' || n || '; ';
+  begin update public.office_controlling_einstellungen set urlaubstage = 70; r := r || 'kalender_grenze=ERLAUBT(FEHLER); ';
+  exception when others then r := r || 'kalender_grenze=verweigert; '; end;
+  execute 'reset role';
+  perform set_config('request.jwt.claims', ub, true);
+  execute 'set local role authenticated';
+  update public.office_controlling_einstellungen set urlaubstage = 1;
+  get diagnostics n = row_count; r := r || 'B_kalender=' || n || '; ';
   execute 'reset role';
 
   if r <> erwartet then raise exception 'Controlling weicht ab: % (erwartet: %)', r, erwartet; end if;

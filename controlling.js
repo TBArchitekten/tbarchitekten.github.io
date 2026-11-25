@@ -21,6 +21,9 @@
    auf das Bruttogehalt allein und daraus der Gewinn nach Bürokosten, im vertraulichen Teil neben jedem Wert, wie er
    gerechnet ist; unter «Sätze und Gehälter» die Annahmen mit Erklärung und die Fragen, die noch zu klären sind;
    gleiche Begriffe in Übersicht und Projektblatt; Nebenknöpfe blau (klickbar heißt blau).
+   Abends (Gari, 25.11.2026): «So gerechnet» erst auf Knopfdruck; die Stunden grün im Budget, orange leicht und rot
+   deutlich darüber; die Jahresstunden aus dem Kalender hergeleitet (Feiertage in Augsburg, Urlaub, Krankheit, weitere
+   Tage, Projektanteil); PDF über den Druckdialog für die Zahlungen, einen Bericht je Paket und die Übersicht.
    Rechnen: controlling-kern.js (window.TBA_CONTROLLING). */
 (()=>{
 'use strict';
@@ -52,7 +55,7 @@ const ZAHLUNG=[['bezahlt','bezahlt'],['gestellt','gestellt, noch offen']];
 // reicht nicht; Wunsch von Gari: er, die Buchhaltung und später der Chef); istAdmin und voll zusammen: vergibt den Zugang.
 let nutzer=null,voll=false,istAdmin=false;
 const daten={projekte:[],pakete:[],staende:[],summen:[],zahlungen:[],stunden:[],saetze:[],einstellungen:null,personen:[],team:[],zugang:[]};
-const ui={paket:UUID.test(params.get('paket')||'')?params.get('paket'):null,reiter:params.get('reiter')==='zahlungen'?'zahlungen':'staende'};
+const ui={paket:UUID.test(params.get('paket')||'')?params.get('paket'):null,reiter:params.get('reiter')==='zahlungen'?'zahlungen':'staende',soGerechnet:false};
 
 // Work fragt vor dem Schließen des Rahmens, ob etwas aussteht: hier wird jede Eingabe im Dialog sofort gespeichert.
 window.TBA_OFFICE_TOOL=Object.freeze({kind:'controlling',revision:()=>0,pending:()=>false,flush:()=>Promise.resolve()});
@@ -158,7 +161,7 @@ function balkenStunden(k){
   const text=soll!=null?'Soll beim Leistungsstand '+proz(k.leistungsstand)+': '+std(soll)+(ueber?' · darüber':' · im Rahmen')
     :'Leistungsstand noch nicht geschätzt';
   return '<div class="ct-balken-block"><div class="ct-balken-kopf"><span>Stunden</span><span><strong>'+std(k.stunden)+'</strong> von '+std(k.budget)+'</span></div>'+
-    '<div class="ct-balken'+(ueber?' ueber':'')+(K.lage(k).stufe==='kritisch'?' kritisch':'')+'" role="img" aria-label="'+esc(std(k.stunden)+' von '+std(k.budget)+'. '+text)+'">'+
+    '<div class="ct-balken'+(ueber?' ueber':'')+' lage-'+K.lage(k).stufe+'" role="img" aria-label="'+esc(std(k.stunden)+' von '+std(k.budget)+'. '+text)+'">'+
     '<span class="ct-fuellung" style="width:'+breite.toFixed(2)+'%"></span>'+marke+'</div><p class="meta">'+esc(text)+'</p></div>';
 }
 function balkenHonorar(k){
@@ -195,8 +198,8 @@ function lageSatz(k,l){
 }
 const lageChip=k=>{const l=K.lage(k);return '<span class="chip ct-lage-chip ct-lage-'+l.stufe+'" data-lage="'+l.stufe+'">'+LAGE_ZEICHEN[l.stufe]+esc(LAGE[l.stufe])+'</span>'};
 // Leistung, Stunden (vom Budget) und Bezahltes (vom Honorar) auf derselben Skala; der Strich ist der Leistungsstand: die
-// Stunden sollten links davon bleiben, das Bezahlte ihn erreichen. Die Stunden tragen die Farbe der Lage, wenn sie über
-// dem Budget liegt.
+// Stunden sollten links davon bleiben, das Bezahlte ihn erreichen. Die Stunden tragen die Farbe der Lage (Gari,
+// 25.11.2026): grün im Budget, orange leicht, rot deutlich darüber; Leistung und Bezahltes bleiben grau.
 function meterListe(k,l){
   if(!(k.honorar>0))return '';
   const ls=k.leistungsstand,anteil=(x,y)=>y>0?x/y*100:null;
@@ -208,7 +211,7 @@ function meterListe(k,l){
     (mitMarke?marke:'')+'</span><span class="ct-meter-zahl">'+esc(text)+'</span></div>';
   return '<div class="ct-meter-liste">'+
     zeile('Leistung',ls,ls==null?'noch nicht geschätzt':proz(ls)+' erledigt','',false)+
-    zeile('Stunden',st,st==null?std(k.stunden):rund(st)+' · '+std(k.stunden)+' von '+std(k.budget),l.stufe==='achtung'||l.stufe==='kritisch'?' '+l.stufe:'',true)+
+    zeile('Stunden',st,st==null?std(k.stunden):rund(st)+' · '+std(k.stunden)+' von '+std(k.budget),l.stufe!=='offen'?' '+l.stufe:'',true)+
     zeile('Bezahlt',bz,bz==null?'keine Zahlungen erfasst':rund(bz)+' · '+euro(k.bezahlt)+' von '+euro(k.honorar),'',true)+
     (ls!=null?'<p class="meta ct-meter-legende"><i aria-hidden="true"></i>Leistungsstand: die Stunden sollten links davon bleiben, das Bezahlte ihn erreichen.</p>':'')+'</div>';
 }
@@ -216,7 +219,7 @@ function kachel(schluessel,name,wert,klasse,unter,vertraulich=false){
   return '<div class="ct-kachel" data-kachel="'+schluessel+'"><span class="ct-kachel-name">'+esc(name)+(vertraulich?' <span class="ct-nur-admin">vertraulich</span>':'')+'</span>'+
     '<strong class="ct-kachel-wert'+klasse+'">'+esc(wert)+'</strong>'+(unter?'<span class="ct-kachel-unter">'+esc(unter)+'</span>':'')+'</div>';
 }
-function kacheln(k,l){
+function kacheln(k,l,mitGewinn=voll){
   const ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis,t=[];
   t.push(kachel('ergebnis',k.abgeschlossen?'Ergebnis netto':'Ergebnis am Ende netto',plus(ergebnis),plusKlasse(ergebnis),
     ergebnis==null?'braucht den Leistungsstand':k.abgeschlossen?'gegenüber der Kalkulation':'gegenüber der Kalkulation, hochgerechnet'));
@@ -225,7 +228,7 @@ function kacheln(k,l){
   const offen=k.erarbeitet==null||!k.zahlungen?null:k.offen;
   t.push(kachel('offen','Erarbeitet, nicht bezahlt netto',offen==null?'—':offen<-0.004?'− '+euro(-offen):euro(offen),'',
     k.erarbeitet==null?'braucht den Leistungsstand':!k.zahlungen?'keine Zahlungen erfasst':offen<-0.004?'im Voraus bezahlt':k.gestellt?'davon gestellt '+euro(k.gestellt):'kann abgerechnet werden'));
-  if(voll){
+  if(mitGewinn){
     const g=k.abgeschlossen?k.gewinn:k.prognoseGewinn,a=K.annahmen(daten.einstellungen);
     const unter=g!=null?'nach Gehältern und Bürokosten'+(daten.einstellungen?.annahmen_bestaetigt?'':' · Annahmen vorläufig')
       :!a.faktor?'Gemeinkostenfaktor fehlt':k.erarbeitet==null?'braucht den Leistungsstand':'Gehälter unvollständig';
@@ -233,11 +236,11 @@ function kacheln(k,l){
   }
   return '<div class="ct-kacheln">'+t.join('')+'</div>';
 }
-function lagePanel(k){
+function lagePanel(k,mitGewinn=voll){
   const l=K.lage(k);
   return '<div class="ct-lage" data-lage="'+l.stufe+'"><div class="ct-lage-kopf"><p class="ct-lage-titel ct-lage-'+l.stufe+'">'+LAGE_ZEICHEN[l.stufe]+
     '<strong>'+esc(LAGE_TITEL[l.stufe])+'</strong></p>'+
-    '<p class="ct-lage-satz">'+esc(lageSatz(k,l))+'</p></div>'+meterListe(k,l)+kacheln(k,l)+'</div>';
+    '<p class="ct-lage-satz">'+esc(lageSatz(k,l))+'</p></div>'+meterListe(k,l)+kacheln(k,l,mitGewinn)+'</div>';
 }
 
 function chips(p,k,mitLage=true){
@@ -264,6 +267,7 @@ function renderUebersicht(){
     '<p class="pb-intro">Honorar laut Vertrag gegen die Stunden im Projekt. Die Kalkulation rechnet mit dem Kalkulationssatz (85 €/h, je Person änderbar); '+
     'erarbeitet ist das Honorar mal Leistungsstand, die Prognose rechnet die bisherigen Stunden auf 100 % hoch. Alle Beträge netto, ohne MwSt.</p></div>'+
     '<div class="pb-actions"><button type="button" class="ct-info" data-rechenweg aria-haspopup="dialog"><span aria-hidden="true">i</span>So wird gerechnet</button>'+
+    (eintraege.length?'<button type="button" class="btn" data-pdf-uebersicht>Übersicht als PDF</button>':'')+
     (voll?'<a class="btn" href="./controlling.html?ansicht=saetze">Sätze und Gehälter</a><button type="button" class="btn btn-primary" data-paket-neu>Neues Honorarpaket</button>':'')+'</div>'+
     '</header><p class="pb-banner info" data-meldung hidden></p>'+
     (eintraege.length?'<div class="ct-grid">'+eintraege.map(karte).join('')+'</div>'
@@ -273,6 +277,7 @@ function renderUebersicht(){
     '</div>';
   root.querySelector('[data-paket-neu]')?.addEventListener('click',()=>paketFormular(null,null));
   root.querySelector('[data-rechenweg]')?.addEventListener('click',()=>rechenweg(null));
+  root.querySelector('[data-pdf-uebersicht]')?.addEventListener('click',uebersichtPdf);
 }
 function karte({paket:p,k}){
   const pr=projekt(p.project_id);
@@ -313,6 +318,14 @@ function renderProjekt(pr){
   if(!p)return;
   root.querySelector('[data-paket-bearbeiten]')?.addEventListener('click',()=>paketFormular(p,pr.id));
   root.querySelector('[data-rechenweg]')?.addEventListener('click',()=>rechenweg(p));
+  root.querySelector('[data-pdf-bericht]')?.addEventListener('click',()=>berichtDialog(pr,p));
+  root.querySelector('[data-pdf-zahlungen]')?.addEventListener('click',()=>drucken(dateiname(pr,p,'Zahlungen'),druckKopf('Zahlungsübersicht',pr,p,false)+druckZahlungen(p,kz(p),true)));
+  // «So gerechnet» auf Knopfdruck (Gari, 25.11.2026: die Erklärung braucht zu viel Platz); bleibt beim Neuzeichnen offen.
+  root.querySelector('[data-so-gerechnet]')?.addEventListener('click',ev=>{
+    ui.soGerechnet=!ui.soGerechnet;
+    root.querySelector('[data-vertraulich]')?.classList.toggle('offen',ui.soGerechnet);
+    ev.currentTarget.setAttribute('aria-expanded',String(ui.soGerechnet));
+  });
   root.querySelector('[data-stand-neu]')?.addEventListener('click',()=>standFormular(p,null));
   root.querySelectorAll('[data-stand]').forEach(b=>b.addEventListener('click',()=>standFormular(p,standZeile(b.dataset.stand))));
   root.querySelector('[data-zahlung-neu]')?.addEventListener('click',()=>zahlungFormular(p,null));
@@ -330,8 +343,8 @@ function zeile(dt,dd,klasse=''){
   const k=(klasse+(/^[+−\d]/.test(String(dd).replace(/<[^>]+>/g,'').trim())?' ct-wert':'')).trim();
   return '<div><dt>'+esc(dt)+'</dt><dd'+(k?' class="'+k+'"':'')+'>'+dd+'</dd></div>';
 }
-function paketBlatt(p){
-  const bew=bewVon(p),k=K.kennzahlen(p,summenVon(p),zahlungenVon(p),bew);
+// Die Kennzahlen in vier Gruppen (Projektblatt und Bericht).
+function kennzahlGruppen(k){
   const satz=euro(k.satz,k.satz%1?2:0)+'/h';
   // Gari (25.11.2026): bei jedem Betrag sagen, ob netto oder brutto. Alles hier ist netto (ohne MwSt), das Honorar ohne
   // Nebenkosten. Dieselben Begriffe wie auf den Karten der Übersicht.
@@ -348,13 +361,17 @@ function paketBlatt(p){
     ['Zahlungen',[zeile('Bezahlt netto (Abschläge)',k.zahlungen?esc(euro(k.bezahlt)):'noch nicht erfasst'),
       ...(k.gestellt?[zeile('Gestellt, noch offen, netto',esc(euro(k.gestellt)))]:[]),zeile('Erarbeitet, nicht bezahlt netto',esc(offenText(k)))]]
   ];
+  return '<div class="ct-gruppen">'+gruppen.map(([titel,zeilen])=>'<div class="ct-gruppe"><h3 class="pb-h3">'+esc(titel)+'</h3><dl class="pb-merkmale">'+zeilen.join('')+'</dl></div>').join('')+'</div>';
+}
+function paketBlatt(p){
+  const bew=bewVon(p),k=K.kennzahlen(p,summenVon(p),zahlungenVon(p),bew);
   return '<section class="card pb-box" aria-label="Kennzahlen"><div class="ct-kopf-zeile"><div><h2 class="pb-h2">'+esc(p.bezeichnung)+'</h2>'+
     (p.leistung?'<p class="meta">'+esc(p.leistung)+'</p>':'')+'</div><div class="ct-kopf-rechts"><div class="pb-chips">'+chips(p,k,false)+'</div>'+
-    '<button type="button" class="ct-info" data-rechenweg aria-haspopup="dialog"><span aria-hidden="true">i</span>So wird gerechnet</button></div></div>'+
+    '<button type="button" class="ct-info" data-rechenweg aria-haspopup="dialog"><span aria-hidden="true">i</span>So wird gerechnet</button>'+
+    '<button type="button" class="btn ct-pdf" data-pdf-bericht aria-haspopup="dialog">Bericht als PDF</button></div></div>'+
     '<p class="meta ct-netto">Alle Beträge in Euro netto, ohne MwSt; das Honorar ohne Nebenkosten.</p>'+
-    lagePanel(k)+
-    '<div class="ct-gruppen">'+gruppen.map(([titel,zeilen])=>'<div class="ct-gruppe"><h3 class="pb-h3">'+esc(titel)+'</h3><dl class="pb-merkmale">'+zeilen.join('')+'</dl></div>').join('')+'</div>'+
-    (voll&&bew?vertraulichBlock(k,bew):'')+
+    lagePanel(k)+kennzahlGruppen(k)+
+    (voll&&bew?vertraulichBlock(k,bew,ui.soGerechnet):'')+
     (p.notiz?'<p class="meta">'+esc(p.notiz)+'</p>':'')+
     (voll?'<button type="button" class="btn" data-paket-bearbeiten>Paket bearbeiten</button>':'')+'</section>'+
     '<div class="ct-reiter" role="tablist" aria-label="Paket">'+
@@ -366,7 +383,7 @@ function paketBlatt(p){
 // = Stunden je Person × Stundensatz aus dem Gehalt; Selbstkosten = Stunden je Person × Bruttogehalt-Stundensatz ×
 // Gemeinkostenfaktor; Ergebnis nach Gehältern und Gewinn nach Bürokosten = Erarbeitet minus diese Kosten; am Ende
 // hochgerechnet mit dem Leistungsstand wie die Prognose.
-function vertraulichBlock(k,bew){
+function vertraulichBlock(k,bew,offen=false){
   const a=K.annahmen(daten.einstellungen),e=x=>esc(euro(x)),pl=x=>esc(plus(x));
   const name=x=>x.person_id?person(x.person_id)||'Person':x.name||'Team (ohne Aufteilung)';
   const hoch=k.leistungsstand!=null&&!k.abgeschlossen?'<span class="ct-so-teil">am Ende ÷ '+esc(proz(k.leistungsstand))+' Leistungsstand</span>':'';
@@ -391,9 +408,11 @@ function vertraulichBlock(k,bew){
       am(k.prognoseGewinn==null?null:pl(k.prognoseGewinn),'—',plusKlasse(k.prognoseGewinn)),differenz(k.selbstkosten,k.prognoseSelbstkosten,'Selbstkosten'))
   ];
   const bestaetigt=daten.einstellungen?.annahmen_bestaetigt;
-  return '<div class="ct-vertraulich" data-vertraulich><h3 class="pb-h3">Zum Gehalt <span class="ct-nur-admin">vertraulich</span></h3>'+
-    '<div class="ct-vertraulich-tabelle"><table><thead><tr><th><span class="sr">Kennzahl</span></th><th class="num">bis jetzt</th><th class="num">am Ende</th><th>So gerechnet</th></tr></thead>'+
+  return '<div class="ct-vertraulich'+(offen?' offen':'')+'" data-vertraulich><div class="ct-vertraulich-kopf"><h3 class="pb-h3">Zum Gehalt <span class="ct-nur-admin">vertraulich</span></h3>'+
+    '<button type="button" class="ct-info" data-so-gerechnet aria-expanded="'+offen+'" aria-controls="ctVertraulichTabelle"><span aria-hidden="true">i</span>So gerechnet</button></div>'+
+    '<div class="ct-vertraulich-tabelle" id="ctVertraulichTabelle"><table><thead><tr><th><span class="sr">Kennzahl</span></th><th class="num">bis jetzt</th><th class="num">am Ende</th><th class="ct-so">So gerechnet</th></tr></thead>'+
     '<tbody>'+zeilen.join('')+'</tbody></table></div>'+
+    '<p class="meta ct-so-hinweis">Gerechnet beim Öffnen der Seite aus den Stunden, Sätzen und Annahmen von jetzt; nach jeder Änderung neu. Gespeichert wird nur, was eingetragen ist.</p>'+
     '<p class="meta ct-annahmen-hinweis" data-annahmen-hinweis>Annahmen: '+esc(proz(a.ag))+' Arbeitgeberanteil, '+esc(zahl(a.jahresstunden))+' Jahresstunden bei '+
     esc(zahl(a.vollzeit,a.vollzeit%1?1:0))+' h in der Woche'+(a.faktor?', Gemeinkostenfaktor '+esc(zahl(a.faktor,2))+' auf das Bruttogehalt':', noch ohne Gemeinkostenfaktor')+'. '+
     (bestaetigt?'Bestätigt am '+esc(datum(bestaetigt))+'. ':'<strong>Noch nicht bestätigt.</strong> ')+
@@ -424,10 +443,13 @@ function staendeTabelle(p,bew){
 }
 // Spalten in der Reihenfolge der Rechnung des Büros (Gari und die Buchhaltung, 25.11.2026): Abschlag (AZ), zzgl.
 // Nebenkosten, Netto inkl. Nebenkosten, MwSt, Brutto.
-function zahlungenTabelle(p,k){
+function zahlungsRechnung(p){
   const liste=zahlungenVon(p),nk=Number(p.nebenkosten_prozent)||0;
   const teile=z=>{const r=K.rechnung({netto:Number(z.netto)||0},nk);r.mwst=K.r2(Number(z.mwst)||0);r.brutto=K.r2(r.netto+r.mwst);return r};
-  const summe=f=>K.r2(liste.reduce((s,z)=>s+teile(z)[f],0));
+  return {liste,nk,teile,summe:f=>K.r2(liste.reduce((s,z)=>s+teile(z)[f],0))};
+}
+function zahlungenTabelle(p,k){
+  const {liste,nk,teile,summe}=zahlungsRechnung(p);
   const kopf='<tr><th>Datum</th><th>Bezeichnung</th><th class="num">Abschlag (AZ)<span class="ct-einheit">Honorar netto</span></th>'+
     '<th class="num">zzgl. '+esc(proz(nk))+' Nebenkosten</th><th class="num">Netto<span class="ct-einheit">inkl. Nebenkosten</span></th>'+
     '<th class="num">MwSt</th><th class="num">Brutto</th><th>Status</th>'+(voll?'<th></th>':'')+'</tr>';
@@ -442,7 +464,8 @@ function zahlungenTabelle(p,k){
   const fuss=liste.length?'<tfoot><tr><td colspan="2">Summe</td>'+['abschlag','nebenkosten','netto','mwst','brutto'].map(f=>'<td class="num">'+esc(euro(summe(f),2))+'</td>').join('')+
     '<td></td>'+(voll?'<td></td>':'')+'</tr></tfoot>':'';
   return '<section class="card pb-box" role="tabpanel" aria-label="Zahlungen"><div class="pb-box-kopf"><h2 class="pb-h2">Zahlungen</h2>'+
-    (voll?'<button type="button" class="btn btn-primary" data-zahlung-neu>Zahlung erfassen</button>':'')+'</div>'+
+    '<div class="ct-knoepfe">'+(liste.length?'<button type="button" class="btn" data-pdf-zahlungen>Als PDF</button>':'')+
+    (voll?'<button type="button" class="btn btn-primary" data-zahlung-neu>Zahlung erfassen</button>':'')+'</div></div>'+
     '<p class="meta">Wie auf der Rechnung: Abschlag (Honorar netto) zzgl. '+esc(proz(nk))+' Nebenkosten = Netto, zzgl. MwSt = Brutto. '+
     'Als bezahlt zählt das Controlling nur den Abschlag, ohne Nebenkosten und MwSt: bisher '+esc(euro(k.bezahlt))+' netto'+
     (k.gestellt?', gestellt und noch offen '+esc(euro(k.gestellt))+' netto':'')+'.</p>'+
@@ -482,16 +505,29 @@ function renderSaetze(){
   const form=root.querySelector('[data-einstellungen]');
   const beispiel=()=>{root.querySelector('[data-beispiel]').textContent=beispielText({arbeitgeberanteil_prozent:K.leseZahl(form.ag.value),
     jahresstunden:K.leseZahl(form.h.value),vollzeit_wochenstunden:K.leseZahl(form.vollzeit.value),gemeinkostenfaktor:K.leseZahl(form.faktor.value)})};
-  form.addEventListener('input',beispiel);
+  form.addEventListener('input',()=>{beispiel();herleitungZeigen(form)});
+  form.jahr.addEventListener('change',()=>herleitungZeigen(form));
+  herleitungZeigen(form);
+  root.querySelector('[data-herleitung-uebernehmen]').addEventListener('click',ev=>{
+    const w=ev.currentTarget.dataset.wert;if(!w)return;
+    form.h.value=eingabe(Number(w));beispiel();herleitungZeigen(form);
+    meldung('Übernommen: '+zahl(Number(w))+' Jahresstunden. Mit «Speichern» festhalten.');
+  });
   form.addEventListener('submit',async ev=>{
     ev.preventDefault();
     const ag=K.leseZahl(form.ag.value),h=K.leseZahl(form.h.value),vz=K.leseZahl(form.vollzeit.value);
     const faktorText=form.faktor.value.trim(),faktor=faktorText?K.leseZahl(faktorText):null;
+    const tage=name=>{const t=form[name].value.trim();return t?K.leseZahl(t):null};
+    const urlaub=tage('urlaub'),krank=tage('krank'),weitere=tage('weitere'),anteil=tage('anteil');
     if(ag==null||ag<0||ag>100||h==null||h<100||h>4000){meldung('Arbeitgeberanteil 0–100 %, Jahresstunden 100–4.000.','warn');return}
     if(vz==null||vz<=0||vz>80){meldung('Wochenstunden der Vollzeit über 0 und höchstens 80.','warn');return}
     if(faktorText&&(faktor==null||faktor<1||faktor>5)){meldung('Gemeinkostenfaktor zwischen 1 und 5, etwa 2,1; leer: keine Selbstkosten.','warn');return}
+    const falsch=[['urlaub',urlaub,60],['krank',krank,100],['weitere',weitere,100]].find(([n,w,max])=>form[n].value.trim()&&(w==null||w<0||w>max));
+    if(falsch){meldung('Tage als Zahl: Urlaub 0–60, Krankheit und weitere Tage 0–100.','warn');return}
+    if(form.anteil.value.trim()&&(anteil==null||anteil<=0||anteil>100)){meldung('Projektanteil in Prozent, über 0 und höchstens 100.','warn');return}
     const {error}=await sb.from('office_controlling_einstellungen').update({arbeitgeberanteil_prozent:ag,jahresstunden:h,vollzeit_wochenstunden:vz,
-      gemeinkostenfaktor:faktor,annahmen_bestaetigt:form.bestaetigt.value||null,annahmen_notiz:form.notiz.value.trim()||null}).eq('id',true);
+      gemeinkostenfaktor:faktor,annahmen_bestaetigt:form.bestaetigt.value||null,annahmen_notiz:form.notiz.value.trim()||null,
+      urlaubstage:urlaub,krankheitstage:krank,weitere_tage:weitere,projektanteil_prozent:anteil}).eq('id',true);
     if(error){meldung('Nicht gespeichert: '+error.message,'warn');return}
     await neuLaden('Gespeichert.');
   });
@@ -524,16 +560,59 @@ function annahmenBox(e,a){
     feld('faktor','Gemeinkostenfaktor auf das Bruttogehalt',eingabe(a.faktor),'Alle Kosten des Büros im Jahr ÷ Summe der Bruttogehälter. Er deckt neben dem Gehalt, '+
       'was keinem Projekt direkt gehört: Miete, Software, Geräte, Versicherungen, Verwaltung, Akquise, Zeit ohne Projekt und, so gerechnet, den Arbeitgeberanteil. '+
       'Leer: keine Selbstkosten.','inputmode="decimal" placeholder="leer: keine Selbstkosten"')+
+    herleitungBox(e,a)+
     feld('bestaetigt','Bestätigt am',e.annahmen_bestaetigt||'','Leer lassen, bis die Fragen unten geklärt sind; bis dahin gilt der Gewinn im Projektblatt als vorläufig.','type="date"')+
     '<div class="ct-feld breit"><label for="an-notiz">Notiz zu den Annahmen</label><textarea id="an-notiz" name="notiz" class="pb-input" maxlength="2000" rows="3" '+
     'placeholder="Woher die Werte stammen, wer sie bestätigt hat">'+esc(e.annahmen_notiz||'')+'</textarea></div>'+
     '<div class="pb-actions breit"><button class="btn btn-primary">Speichern</button></div></form></section>';
 }
+// Jahresstunden aus dem Kalender (Gari, 25.11.2026: zählen die 1.600 h die Feiertage 2026?). Die 1.600 h sind eine
+// Annahme; hier lassen sie sich herleiten: Werktage des Jahres minus Feiertage am Sitz des Büros (Augsburg) minus Urlaub,
+// Krankheit und weitere Tage, mal Wochenstunden ÷ 5, mal Projektanteil. «Übernehmen» setzt das Ergebnis als Jahresstunden,
+// «Speichern» hält alles fest. Urlaub je Person braucht es nicht, solange er in Teilzeit anteilig ist: das decken die
+// Wochenstunden ab.
+function herleitungJahr(){const j=new Date().getFullYear();return [j-1,j,j+1]}
+function herleitungBox(e,a){
+  const j=new Date().getFullYear(),wert=x=>x==null?'':eingabe(x);
+  const feld=(name,titel,w,platz,hilfe)=>'<label class="ct-herleitung-feld">'+esc(titel)+'<input name="'+name+'" class="pb-input" inputmode="decimal" value="'+esc(w)+'" placeholder="'+esc(platz)+'">'+
+    (hilfe?'<span class="ct-feld-hilfe">'+esc(hilfe)+'</span>':'')+'</label>';
+  const kal=K.jahresstundenAusKalender({jahr:j});
+  return '<details class="ct-herleitung breit" data-herleitung><summary>Jahresstunden aus dem Kalender herleiten · '+esc(String(j))+' in Augsburg: '+
+    esc(zahl(kal.werktage))+' Werktage − '+esc(zahl(kal.feiertage))+' Feiertage = '+esc(zahl(kal.arbeitstage))+' Arbeitstage</summary>'+
+    '<div class="ct-herleitung-inhalt"><label class="ct-herleitung-feld">Jahr<select name="jahr" class="pb-input">'+herleitungJahr().map(x=>'<option'+(x===j?' selected':'')+'>'+x+'</option>').join('')+'</select></label>'+
+    '<p class="ct-feld-hilfe ct-herleitung-kalender" data-kalender></p>'+
+    feld('urlaub','Urlaubstage (Vollzeit)',wert(e.urlaubstage),'z. B. 30','In Teilzeit anteilig; das decken die Wochenstunden je Person ab.')+
+    feld('krank','Krankheitstage (Annahme)',wert(e.krankheitstage),'z. B. 15','Im Schnitt 2025: 14,6 Arbeitstage je Beschäftigten (Destatis).')+
+    feld('weitere','Weitere Tage ohne Projekt',wert(e.weitere_tage),'z. B. 3','Fortbildung, Betriebsausflug, Heiligabend, Silvester.')+
+    feld('anteil','Projektanteil der Arbeitszeit (%)',wert(e.projektanteil_prozent),'leer: 100','Ohne Akquise, Büroorganisation und interne Termine.')+
+    '<div class="ct-herleitung-ergebnis"><p data-herleitung-ergebnis></p><button type="button" class="btn" data-herleitung-uebernehmen>In Jahresstunden übernehmen</button></div></div></details>';
+}
+function herleitungZeigen(form){
+  const jahr=Number(form.jahr.value),fehlt=!form.urlaub.value.trim();
+  const zahlOder=(x)=>x.trim()?K.leseZahl(x):null;
+  const vz=K.leseZahl(form.vollzeit.value)||40;
+  const r=K.jahresstundenAusKalender({jahr,urlaubstage:zahlOder(form.urlaub.value),krankheitstage:zahlOder(form.krank.value),
+    weitereTage:zahlOder(form.weitere.value),projektanteil:zahlOder(form.anteil.value),wochenstunden:vz});
+  const ft=K.feiertage(jahr),kurz=x=>x.datum.slice(8,10)+'.'+x.datum.slice(5,7)+'.';
+  root.querySelector('[data-kalender]').textContent=jahr+': '+zahl(r.werktage)+' Werktage (Mo–Fr), davon '+zahl(r.feiertage)+' Feiertage in Augsburg: '+
+    ft.filter(x=>x.werktag).map(x=>x.name+' '+kurz(x)).join(', ')+'; am Wochenende: '+(ft.filter(x=>!x.werktag).map(x=>x.name).join(', ')||'keiner')+'.';
+  const knopf=root.querySelector('[data-herleitung-uebernehmen]'),aus=root.querySelector('[data-herleitung-ergebnis]');
+  knopf.disabled=fehlt;knopf.dataset.wert=fehlt?'':String(r.jahresstunden);
+  if(fehlt){aus.textContent='Urlaubstage eintragen, dann steht hier das Ergebnis.';return}
+  const tage=x=>zahl(x,x%1?1:0),h=K.leseZahl(form.h.value);
+  aus.textContent='('+zahl(r.arbeitstage)+' Arbeitstage − '+tage(K.leseZahl(form.urlaub.value)||0)+' Urlaub − '+tage(zahlOder(form.krank.value)||0)+' Krankheit − '+
+    tage(zahlOder(form.weitere.value)||0)+' weitere) = '+tage(r.tage)+' Tage × '+zahl(r.stundenJeTag,r.stundenJeTag%1?1:0)+' h × '+proz(r.projektanteil)+' = '+
+    zahl(r.jahresstunden)+' h'+(h&&Math.abs(h-r.jahresstunden)>=1?' (eingetragen: '+zahl(h)+' h)':'');
+}
+
 // Was vor dem Gespräch mit der Büroleitung offen ist (Gari, 25.11.2026): je Frage, warum sie zählt und was jetzt gilt.
 function fragenBox(a,aktive){
   const f=a.faktor?zahl(a.faktor,2):null,ag=proz(a.ag),h=zahl(a.jahresstunden),vz=zahl(a.vollzeit,a.vollzeit%1?1:0);
   const deckung=K.deckungBisGehalt(85,{arbeitgeberanteil_prozent:a.ag,jahresstunden:a.jahresstunden,vollzeit_wochenstunden:a.vollzeit,gemeinkostenfaktor:a.faktor});
   const ohneWoche=aktive.filter(x=>{const g=K.gehaltAm(daten.saetze,x.user_id,heute());return g&&g.wochenstunden==null}).length;
+  const e=daten.einstellungen||{},kalender=K.jahresstundenAusKalender({jahr:new Date().getFullYear()});
+  const herleitung=e.urlaubstage!=null?K.jahresstundenAusKalender({jahr:kalender.jahr,urlaubstage:e.urlaubstage,krankheitstage:e.krankheitstage,
+    weitereTage:e.weitere_tage,projektanteil:e.projektanteil_prozent,wochenstunden:a.vollzeit}).jahresstunden:null;
   const fragen=[
     ['faktor-basis','Wird der Gemeinkostenfaktor'+(f?' '+f:'')+' auf das Bruttogehalt allein gerechnet oder auf Bruttogehalt plus Arbeitgeberanteil?',
       'Gilt er für Bruttogehalt plus Arbeitgeberanteil, sind die Selbstkosten um den Arbeitgeberanteil (rund '+ag+') höher und der Gewinn entsprechend kleiner.',
@@ -547,10 +626,11 @@ function fragenBox(a,aktive){
     ['arbeitgeberanteil','Gilt der Arbeitgeberanteil von '+ag+' für alle, oder lassen sich die tatsächlichen Arbeitgeberkosten je Person aus der Lohnabrechnung nehmen?',
       'Rund 21 % gilt für reguläre Stellen (dazu Umlagen und Berufsgenossenschaft); für Werkstudenten zahlt das Büro meist nur die Rentenversicherung, '+
       'im Übergangsbereich bis 2.000 € im Monat mehr. Betrifft nur die Personalkosten, nicht die Selbstkosten.',ag+' für alle.'],
-    ['jahresstunden','Sind '+h+' Stunden im Jahr die Projektstunden einer Vollzeitkraft, nach Urlaub, Feiertagen, Krankheit, Fortbildung und Büroarbeit ohne Projekt?',
-      'Weniger Projektstunden heißen: jede Stunde kostet mehr. Bezahlt sind 52 × '+vz+' h = '+zahl(52*a.vollzeit)+' h.',h+' h bei '+vz+' h in der Woche.'],
-    ['wochenstunden','Stimmen die Wochenstunden je Person laut Vertrag, und wie zählen Überstunden?',
-      'Der Stundensatz einer Teilzeitkraft rechnet mit ihrem Anteil an den Jahresstunden. Unbezahlte Überstunden senken die tatsächlichen Kosten je Stunde.',
+    ['jahresstunden','Sind '+h+' Stunden im Jahr die Projektstunden einer Vollzeitkraft? Mit wie vielen Urlaubstagen, Krankheitstagen und Tagen ohne Projekt rechnet das Büro, und welcher Anteil der Arbeitszeit geht in Projekte?',
+      'Weniger Projektstunden heißen: jede Stunde kostet mehr. '+kalender.jahr+' hat Augsburg '+zahl(kalender.feiertage)+' Feiertage an Werktagen, also '+
+      zahl(kalender.arbeitstage)+' Arbeitstage; die Herleitung oben rechnet daraus die Jahresstunden.',h+' h bei '+vz+' h in der Woche'+(herleitung?'; aus dem Kalender '+zahl(herleitung)+' h':'')+'.'],
+    ['wochenstunden','Stimmen die Wochenstunden je Person laut Vertrag, ist der Urlaub in Teilzeit anteilig, und wie zählen Überstunden?',
+      'Der Stundensatz einer Teilzeitkraft rechnet mit ihrem Anteil an den Jahresstunden; anteiliger Urlaub ist darin schon enthalten. Nur wer mehr oder weniger Urlaub hat, bräuchte einen eigenen Wert. Unbezahlte Überstunden senken die tatsächlichen Kosten je Stunde.',
       'je Person in der Tabelle oben; ohne Angabe Vollzeit'+(ohneWoche?' ('+ohneWoche+(ohneWoche===1?' Person':' Personen')+' mit Gehalt ohne Wochenstunden)':'')+'.'],
     ['sonderzahlungen','Gibt es ein 13. Gehalt, Urlaubsgeld, Boni oder Zuschüsse (etwa ein Jobticket), die nicht im Monatsgehalt stecken?',
       'Gerechnet wird Monatsgehalt × 12; ein 13. Gehalt macht jede Stunde gut 8 % teurer.','Monatsgehalt × 12, ohne Sonderzahlungen.'],
@@ -624,8 +704,9 @@ function rechenweg(p){
       'deutlich über Budget darüber. Abgeschlossen zählt das Ergebnis. Ohne Leistungsstand bleibt die Lage offen.',
       k&&lageWert(k)?lageWert(k):''),
     z('Die Balken','Im Projektblatt Leistung, Stunden (vom Budget) und Bezahltes (vom Honorar) auf derselben Skala; der Strich ist der Leistungsstand: '+
-      'die Stunden sollten links davon bleiben, das Bezahlte ihn erreichen. Auf den Karten der Übersicht: Stunden grau, der Strich ist das Soll beim '+
-      'Leistungsstand, bernsteinfarben, wenn darüber; Honorar dunkel bezahlt, hell erarbeitet.','')
+      'die Stunden sollten links davon bleiben, das Bezahlte ihn erreichen. Die Stunden sind grün im Budget, orange leicht und rot deutlich darüber, '+
+      'grau ohne Einschätzung. Auf den Karten der Übersicht: Stunden in denselben Farben, der Strich ist das Soll beim Leistungsstand; Honorar dunkel '+
+      'bezahlt, hell erarbeitet.','')
   ];
   if(voll)zeilen.push(z('Zum Gehalt (vertraulich)','Personalkosten: je Person Stunden × Bruttogehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden der Person; '+
     'die Jahresstunden der Person sind die einer Vollzeitkraft × Wochenstunden ÷ Vollzeit-Wochenstunden. Selbstkosten: dasselbe mit dem Gemeinkostenfaktor '+
@@ -641,6 +722,117 @@ function lageWert(k){
   const l=K.lage(k);
   if(l.stufe==='offen')return '';
   return esc(plus(l.ergebnis))+' = '+(l.anteil<0?'− ':'')+esc(prozentHonorar(l))+' des Honorars → '+esc(LAGE[l.stufe]);
+}
+
+// ---------- PDF ----------
+// Wie Projektdokumente und Kostenberechnung (Gari, 25.11.2026: die Zahlungen als PDF; dazu ein Bericht je Paket und die
+// Übersicht): eine Druckfassung, die nur im Druck erscheint, im Druckdialog «Als PDF sichern». Der Titel des Dokuments
+// wird zum Dateinamen. Vertrauliches kommt nur hinein, wenn es mit vollem Zugang ausdrücklich gewählt ist.
+function dateiname(pr,p,art){
+  return [pr?.number,pr?.name,p?.bezeichnung,art,heute()].filter(Boolean).join(' – ').replace(/[\\/:*?"<>|]+/g,'-');
+}
+function drucken(titel,html,quer=false){
+  let d=document.getElementById('ctDruck');
+  if(!d){d=document.createElement('div');d.id='ctDruck';d.className='ct-druck';document.body.append(d)}
+  d.innerHTML=html;
+  const alt=document.title,seite=document.createElement('style');
+  if(quer){seite.textContent='@page{size:A4 landscape}';document.head.append(seite)}
+  document.title=titel;
+  document.documentElement.classList.add('ct-drucken');
+  window.addEventListener('afterprint',()=>{document.title=alt;seite.remove();document.documentElement.classList.remove('ct-drucken');d.innerHTML=''},{once:true});
+  window.print();
+}
+function druckKopf(art,pr,p,vertraulich){
+  return '<header class="ctd-kopf"><p class="ctd-marke">TBA Office · Controlling'+(vertraulich?' · <strong>vertraulich</strong>':'')+'</p>'+
+    '<h1>'+esc(art)+'</h1>'+(pr?'<p class="ctd-projekt">'+esc(projektName(pr))+(p?' · '+esc(p.bezeichnung)+(p.leistung?' · '+esc(p.leistung):''):'')+'</p>':'')+
+    '<p class="ctd-meta">Erstellt am '+esc(datum(heute()))+'. Beträge in Euro; netto heißt ohne MwSt, das Honorar ohne Nebenkosten.</p></header>';
+}
+const druckSumme=liste=>'<dl class="ctd-summen">'+liste.map(([a,b,klasse])=>'<div><dt>'+esc(a)+'</dt><dd'+(klasse?' class="'+klasse.trim()+'"':'')+'>'+esc(b)+'</dd></div>').join('')+'</dl>';
+function druckZahlungen(p,k,mitSumme){
+  const {liste,nk,teile,summe}=zahlungsRechnung(p);
+  const tabelle=liste.length?'<table><thead><tr><th>Datum</th><th>Bezeichnung</th><th class="num">Abschlag (AZ)<br>Honorar netto</th><th class="num">zzgl. '+esc(proz(nk))+
+    '<br>Nebenkosten</th><th class="num">Netto<br>inkl. Nebenkosten</th><th class="num">MwSt</th><th class="num">Brutto</th><th>Status</th></tr></thead><tbody>'+
+    liste.map(z=>{const r=teile(z);return '<tr><td>'+esc(datum(z.datum)||'offen')+'</td><td>'+esc(z.bezeichnung||'')+(z.notiz?'<br><span class="ctd-klein">'+esc(z.notiz)+'</span>':'')+'</td>'+
+      ['abschlag','nebenkosten','netto','mwst','brutto'].map(f=>'<td class="num">'+esc(euro(r[f],2))+'</td>').join('')+
+      '<td>'+esc(z.status)+(z.vorlaeufig?', vorläufig':'')+'</td></tr>'}).join('')+'</tbody><tfoot><tr><td colspan="2">Summe</td>'+
+    ['abschlag','nebenkosten','netto','mwst','brutto'].map(f=>'<td class="num">'+esc(euro(summe(f),2))+'</td>').join('')+'<td></td></tr></tfoot></table>'
+    :'<p>Noch keine Zahlung erfasst.</p>';
+  const summen=mitSumme?druckSumme([['Honorar netto laut Vertrag',euro(k.honorar,2)],
+    ['Erarbeitet netto'+(k.leistungsstand!=null?' ('+proz(k.leistungsstand)+(k.stand?', Stand '+datum(k.stand):'')+')':''),k.erarbeitet==null?'—':euro(k.erarbeitet,2)],
+    ['Bezahlt netto (Abschläge)',euro(k.bezahlt,2)],...(k.gestellt?[['Gestellt, noch offen, netto',euro(k.gestellt,2)]]:[]),
+    ['Erarbeitet, nicht bezahlt netto',k.offen==null||!k.zahlungen?'—':euro(k.offen,2)]]):'';
+  return '<section class="ctd-teil"><h2>Zahlungen</h2>'+tabelle+summen+
+    '<p class="ctd-fuss">Wie auf der Rechnung: Abschlag zzgl. '+esc(proz(nk))+' Nebenkosten = Netto, zzgl. MwSt = Brutto. Als bezahlt zählt das Controlling den Abschlag '+
+    'ohne Nebenkosten und MwSt.</p></section>';
+}
+function druckStaende(p,bew,vertraulich){
+  const reihen=summenVon(p).reverse(),honorar=Number(p.honorar_netto)||0,abgeschlossen=p.status==='abgeschlossen';
+  if(!reihen.length)return '<section class="ctd-teil"><h2>Stände und Stunden</h2><p>Noch kein Stand erfasst.</p></section>';
+  return '<section class="ctd-teil"><h2>Stände und Stunden</h2><table><thead><tr><th>Stichtag</th><th class="num">Leistungsstand</th><th class="num">Stunden</th>'+
+    '<th class="num">Wert netto<br>zum Kalkulationssatz</th><th class="num">Erarbeitet netto</th><th class="num">Ergebnis netto</th>'+(vertraulich?'<th class="num">Personalkosten</th>':'')+
+    '</tr></thead><tbody>'+reihen.map((s,i)=>{
+      const ls=abgeschlossen&&i===0?100:s.leistungsstand,erarbeitet=ls!=null?honorar*Number(ls)/100:null,ergebnis=erarbeitet!=null?erarbeitet-Number(s.wert_kalkulation||0):null;
+      const je=vertraulich?stundenVon(s.stand_id).map(h=>wer(h)+' '+std(Number(h.stunden))).join(' · '):'',pk=bew?.staende.find(x=>x.stand_id===s.stand_id)?.personalkosten;
+      return '<tr><td>'+esc(datum(s.stichtag))+(je?'<br><span class="ctd-klein">'+esc(je)+'</span>':'')+'</td><td class="num">'+esc(proz(ls))+'</td><td class="num">'+esc(std(Number(s.stunden)))+'</td>'+
+        '<td class="num">'+esc(euro(s.wert_kalkulation))+'</td><td class="num">'+esc(euro(erarbeitet))+'</td><td class="num'+plusKlasse(ergebnis)+'">'+esc(plus(ergebnis))+'</td>'+
+        (vertraulich?'<td class="num">'+esc(pk==null?'—':euro(pk))+'</td>':'')+'</tr>';
+    }).join('')+'</tbody></table></section>';
+}
+function druckBericht(pr,p,teile){
+  const vertraulich=voll&&teile.vertraulich,bew=vertraulich?bewVon(p):null,k=K.kennzahlen(p,summenVon(p),zahlungenVon(p),bewVon(p));
+  return '<div class="ctd">'+druckKopf('Controlling-Bericht',pr,p,vertraulich)+
+    (teile.lage?'<section class="ctd-teil"><h2>Lage und Kennzahlen</h2>'+lagePanel(k,vertraulich)+kennzahlGruppen(k)+(p.notiz?'<p class="ctd-fuss">'+esc(p.notiz)+'</p>':'')+'</section>':'')+
+    (vertraulich&&bew?'<section class="ctd-teil">'+vertraulichBlock(k,bew,true)+'</section>':'')+
+    (teile.staende?druckStaende(p,bew,vertraulich):'')+
+    (teile.zahlungen?druckZahlungen(p,k,!teile.lage):'')+'</div>';
+}
+function berichtDialog(pr,p){
+  const form=oeffneDialog('<form method="dialog" class="pb-form"><h2>Bericht als PDF</h2><p class="meta">'+esc(projektName(pr))+' · '+esc(p.bezeichnung)+'</p>'+
+    '<fieldset class="ct-pdf-teile"><legend>Was in den Bericht kommt</legend>'+
+    '<label class="pb-check"><input type="checkbox" name="lage" checked>Lage und Kennzahlen</label>'+
+    '<label class="pb-check"><input type="checkbox" name="staende" checked>Stände und Stunden</label>'+
+    '<label class="pb-check"><input type="checkbox" name="zahlungen" checked>Zahlungen</label>'+
+    (voll?'<label class="pb-check"><input type="checkbox" name="vertraulich">Zum Gehalt und Gewinn (vertraulich)</label>':'')+'</fieldset>'+
+    '<p class="meta">Im Druckdialog «Als PDF sichern» wählen.</p><p class="pb-banner warn" data-dialog-fehler hidden></p>'+
+    '<div class="pb-actions"><button value="drucken" class="btn btn-primary">Drucken oder als PDF sichern</button><button value="abbrechen" class="btn" formnovalidate>Abbrechen</button></div></form>');
+  form.addEventListener('submit',ev=>{
+    if(ev.submitter?.value!=='drucken')return;
+    ev.preventDefault();
+    const teile={lage:form.lage.checked,staende:form.staende.checked,zahlungen:form.zahlungen.checked,vertraulich:!!form.vertraulich?.checked};
+    if(!Object.values(teile).some(Boolean)){zeigeFehler('Bitte mindestens einen Teil wählen.');return}
+    dialog.close();
+    drucken(dateiname(pr,p,'Controlling'+(teile.vertraulich?' vertraulich':'')),druckBericht(pr,p,teile));
+  });
+}
+// Übersicht aller Pakete auf einem Blatt (quer), wie die Karten geordnet; mit vollem Zugang auf Wunsch der Gewinn.
+function druckUebersicht(mitGewinn){
+  const eintraege=daten.pakete.map(p=>({paket:p,k:kz(p)})).sort(K.ordnung);
+  const reihen=eintraege.map(({paket:p,k})=>{
+    const pr=projekt(p.project_id),ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis,g=k.abgeschlossen?k.gewinn:k.prognoseGewinn;
+    return '<tr><td>'+esc(pr?.number||'')+'</td><td>'+esc(pr?.name||'')+'<br><span class="ctd-klein">'+esc(p.bezeichnung)+' · '+esc(p.status)+(k.vorlaeufig?', vorläufig':'')+'</span></td>'+
+      '<td>'+lageChip(k)+'</td><td class="num">'+esc(euro(k.honorar))+'</td><td class="num">'+esc(proz(k.leistungsstand))+'</td>'+
+      '<td class="num">'+esc(std(k.stunden))+' / '+esc(std(k.budget))+'</td><td class="num'+plusKlasse(ergebnis)+'">'+esc(plus(ergebnis))+'</td>'+
+      '<td class="num">'+esc(k.zahlungen?euro(k.bezahlt):'—')+'</td><td class="num">'+esc(k.offen==null||!k.zahlungen?'—':euro(k.offen))+'</td>'+
+      (mitGewinn?'<td class="num'+plusKlasse(g)+'">'+esc(plus(g))+'</td>':'')+'</tr>';
+  }).join('');
+  return '<div class="ctd">'+druckKopf('Controlling · Übersicht',null,null,mitGewinn)+'<section class="ctd-teil"><table><thead><tr><th>Nr.</th><th>Projekt · Paket</th><th>Lage</th>'+
+    '<th class="num">Honorar netto</th><th class="num">Leistungsstand</th><th class="num">Stunden / Budget</th><th class="num">Ergebnis am Ende netto</th>'+
+    '<th class="num">Bezahlt netto</th><th class="num">Erarbeitet, nicht bezahlt netto</th>'+(mitGewinn?'<th class="num">Gewinn am Ende netto</th>':'')+'</tr></thead><tbody>'+reihen+'</tbody></table>'+
+    '<p class="ctd-fuss">Lage: Ergebnis am Ende gegenüber der Kalkulation, gemessen am Honorar (im Budget; leicht über Budget bis 10 % des Honorars im Minus; deutlich darüber). '+
+    'Abgeschlossene Pakete mit ihrem Ergebnis.'+(mitGewinn?' Gewinn: nach Gehältern und Bürokosten (Gemeinkostenfaktor auf das Bruttogehalt).':'')+'</p></section></div>';
+}
+function uebersichtPdf(){
+  const name='Controlling – Übersicht – '+heute();
+  if(!voll){drucken(name,druckUebersicht(false),true);return}
+  const form=oeffneDialog('<form method="dialog" class="pb-form"><h2>Übersicht als PDF</h2><p class="meta">Alle Honorarpakete auf einem Blatt, quer.</p>'+
+    '<label class="pb-check"><input type="checkbox" name="gewinn">mit Gewinn am Ende (vertraulich)</label><p class="meta">Im Druckdialog «Als PDF sichern» wählen.</p>'+
+    '<div class="pb-actions"><button value="drucken" class="btn btn-primary">Drucken oder als PDF sichern</button><button value="abbrechen" class="btn" formnovalidate>Abbrechen</button></div></form>');
+  form.addEventListener('submit',ev=>{
+    if(ev.submitter?.value!=='drucken')return;
+    ev.preventDefault();
+    const g=form.gewinn.checked;dialog.close();
+    drucken(name+(g?' – vertraulich':''),druckUebersicht(g),true);
+  });
 }
 
 // ---------- Formulare ----------

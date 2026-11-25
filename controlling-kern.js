@@ -7,7 +7,8 @@
    Kalkulationssatz, kein Gehalt); das Ergebnis zum Gehalt rechnet nur mit vollem Zugang.
    Seit 25.11.2026 (Gari, nachmittags): Wochenstunden je Person (Teilzeit hat ihren Anteil an den Jahresstunden), die
    Selbstkosten einer Stunde mit dem Gemeinkostenfaktor des Büros auf das Bruttogehalt allein, die Bewertung der Stunden
-   je Person wie in office_controlling_summen (bewertung) und die Lage auf einen Blick (lage).
+   je Person wie in office_controlling_summen (bewertung) und die Lage auf einen Blick (lage). Dazu die Jahresstunden aus
+   dem Kalender (Werktage, Feiertage am Sitz des Büros in Augsburg, Urlaub, Krankheit, weitere Tage, Projektanteil).
    Ohne DOM: im Browser window.TBA_CONTROLLING, in Node module.exports (Tests). */
 (function(root){
 'use strict';
@@ -189,6 +190,40 @@ function bewertung(staende,stunden,saetze,einstellungen,paketSatz){
       satzGehalt:p.ohneGehalt?null:einer(p.saetzeG),satzSelbstkosten:p.ohneSelbstkosten?null:einer(p.saetzeS)}))};
 }
 
+// ---------- Jahresstunden aus dem Kalender (Gari, 25.11.2026: zählen die 1.600 h die Feiertage des Jahres?) ----------
+// Ostersonntag im gregorianischen Kalender (anonymer gregorianischer Algorithmus), als UTC-Datum.
+function ostern(jahr){
+  const a=jahr%19,b=Math.floor(jahr/100),c=jahr%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const n=h+l-7*m+114;
+  return new Date(Date.UTC(jahr,Math.floor(n/31)-1,n%31+1));
+}
+const isoTag=d=>d.toISOString().slice(0,10);
+// Die gesetzlichen Feiertage am Sitz des Büros: Stadt Augsburg, Bayern – 14, mit Mariä Himmelfahrt (überwiegend
+// katholische Gemeinde) und dem Augsburger Friedensfest (nur im Stadtgebiet). werktag: fällt auf Montag bis Freitag.
+function feiertage(jahr){
+  const o=ostern(jahr).getTime(),ab=n=>new Date(o+n*864e5),am=(m,t)=>new Date(Date.UTC(jahr,m-1,t));
+  return [['Neujahr',am(1,1)],['Heilige Drei Könige',am(1,6)],['Karfreitag',ab(-2)],['Ostermontag',ab(1)],['Tag der Arbeit',am(5,1)],
+    ['Christi Himmelfahrt',ab(39)],['Pfingstmontag',ab(50)],['Fronleichnam',ab(60)],['Augsburger Friedensfest',am(8,8)],
+    ['Mariä Himmelfahrt',am(8,15)],['Tag der Deutschen Einheit',am(10,3)],['Allerheiligen',am(11,1)],['1. Weihnachtstag',am(12,25)],
+    ['2. Weihnachtstag',am(12,26)]].map(([name,d])=>({name,datum:isoTag(d),werktag:d.getUTCDay()>=1&&d.getUTCDay()<=5}));
+}
+// Montag bis Freitag im Jahr.
+function werktage(jahr){
+  let n=0;
+  for(let t=Date.UTC(jahr,0,1);t<Date.UTC(jahr+1,0,1);t+=864e5){const w=new Date(t).getUTCDay();if(w>=1&&w<=5)n++}
+  return n;
+}
+// Jahresstunden einer Vollzeitkraft aus dem Kalender: (Werktage − Feiertage an Werktagen − Urlaub − Krankheit − weitere
+// Tage ohne Projekt) × Wochenstunden ÷ 5 × Projektanteil. Leere Angaben zählen als 0 Tage und 100 % Projektanteil.
+function jahresstundenAusKalender({jahr,urlaubstage,krankheitstage,weitereTage,projektanteil,wochenstunden}={}){
+  const j=Number(jahr)||new Date().getFullYear(),w=werktage(j),f=feiertage(j).filter(x=>x.werktag).length;
+  const woche=Number(wochenstunden)>0?Number(wochenstunden):40,anteil=Number(projektanteil)>0?Math.min(Number(projektanteil),100):100;
+  const tage=w-f-zahl(urlaubstage)-zahl(krankheitstage)-zahl(weitereTage);
+  return {jahr:j,werktage:w,feiertage:f,arbeitstage:w-f,tage,stundenJeTag:woche/5,projektanteil:anteil,
+    jahresstunden:Math.max(0,Math.round(tage*woche/5*anteil/100))};
+}
+
 // Lage auf einen Blick (Gari, 25.11.2026: das Projektblatt öffnen und sofort sehen, wie das Projekt läuft): die
 // Hochrechnung gegenüber der Kalkulation, gemessen am Honorar. Im Budget: am Ende bleibt nichts im Minus; leicht über
 // Budget: bis 10 % des Honorars im Minus; deutlich darüber: mehr. Abgeschlossen zählt das Ergebnis. Ohne Honorar, Stand
@@ -206,7 +241,7 @@ function lage(k){
 }
 
 const api={MWST_PROZENT,STATUS,LAGE_GRENZE,leseZahl,ausBrutto,honorarAnteil,rechnung,kennzahlen,ordnung,annahmen,jahresstundenPerson,
-  gehaltSatz,selbstkostenSatz,deckungBisGehalt,satzAm,gehaltAm,bewertung,lage,r2};
+  gehaltSatz,selbstkostenSatz,deckungBisGehalt,satzAm,gehaltAm,bewertung,lage,ostern,feiertage,werktage,jahresstundenAusKalender,r2};
 if(typeof module==='object'&&module.exports)module.exports=api;
 else root.TBA_CONTROLLING=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -78,7 +78,7 @@ test('Import: einmaliger Schlüssel (nur Hash mit Ablauf), strenge Prüfung von 
 test('Seite: eigene Seite im Werkzeugkasten, gleicher Client und dieselbe Gestalt wie die Produktbibliothek',()=>{
   assert.match(seite,/<html lang="de">/);
   assert.match(seite,/<title>TBA Office · Herstellerkatalog<\/title>/);
-  assert.match(seite,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=2">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/herstellerkatalog\.css\?v=office2">/);
+  assert.match(seite,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/herstellerkatalog\.css\?v=office2">/);
   assert.match(seite,/<script src="\.\/shared\/supabase-client\.js\?v=office4"><\/script>/);
   assert.match(seite,/<script src="\.\/herstellerkatalog\.js\?v=office2"><\/script>/);
   assert.match(seite,/<meta name="robots" content="noindex">/);

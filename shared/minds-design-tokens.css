@@ -46,6 +46,12 @@
   --m-attention-soft:#fbf1e8;
   --m-error:#b54736;
   --m-error-soft:#fbe9e7;
+  /* Füllungen für Balken und Diagramme, nicht für Schrift (Gari, 25.11.2026: über dem Budget orange, im Budget grün):
+     kräftiger als die Schriftfarben darüber, auf Weiß und auf --m-fill mindestens 3:1, auch für Farbenschwache
+     unterscheidbar (geprüft mit dem Palettenprüfer). Bedeutung tragen sie nie allein: dazu Zeichen, Wort oder Zahl. */
+  --m-success-fill:#2f9a63;
+  --m-attention-fill:#d4690f;
+  --m-error-fill:#a8323f;
   /* Entscheidungspunkte des Auftraggebers (Projektdokumente) */
   --m-decision:#5b3b8c;
   --m-decision-soft:#f3eefb;

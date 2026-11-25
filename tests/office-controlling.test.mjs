@@ -84,9 +84,9 @@ test('Übersicht: laufende Pakete zuerst, darin die schlechteste Prognose oben',
 
 test('Seite: Tokens zuerst, Kern vor der Seite, Marke im Rahmen, Anmeldung wie die anderen Werkzeuge',()=>{
   const html=read('controlling.html'),js=read('controlling.js');
-  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=2">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office4">/);
+  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office5">/);
   assert.match(html,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  assert.ok(html.indexOf('controlling-kern.js?v=office3')<html.indexOf('controlling.js?v=office4'));
+  assert.ok(html.indexOf('controlling-kern.js?v=office4')<html.indexOf('controlling.js?v=office5'));
   assert.ok(html.includes("<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>"));
   assert.match(js,/const IM_REITER=window\.self!==window\.top;/);
   assert.match(js,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
@@ -161,7 +161,7 @@ test('Tools und Work: Karte «Controlling», Reiter je Projekt nach der Kostenbe
 test('Keine Namen aus Projekten und Team, keine spanischen Wörter',()=>{
   for(const f of ['controlling.html','controlling.js','controlling-kern.js','controlling.css',MIGRATION,'tests/sql/office-controlling-acceptance.sql',
     'tests/browser/fixtures/fake-supabase-controlling.js','tests/browser/office-controlling.chromium.mjs',
-    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|controlling_annahmen|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
+    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|controlling_annahmen|controlling_jahresstunden|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
     const s=read(f);
     // Namen von Projekten, Bauherren und Kolleginnen nur als Prüfsumme (sha256, 16 Zeichen), damit sie selbst nicht im
     // öffentlichen Repo stehen.
@@ -303,4 +303,53 @@ test('Migration Annahmen: Wochenstunden, Vollzeit, Faktor ohne Wert im Repo, Sum
   assert.match(sql,/case when \(select admin from zugang\) and l\.gehalt_vollstaendig then round\(coalesce\(l\.wert_g, 0\), 2\) end/);
   const abnahme=read('tests/sql/office-controlling-acceptance.sql');
   assert.match(abnahme,/A_teilzeit=2; A_s1_teilzeit=774\.40; A_faktor=1; faktor_grenze=verweigert; B_faktor=0; /);
+});
+
+test('Kalender am Sitz des Büros: Ostern, 14 Feiertage in Augsburg, Werktage; Jahresstunden aus Urlaub, Krankheit und Projektanteil',()=>{
+  assert.deepEqual([2024,2025,2026,2027].map(j=>K.ostern(j).toISOString().slice(0,10)),['2024-03-31','2025-04-20','2026-04-05','2027-03-28']);
+  const f=K.feiertage(2026);
+  assert.equal(f.length,14,'Augsburg: mit Mariä Himmelfahrt und dem Friedensfest');
+  assert.deepEqual(f.filter(x=>x.werktag).map(x=>x.datum),['2026-01-01','2026-01-06','2026-04-03','2026-04-06','2026-05-01','2026-05-14','2026-05-25','2026-06-04','2026-12-25']);
+  assert.deepEqual(f.filter(x=>!x.werktag).map(x=>x.name),['Augsburger Friedensfest','Mariä Himmelfahrt','Tag der Deutschen Einheit','Allerheiligen','2. Weihnachtstag']);
+  assert.deepEqual([2025,2026,2027].map(j=>K.feiertage(j).filter(x=>x.werktag).length),[13,9,8],'je nach Jahr fallen mehr oder weniger auf das Wochenende');
+  assert.deepEqual([2026,2027,2028].map(K.werktage),[261,261,260]);
+  const r=K.jahresstundenAusKalender({jahr:2026,urlaubstage:30,krankheitstage:15,weitereTage:3,wochenstunden:40});
+  assert.deepEqual([r.arbeitstage,r.tage,r.stundenJeTag,r.projektanteil,r.jahresstunden],[252,204,8,100,1632]);
+  assert.equal(K.jahresstundenAusKalender({jahr:2026,urlaubstage:30,krankheitstage:15,weitereTage:3,projektanteil:90}).jahresstunden,1469);
+  assert.equal(K.jahresstundenAusKalender({jahr:2026,urlaubstage:30,wochenstunden:38.5}).jahresstunden,1709,'222 Tage × 7,7 h');
+});
+
+test('Migration Jahresstunden: vier Angaben der Herleitung, leer und begrenzt; nichts entfernt',()=>{
+  const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_controlling_jahresstunden\.sql$/.test(f));
+  assert.equal(datei.length,1);
+  const sql=read('supabase/migrations/'+datei[0]),ohne=sql.replace(/--.*$/gm,'');
+  assert.doesNotMatch(ohne,/\b(drop|truncate|delete\s+from|alter\s+table\s+\S+\s+drop|default)\b/i,'nichts Destruktives, keine Standardwerte');
+  for(const [spalte,grenze] of [['urlaubstage','urlaubstage <= 60'],['krankheitstage','krankheitstage <= 100'],['weitere_tage','weitere_tage <= 100'],['projektanteil_prozent','projektanteil_prozent <= 100']])
+    assert.ok(sql.includes('add column '+spalte+' ')&&sql.includes(grenze),spalte);
+  assert.match(read('tests/sql/office-controlling-acceptance.sql'),/A_kalender=1; kalender_grenze=verweigert; B_kalender=0; /);
+});
+
+test('Farben der Lage (Gari, 25.11.2026): Füllungen grün, orange, rot aus den Tokens; alle Seiten laden dieselbe Token-Datei',()=>{
+  const tokens=read('shared/minds-design-tokens.css'),css=read('controlling.css');
+  for(const [name,wert] of [['success','#2f9a63'],['attention','#d4690f'],['error','#a8323f']]){
+    assert.match(tokens,new RegExp('--m-'+name+'-fill:'+wert+';'),name);
+  }
+  assert.match(css,/\.ct-meter-spur\.gut \.ct-meter-fuellung\{background:var\(--m-success-fill\)\}/);
+  assert.match(css,/\.ct-meter-spur\.achtung \.ct-meter-fuellung\{background:var\(--m-attention-fill\)\}/);
+  assert.match(css,/\.ct-balken\.lage-kritisch \.ct-fuellung\{background:var\(--m-error-fill\)\}/);
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g,''),/#[0-9a-f]{3,6}\b/i,'keine Farbwerte im Controlling, nur Tokens');
+  for(const f of ['index.html','app/index.html','app/live/index.html','terminplan.html','terminplan-hilfe.html','kostenberechnung.html','kostenberechnung-hilfe.html',
+    'projektdokumente.html','produktbibliothek.html','herstellerkatalog.html','controlling.html','projektstart.html','oauth-consent.html'])
+    assert.match(read(f),/minds-design-tokens\.css\?v=3"/,f);
+});
+
+test('PDF über den Druckdialog: Zahlungen, Bericht und Übersicht; Vertrauliches nur mit vollem Zugang und auf Wunsch',()=>{
+  const js=read('controlling.js'),css=read('controlling.css');
+  assert.match(css,/\.ct-druck\{display:none\}\n@media print\{/);
+  assert.match(css,/html\.ct-drucken body>\*:not\(\.ct-druck\)\{display:none!important\}/);
+  assert.match(js,/window\.addEventListener\('afterprint',\(\)=>\{document\.title=alt;seite\.remove\(\);document\.documentElement\.classList\.remove\('ct-drucken'\);d\.innerHTML=''\},\{once:true\}\);\n  window\.print\(\);/);
+  assert.match(js,/const vertraulich=voll&&teile\.vertraulich,/,'der Bericht nimmt Vertrauliches nur mit vollem Zugang');
+  assert.match(js,/\(voll\?'<label class="pb-check"><input type="checkbox" name="vertraulich">/);
+  assert.match(js,/if\(!voll\)\{drucken\(name,druckUebersicht\(false\),true\);return\}/);
+  assert.match(js,/\.replace\(\/\[\\\\\/:\*\?"<>\|\]\+\/g,'-'\)/,'Dateiname ohne Zeichen, die Dateisysteme ablehnen');
 });
