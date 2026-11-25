@@ -46,12 +46,14 @@ const fixtures={
   office_kosten_instances:[],
   // Mustermappe: eine Mappe im Projekt (Zeile der Entscheidungsvorlagen, form «mustermappe»).
   office_projektdokumente:[{id:'dok-v',project_id:'p1',art:'entscheidungsvorlagen'}],
-  office_projektdokument_zeilen:[{id:'mm-1',dokument_id:'dok-v',nr:1,themenpaket:'Bodenbeläge',titel:'Mustermappe Bodenbeläge',updated_at:'2026-11-24T10:00:00Z',server_revision:1}]
+  office_projektdokument_zeilen:[{id:'mm-1',dokument_id:'dok-v',nr:1,themenpaket:'Bodenbeläge',titel:'Mustermappe Bodenbeläge',updated_at:'2026-11-24T10:00:00Z',server_revision:1}],
+  // Abschnitte des Projekts (25.11.2026): alle fünf aufgenommen, wie in einem Projekt in der LPH 3.
+  office_project_abschnitte:['terminplan','kosten','mustermappe','produkte','hersteller'].map(abschnitt=>({project_id:'p1',abschnitt}))
 };
 const harness=`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${pageCss}</head>
 <body data-section="work" class="office-app"><div class="app" id="app"><main id="swipeArea" class="swipe-area"><section id="workScreen" class="screen work-screen active" data-screen="work"><div class="work-shell">
 <div class="work-head"><div><h1 id="workProjectTitle">Work</h1></div><div class="work-project-switch"></div></div>
-<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button><button data-work-view="controlling" hidden>Controlling</button><button data-work-view="mustermappe" hidden>Mustermappe</button><button data-work-view="produkte" hidden>Produkte</button><button data-work-view="hersteller" hidden>Hersteller</button></div>
+<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button><button data-work-view="controlling" hidden>Controlling</button><button data-work-view="mustermappe" hidden>Mustermappe</button><button data-work-view="produkte" hidden>Produkte</button><button data-work-view="hersteller" hidden>Hersteller</button><button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden>+</button></div>
 <div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div><div id="workToolHost" class="work-tool-host" hidden></div></div></section></main></div>
 <div id="modalRoot" hidden></div>
 <script>
@@ -387,6 +389,44 @@ test('Reiter Mustermappe, Produkte und Hersteller: Mappen wählen, weitere anleg
     await bereit(page,'controlling');
     assert.equal((await rahmen(page,'controlling')).src,'../controlling.html?projekt=p1');
     assert.equal(await page.locator('[data-work-tool-pane="controlling"] .work-tool-bar').isVisible(),false);
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
+
+// Gari, 25.11.2026: Terminplan, Kostenberechnung, Mustermappe, Produkte und Hersteller nimmt jedes Projekt über «+» auf;
+// Ausblenden löscht nichts, und ein Link auf einen ausgeblendeten Abschnitt nimmt ihn wieder auf.
+test('Abschnitte je Projekt: «+» am Ende der Reiter, ausblenden und wieder aufnehmen',async()=>{
+  const {page,errors}=await board();
+  await page.route(/\/(projektdokumente|produktbibliothek|herstellerkatalog|controlling|terminplan|kostenberechnung)\.html/,r=>r.fulfill({contentType:'text/html',body:werkzeug}));
+  try{
+    const plus=page.locator('[data-work-abschnitte]');
+    assert.equal(await plus.isVisible(),true);
+    assert.equal(await page.evaluate(()=>{const t=document.querySelector('.work-tabs');return t.lastElementChild.matches('[data-work-abschnitte]')}),true,'am Ende der Reiter');
+    await plus.click();
+    const menu=page.locator('#workAbschnitteMenu');
+    await menu.waitFor();
+    assert.equal(await plus.getAttribute('aria-expanded'),'true');
+    assert.deepEqual(await menu.locator('.work-abschnitt strong').allTextContents(),['Terminplan','Kostenberechnung','Mustermappe','Produkte','Hersteller'],'Controlling bleibt immer da');
+    assert.equal(await menu.locator('[data-abschnitt-aus]').count(),5);
+    // Hersteller ausblenden: der Reiter verschwindet, gelöscht wird nur die Zeile des Abschnitts.
+    await menu.locator('[data-abschnitt-aus="hersteller"]').click();
+    await menu.waitFor({state:'detached'});
+    await page.locator('[data-work-view="hersteller"]').waitFor({state:'hidden'});
+    const loeschen=await page.evaluate(()=>window.__writes.filter(w=>w.table==='office_project_abschnitte').map(w=>({op:w.op,filters:w.filters})));
+    assert.deepEqual(loeschen,[{op:'delete',filters:[['eq','project_id','p1'],['eq','abschnitt','hersteller']]}]);
+    // Wieder aufnehmen: der Reiter steht da und öffnet sich.
+    await plus.click();
+    await menu.locator('[data-abschnitt-an="hersteller"]').click();
+    await page.locator('[data-work-view="hersteller"].active').waitFor();
+    await page.locator('[data-work-tool-pane="hersteller"] iframe').waitFor({state:'attached'});
+    const neu=await page.evaluate(()=>window.__writes.filter(w=>w.table==='office_project_abschnitte'&&w.op==='insert').map(w=>w.value));
+    assert.deepEqual(neu,[{project_id:'p1',abschnitt:'hersteller',created_by:'pa'}]);
+    // Escape schließt das Menü.
+    await plus.click();await menu.waitFor();
+    await page.keyboard.press('Escape');
+    await menu.waitFor({state:'detached'});
+    assert.equal(await plus.getAttribute('aria-expanded'),'false');
+    if(process.env.WORK_FOTOS){await plus.click();await menu.waitFor();await page.screenshot({path:path.join(process.env.WORK_FOTOS,'work-abschnitte.png')});await page.keyboard.press('Escape')}
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });

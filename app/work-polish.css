@@ -476,3 +476,37 @@ body[data-section="work"] .work-tool-create{
   border:0;border-radius:999px;padding:10px 16px;background:var(--work-accent,var(--m-blue));color:#fff;
   font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 body[data-section="work"] .work-tool-create:hover{background:#0068d9}
+
+/* Abschnitte je Projekt (Gari, 25.11.2026): «+» am Ende der Reiter nimmt Terminplan, Kostenberechnung, Mustermappe,
+   Produkte oder Hersteller in das Projekt auf; blau, weil man es anklickt. Das Menü hängt am Body (die Reiterzeile
+   scrollt und würde es abschneiden). */
+/* 44 px zum Tippen, sichtbar ein blauer Kreis; klebt am rechten Rand, wenn die Reiter am Telefon seitlich scrollen. */
+body[data-section="work"] .work-tabs button.work-tab-plus{
+  position:sticky;right:0;z-index:1;flex:none;display:grid;place-items:center;
+  width:44px;min-width:44px;height:44px;min-height:44px;padding:0;margin:0 0 0 4px;
+  border:0;border-radius:0;background:var(--m-canvas);color:var(--m-on-blue);
+  font-size:19px;font-weight:500;line-height:1}
+body[data-section="work"] .work-tabs button.work-tab-plus::before{
+  content:"";position:absolute;width:28px;height:28px;border-radius:var(--m-radius-pill);background:var(--m-blue);z-index:-1}
+body[data-section="work"] .work-tabs button.work-tab-plus:hover{color:var(--m-on-blue);background:var(--m-canvas)}
+body[data-section="work"] .work-tabs button.work-tab-plus:hover::before{background:var(--m-blue-hover)}
+body[data-section="work"] .work-tabs button.work-tab-plus[aria-expanded="true"]::before{background:var(--m-blue-press)}
+body[data-section="work"] .work-tabs button.work-tab-plus[hidden]{display:none}
+.work-abschnitte-menu{
+  position:fixed;z-index:1200;box-sizing:border-box;max-height:calc(100vh - 24px);overflow:auto;
+  padding:12px 14px 10px;border:1px solid var(--m-border);border-radius:var(--m-radius-panel);
+  background:var(--m-paper);color:var(--m-ink);font-family:var(--m-type-system);
+  box-shadow:0 18px 40px rgba(20,22,26,.16)}
+.work-abschnitte-kopf{margin:0 0 6px;font-size:13px;color:var(--m-ink-soft)}
+.work-abschnitte-kopf strong{color:var(--m-ink)}
+.work-abschnitt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--m-border-soft)}
+.work-abschnitt>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.work-abschnitt strong{font-size:14px;font-weight:620}
+.work-abschnitt small{font-size:12px;color:var(--m-ink-soft);line-height:1.35}
+.work-abschnitt button{flex:none;min-height:36px;padding:0 12px;border-radius:var(--m-radius-control);font:inherit;font-size:13px;cursor:pointer}
+.work-abschnitt-an{border:1px solid var(--m-blue);background:var(--m-blue);color:var(--m-on-blue);font-weight:600}
+.work-abschnitt-an:hover{background:var(--m-blue-hover)}
+.work-abschnitt-aus{border:1px solid var(--m-field);background:var(--m-paper);color:var(--m-ink-soft)}
+.work-abschnitt-aus:hover{color:var(--m-ink);background:var(--m-fill)}
+.work-abschnitt button:disabled{opacity:.5;cursor:default}
+.work-abschnitte-fuss{margin:6px 0 0;padding-top:8px;border-top:1px solid var(--m-border-soft);font-size:12px;color:var(--m-ink-soft)}

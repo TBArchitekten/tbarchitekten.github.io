@@ -54,9 +54,10 @@ function bindStatic(){
   if(bound)return;bound=true;
   $('.work-project-switch')?.addEventListener('click',e=>{const b=e.target.closest('[data-work-project]');if(!b)return;
     if(isMusterPlanner())history.replaceState(null,'','#section=work');
-    if(b.dataset.workProject!==projectKey)retireToolPanes();
+    if(b.dataset.workProject!==projectKey){retireToolPanes();abschnitte.clear();schliesseAbschnittMenu()}
     projectKey=b.dataset.workProject;localStorage.setItem('minds-work-project',projectKey);if(projectKey===OFFICE_ROOT)view='desktop';folderId=null;activeThreadId=null;reviewReportLimit=20;void render()});
   $$('[data-work-view]').forEach(b=>b.onclick=()=>{view=b.dataset.workView;localStorage.setItem('minds-work-view',view);paintChrome();void render()});
+  $('[data-work-abschnitte]')?.addEventListener('click',e=>oeffneAbschnittMenu(e.currentTarget));
   const host=$('#workToolHost');
   host?.addEventListener('click',e=>{
     if(e.target.closest('[data-work-retry]')){void render();return}
@@ -119,6 +120,7 @@ async function render(){
     if(isMusterPlanner()){
       project={id:null,client_key:'__muster_lph3__',name:'Muster-Planner · LPH 3'};
       $$('[data-work-view]').forEach(b=>{if(isToolView(b.dataset.workView))b.hidden=true});
+      zeigeAbschnitte();
       paintChrome();
       await waitForWork(renderPlanner(true),'Muster-Planner');
       return;
@@ -140,13 +142,18 @@ async function render(){
       if(host)host.hidden=true;
       if(body){body.hidden=false;body.innerHTML='<div class="work-empty" role="status"><p>Noch keine Projekte.</p><p class="small">Projekte legst du unter Tools → Projekte an.</p><a class="secondary" href="#section=projects">Projekte öffnen</a></div>'}
       $$('[data-work-view]').forEach(b=>{b.hidden=b.dataset.workView!=='overview'});
+      zeigeAbschnitte();
       return;
     }
     if(projectKey===OFFICE_ROOT)view='desktop';
     const loadedProject=projectKey===OFFICE_ROOT?null:await waitForWork(loadProject(session),'project');
     if(!latest())return;
     project=loadedProject;
-    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView)||isToolView(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
+    if(project?.id&&!abschnitte.has(String(project.id)))await waitForWork(ladeAbschnitte(project.id),'sections');
+    if(!latest())return;
+    if(!abschnittAn(view)){view='overview';localStorage.setItem('minds-work-view',view)}
+    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView)||isToolView(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT||!abschnittAn(b.dataset.workView)});
+    zeigeAbschnitte();
     paintChrome();
     const settings=project&&!OFFICE?await waitForWork(
       sb.from('minds_self_review_settings').select('enabled,timezone,local_hour,code_preparation_enabled')
@@ -859,6 +866,90 @@ async function loadMustermappen(pid){
  return {data:(data||[]).map(r=>({id:r.id,phase:r.themenpaket||r.titel||'Mustermappe',updated_at:r.updated_at,server_revision:r.server_revision})),error:null};
 }
 const WORK_TOOL_PICK_KEY='tba-office-work-tool-v1';
+// Abschnitte je Projekt (Gari, 25.11.2026): Terminplan, Kostenberechnung, Mustermappe, Produkte und Hersteller braucht
+// nicht jedes Projekt (eine Machbarkeitsstudie etwa keinen davon). Das Projekt nimmt sie über «+» am Ende der Reiter
+// auf, wie Reiter in Teams oder Werkzeuge je Projekt in Basecamp; die Wahl gilt für das ganze Team
+// (office_project_abschnitte). Ausblenden löscht nichts: die Daten bleiben, «+» holt den Abschnitt zurück. Immer da:
+// Panorama, Desktop, Planner, Controlling, Threads. Fehlt die Tabelle (oder antwortet sie nicht), steht alles da wie bisher.
+const OPTIONALE_ABSCHNITTE=[
+ ['terminplan','Terminplan','Termine und Phasen des Projekts als Gantt.'],
+ ['kosten','Kostenberechnung','Kosten nach DIN 276 mit Mengen und Kennwerten.'],
+ ['mustermappe','Mustermappe','Bemusterung je Themenpaket, für den Bemusterungstermin.'],
+ ['produkte','Produkte','Was aus der Produktbibliothek für das Projekt ausgewählt ist.'],
+ ['hersteller','Hersteller','Firmen mit Kontakt im Projekt.']
+];
+const OPTIONAL=new Set(OPTIONALE_ABSCHNITTE.map(a=>a[0]));
+const abschnitte=new Map();
+async function ladeAbschnitte(pid){
+ if(!pid)return;
+ let an=new Set(OPTIONAL);
+ try{const {data,error}=await sb.from('office_project_abschnitte').select('abschnitt').eq('project_id',pid);
+  if(!error)an=new Set((data||[]).map(r=>r.abschnitt))}catch{}
+ abschnitte.set(String(pid),an);
+}
+function abschnittAn(v){
+ if(!OPTIONAL.has(v))return true;
+ const an=abschnitte.get(String(project?.id));
+ return !an||an.has(v);
+}
+async function abschnittAendern(kind,an){
+ const pid=project?.id;if(!pid||!OPTIONAL.has(kind))return false;
+ const session=await getSession();
+ const {error}=an?await sb.from('office_project_abschnitte').insert({project_id:pid,abschnitt:kind,created_by:session?.user?.id})
+  :await sb.from('office_project_abschnitte').delete().eq('project_id',pid).eq('abschnitt',kind);
+ // Schon da (gleichzeitig von jemand anderem hinzugefügt) zählt als Erfolg.
+ if(error&&!(an&&error.code==='23505')){
+  setStatus(error.code==='42501'||/row-level security/i.test(error.message||'')?'Abschnitte ändert das Projektteam.':'Abschnitt nicht geändert: '+(error.message||error));
+  return false;
+ }
+ const set=abschnitte.get(String(pid))||new Set();if(an)set.add(kind);else set.delete(kind);abschnitte.set(String(pid),set);
+ return true;
+}
+function zeigeAbschnitte(){
+ const plus=$('[data-work-abschnitte]');
+ $$('[data-work-view]').forEach(b=>{if(OPTIONAL.has(b.dataset.workView)&&!abschnittAn(b.dataset.workView))b.hidden=true});
+ if(plus)plus.hidden=projectKey===OFFICE_ROOT||!project?.id||isMusterPlanner();
+}
+function schliesseAbschnittMenu(){
+ const m=$('#workAbschnitteMenu');if(m)m.remove();
+ $('[data-work-abschnitte]')?.setAttribute('aria-expanded','false');
+ document.removeEventListener('pointerdown',menuAussen,true);document.removeEventListener('keydown',menuTaste,true);
+ window.removeEventListener('resize',schliesseAbschnittMenu);
+}
+function menuAussen(e){if(!e.target.closest?.('#workAbschnitteMenu,[data-work-abschnitte]'))schliesseAbschnittMenu()}
+function menuTaste(e){if(e.key==='Escape'){schliesseAbschnittMenu();$('[data-work-abschnitte]')?.focus()}}
+function oeffneAbschnittMenu(knopf){
+ if($('#workAbschnitteMenu')){schliesseAbschnittMenu();return}
+ const menu=document.createElement('div');
+ menu.id='workAbschnitteMenu';menu.className='work-abschnitte-menu';menu.setAttribute('role','dialog');menu.setAttribute('aria-label','Abschnitte des Projekts');
+ menu.innerHTML='<p class="work-abschnitte-kopf">Abschnitte für <strong>'+esc(project?.name||'das Projekt')+'</strong></p>'+
+  OPTIONALE_ABSCHNITTE.map(([k,name,text])=>{const an=abschnittAn(k);
+   return '<div class="work-abschnitt'+(an?' is-an':'')+'"><div><strong>'+esc(name)+'</strong><small>'+esc(text)+'</small></div>'+
+    (an?'<button type="button" class="work-abschnitt-aus" data-abschnitt-aus="'+k+'">Ausblenden</button>'
+      :'<button type="button" class="work-abschnitt-an" data-abschnitt-an="'+k+'">Hinzufügen</button>')+'</div>'}).join('')+
+  '<p class="work-abschnitte-fuss">Gilt für das ganze Projektteam. Ausblenden löscht nichts.</p>';
+ document.body.append(menu);
+ const r=knopf.getBoundingClientRect(),breite=Math.min(340,window.innerWidth-16);
+ menu.style.width=breite+'px';
+ menu.style.left=Math.max(8,Math.min(r.right-breite,window.innerWidth-breite-8))+'px';
+ menu.style.top=(r.bottom+6)+'px';
+ knopf.setAttribute('aria-expanded','true');
+ menu.addEventListener('click',async e=>{
+  const an=e.target.closest('[data-abschnitt-an]'),aus=e.target.closest('[data-abschnitt-aus]');
+  if(!an&&!aus)return;
+  const kind=(an||aus).dataset.abschnittAn||(an||aus).dataset.abschnittAus;
+  (an||aus).disabled=true;
+  const ok=await abschnittAendern(kind,!!an);
+  schliesseAbschnittMenu();
+  if(!ok)return;
+  if(an){view=kind;localStorage.setItem('minds-work-view',view)}
+  else if(view===kind){view='overview';localStorage.setItem('minds-work-view',view)}
+  void render();
+ });
+ // Gleich anmelden: der Klick, der das Menü öffnet, hat sein pointerdown schon hinter sich.
+ document.addEventListener('pointerdown',menuAussen,true);document.addEventListener('keydown',menuTaste,true);window.addEventListener('resize',schliesseAbschnittMenu);
+ menu.querySelector('button')?.focus();
+}
 function isToolView(v){return Object.prototype.hasOwnProperty.call(WORK_TOOLS,v)}
 function toolPick(projectId,kind){
  try{return JSON.parse(localStorage.getItem(WORK_TOOL_PICK_KEY)||'{}')[projectId]?.[kind]||null}catch{return null}
@@ -889,8 +980,10 @@ function retireToolPanes(keepProjectId=null){
   void flushToolFrame(pane.querySelector('iframe')).finally(()=>pane.remove());
  });
 }
-function openToolTab(kind,id=null){
+async function openToolTab(kind,id=null){
  if(!isToolView(kind)||!project?.id)return;
+ // Ein Link (Panorama, «Neuer Terminplan») auf einen ausgeblendeten Abschnitt nimmt ihn für das Projekt auf.
+ if(!abschnittAn(kind)&&!await abschnittAendern(kind,true))return;
  if(id)rememberToolPick(String(project.id),kind,id);
  view=kind;localStorage.setItem('minds-work-view',view);paintChrome();void render();
 }

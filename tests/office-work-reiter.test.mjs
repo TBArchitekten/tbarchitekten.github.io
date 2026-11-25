@@ -4,7 +4,7 @@
 // und office-terminplan-reiter.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const shell=read('app/shell.js'),work=read('app/work.js'),index=read('app/index.html');
@@ -32,7 +32,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office55','shell.js?v=office57','office-projects.js?v=office62','work-polish.css?v=6','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office56','shell.js?v=office58','office-projects.js?v=office62','work-polish.css?v=7','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 
@@ -141,4 +141,37 @@ test('Projekte: Nummer und Name bearbeiten, nur Admin oder Projektleitung (wie d
   assert.match(projects,/if\(role==='admin'\|\|project\.projektleiter_id===userId\)\{\n      const edit=document\.createElement\('button'\);edit\.type='button';edit\.textContent='Bearbeiten';edit\.onclick=\(\)=>editProject\(project\);/);
   assert.match(projects,/sb\(\)\.from\('office_projects'\)\.update\(\{number,name\}\)\.eq\('id',project\.id\)\.select\('id'\)\.maybeSingle\(\)/);
   assert.match(projects,/saveError\?\.code==='23505'\?'Diese Projektnummer ist bereits vergeben\.'/);
+});
+
+test('Abschnitte je Projekt: «+» am Ende der Reiter, für das ganze Team, Ausblenden löscht nichts (Gari, 25.11.2026)',()=>{
+  // Der Knopf steht als letztes in der Reiterzeile, nach Threads; ohne Projekt verborgen.
+  assert.match(shell,/<button data-work-view="threads">Threads<\/button>\s*<button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" title="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden>\+<\/button>\s*<\/div>/);
+  // Wählbar sind genau diese fünf; Panorama, Desktop, Planner, Controlling und Threads bleiben immer.
+  assert.match(work,/const OPTIONALE_ABSCHNITTE=\[\n \['terminplan','Terminplan',[^\n]*\n \['kosten','Kostenberechnung',[^\n]*\n \['mustermappe','Mustermappe',[^\n]*\n \['produkte','Produkte',[^\n]*\n \['hersteller','Hersteller',[^\n]*\n\];/);
+  assert.doesNotMatch(work.slice(work.indexOf('const OPTIONALE_ABSCHNITTE'),work.indexOf('const OPTIONAL=')),/'controlling'/);
+  // Ohne Tabelle oder bei einem Fehler steht alles da wie bisher.
+  assert.match(work,/let an=new Set\(OPTIONAL\);\n try\{const \{data,error\}=await sb\.from\('office_project_abschnitte'\)\.select\('abschnitt'\)\.eq\('project_id',pid\);\n  if\(!error\)an=new Set/);
+  assert.match(work,/insert\(\{project_id:pid,abschnitt:kind,created_by:session\?\.user\?\.id\}\)/);
+  assert.match(work,/delete\(\)\.eq\('project_id',pid\)\.eq\('abschnitt',kind\)/);
+  // Ein ausgeblendeter Reiter verschwindet, die gewählte Ansicht fällt aufs Panorama; ein Link nimmt ihn wieder auf.
+  assert.match(work,/b\.hidden=projectKey===OFFICE_ROOT\|\|!abschnittAn\(b\.dataset\.workView\)/);
+  assert.match(work,/if\(!abschnittAn\(view\)\)\{view='overview';localStorage\.setItem\('minds-work-view',view\)\}/);
+  assert.match(work,/if\(!abschnittAn\(kind\)&&!await abschnittAendern\(kind,true\)\)return;/);
+  assert.match(work,/if\(b\.dataset\.workProject!==projectKey\)\{retireToolPanes\(\);abschnitte\.clear\(\);schliesseAbschnittMenu\(\)\}/);
+  // Menü am Body, schließt mit Escape und Klick daneben; blau ist nur, was man anklickt.
+  assert.match(work,/menu\.id='workAbschnitteMenu';menu\.className='work-abschnitte-menu';menu\.setAttribute\('role','dialog'\)/);
+  assert.match(work,/Gilt für das ganze Projektteam\. Ausblenden löscht nichts\./);
+  const css=read('app/work-polish.css');
+  assert.match(css,/body\[data-section="work"\] \.work-tabs button\.work-tab-plus\{\n  position:sticky;right:0;z-index:1;/);
+  assert.match(css,/width:44px;min-width:44px;height:44px;min-height:44px;/,'Ziel zum Tippen 44 px');
+  // Migration: Lesen alle Mitglieder, ändern Team, Projektleitung und Admins; was Daten hat, bleibt sichtbar.
+  const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_project_abschnitte\.sql$/.test(f));
+  assert.equal(datei.length,1);
+  const sql=read('supabase/migrations/'+datei[0]);
+  assert.match(sql,/abschnitt text not null check \(abschnitt in \('terminplan','kosten','mustermappe','produkte','hersteller'\)\),/);
+  assert.match(sql,/primary key \(project_id, abschnitt\)/);
+  assert.match(sql,/for insert to authenticated with check \(\n    \(select private\.office_is_member\(\)\) and created_by = \(select auth\.uid\(\)\)\n    and \(\(select private\.office_leads_project\(project_id\)\) or \(select private\.office_in_project_team\(project_id\)\)\)\);/);
+  for(const [a,t] of [['terminplan','office_terminplan_instances'],['kosten','office_kosten_instances'],['mustermappe','office_projektdokument_zeilen'],['produkte','office_produkt_verwendungen'],['hersteller','office_hersteller_kontakte']])
+    assert.match(sql,new RegExp("select p\\.id, '"+a+"', null from public\\.office_projects p\\n where exists \\(select 1 from public\\."+(a==='mustermappe'?'office_projektdokumente':t)),a);
+  assert.doesNotMatch(sql.replace(/--.*$/gm,''),/\b(drop|truncate|delete\s+from|update\s+public)\b/i,'nichts Destruktives');
 });
