@@ -17,6 +17,21 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-25 · Controlling: Gehälter nur für die Liste, Zahlungen wie die Rechnung, netto überall, «So wird gerechnet» · Claude
+- Qué cambió y por qué: Rückmeldung von Gari nach der ersten Arbeit mit der Buchhaltung (25.11.2026, 13:19).
+  - **Sätze und Gehälter nur für die Liste:** Gari: sehen sollen sie nur er und die Buchhaltung, später der Chef. Bisher hatte jeder Admin vollen Zugang (und wer später Admin würde, sähe die Gehälter von selbst). Jetzt zählt nur `office_controlling_zugang`: die heutigen Admins kamen beim Einspielen auf die Liste, `private.office_controlling_voll()` prüft nur noch sie, und **einschränkende** Policies (AND) halten Sätze mit Gehältern, Stunden je Person und die Annahmen auch vor Admins ohne Eintrag zurück. Die Liste ändern nur Admins, die selbst darauf stehen; sich selbst setzt niemand darauf, und in der Seite entfernt sich niemand selbst. Den Chef nimmt Gari (oder Claude auf Garis Wort) auf, sobald er im Office ist.
+  - **Zahlung wie die Rechnung des Büros:** Abschlag (AZ, Honorar netto) zzgl. Nebenkosten = Netto, zzgl. 19 % MwSt = Brutto, untereinander wie auf der Rechnung. Eingetragen wird, was zur Hand ist – Abschlag, Netto oder Brutto –, der Rest rechnet sich mit; die MwSt folgt jeder Änderung (vorher musste Gari sie von Hand setzen) und lässt sich danach noch ändern. `rechnung()` in `controlling-kern.js` rundet jeden Schritt auf den Cent und trifft die Rechnung des Büros genau; vom Netto zurück zum Abschlag stimmt der Cent (geprüft über 8.000 Beträge).
+  - **Tabelle der Zahlungen** in der Reihenfolge der Rechnung: Abschlag (AZ) · zzgl. 5 % Nebenkosten · Netto inkl. Nebenkosten · MwSt · Brutto. Gari schrieb «Anzahl» für die erste Spalte; auf der Rechnung steht «AZ» (Abschlagszahlung, wie im Vertrag), daher «Abschlag (AZ)».
+  - **Netto bei jedem Betrag** (Gari: viele Werte sagten nicht, ob netto oder brutto): jede Kennzahl, die Balken und die Spalten nennen «netto»; ein Satz über den Kennzahlen sagt, dass alles netto ist und das Honorar ohne Nebenkosten; «zum Gehalt» heißt jetzt «Personalkosten».
+  - **«So wird gerechnet»** (Gari und die Buchhaltung suchten, woher die Zahlen kommen): Knopf im Projektblatt und in der Übersicht; der Dialog nennt je Wert die Herkunft und rechnet ihn mit den Zahlen des Pakets vor (etwa Honorar × Leistungsstand = Erarbeitet).
+  - Kennzahl «bezahlt»: je Zahlung ihr Abschlag, dann die Summe, damit sie auf den Cent mit der Tabelle übereinstimmt.
+- Archivos: `controlling.js` (`?v=office3`), `controlling-kern.js` (`office2`), `controlling.css` (`office3`), `controlling.html`; Migration `supabase/migrations/…_office_controlling_nur_liste.sql`; Tests: `tests/office-controlling.test.mjs` (drei neue), `tests/sql/office-controlling-acceptance.sql` (Admin ohne Eintrag), `tests/browser/office-controlling.chromium.mjs` (Rechnung, Rechenweg, Admin ohne Eintrag) und `fixtures/fake-supabase-controlling.js`; `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: migración `office_controlling_nur_liste` (Zeilen nur in `office_controlling_zugang`, `office_controlling_voll()` mit neuem Körper, nur neue, einschränkende Policies; keine entfernt) — aplicada en Supabase: pendiente.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (466); Chromium `office-controlling` grün (7); Bildschirmfotos von Projektblatt, Rechenweg, Zahlungsdialog (Rechner und Telefon) und Tabelle angesehen.
+- Quedó pendiente o sin probar: den Chef auf die Liste setzen, sobald er im Office ist; der Gemeinkostenfaktor (1,87) als dritte Annahme, falls Gari ihn will.
+- Riesgos o decisiones que necesitan a Gari: «Abschlag (AZ)» statt «Anzahl».
+- PR: (folgt)
+
 ### 2026-11-25 · Controlling: ganze Karte, voller Zugang für die Buchhaltung; Work: Abschnitte je Projekt mit «+» · Claude
 - Qué cambió y por qué: Rückmeldung von Gari zum ersten Tag mit dem Controlling (25.11.2026).
   - **Karten der Übersicht:** Gari fand nicht, wo man sie öffnet (nur der Titel war ein Link). Jetzt öffnet die ganze Karte das Projektblatt (der Link im Titel spannt sich über die Karte, Hover mit blauem Rand); fett steht das **Projekt**, darüber die Nummer, darunter das Paket.
