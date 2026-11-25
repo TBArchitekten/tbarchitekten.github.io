@@ -172,3 +172,7 @@ label.btn:focus-within{outline:2px solid var(--pb-link);outline-offset:2px}
 /* Kontakt des Herstellers aus dem Herstellerkatalog (24.11.2026) */
 .pb-hersteller{margin:0;font-size:13px;line-height:1.45;color:var(--pb-muted);overflow-wrap:anywhere}
 .pb-hersteller a{color:var(--pb-link)}
+/* Als Reiter «Produkte» oder «Hersteller» eines Projekts in Work (25.11.2026): Work nennt Projekt und Werkzeug schon;
+   kein Rücksprung in die App (das hieße die App im Rahmen). */
+.im-reiter .pb{padding-top:14px}
+.im-reiter .pb-back[href^="./app/"]{display:none}

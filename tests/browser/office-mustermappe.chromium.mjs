@@ -77,12 +77,15 @@ const seiteWaehlen=(page,text)=>page.locator('.mm-seitenliste button',{hasText:t
 
 test('Mappe anlegen, Position mit Code, Kandidaten aus der Bibliothek, Texte auf der Seite',async()=>{
   const {page,fehler}=await oeffne();
-  await page.goto(adresse('projektdokumente.html'));
+  // Tools › Mustermappe (Gari, 25.11.2026): eigenes Werkzeug, erst das Projekt, dann die Mappen des Projekts.
+  await page.goto(adresse('projektdokumente.html?werkzeug=mustermappe'));
+  await page.locator('h1',{hasText:'Mustermappe'}).waitFor();
   await page.locator('a.pd-wahl-projekt',{hasText:'Testhaus'}).click();
-  const karte=page.locator('.pd-karte',{hasText:'Mustermappen'});
-  await karte.waitFor();
-  assert.match(await karte.innerText(),/L3\.MAP\.1/);
-  await karte.locator('button',{hasText:'Neue Mustermappe'}).click();
+  await page.locator('h1',{hasText:'Mustermappen'}).waitFor();
+  assert.match(new URL(page.url()).search,/werkzeug=mustermappe/);
+  assert.match(await page.locator('.pd-wrap').innerText(),/Für dieses Projekt gibt es noch keine Mustermappe\./);
+  assert.equal(await page.title(),'TBA Office · Mustermappe');
+  await page.locator('.pd-head button[data-act="mm-neu"]',{hasText:'Neue Mustermappe'}).click();
   await page.locator('#pdDialog select[name="paket"]').selectOption('Bodenbeläge');
   await page.locator('#pdDialog input[name="termin"]').fill('03.12.2026');
   await page.locator('#pdDialog button[type="submit"]').click();
@@ -241,11 +244,16 @@ test('Vorlegen hält den Stand fest; Übersicht, Entscheidungsliste und iPhone',
   assert.equal(await page.locator('#pdDialog .mm-stand textarea').count(),0);
   assert.match(await page.locator('#pdDialog').innerText(),/dieser Stand ändert sich nicht/);
   await page.locator('#pdDialog [data-dlg="zu"]').click();
-  // Übersicht: eigene Karte, nicht unter den Entscheidungsvorlagen.
-  await page.locator('a.pd-back',{hasText:'Projektstart'}).click();
-  const karte=page.locator('.pd-karte',{hasText:'Mustermappen'});
+  // Zurück zu den Mappen des Projekts: eine Karte je Mappe mit Positionen, Seiten, Termin und Stand.
+  await page.locator('a.pd-back',{hasText:'Mustermappen'}).click();
+  const karte=page.locator('.mm-karte',{hasText:'Mustermappe Bodenbeläge'});
   await karte.waitFor();
-  assert.match(await karte.innerText(),/Mustermappe Bodenbeläge · 1 Position · vorgelegt am/);
+  assert.match(await karte.innerText(),/1 Position · \d+ Seiten/);
+  assert.match(await karte.innerText(),/Bemusterung am 03\.12\.2026 · vorgelegt am/);
+  // Der Projektstart zeigt keine Mappen mehr, auch nicht unter den Entscheidungsvorlagen.
+  await page.goto(adresse('projektdokumente.html?projekt='+d.office_projects[0].id));
+  await page.locator('.pd-karte',{hasText:'Entscheidungsvorlagen'}).waitFor();
+  assert.equal(await page.locator('.pd-karte',{hasText:'Mustermappen'}).count(),0);
   assert.doesNotMatch(await page.locator('.pd-karte',{hasText:'Entscheidungsvorlagen'}).innerText(),/Mustermappe/);
   // In der Entscheidungsliste steht die Position mit Herkunft und Vorlage.
   await page.locator('.pd-karte',{hasText:'Entscheidungsliste'}).locator('a',{hasText:'Öffnen'}).click();
@@ -318,4 +326,55 @@ test('Präsentieren im Termin: Entscheidung je Position, danach in der Produktbi
   assert.deepEqual(st,{'Parkett Eiche geölt':'freigegeben','Naturstein Jura':'verworfen'});
   await page.locator('.card',{hasText:'Entscheidungen der Bemusterung'}).locator('.chip-ok',{hasText:'freigegeben'}).waitFor();
   assert.deepEqual(fehler,[]);
+});
+
+// Als Reiter «Mustermappe» in Work (Gari, 25.11.2026): die Seite läuft in einem Rahmen der App. Ohne Rücksprung in die
+// App und ohne zweite Projektzeile; ?neu=1 öffnet nur den Dialog, Abbrechen meldet die Seite, die neue Mappe öffnet sie
+// über die Adresse; Work liest die Revision der Mappe und lässt vor dem Schließen speichern.
+test('Als Reiter in Work: kein Rücksprung, Anlegen und Abbrechen gemeldet, Revision und Speichern für Work',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1320,height:940},deviceScaleFactor:1});
+  const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co/,r=>r.abort());
+  const PID='22222222-2222-4222-8222-222222222222';
+  await page.route(/\/__rahmen__\.html$/,r=>r.fulfill({contentType:'text/html',body:`<!doctype html><html lang="de"><body style="margin:0"><script>
+window.__nachrichten=[];addEventListener('message',e=>{if(e.origin===location.origin)window.__nachrichten.push(e.data)});
+</script><iframe id="f" allow="fullscreen" style="width:1300px;height:900px;border:0" src="/projektdokumente.html?projekt=${PID}&werkzeug=mustermappe&neu=1"></iframe></body></html>`}));
+  try{
+    await page.goto(adresse('__rahmen__.html'));
+    const f=page.frameLocator('#f'),rahmen=()=>page.frames().find(x=>/projektdokumente\.html/.test(x.url()));
+    await f.locator('#pdDialog select[name="paket"]').waitFor();
+    assert.equal(await rahmen().evaluate(()=>document.documentElement.classList.contains('im-reiter')),true);
+    assert.equal(await f.locator('.pd-karte').count(),0,'hinter dem Dialog keine Liste der Mappen');
+    assert.doesNotMatch(rahmen().url(),/neu=1/,'neu einmal: das Neuladen öffnet den Dialog nicht wieder');
+    await f.locator('#pdDialog [data-dlg="abbrechen"]').click();
+    await page.waitForFunction(()=>window.__nachrichten.length===1);
+    assert.deepEqual(await page.evaluate(()=>window.__nachrichten),[{tbaOfficeTool:'abgebrochen'}]);
+    // Anlegen: die neue Mappe öffnet sich über die Adresse der Seite (Work übernimmt sie beim Laden des Rahmens).
+    await rahmen().evaluate(p=>location.assign('/projektdokumente.html?projekt='+p+'&werkzeug=mustermappe&neu=1'),PID);
+    await f.locator('#pdDialog select[name="paket"]').waitFor();
+    await f.locator('#pdDialog select[name="paket"]').selectOption('Bäder');
+    await f.locator('#pdDialog button[type="submit"]').click();
+    await f.locator('h1',{hasText:'Mustermappe Bäder'}).waitFor();
+    const url=new URL(rahmen().url());
+    assert.equal(url.searchParams.get('projekt'),PID);assert.ok(url.searchParams.get('vorlage'),'die Mappe steht in der Adresse');
+    assert.deepEqual(await page.evaluate(()=>window.__nachrichten),[{tbaOfficeTool:'abgebrochen'}],'Anlegen ist kein Abbruch');
+    // Kein Rücksprung und keine zweite Projektzeile; die Überschrift der Mappe bleibt.
+    assert.deepEqual(await f.locator('.pd-mappe-wrap').evaluate(w=>[getComputedStyle(w.querySelector(':scope>.pd-back')).display,
+      getComputedStyle(w.querySelector('.pd-head .kicker')).display,getComputedStyle(w.querySelector('.pd-head h1')).display]),['none','none','block']);
+    // Für Work: Revision der Mappe, nichts offen; eine Änderung steht aus, flush speichert sie.
+    const rev=await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.kind,window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending()]);
+    assert.equal(rev[0],'mustermappe');assert.ok(rev[1]>=1);assert.equal(rev[2],false);
+    await f.locator('.mm-nav button',{hasText:'Position hinzufügen'}).click();
+    await f.locator('#pdDialog input[name="code"]').fill('S1');
+    await f.locator('#pdDialog input[name="bez"]').fill('Waschtisch');
+    await f.locator('#pdDialog button[type="submit"]').click();
+    await f.locator('.mm-seitenliste .active',{hasText:'S1 Waschtisch · Vergleich'}).waitFor();
+    await rahmen().evaluate(()=>window.TBA_OFFICE_TOOL.flush());
+    const nach=await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending()]);
+    assert.ok(nach[0]>rev[1],'gespeichert: neue Revision');assert.equal(nach[1],false);
+    // Im Rahmen führt kein Link in die App.
+    assert.equal(await f.locator('a[href^="./app/"]:visible').count(),0);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
 });

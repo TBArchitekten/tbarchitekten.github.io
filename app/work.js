@@ -62,7 +62,7 @@ function bindStatic(){
     if(e.target.closest('[data-work-retry]')){void render();return}
     const pick=e.target.closest('[data-work-tool-pick]');
     if(pick){void switchToolInstance(pick.closest('[data-work-tool-pane]'),pick.dataset.workToolPick);return}
-    if(e.target.closest('[data-work-tool-create]'))createToolInstance(e.target.closest('[data-work-tool-pane]'));
+    if(e.target.closest('[data-work-tool-create]'))void createToolInstance(e.target.closest('[data-work-tool-pane]'));
   });
   window.addEventListener('message',onToolMessage);
   const input=$('#workFileInput');if(input)input.onchange=()=>{const fs=[...(input.files||[])];input.value='';if(fs.length)void uploadFiles(fs)};
@@ -146,7 +146,7 @@ async function render(){
     const loadedProject=projectKey===OFFICE_ROOT?null:await waitForWork(loadProject(session),'project');
     if(!latest())return;
     project=loadedProject;
-    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner','terminplan','kosten'].includes(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
+    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView)||isToolView(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT});
     paintChrome();
     const settings=project&&!OFFICE?await waitForWork(
       sb.from('minds_self_review_settings').select('enabled,timezone,local_hour,code_preparation_enabled')
@@ -827,12 +827,34 @@ function workAvatarInitials(name){
 // Board und bleibt beim Wechsel der Reiter offen; Work schaltet nur um, was sichtbar ist. Je Projekt und Werkzeug merkt
 // sich Work die zuletzt gewählte Fassung (z. B. LPH 3 oder LPH 5). Bevor ein Rahmen schließt oder eine andere Fassung
 // lädt, speichert die Seite, was noch aussteht (TBA_OFFICE_TOOL in terminplan.html und kostenberechnung.js).
+// Mustermappe, Produkte und Hersteller (Gari, 25.11.2026): die Mappen des Projekts wie die Fassungen eines Terminplans
+// (eine je Themenpaket, eine weitere über «Neue Mustermappe» neben der Wahl); Produkte und Hersteller sind je Projekt
+// eine Seite, gefiltert auf das Projekt (?projekt=): was dafür ausgewählt ist und die Firmen dazu.
 const WORK_TOOLS={
  terminplan:{table:'office_terminplan_instances',page:'../terminplan.html',name:'Terminplan',
   none:'Für dieses Projekt gibt es noch keinen Terminplan.',create:'Terminplan anlegen'},
  kosten:{table:'office_kosten_instances',page:'../kostenberechnung.html',name:'Kostenberechnung',
-  none:'Für dieses Projekt gibt es noch keine Kostenberechnung.',create:'Kostenberechnung anlegen'}
+  none:'Für dieses Projekt gibt es noch keine Kostenberechnung.',create:'Kostenberechnung anlegen'},
+ mustermappe:{page:'../projektdokumente.html',name:'Mustermappe',idParam:'vorlage',load:loadMustermappen,
+  none:'Für dieses Projekt gibt es noch keine Mustermappe.',create:'Mustermappe anlegen',add:'Neue Mustermappe',
+  src:(pid,id,neu)=>'../projektdokumente.html?'+new URLSearchParams(neu?{projekt:pid,werkzeug:'mustermappe',neu:'1'}:{projekt:pid,vorlage:id})},
+ produkte:{page:'../produktbibliothek.html',name:'Produkte',single:true,
+  src:pid=>'../produktbibliothek.html?projekt='+encodeURIComponent(pid)},
+ hersteller:{page:'../herstellerkatalog.html',name:'Hersteller',single:true,
+  src:pid=>'../herstellerkatalog.html?projekt='+encodeURIComponent(pid)}
 };
+// Die Mappen eines Projekts: Zeilen der Entscheidungsvorlagen mit form «mustermappe», in der Reihenfolge des Anlegens.
+async function loadMustermappen(pid){
+ const docs=await sb.from('office_projektdokumente').select('id').eq('project_id',pid).eq('art','entscheidungsvorlagen');
+ if(docs.error)return {data:null,error:docs.error};
+ const ids=(docs.data||[]).map(d=>d.id);
+ if(!ids.length)return {data:[],error:null};
+ const {data,error}=await sb.from('office_projektdokument_zeilen')
+  .select('id,nr,updated_at,server_revision,themenpaket:daten->>themenpaket,titel:daten->>titel')
+  .in('dokument_id',ids).eq('daten->>form','mustermappe').order('nr');
+ if(error)return {data:null,error};
+ return {data:(data||[]).map(r=>({id:r.id,phase:r.themenpaket||r.titel||'Mustermappe',updated_at:r.updated_at,server_revision:r.server_revision})),error:null};
+}
 const WORK_TOOL_PICK_KEY='tba-office-work-tool-v1';
 function isToolView(v){return Object.prototype.hasOwnProperty.call(WORK_TOOLS,v)}
 function toolPick(projectId,kind){
@@ -884,17 +906,22 @@ function showToolFrame(pane,kind,target,neu=false){
   frame=document.createElement('iframe');
   frame.className='work-tool-frame';
   frame.title=tool.name+(project?.name?' · '+project.name:'');
+  // Präsentieren (Mustermappe) darf den ganzen Bildschirm nehmen.
+  frame.allow='fullscreen';
   frame.addEventListener('load',()=>toolFrameLoaded(pane,kind,frame));
   stage.append(frame);
  }
  pane.dataset.creating=neu?'1':'';
- frame.dataset.toolId=neu?'':target;
- frame.src=tool.page+(neu?'?neu=':'?id=')+encodeURIComponent(target);
+ frame.dataset.toolId=neu||tool.single?'':target;
+ frame.src=tool.src?tool.src(pane.dataset.workToolProject,target,neu):tool.page+(neu?'?neu=':'?id=')+encodeURIComponent(target);
 }
-// Die Seite hat selbst eine Fassung geöffnet (nach dem Anlegen): Work übernimmt sie als gewählte.
+// Die Seite hat selbst eine Fassung geöffnet (nach dem Anlegen): Work übernimmt sie als gewählte. Produkte und
+// Hersteller haben keine Fassungen; dort bleibt jeder Klick in der Seite.
 function toolFrameLoaded(pane,kind,frame){
+ const tool=WORK_TOOLS[kind];
+ if(tool.single)return;
  let id=null;
- try{id=new URL(frame.contentWindow.location.href).searchParams.get('id')}catch{}
+ try{id=new URL(frame.contentWindow.location.href).searchParams.get(tool.idParam||'id')}catch{}
  if(!id||id===frame.dataset.toolId)return;
  frame.dataset.toolId=id;pane.dataset.creating='';
  rememberToolPick(pane.dataset.workToolProject,kind,id);
@@ -909,10 +936,12 @@ function onToolMessage(e){
  pane.querySelector('iframe')?.remove();
  if(view===pane.dataset.workToolPane)void renderTool(view);
 }
-function createToolInstance(pane){
+async function createToolInstance(pane){
  if(!pane||!project?.id)return;
  const kind=pane.dataset.workToolPane,pid=pane.dataset.workToolProject;
  if(kind==='kosten'){showToolFrame(pane,kind,pid,true);return}
+ // Eine weitere Mappe: was in der offenen noch aussteht, wird vorher gespeichert; Abbrechen führt zu ihr zurück.
+ if(kind==='mustermappe'){const frame=pane.querySelector('iframe');if(frame)await flushToolFrame(frame);showToolFrame(pane,kind,pid,true);return}
  if(!window.TBA_OFFICE_PROJECTS?.openNewPlan){setStatus('Terminplan anlegen ist gerade nicht verfügbar.');return}
  void window.TBA_OFFICE_PROJECTS.openNewPlan(pid,{onCreated:id=>{
   rememberToolPick(pid,'terminplan',id);
@@ -942,7 +971,9 @@ async function renderTool(kind){
   host.append(pane);
  }
  paintSurface();
- const {data,error}=await sb.from(tool.table).select('id,phase,updated_at,server_revision')
+ // Eine Seite je Projekt (Produkte, Hersteller): einmal öffnen, dann bleibt sie, wo man in ihr war.
+ if(tool.single){if(!pane.querySelector('.work-tool-stage iframe'))showToolFrame(pane,kind,pid);return}
+ const {data,error}=tool.load?await tool.load(project.id):await sb.from(tool.table).select('id,phase,updated_at,server_revision')
   .eq('project_id',project.id).eq('is_archived',false).order('updated_at',{ascending:false});
  if(!pane.isConnected||pane.dataset.retiring)return;
  const stage=pane.querySelector('.work-tool-stage'),bar=pane.querySelector('.work-tool-bar');
@@ -954,9 +985,11 @@ async function renderTool(kind){
  }
  const rows=data||[];
  const pick=[toolPick(pid,kind),frame?.dataset.toolId].find(id=>id&&rows.some(r=>r.id===id))||rows[0]?.id||null;
- bar.hidden=rows.length<2;
- bar.innerHTML=rows.length<2?'':'<div class="work-tool-versions" role="tablist" aria-label="'+esc(tool.name)+' wählen">'+
-  rows.map(r=>toolChip(kind,r,rows,pick)).join('')+'</div>';
+ // Mappen: die Wahl steht schon bei einer, damit «Neue Mustermappe» daneben Platz hat.
+ bar.hidden=rows.length<(tool.add?1:2);
+ bar.innerHTML=bar.hidden?'':'<div class="work-tool-versions" role="tablist" aria-label="'+esc(tool.name)+' wählen">'+
+  rows.map(r=>toolChip(kind,r,rows,pick)).join('')+'</div>'+
+  (tool.add?'<button type="button" class="work-tool-add" data-work-tool-create>'+esc(tool.add)+'</button>':'');
  if(!rows.length){
   if(frame&&pane.dataset.creating==='1')return;
   if(frame){await flushToolFrame(frame);frame.remove()}
@@ -964,6 +997,8 @@ async function renderTool(kind){
    '<button type="button" class="work-tool-create" data-work-tool-create>'+esc(tool.create)+'</button></div>';
   return;
  }
+ // Eine weitere Mappe wird gerade angelegt: der Dialog in der Seite bleibt offen.
+ if(frame&&pane.dataset.creating==='1')return;
  rememberToolPick(pid,kind,pick);
  if(frame&&frame.dataset.toolId===pick){
   // Schon offen: neu laden nur, wenn inzwischen jemand anderes gespeichert hat, hier nichts aussteht und niemand

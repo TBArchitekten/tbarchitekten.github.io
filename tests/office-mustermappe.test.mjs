@@ -150,3 +150,26 @@ test('Position ohne Kandidat: im Bearbeiten ein Hinweis, im PDF kein Text für d
   assert.doesNotMatch(druck,/Noch kein Kandidat|Bibliothek wählen/);
   assert.match(druck,/80–125 €\/m²/);
 });
+
+// Gari, 25.11.2026: Die Mustermappe ist ein eigenes Werkzeug (Tools › Mustermappe) und im Projekt ein Reiter in Work,
+// nicht mehr eine Karte im Projektstart.
+test('Werkzeug Mustermappe: Mappen je Projekt, nicht mehr im Projektstart; die Mappe führt zurück zu den Mappen',()=>{
+  const js=readFileSync(new URL('../projektdokumente.js',import.meta.url),'utf8');
+  assert.match(js,/ui\.werkzeug=p\.get\('werkzeug'\)==='mustermappe'\?'mustermappe':'';/);
+  assert.match(js,/if\(ziel\)\{gehe\(\{werkzeug:ui\.werkzeug,projekt:ziel\.id\},\{ersetzen:true\}\);return\}/);
+  assert.match(js,/else if\(ui\.werkzeug\)\{\n    ui\.ansicht='mappen';/);
+  assert.match(js,/else if\(ui\.ansicht==='mappen'\)renderMappen\(\);/);
+  assert.match(js,/function renderMappen\(\)\{/);
+  assert.match(js,/titel:'Mustermappen',\n    intro:esc\(MAPPE_INTRO\),aktionen:projektwahl\+'<button type="button" class="btn btn-primary" data-act="mm-neu">Neue Mustermappe<\/button>'/);
+  // Die Übersicht des Projektstarts hat keine Karte «Mustermappen» mehr.
+  const uebersicht=js.slice(js.indexOf('function renderUebersicht(){'),js.indexOf('// ---------- Listen ----------'));
+  assert.doesNotMatch(uebersicht,/Mustermappen|mm-neu|L3\.MAP\.1/);
+  assert.match(js,/kopf\(\{zurueck:\[url\(\{werkzeug:'mustermappe',projekt:projekt\.id\}\),'‹ Mustermappen'\],\n    kicker:'Mustermappe · '\+projektName\(\),titel:inh\.titel,meta,aktionen\}\)/);
+  // Ein anderes Projekt in der Liste der Mappen bleibt im Werkzeug.
+  assert.match(js,/gehe\(\{werkzeug:ui\.ansicht==='mappen'\?ui\.werkzeug:'',projekt:el\.value\}\)/);
+  // ?neu=1 öffnet einmal den Dialog; im Rahmen ohne Liste dahinter.
+  assert.match(js,/if\(neu\)history\.replaceState\(null,'',url\(\{werkzeug:ui\.werkzeug,projekt:pid\}\)\);/);
+  assert.match(js,/if\(neu&&IM_REITER\)zeichne\('<div class="pd-wrap"><p class="meta">Neue Mustermappe …<\/p><\/div>',null\);else render\(\);/);
+  const html=readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8');
+  assert.match(html,/projektdokumente\.css\?v=office8/);assert.match(html,/projektdokumente\.js\?v=office7/);
+});

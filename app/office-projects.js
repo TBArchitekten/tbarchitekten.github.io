@@ -384,6 +384,12 @@ document.getElementById('officeToolsProdukte')?.addEventListener('click',()=>{
 document.getElementById('officeToolsHersteller')?.addEventListener('click',()=>{
   window.location.href='../herstellerkatalog.html';
 });
+// Mustermappe: eigenes Werkzeug (Gari, 25.11.2026), nicht mehr eine Karte im Projektstart. Die Seite bleibt
+// projektdokumente.html, weil jede Position eine Entscheidung der Entscheidungsliste ist; ?werkzeug=mustermappe zeigt
+// je Projekt die Mappen. Im Projekt steht die Mappe als Reiter in Work.
+document.getElementById('officeToolsMappe')?.addEventListener('click',()=>{
+  window.location.href='../projektdokumente.html?werkzeug=mustermappe';
+});
 document.getElementById('officePlansBack')?.addEventListener('click',()=>{window.ISABELLA_APP?.show?.('tools');history.replaceState(null,'','#section=tools')});
 document.getElementById('officePlansDrawer')?.addEventListener('click',()=>{
   document.getElementById('closeDrawer')?.click();openPlans();

@@ -171,3 +171,67 @@ test('iPhone: Katalog und Firmenblatt ohne Querscrollen',async()=>{
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
+
+// Reiter «Produkte» und «Hersteller» eines Projekts in Work (Gari, 25.11.2026): nur was für das Projekt ausgewählt ist
+// und die Firmen dazu; jeder Link zwischen Bibliothek und Katalog bleibt im Projekt; im Rahmen ohne Rücksprung in die App.
+const P1='22222222-2222-4222-8222-222222222222';
+test('Im Projekt: Produkte und Hersteller nur des Projekts, Links bleiben im Projekt',async()=>{
+  const {ctx,page,fehler}=await oeffne('herstellerkatalog.html?projekt='+P1);
+  try{
+    // Hersteller: H1 hat Kontakt im Projekt und das ausgewählte Produkt; H2 nur einen Kontakt in einem anderen Vorhaben.
+    assert.equal(await page.locator('h1').textContent(),'T-01 · Testhaus');
+    assert.match(await page.locator('.pb-head .kicker').textContent(),/Herstellerkatalog · Firmen im Projekt/);
+    assert.deepEqual(await page.locator('.hk-karte h2').allTextContents(),['Hersteller B']);
+    assert.equal(await page.locator('#hkProjekt').count(),0,'kein zweiter Projektfilter');
+    assert.match(await page.locator('[data-zahl]').textContent(),/^1 Firma im Projekt/);
+    assert.match(await karte(page,'Hersteller B').locator('.hk-im-projekt').textContent(),/^BO-01 · Kalkstein, geschliffen · bemustert$/);
+    // Firmenblatt: zurück zu den Firmen des Projekts; ein neuer Kontakt ist schon dem Projekt zugeordnet.
+    await karte(page,'Hersteller B').locator('h2 a').click();
+    await page.locator('h1',{hasText:'Hersteller B'}).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('projekt'),P1);
+    assert.equal(await page.locator('a.pb-back').textContent(),'‹ Firmen des Projekts');
+    await page.locator('[data-kontakt-neu]').click();
+    assert.equal(await page.locator('#hkDialog select[name="projekt"]').inputValue(),P1);
+    await page.locator('#hkDialog button[value="abbrechen"]').click();
+    // Produkt der Firma: das Produktblatt bleibt im Projekt und führt zur Auswahl des Projekts zurück.
+    await page.locator('.hk-liste a',{hasText:'Kalkstein, geschliffen'}).click();
+    await page.locator('h1',{hasText:'Kalkstein, geschliffen'}).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('projekt'),P1);
+    assert.equal(await page.locator('a.pb-back').textContent(),'‹ Auswahl des Projekts');
+    await page.locator('a.pb-back').click();
+    await page.locator('[data-zahl]').waitFor();
+    assert.match(await page.locator('[data-zahl]').textContent(),/^1 Eintrag ausgewählt für T-01 · Testhaus/);
+    assert.deepEqual(await page.locator('.pb-karte h2').allTextContents(),['Kalkstein, geschliffen']);
+    assert.equal(await page.locator('#pbProjekt').count(),0);
+    assert.equal(await page.locator('.pb-karte [data-zu-projekt]').count(),0,'schon im Projekt: kein «Zu Projekt» auf der Karte');
+    assert.equal(await page.locator('.pb-verwendung').textContent(),'BO-01 · bemustert');
+    assert.deepEqual(await page.locator('.pb-pills .pill').allTextContents(),['Bodenbeläge · 1','Alle']);
+    assert.equal(await page.locator('#pbSort option[value="zuletzt"]').textContent(),'Code im Projekt');
+    assert.equal(await page.locator('a.pb-back').textContent(),'‹ Produktbibliothek');
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+test('Im Rahmen (Reiter in Work): kein Rücksprung, keine zweite Überschrift, die ganze Bibliothek als ganze Seite',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1320,height:940},deviceScaleFactor:1});
+  const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co/,r=>r.abort());
+  await page.route(/\/__rahmen__\.html$/,r=>r.fulfill({contentType:'text/html',body:'<!doctype html><html lang="de"><body style="margin:0">'+
+    '<iframe id="p" style="width:1300px;height:440px;border:0" src="/produktbibliothek.html?projekt='+P1+'"></iframe>'+
+    '<iframe id="h" style="width:1300px;height:440px;border:0" src="/herstellerkatalog.html?projekt='+P1+'"></iframe></body></html>'}));
+  try{
+    await page.goto(adresse('__rahmen__.html'));
+    for(const [id,ziel,karten,name] of [['#p','./produktbibliothek.html','.pb-karte h2','Kalkstein, geschliffen'],['#h','./herstellerkatalog.html','.hk-karte h2','Hersteller B']]){
+      const f=page.frameLocator(id);
+      await f.locator(karten,{hasText:name}).waitFor();
+      assert.equal(await f.locator('html').evaluate(h=>h.classList.contains('im-reiter')),true);
+      assert.equal(await f.locator('a.pb-back').count(),0,'kein Rücksprung im Rahmen');
+      assert.equal(await f.locator('.pb-head h1').count(),0,'Work nennt das Projekt schon');
+      const ganz=f.locator('.pb-actions a.btn');
+      assert.deepEqual([await ganz.getAttribute('href'),await ganz.getAttribute('target')],[ziel,'_top']);
+      assert.equal(await f.locator('a[href^="./app/"]').count(),0);
+    }
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});

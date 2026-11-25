@@ -15,7 +15,10 @@
    Produktbibliothek (mit Musterliste des Projekts), Kennwert aus einem Preis, dem Datenpool oder der Kostenberechnung,
    Menge aus der Kostenberechnung, jede Zahl mit Fundstelle (projektdokumente-zahlen.js). Romy «Zahlen holen» wählt nur
    unter diesen Kandidaten und schlägt vor; nach der Entscheidung gibt «In der Produktbibliothek freigeben» das gewählte
-   Produkt im Projekt frei. */
+   Produkt im Projekt frei.
+   Mustermappe als eigenes Werkzeug (25.11.2026, Gari): ?werkzeug=mustermappe zeigt je Projekt die Mappen (Tools ›
+   Mustermappe), nicht mehr eine Karte im Projektstart. Als Reiter in Work läuft die Seite in einem Rahmen: ohne
+   Rücksprung in die App, mit TBA_OFFICE_TOOL (Revision der Mappe, Speichern auf Zuruf) und ?neu=1 zum Anlegen. */
 (()=>{
 'use strict';
 const K=window.TBA_PROJEKTDOKUMENTE,X=window.TBA_PROJEKTDOKUMENTE_EXPORT,OFFICE=window.TBA_OFFICE_CONFIG;
@@ -23,6 +26,8 @@ const Z=window.TBA_PROJEKTDOKUMENTE_ZAHLEN,R=window.TBA_KOSTEN_RECHNEN,P=window.
 const sb=window.MINDS_SUPABASE||(window.supabase&&OFFICE?window.supabase.createClient(OFFICE.url,OFFICE.key,
   {auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}):null);
 const inApp=!!window.WINDOW_NATIVE?.available;
+// Als Reiter in Work (Rahmen): nie die Startseite oder die App im Rahmen öffnen.
+const IM_REITER=window.self!==window.top;
 const root=document.getElementById('pd'),dialog=document.getElementById('pdDialog');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const kopie=x=>JSON.parse(JSON.stringify(x??{}));
@@ -39,7 +44,7 @@ const NEU_FELD={klaerungsliste:'sachverhalt',entscheidungsliste:'thema'};
 
 let nutzer=null,mitglied=null,mitglieder=[],projekte=[],team=[];
 let projekt=null,dokumente={},zeilen=leer(),aufgaben=new Map(),geladenUm=0;
-const ui={ansicht:'',art:'',vorlage:null,filter:'alle',disziplin:'',suche:'',alleSpalten:false,auswahl:new Set(),detail:null,
+const ui={ansicht:'',werkzeug:'',art:'',vorlage:null,filter:'alle',disziplin:'',suche:'',alleSpalten:false,auswahl:new Set(),detail:null,
   verlauf:null,edit:null,meldung:'',meldungArt:'info',staende:null,spaeter:new Set(),romyText:null};
 const speicher={laeuft:0,fehler:''};
 const VORSCHLAG='id,dokument_id,zeile_id,art,daten,fundstelle,begruendung,quelle,created_by,created_at';
@@ -61,12 +66,14 @@ async function start(){
   if(!sb||!K||!X){fehler('Office-Verbindung nicht verfügbar.');return}
   const {data,error}=await sb.auth.getSession();
   const session=data?.session;
-  if(error||!session){if(inApp){void window.WINDOW_NATIVE.call('session.signIn');fehler('Bitte in der App anmelden.');return}location.href='./';return}
+  if(error||!session){if(inApp){void window.WINDOW_NATIVE.call('session.signIn');fehler('Bitte in der App anmelden.');return}
+    if(IM_REITER){fehler('Bitte in TBA Office neu anmelden.');return}
+    location.href='./';return}
   nutzer=session.user;
   const {data:m,error:me}=await sb.from('office_members').select('user_id,role,display_name,is_active,must_change_password')
     .eq('user_id',nutzer.id).eq('is_active',true).maybeSingle();
   if(me||!m){fehler('Kein Zugriff auf TBA Office.');return}
-  if(m.must_change_password){if(inApp){fehler('Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.');return}location.href='./';return}
+  if(m.must_change_password){if(inApp||IM_REITER){fehler('Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.');return}location.href='./';return}
   mitglied=m;
   try{
     const [mm,pr,pm]=await Promise.all([
@@ -90,10 +97,11 @@ function gehe(p,{ersetzen=false}={}){
 async function route(){
   const p=params(),pid=p.get('projekt');
   ui.edit=null;ui.auswahl=new Set();
+  ui.werkzeug=p.get('werkzeug')==='mustermappe'?'mustermappe':'';
   if(!pid){
     let letztes='';try{letztes=localStorage.getItem(LETZTES)||''}catch{}
     const ziel=projekte.find(x=>x.id===letztes&&x.status==='aktiv'&&darf(x));
-    if(ziel){gehe({projekt:ziel.id},{ersetzen:true});return}
+    if(ziel){gehe({werkzeug:ui.werkzeug,projekt:ziel.id},{ersetzen:true});return}
     zeigeProjektwahl();return;
   }
   if(!projekt||projekt.id!==pid){
@@ -109,6 +117,14 @@ async function route(){
     ui.ansicht=istMappe(v)?'mappe':'vorlage';ui.vorlage=vorlage;ui.staende=null;
     if(ui.ansicht==='mappe'&&mm.offen!==vorlage){mm.offen=vorlage;mm.seite=null;mm.geladen=''}
     render();void ladeStaende(vorlage);
+  }
+  else if(ui.werkzeug){
+    ui.ansicht='mappen';ui.detail=null;
+    // ?neu=1 (Reiter «Mustermappe» in Work, «Mustermappe anlegen»): einmal den Dialog, das Neuladen öffnet ihn nicht wieder.
+    const neu=p.get('neu')==='1';
+    if(neu)history.replaceState(null,'',url({werkzeug:ui.werkzeug,projekt:pid}));
+    if(neu&&IM_REITER)zeichne('<div class="pd-wrap"><p class="meta">Neue Mustermappe …</p></div>',null);else render();
+    if(neu)neueMappeDialog();
   }
   else if(LISTEN.includes(liste)){
     if(ui.art!==liste){ui.filter='alle';ui.disziplin='';ui.suche='';ui.detail=null}
@@ -271,9 +287,11 @@ function kopf({zurueck,kicker,titel,meta='',aktionen='',intro=''}){
 const projektName=()=>projekt?projekt.number+' · '+projekt.name:'';
 const url=p=>'?'+new URLSearchParams(Object.entries(p).filter(([,v])=>v)).toString();
 function render(){
+  document.title='TBA Office · '+(['mappe','mappen'].includes(ui.ansicht)?'Mustermappe':'Projektstart');
   if(ui.ansicht==='liste')renderListe();
   else if(ui.ansicht==='vorlage')renderVorlage();
   else if(ui.ansicht==='mappe')renderMappe();
+  else if(ui.ansicht==='mappen')renderMappen();
   else renderUebersicht();
 }
 // Neu zeichnen, ohne Eingaben zu verlieren. Chrome meldet beim Ersetzen des DOM noch change und focusout der alten
@@ -302,15 +320,16 @@ function zeichne(html,fokus){
 }
 let renderTimer=0;
 function spaeterRendern(){clearTimeout(renderTimer);renderTimer=setTimeout(render,0)}
+const MAPPE_INTRO='Je Themenpaket eine Mappe A3 quer: Positionen mit dem Code aus dem Plan, Kandidaten aus der Produktbibliothek, Texte und Bilder auf der Seite. Vorgestellt im Bemusterungstermin; entschieden wird in der Entscheidungsliste.';
 function zeigeProjektwahl(hinweis=''){
-  const meine=projekte.filter(p=>p.status==='aktiv'&&darf(p));
+  const meine=projekte.filter(p=>p.status==='aktiv'&&darf(p)),mappe=ui.werkzeug==='mustermappe';
   const fokus=vorZeichnen();
-  const html='<div class="pd-wrap">'+kopf({zurueck:['./app/#section=tools','‹ Werkzeuge'],kicker:'Werkzeuge · Projektstart',titel:'Projektstart',
-    intro:'Die Bürovorlagen werden Dokumente des Projekts: hier bearbeiten und als Word, Excel oder PDF ausgeben, wenn Fachplaner oder Bauherr sie brauchen. Das Muster bleibt, wie es ist; jedes Projekt bekommt seine eigene Fassung.',
-    aktionen:'<a class="btn" href="./projektstart.html">Muster ansehen</a>'})+
+  const html='<div class="pd-wrap">'+kopf({zurueck:['./app/#section=tools','‹ Werkzeuge'],kicker:mappe?'Werkzeuge · Mustermappe':'Werkzeuge · Projektstart',titel:mappe?'Mustermappe':'Projektstart',
+    intro:mappe?esc(MAPPE_INTRO):'Die Bürovorlagen werden Dokumente des Projekts: hier bearbeiten und als Word, Excel oder PDF ausgeben, wenn Fachplaner oder Bauherr sie brauchen. Das Muster bleibt, wie es ist; jedes Projekt bekommt seine eigene Fassung.',
+    aktionen:mappe?'':'<a class="btn" href="./projektstart.html">Muster ansehen</a>'})+
     (hinweis?'<div class="pd-banner warn">'+esc(hinweis)+'</div>':'')+
     '<section class="card pd-wahl"><h2>Projekt wählen</h2>'+(meine.length?'<div class="pd-wahl-liste">'+meine.map(p=>
-      '<a class="pd-wahl-projekt" href="'+esc(url({projekt:p.id}))+'" data-nav><span class="pd-nr">'+esc(p.number)+'</span> '+esc(p.name)+'</a>').join('')+'</div>'
+      '<a class="pd-wahl-projekt" href="'+esc(url({werkzeug:ui.werkzeug,projekt:p.id}))+'" data-nav><span class="pd-nr">'+esc(p.number)+'</span> '+esc(p.name)+'</a>').join('')+'</div>'
       :'<p class="meta">Du bist in keinem aktiven Projekt eingetragen. Die Projektleitung trägt das Team unter Werkzeuge › Projekte ein.</p>')+'</section></div>';
   zeichne(html,fokus);
 }
@@ -351,11 +370,6 @@ function renderUebersicht(){
     '<section class="pd-abschnitt"><h2>Texte</h2><p class="meta">feste Abschnitte, Daten des Projekts schon eingesetzt · Ausgabe als Word oder PDF</p><div class="pd-grid">'+
     '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Entscheidungsvorlagen</h3><span class="pd-code">L3.ENV.1</span></div>'+vorlagenListe+
     '<div class="pd-karte-aktionen"><button type="button" class="btn btn-primary" data-act="neue-vorlage">Neue Vorlage</button></div></article>'+
-    '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Mustermappen</h3><span class="pd-code">L3.MAP.1</span></div>'+(mappen().length?'<ul class="pd-vorlagen">'+mappen().map(v=>
-      '<li><a href="'+esc(url({projekt:projekt.id,vorlage:v.id}))+'" data-nav>'+esc(v.daten.titel||'Mustermappe')+'</a> · '+(v.daten.punkte||[]).length+((v.daten.punkte||[]).length===1?' Position':' Positionen')+' · '+
-      (v.daten.status==='vorgelegt'?'vorgelegt am '+esc(K.datumKurz(v.daten.vorgelegt_am)):'in Arbeit')+'</li>').join('')+'</ul>'
-      :'<p class="meta">Eine Mappe je Themenpaket: Seiten A3 quer aus den Positionen und der Produktbibliothek, vorgestellt im Bemusterungstermin.</p>')+
-    '<div class="pd-karte-aktionen"><button type="button" class="btn btn-primary" data-act="mm-neu">Neue Mustermappe</button></div></article>'+
     folgt('Projektstartvermerk','L3.PSV.1 · M00','Projektdaten, Beteiligte, Termine und Vereinbarungen zum Start')+
     folgt('Kick-off Fachplanung','L3.A1.ABS','Tagesordnung und Protokoll des Kick-offs mit den Fachplanern')+
     '</div></section>'+
@@ -1182,6 +1196,27 @@ function seitePatch(v,id,patch){seitenSetzen(v,M.seitenVon(v.daten).map(x=>x.id=
 function mmWachse(t){t.style.height='auto';t.style.height=t.scrollHeight+'px'}
 function mappeSeite(v){const l=M.seitenVon(v.daten);return l.find(x=>x.id===mm.seite)||l[0]||null}
 
+// Die Mappen eines Projekts (Werkzeug Mustermappe): je Themenpaket eine Karte mit Positionen, Seiten, Termin und Stand.
+function renderMappen(){
+  const liste=mappen();
+  const projektwahl='<label class="pd-projekt"><span>Projekt</span><select data-act="projekt">'+projekte.filter(p=>p.status==='aktiv'&&darf(p)).map(p=>
+    '<option value="'+esc(p.id)+'"'+(p.id===projekt.id?' selected':'')+'>'+esc(p.number+' · '+p.name)+'</option>').join('')+'</select></label>';
+  const karte=v=>{
+    const n=(v.daten.punkte||[]).length,seiten=M.seitenVon(v.daten).length,ziel=esc(url({projekt:projekt.id,vorlage:v.id}));
+    return '<article class="card pd-karte mm-karte"><div class="pd-karte-kopf"><h3><a href="'+ziel+'" data-nav>'+esc(v.daten.titel||'Mustermappe')+'</a></h3><span class="pd-code">L3.MAP.1</span></div>'+
+      '<p class="pd-karte-zahl">'+n+(n===1?' Position':' Positionen')+' · '+seiten+(seiten===1?' Seite':' Seiten')+'</p>'+
+      '<p class="meta">'+(v.daten.besprechung_am?'Bemusterung am '+esc(K.datumLang(v.daten.besprechung_am)):'Bemusterungstermin noch offen')+' · '+
+        (v.daten.status==='vorgelegt'?'vorgelegt am '+esc(K.datumKurz(v.daten.vorgelegt_am)):'in Arbeit')+'</p>'+
+      '<div class="pd-karte-aktionen"><a class="btn btn-primary" href="'+ziel+'" data-nav>Öffnen</a></div></article>';
+  };
+  const fokus=vorZeichnen();
+  const html='<div class="pd-wrap pd-mappen-wrap">'+kopf({zurueck:['./app/#section=tools','‹ Werkzeuge'],kicker:'Werkzeuge · Mustermappe · '+projektName(),titel:'Mustermappen',
+    intro:esc(MAPPE_INTRO),aktionen:projektwahl+'<button type="button" class="btn btn-primary" data-act="mm-neu">Neue Mustermappe</button>'})+
+    (liste.length?'<div class="pd-grid">'+liste.map(karte).join('')+'</div>'
+      :'<section class="card pd-karte"><p class="pd-karte-zahl">Für dieses Projekt gibt es noch keine Mustermappe.</p><p class="meta">«Neue Mustermappe» legt die erste an, zum Beispiel für die Bodenbeläge.</p></section>')+
+    '</div>';
+  zeichne(html,fokus);
+}
 function renderMappe(){
   const v=vorlageZeile();
   if(!v||!istMappe(v)){renderVorlage();return}
@@ -1209,8 +1244,8 @@ function renderMappe(){
     '<div class="mm-buehne'+(mm.lesen?' lesen':'')+'">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:seiten.length,modus:'bearbeiten',bild:bildUrl}):'<p class="meta">Die Mappe hat keine Seite.</p>')+'</div>'+
     mappeHinweise(v,seite)+'</section>';
   const fokus=vorZeichnen();
-  const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({projekt:projekt.id}),'‹ Projektstart'],
-    kicker:'Projektstart · '+projektName()+' · Mustermappe',titel:inh.titel,meta,aktionen})+
+  const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({werkzeug:'mustermappe',projekt:projekt.id}),'‹ Mustermappen'],
+    kicker:'Mustermappe · '+projektName(),titel:inh.titel,meta,aktionen})+
     '<div class="mm">'+nav+mitte+'<aside class="mm-rechts" aria-label="Einstellungen">'+mappeSeitenleiste(v,inh,seite)+'</aside></div>'+
     '<div class="pd-druck mm-druck" aria-hidden="true">'+M.mappeHtml(inh,{modus:'druck',bild:bildUrl})+'</div>'+(ui.detail?detailPanel('entscheidungsliste'):'')+'</div>';
   zeichne(html,fokus);
@@ -1324,11 +1359,16 @@ function neueMappeDialog(){
     '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Mappe anlegen</button></div></form>';
   const form=dialog.querySelector('form');
   form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
+  // Im Reiter: Work erfährt, wenn das Anlegen abgebrochen wird, und öffnet die neue Mappe über die Adresse der Seite.
+  let angelegt=false;
+  if(IM_REITER)dialog.addEventListener('close',()=>{if(!angelegt)window.parent.postMessage({tbaOfficeTool:'abgebrochen'},location.origin)},{once:true});
   form.onsubmit=e=>{
     e.preventDefault();const t=K.leseDatum(form.termin.value);
     if(t===null){dialog.querySelector('[data-dlg-fehler]').textContent='Datum bitte als TT.MM.JJJJ eingeben.';return}
-    dialog.close();
-    void sicher(async()=>{const v=await neueZeile('entscheidungsvorlagen',M.neueMappe({themenpaket:form.paket.value,verfasser:meinName(),termin:t}));gehe({projekt:projekt.id,vorlage:v.id})});
+    angelegt=true;dialog.close();
+    void sicher(async()=>{const v=await neueZeile('entscheidungsvorlagen',M.neueMappe({themenpaket:form.paket.value,verfasser:meinName(),termin:t}));
+      if(IM_REITER){await alleSpeichern();location.assign(url({projekt:projekt.id,vorlage:v.id}));return}
+      gehe({projekt:projekt.id,vorlage:v.id})});
   };
   dialog.showModal();
 }
@@ -1926,7 +1966,7 @@ root.addEventListener('click',e=>{
 root.addEventListener('change',e=>{
   if(zeichnet)return;
   const el=e.target;
-  if(el.matches('[data-act="projekt"]')){ui.meldung='';gehe({projekt:el.value});return}
+  if(el.matches('[data-act="projekt"]')){ui.meldung='';gehe({werkzeug:ui.ansicht==='mappen'?ui.werkzeug:'',projekt:el.value});return}
   if(el.matches('[data-act="disziplin"]')){ui.disziplin=el.value;renderListe();return}
   if(el.matches('[data-act="runde"]')){void sicher(async()=>{await sichereDokument('klaerungsliste');await setzeMeta('klaerungsliste',{runde:el.value});renderListe()});return}
   if(el.matches('[data-act="punkt-neu"]')){if(el.value)void sicher(()=>punktNeu(el.value));return}
@@ -2040,6 +2080,10 @@ async function loeschen(z){
 window.addEventListener('beforeunload',e=>{
   if(ungespeichert()){void alleSpeichern();e.preventDefault();e.returnValue=''}
 });
+// Für Work (Reiter «Mustermappe»): Revision der offenen Mappe, ob etwas aussteht, und Speichern, bevor Work den Rahmen
+// schließt oder eine andere Mappe lädt.
+window.TBA_OFFICE_TOOL=Object.freeze({kind:'mustermappe',revision:()=>vorlageZeile()?.rev||0,
+  pending:()=>ungespeichert()||speicher.laeuft>0,flush:()=>alleSpeichern()});
 
 void start();
 })();
