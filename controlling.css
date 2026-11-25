@@ -4,7 +4,9 @@
    Blau bleibt dem Klickbaren; die Balken sind grau, über dem Soll bernsteinfarben; Gewinn grün, Verlust rot.
    Seit 25.11.2026 nachmittags: die Lage auf einen Blick (Stufe als Zeichen und Wort in den gedämpften Statusfarben,
    Leistung, Stunden und Bezahltes auf einer Skala, Kacheln), der vertrauliche Teil als Tabelle mit «So gerechnet», die
-   Annahmen mit Erklärung und «Zu klären»; Nebenknöpfe blau (Gari: klickbar heißt blau). */
+   Annahmen mit Erklärung und «Zu klären»; Nebenknöpfe blau (Gari: klickbar heißt blau).
+   Abends: Stunden grün, orange oder rot nach der Lage (Füllfarben aus den Tokens), «So gerechnet» auf Knopfdruck, die
+   Herleitung der Jahresstunden und die Druckfassung für PDF. */
 .ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
 /* Die ganze Karte ist der Link zum Projektblatt (Gari, 25.11.2026): der Link im Titel spannt sich über die Karte. */
 .ct-karte{position:relative;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0;cursor:pointer;
@@ -27,8 +29,9 @@
 .ct-balken{position:relative;height:12px;border-radius:var(--m-radius-pill);background:var(--m-fill);overflow:visible}
 .ct-balken>span{position:absolute;left:0;top:0;bottom:0;border-radius:var(--m-radius-pill)}
 .ct-fuellung{background:var(--m-ink-soft)}
-.ct-balken.ueber .ct-fuellung{background:var(--m-attention)}
-.ct-balken.kritisch .ct-fuellung{background:var(--m-error)}
+.ct-balken.lage-gut .ct-fuellung{background:var(--m-success-fill)}
+.ct-balken.lage-achtung .ct-fuellung,.ct-balken.ueber.lage-offen .ct-fuellung{background:var(--m-attention-fill)}
+.ct-balken.lage-kritisch .ct-fuellung{background:var(--m-error-fill)}
 .ct-erarbeitet{background:var(--m-border-strong)}
 .ct-bezahlt{background:var(--m-ink-soft)}
 .ct-marke{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--m-ink);border-radius:1px}
@@ -133,6 +136,9 @@
 .ct-lage-achtung{background:var(--m-attention-soft);color:var(--m-attention)}
 .ct-lage-kritisch{background:var(--m-error-soft);color:var(--m-error)}
 .ct-lage-offen{background:var(--m-fill);color:var(--m-ink-soft)}
+.ct-lage-gut svg{color:var(--m-success-fill)}
+.ct-lage-achtung svg{color:var(--m-attention-fill)}
+.ct-lage-kritisch svg{color:var(--m-error-fill)}
 .ct-lage-satz{margin:0;font-size:15px;line-height:1.45;color:var(--m-ink);max-width:72ch}
 /* Leistung, Stunden, Bezahlt: eine Skala, die Balken untereinander bündig; der Strich ist der Leistungsstand. */
 .ct-meter-liste{display:flex;flex-direction:column;gap:9px}
@@ -140,8 +146,9 @@
 .ct-meter-name{color:var(--m-ink-soft)}
 .ct-meter-spur{position:relative;height:10px;border-radius:var(--m-radius-pill);background:var(--m-fill)}
 .ct-meter-fuellung{position:absolute;left:0;top:0;bottom:0;border-radius:var(--m-radius-pill);background:var(--m-ink-soft)}
-.ct-meter-spur.achtung .ct-meter-fuellung{background:var(--m-attention)}
-.ct-meter-spur.kritisch .ct-meter-fuellung{background:var(--m-error)}
+.ct-meter-spur.gut .ct-meter-fuellung{background:var(--m-success-fill)}
+.ct-meter-spur.achtung .ct-meter-fuellung{background:var(--m-attention-fill)}
+.ct-meter-spur.kritisch .ct-meter-fuellung{background:var(--m-error-fill)}
 .ct-meter-marke{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--m-ink);border-radius:1px}
 .ct-meter-zahl{color:var(--m-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ct-meter-legende{display:flex;align-items:center;gap:8px;margin:0}
@@ -163,7 +170,12 @@
 
 /* Zum Gehalt (vertraulich): je Wert bis jetzt, am Ende und wie er gerechnet ist (Gari, 25.11.2026). */
 .ct-vertraulich{display:flex;flex-direction:column;gap:8px}
-.ct-vertraulich .pb-h3{margin:4px 0 0;font-size:13px;color:var(--m-ink-soft);font-weight:650;text-transform:uppercase;letter-spacing:.08em}
+.ct-vertraulich-kopf{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px}
+.ct-vertraulich:not(.offen) .ct-so,.ct-vertraulich:not(.offen) .ct-so-hinweis{display:none}
+.ct-vertraulich:not(.offen) .ct-vertraulich-tabelle table{width:auto;min-width:min(100%,560px)}
+.ct-vertraulich:not(.offen) .ct-vertraulich-tabelle td.num{min-width:130px}
+.ct-so-hinweis{margin:0}
+.ct-vertraulich .pb-h3{margin:0;font-size:13px;color:var(--m-ink-soft);font-weight:650;text-transform:uppercase;letter-spacing:.08em}
 .ct-vertraulich-tabelle table{width:100%;border-collapse:collapse;font-size:14px}
 .ct-vertraulich-tabelle th,.ct-vertraulich-tabelle td{padding:9px 10px;border-bottom:1px solid var(--m-border-soft);vertical-align:top;text-align:left}
 .ct-vertraulich-tabelle thead th{font-size:12px;font-weight:600;color:var(--m-ink-soft);padding-top:4px}
@@ -191,12 +203,77 @@
 .ct-feld .pb-input{width:100%}
 .ct-feld-hilfe{margin:0;font-size:12.5px;line-height:1.45;color:var(--m-ink-soft)}
 .ct-annahmen .breit{grid-column:1/-1}
+.ct-herleitung{border:1px solid var(--m-border-soft);border-radius:var(--m-radius-control);background:var(--m-surface)}
+.ct-herleitung>summary{cursor:pointer;padding:10px 14px;font-size:14px;font-weight:600;color:var(--m-link);list-style-position:inside}
+.ct-herleitung>summary:hover{color:var(--m-link-hover)}
+.ct-herleitung-inhalt{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px 16px;padding:4px 14px 14px}
+.ct-herleitung-feld{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--m-ink);min-width:0}
+.ct-herleitung-feld .ct-feld-hilfe{font-weight:400}
+.ct-herleitung-kalender{grid-column:2/-1;align-self:end}
+.ct-herleitung-ergebnis{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;
+  padding-top:10px;border-top:1px solid var(--m-border-soft)}
+.ct-herleitung-ergebnis p{margin:0;font-size:14px;font-variant-numeric:tabular-nums;color:var(--m-ink)}
+@media (max-width:560px){.ct-herleitung-kalender{grid-column:1/-1}}
+.ct-knoepfe{display:flex;flex-wrap:wrap;gap:8px}
+.ct-pdf{min-height:36px}
+.ct-pdf-teile{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.ct-pdf-teile legend{font-size:13px;color:var(--m-ink-soft);margin-bottom:4px}
 .ct-fragen{margin:0;padding:0 0 0 22px;display:flex;flex-direction:column;gap:14px}
 .ct-fragen li{padding-left:2px}
 .ct-fragen li::marker{font-weight:650;color:var(--m-ink-soft)}
 .ct-fragen li strong{display:block;font-size:14px;line-height:1.4}
 .ct-fragen li span{display:block;margin-top:3px;font-size:13px;line-height:1.45;color:var(--m-ink-soft)}
 .ct-fragen em{font-style:normal;font-weight:600;color:var(--m-ink)}
+
+/* PDF über den Druckdialog (wie Projektdokumente und Kostenberechnung): auf dem Bildschirm unsichtbar, im Druck allein. */
+.ct-druck{display:none}
+@media print{
+  @page{size:A4;margin:14mm 14mm 16mm 16mm}
+  html.ct-drucken body{background:var(--m-paper)}
+  html.ct-drucken body>*:not(.ct-druck){display:none!important}
+  html.ct-drucken .ct-druck{display:block}
+  .ct-druck{font-family:var(--m-type);font-size:9.5pt;line-height:1.4;color:var(--m-ink)}
+  .ct-druck *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ct-druck button,.ct-druck .ct-meter-legende i{display:none!important}
+  .ct-druck a{color:inherit;text-decoration:none}
+  .ctd-kopf{border-bottom:1pt solid var(--m-border-strong);padding-bottom:6pt;margin-bottom:8pt}
+  .ctd-kopf h1{font-size:16pt;margin:2pt 0;letter-spacing:-.01em}
+  .ctd-marke{margin:0;font-size:8pt;letter-spacing:.06em;text-transform:uppercase;color:var(--m-ink-soft)}
+  .ctd-projekt{margin:0;font-size:11pt;font-weight:600}
+  .ctd-meta,.ctd-fuss{margin:3pt 0 0;font-size:8pt;color:var(--m-ink-soft)}
+  .ctd-teil{margin-top:10pt}
+  .ctd-teil>h2{font-size:11.5pt;margin:0 0 4pt;break-after:avoid}
+  .ctd-teil table{width:100%;border-collapse:collapse;font-size:8.5pt}
+  .ctd-teil th,.ctd-teil td{padding:3pt 4pt;border-bottom:.5pt solid var(--m-border);text-align:left;vertical-align:top}
+  .ctd-teil th{font-weight:600;color:var(--m-ink-soft)}
+  .ctd-teil .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ctd-teil tfoot td{font-weight:650;border-top:1pt solid var(--m-border-strong)}
+  .ctd-teil tr{break-inside:avoid}
+  .ctd-klein{font-size:7.5pt;color:var(--m-ink-soft)}
+  .ctd-teil td:first-child{white-space:nowrap}
+  .ctd-summen{display:grid;grid-template-columns:minmax(0,1fr);max-width:120mm;margin:8pt 0 0}
+  .ctd-summen div{display:flex;justify-content:space-between;gap:12pt;padding:2.5pt 0;border-bottom:.5pt solid var(--m-border-soft)}
+  .ctd-summen dt{color:var(--m-ink-soft)}
+  .ctd-summen dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ct-druck .meta{font-size:8pt}
+  .ct-druck .ct-so-hinweis,.ct-druck .ct-annahmen-hinweis a{display:none}
+  .ct-druck .ct-lage{padding:4pt 0 8pt;border-top:0;gap:7pt}
+  .ct-druck .ct-lage-titel{font-size:10pt;padding:3pt 9pt 3pt 7pt}
+  .ct-druck .ct-lage-satz{font-size:9.5pt}
+  .ct-druck .ct-meter{grid-template-columns:52pt minmax(0,1fr) 150pt;font-size:8.5pt;gap:8pt}
+  .ct-druck .ct-meter-spur{height:6pt}
+  .ct-druck .ct-kacheln{grid-template-columns:repeat(4,minmax(0,1fr));gap:6pt}
+  .ct-druck .ct-kachel{padding:6pt 8pt}
+  .ct-druck .ct-kachel-wert{font-size:12pt}
+  .ct-druck .ct-gruppen{grid-template-columns:repeat(2,minmax(0,1fr));gap:4pt 18pt;margin-top:8pt}
+  .ct-druck .pb-merkmale div{padding:2.5pt 0}
+  .ct-druck .pb-merkmale dt,.ct-druck .pb-merkmale dd{font-size:8.5pt}
+  .ct-druck .ct-gruppe .pb-h3{font-size:8pt}
+  .ct-druck .ct-vertraulich-tabelle table{font-size:8.5pt}
+  .ct-druck .ct-vertraulich-tabelle th,.ct-druck .ct-vertraulich-tabelle td{padding:3pt 4pt}
+  .ct-druck .ct-so{font-size:7.5pt}
+  .ct-druck .ct-lage-chip{font-size:7.5pt;padding:1pt 6pt}
+}
 
 /* Als Reiter «Controlling» eines Projekts in Work: Work nennt das Projekt schon; kein Weg zur Übersicht aller Projekte. */
 .im-reiter .ct-zur-uebersicht{display:none}

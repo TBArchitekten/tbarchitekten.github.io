@@ -7,14 +7,15 @@
 // Funktion (Stunden kumuliert, fehlende Person zählt weiter, Zuwachs zum Satz am Stichtag, Gehalt nur für Admins und
 // nur vollständig). Eindeutig: ein Stand je Paket und Tag, eine Zeile je Person und Stand, ein Satz je Person und Tag.
 // Seit office_controlling_annahmen: Wochenstunden je Satz (Person B arbeitet 25 von 40 h), Vollzeit-Wochenstunden und ein
-// erfundener Gemeinkostenfaktor (2); der Wert zum Gehalt rechnet mit den Jahresstunden der Person.
+// erfundener Gemeinkostenfaktor (2); der Wert zum Gehalt rechnet mit den Jahresstunden der Person. Seit
+// office_controlling_jahresstunden: die Angaben der Herleitung aus dem Kalender (leer).
 (function(){
   const ROLLE=['member','buchhaltung','admin-ohne-liste'].includes(window.__ctRolle)?window.__ctRolle:'admin';
   const UID='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222',C='33333333-3333-4333-8333-333333333333';
   const P1='a1111111-1111-4111-8111-111111111111',P2='a2222222-2222-4222-8222-222222222222',P3='a3333333-3333-4333-8333-333333333333';
   const K1='b1111111-1111-4111-8111-111111111111',K2='b2222222-2222-4222-8222-222222222222';
   const S1='c1111111-1111-4111-8111-111111111111',S2='c2222222-2222-4222-8222-222222222222';
-  const KEY='tba_controlling_fake_db_v2';
+  const KEY='tba_controlling_fake_db_v3';
   const session={access_token:'fake',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,
     user:{id:UID,email:'test@fixture.invalid',aud:'authenticated',role:'authenticated'}};
   const zeit=t=>new Date(t).toISOString();
@@ -45,7 +46,7 @@
       {id:crypto.randomUUID(),person_id:B,gueltig_ab:'2026-01-01',kalkulationssatz:90,monatsgehalt:3000,wochenstunden:25,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')},
       {id:crypto.randomUUID(),person_id:UID,gueltig_ab:'2026-01-01',kalkulationssatz:null,monatsgehalt:4000,wochenstunden:null,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')}],
     office_controlling_einstellungen:[{id:true,arbeitgeberanteil_prozent:21,jahresstunden:1600,vollzeit_wochenstunden:40,gemeinkostenfaktor:2,
-      annahmen_notiz:null,annahmen_bestaetigt:null,updated_at:zeit('2026-11-01')}],
+      annahmen_notiz:null,annahmen_bestaetigt:null,urlaubstage:null,krankheitstage:null,weitere_tage:null,projektanteil_prozent:null,updated_at:zeit('2026-11-01')}],
     office_controlling_zugang:[]
   });
   let db=null;try{db=JSON.parse(sessionStorage.getItem(KEY)||'null')}catch{}
