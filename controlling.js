@@ -16,6 +16,11 @@
    Karten (Gari, 25.11.2026): fett das Projekt, darunter das Paket; die ganze Karte öffnet das Projektblatt.
    Ansichten: Übersicht (ohne Parameter), Projektblatt (?projekt=<id>, auch als Reiter «Controlling» eines Projekts in
    Work; ?paket= und ?reiter=zahlungen wählen vor), Sätze und Gehälter (?ansicht=saetze, nur Admins).
+   Nachmittags (Gari, 25.11.2026): oben im Projektblatt die Lage auf einen Blick (Stufe mit Zeichen und Wort, Leistung,
+   Stunden und Bezahltes auf einer Skala, vier Zahlen); Wochenstunden je Person; Selbstkosten mit dem Gemeinkostenfaktor
+   auf das Bruttogehalt allein und daraus der Gewinn nach Bürokosten, im vertraulichen Teil neben jedem Wert, wie er
+   gerechnet ist; unter «Sätze und Gehälter» die Annahmen mit Erklärung und die Fragen, die noch zu klären sind;
+   gleiche Begriffe in Übersicht und Projektblatt; Nebenknöpfe blau (klickbar heißt blau).
    Rechnen: controlling-kern.js (window.TBA_CONTROLLING). */
 (()=>{
 'use strict';
@@ -134,8 +139,11 @@ const standZeile=id=>daten.staende.find(s=>s.id===id)||null;
 const summenVon=p=>daten.summen.filter(s=>s.paket_id===p.id).sort((a,b)=>String(a.stichtag).localeCompare(String(b.stichtag)));
 const zahlungenVon=p=>daten.zahlungen.filter(z=>z.paket_id===p.id)
   .sort((a,b)=>String(a.datum||'9999').localeCompare(String(b.datum||'9999'))||String(a.created_at).localeCompare(String(b.created_at)));
-const kz=p=>K.kennzahlen(p,summenVon(p),zahlungenVon(p));
 const stundenVon=standId=>daten.stunden.filter(h=>h.stand_id===standId);
+// Mit vollem Zugang bewertet die Seite die Stunden je Person selbst (wie office_controlling_summen), mit Personalkosten
+// und Selbstkosten; ohne vollen Zugang gibt es dafür keine Daten.
+const bewVon=p=>voll?K.bewertung(summenVon(p).map(s=>({id:s.stand_id,stichtag:s.stichtag})),daten.stunden,daten.saetze,daten.einstellungen,p.kalkulationssatz):null;
+const kz=p=>K.kennzahlen(p,summenVon(p),zahlungenVon(p),bewVon(p));
 const wer=h=>h.person_id?person(h.person_id)||'Person':h.person_name||'Team';
 const urlProjekt=(pid,mehr={})=>'./controlling.html?'+new URLSearchParams({projekt:pid,...mehr});
 
@@ -150,7 +158,7 @@ function balkenStunden(k){
   const text=soll!=null?'Soll beim Leistungsstand '+proz(k.leistungsstand)+': '+std(soll)+(ueber?' · darüber':' · im Rahmen')
     :'Leistungsstand noch nicht geschätzt';
   return '<div class="ct-balken-block"><div class="ct-balken-kopf"><span>Stunden</span><span><strong>'+std(k.stunden)+'</strong> von '+std(k.budget)+'</span></div>'+
-    '<div class="ct-balken'+(ueber?' ueber':'')+'" role="img" aria-label="'+esc(std(k.stunden)+' von '+std(k.budget)+'. '+text)+'">'+
+    '<div class="ct-balken'+(ueber?' ueber':'')+(K.lage(k).stufe==='kritisch'?' kritisch':'')+'" role="img" aria-label="'+esc(std(k.stunden)+' von '+std(k.budget)+'. '+text)+'">'+
     '<span class="ct-fuellung" style="width:'+breite.toFixed(2)+'%"></span>'+marke+'</div><p class="meta">'+esc(text)+'</p></div>';
 }
 function balkenHonorar(k){
@@ -162,8 +170,78 @@ function balkenHonorar(k){
     '<span class="ct-erarbeitet" style="width:'+e.toFixed(2)+'%"></span><span class="ct-bezahlt" style="width:'+b.toFixed(2)+'%"></span></div>'+
     '<p class="meta"><span class="ct-legende"><i></i>'+esc(teile[0])+'</span>'+(teile[1]?' · <span class="ct-legende"><i class="hell"></i>'+esc(teile[1])+'</span>':'')+'</p></div>';
 }
-function chips(p,k){
-  const c=['<span class="chip'+(p.status==='abgeschlossen'?' chip-ok':p.status==='angeboten'?' chip-src':'')+'">'+esc(p.status)+'</span>'];
+// ---------- Lage auf einen Blick ----------
+// Gari (25.11.2026): das Projektblatt öffnen und sofort sehen, wie das Projekt läuft. Die Stufe kommt aus der
+// Hochrechnung gegenüber der Kalkulation (controlling-kern.js, lage) und erscheint immer mit Zeichen und Wort, nie nur als
+// Farbe; dazu Leistung, Stunden und Bezahltes auf derselben Skala und vier Zahlen, die sagen, was zu tun ist.
+const LAGE={gut:'im Budget',achtung:'leicht über Budget',kritisch:'deutlich über Budget',offen:'noch offen'};
+const LAGE_TITEL={gut:'Im Budget',achtung:'Leicht über Budget',kritisch:'Deutlich über Budget',offen:'Noch keine Einschätzung'};
+const LAGE_ZEICHEN={
+  gut:'<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="6.4"/><path d="M5.1 8.3l1.9 1.9 3.9-4.2"/></svg>',
+  achtung:'<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1.9l6.3 11.3H1.7z"/><path d="M8 6.3v3.2M8 11.4v.2"/></svg>',
+  kritisch:'<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M5.3 1.6h5.4l3.7 3.7v5.4l-3.7 3.7H5.3l-3.7-3.7V5.3z"/><path d="M8 4.8v4M8 11v.2"/></svg>',
+  offen:'<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="6.4"/><path d="M5.2 8h5.6"/></svg>'
+};
+const prozentHonorar=l=>proz(Math.round(Math.abs(l.anteil)*1000)/10);
+function lageSatz(k,l){
+  if(l.grund==='honorar')return 'Ohne Honorar gibt es kein Budget, an dem sich die Stunden messen lassen.';
+  if(l.grund==='stand')return 'Sobald ein Stand mit Stunden und Leistungsstand erfasst ist, steht hier, wie das Paket läuft.';
+  if(l.grund==='leistungsstand')return 'Im letzten Stand fehlt der geschätzte Leistungsstand; ohne ihn lässt sich nicht hochrechnen.';
+  if(k.abgeschlossen)return l.ergebnis>=0?'Abgeschlossen mit '+std(k.stunden)+' von '+std(k.budget)+': '+plus(l.ergebnis)+' gegenüber der Kalkulation.'
+    :'Abgeschlossen mit '+std(k.stunden)+' statt '+std(k.budget)+': die Stunden kosteten '+euro(-l.ergebnis)+' mehr als kalkuliert ('+prozentHonorar(l)+' des Honorars).';
+  if(l.stufe==='gut')return 'Im bisherigen Takt reicht das Budget: '+std(k.prognoseStunden)+' von '+std(k.budget)+', am Ende '+plus(l.ergebnis)+' gegenüber der Kalkulation.';
+  return 'Im bisherigen Takt braucht das Paket '+std(k.prognoseStunden)+' statt '+std(k.budget)+'; am Ende fehlen '+euro(-l.ergebnis)+
+    ' gegenüber der Kalkulation ('+prozentHonorar(l)+' des Honorars).';
+}
+const lageChip=k=>{const l=K.lage(k);return '<span class="chip ct-lage-chip ct-lage-'+l.stufe+'" data-lage="'+l.stufe+'">'+LAGE_ZEICHEN[l.stufe]+esc(LAGE[l.stufe])+'</span>'};
+// Leistung, Stunden (vom Budget) und Bezahltes (vom Honorar) auf derselben Skala; der Strich ist der Leistungsstand: die
+// Stunden sollten links davon bleiben, das Bezahlte ihn erreichen. Die Stunden tragen die Farbe der Lage, wenn sie über
+// dem Budget liegt.
+function meterListe(k,l){
+  if(!(k.honorar>0))return '';
+  const ls=k.leistungsstand,anteil=(x,y)=>y>0?x/y*100:null;
+  const st=anteil(k.stunden,k.budget),bz=k.zahlungen?anteil(Math.max(k.bezahlt,0),k.honorar):null;
+  const breite=x=>Math.max(0,Math.min(Number(x)||0,100)).toFixed(2)+'%',rund=x=>proz(Math.round(x));
+  const marke=ls!=null?'<span class="ct-meter-marke" style="left:'+breite(ls)+'"></span>':'';
+  const zeile=(name,wert,text,klasse,mitMarke)=>'<div class="ct-meter" data-meter="'+name.toLowerCase()+'"><span class="ct-meter-name">'+esc(name)+'</span>'+
+    '<span class="ct-meter-spur'+klasse+'" role="img" aria-label="'+esc(name+': '+text)+'">'+(wert!=null?'<span class="ct-meter-fuellung" style="width:'+breite(wert)+'"></span>':'')+
+    (mitMarke?marke:'')+'</span><span class="ct-meter-zahl">'+esc(text)+'</span></div>';
+  return '<div class="ct-meter-liste">'+
+    zeile('Leistung',ls,ls==null?'noch nicht geschätzt':proz(ls)+' erledigt','',false)+
+    zeile('Stunden',st,st==null?std(k.stunden):rund(st)+' · '+std(k.stunden)+' von '+std(k.budget),l.stufe==='achtung'||l.stufe==='kritisch'?' '+l.stufe:'',true)+
+    zeile('Bezahlt',bz,bz==null?'keine Zahlungen erfasst':rund(bz)+' · '+euro(k.bezahlt)+' von '+euro(k.honorar),'',true)+
+    (ls!=null?'<p class="meta ct-meter-legende"><i aria-hidden="true"></i>Leistungsstand: die Stunden sollten links davon bleiben, das Bezahlte ihn erreichen.</p>':'')+'</div>';
+}
+function kachel(schluessel,name,wert,klasse,unter,vertraulich=false){
+  return '<div class="ct-kachel" data-kachel="'+schluessel+'"><span class="ct-kachel-name">'+esc(name)+(vertraulich?' <span class="ct-nur-admin">vertraulich</span>':'')+'</span>'+
+    '<strong class="ct-kachel-wert'+klasse+'">'+esc(wert)+'</strong>'+(unter?'<span class="ct-kachel-unter">'+esc(unter)+'</span>':'')+'</div>';
+}
+function kacheln(k,l){
+  const ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis,t=[];
+  t.push(kachel('ergebnis',k.abgeschlossen?'Ergebnis netto':'Ergebnis am Ende netto',plus(ergebnis),plusKlasse(ergebnis),
+    ergebnis==null?'braucht den Leistungsstand':k.abgeschlossen?'gegenüber der Kalkulation':'gegenüber der Kalkulation, hochgerechnet'));
+  if(!k.abgeschlossen&&k.budget>0)t.push(kachel('rest','Stunden für den Rest',std(K.r2(k.budget-k.stunden)),k.stunden>k.budget+0.005?' ct-minus':'',
+    l.restNoetig!=null?'im bisherigen Takt nötig: '+std(l.restNoetig):'Budget minus bisherige Stunden'));
+  const offen=k.erarbeitet==null||!k.zahlungen?null:k.offen;
+  t.push(kachel('offen','Erarbeitet, nicht bezahlt netto',offen==null?'—':offen<-0.004?'− '+euro(-offen):euro(offen),'',
+    k.erarbeitet==null?'braucht den Leistungsstand':!k.zahlungen?'keine Zahlungen erfasst':offen<-0.004?'im Voraus bezahlt':k.gestellt?'davon gestellt '+euro(k.gestellt):'kann abgerechnet werden'));
+  if(voll){
+    const g=k.abgeschlossen?k.gewinn:k.prognoseGewinn,a=K.annahmen(daten.einstellungen);
+    const unter=g!=null?'nach Gehältern und Bürokosten'+(daten.einstellungen?.annahmen_bestaetigt?'':' · Annahmen vorläufig')
+      :!a.faktor?'Gemeinkostenfaktor fehlt':k.erarbeitet==null?'braucht den Leistungsstand':'Gehälter unvollständig';
+    t.push(kachel('gewinn',k.abgeschlossen?'Gewinn netto':'Gewinn am Ende netto',plus(g),plusKlasse(g),unter,true));
+  }
+  return '<div class="ct-kacheln">'+t.join('')+'</div>';
+}
+function lagePanel(k){
+  const l=K.lage(k);
+  return '<div class="ct-lage" data-lage="'+l.stufe+'"><div class="ct-lage-kopf"><p class="ct-lage-titel ct-lage-'+l.stufe+'">'+LAGE_ZEICHEN[l.stufe]+
+    '<strong>'+esc(LAGE_TITEL[l.stufe])+'</strong></p>'+
+    '<p class="ct-lage-satz">'+esc(lageSatz(k,l))+'</p></div>'+meterListe(k,l)+kacheln(k,l)+'</div>';
+}
+
+function chips(p,k,mitLage=true){
+  const c=[...(mitLage?[lageChip(k)]:[]),'<span class="chip'+(p.status==='abgeschlossen'?' chip-ok':p.status==='angeboten'?' chip-src':'')+'">'+esc(p.status)+'</span>'];
   if(k.vorlaeufig)c.push('<span class="chip chip-att" title="Zahlen noch nicht bestätigt">vorläufig</span>');
   if(k.stand)c.push('<span class="chip chip-mute">Stand '+esc(datum(k.stand))+'</span>');
   return c.join('');
@@ -200,16 +278,16 @@ function karte({paket:p,k}){
   const pr=projekt(p.project_id);
   const ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis;
   // Gari (25.11.2026): fett steht das Projekt, darunter das Paket; die ganze Karte öffnet das Projektblatt (der Link
-  // im Titel deckt die Karte ab, siehe .ct-karte h2 a::after).
+  // im Titel deckt die Karte ab, siehe .ct-karte h2 a::after). Die Begriffe wie im Projektblatt (Gari, nachmittags).
   return '<article class="card ct-karte" data-paket="'+esc(p.id)+'">'+(pr?.number?'<p class="meta ct-nummer">'+esc(pr.number)+'</p>':'')+
     '<h2><a href="'+esc(urlProjekt(p.project_id,{paket:p.id}))+'"><span data-titel>'+esc(pr?.name||'Projekt')+'</span>'+
     '<span class="sr"> · '+esc(p.bezeichnung)+'</span></a></h2>'+
     '<p class="ct-paket">'+esc(p.bezeichnung)+(p.leistung?' <span class="meta">· '+esc(p.leistung)+'</span>':'')+'</p>'+
     '<div class="pb-chips">'+chips(p,k)+'</div>'+balkenStunden(k)+balkenHonorar(k)+
     '<dl class="ct-zahlen">'+
-    '<div><dt>'+(k.abgeschlossen?'Ergebnis netto':'Prognose netto')+'</dt><dd class="'+plusKlasse(ergebnis).trim()+'" data-ergebnis>'+esc(plus(ergebnis))+'</dd></div>'+
+    '<div><dt>'+(k.abgeschlossen?'Ergebnis netto':'Ergebnis am Ende netto')+'</dt><dd class="'+plusKlasse(ergebnis).trim()+'" data-ergebnis>'+esc(plus(ergebnis))+'</dd></div>'+
     '<div><dt>Honorar je Stunde netto</dt><dd>'+(k.jeStunde==null?'—':esc(euro(k.jeStunde))+'/h')+'</dd></div>'+
-    '<div><dt>Offen netto</dt><dd'+(k.zahlungen||k.erarbeitet==null?'':' class="ct-klein"')+'>'+esc(offenText(k))+'</dd></div></dl></article>';
+    '<div><dt>Erarbeitet, nicht bezahlt netto</dt><dd'+(k.zahlungen||k.erarbeitet==null?'':' class="ct-klein"')+'>'+esc(offenText(k))+'</dd></div></dl></article>';
 }
 
 // ---------- Projektblatt ----------
@@ -247,12 +325,16 @@ function adresse(){
   if(ui.reiter==='zahlungen')u.searchParams.set('reiter','zahlungen');else u.searchParams.delete('reiter');
   history.replaceState(null,'',u.pathname+u.search);
 }
-function zeile(dt,dd,klasse=''){return '<div><dt>'+esc(dt)+'</dt><dd'+(klasse?' class="'+klasse.trim()+'"':'')+'>'+dd+'</dd></div>'}
+// Beträge und Stunden bleiben auf einer Zeile (die längeren Begriffe brechen um, nicht «20.000 €»).
+function zeile(dt,dd,klasse=''){
+  const k=(klasse+(/^[+−\d]/.test(String(dd).replace(/<[^>]+>/g,'').trim())?' ct-wert':'')).trim();
+  return '<div><dt>'+esc(dt)+'</dt><dd'+(k?' class="'+k+'"':'')+'>'+dd+'</dd></div>';
+}
 function paketBlatt(p){
-  const k=kz(p);
+  const bew=bewVon(p),k=K.kennzahlen(p,summenVon(p),zahlungenVon(p),bew);
   const satz=euro(k.satz,k.satz%1?2:0)+'/h';
   // Gari (25.11.2026): bei jedem Betrag sagen, ob netto oder brutto. Alles hier ist netto (ohne MwSt), das Honorar ohne
-  // Nebenkosten; «zum Gehalt» sind Personalkosten (Bruttogehalt mit Arbeitgeberanteil).
+  // Nebenkosten. Dieselben Begriffe wie auf den Karten der Übersicht.
   const gruppen=[
     ['Vertrag',[zeile('Honorar netto',esc(euro(k.honorar))),zeile('Nebenkosten netto ('+proz(k.nebenkostenProzent)+')',esc(euro(k.nebenkosten))),
       zeile('Kalkulationssatz netto',esc(satz)),zeile('Stundenbudget',esc(std(k.budget)))]],
@@ -261,31 +343,66 @@ function paketBlatt(p){
       zeile('Wert der Stunden netto',esc(euro(k.wert))),zeile('Erarbeitet netto',esc(euro(k.erarbeitet))),
       zeile('Ergebnis bisher netto',esc(plus(k.ergebnisBisher)),plusKlasse(k.ergebnisBisher)),
       zeile('Honorar je Stunde netto',k.jeStunde==null?'—':esc(euro(k.jeStunde,2))+'/h')]],
-    [k.abgeschlossen?'Am Ende':'Prognose am Ende',[zeile('Stunden',esc(std(k.prognoseStunden))),
-      zeile('Ergebnis netto',esc(plus(k.prognoseErgebnis)),plusKlasse(k.prognoseErgebnis))]],
+    [k.abgeschlossen?'Am Ende':'Prognose am Ende',[zeile('Stunden am Ende',esc(std(k.prognoseStunden))),
+      zeile('Ergebnis am Ende netto',esc(plus(k.prognoseErgebnis)),plusKlasse(k.prognoseErgebnis))]],
     ['Zahlungen',[zeile('Bezahlt netto (Abschläge)',k.zahlungen?esc(euro(k.bezahlt)):'noch nicht erfasst'),
-      ...(k.gestellt?[zeile('Gestellt, noch offen, netto',esc(euro(k.gestellt)))]:[]),zeile('Erarbeitet, nicht bezahlt, netto',esc(offenText(k)))]]
+      ...(k.gestellt?[zeile('Gestellt, noch offen, netto',esc(euro(k.gestellt)))]:[]),zeile('Erarbeitet, nicht bezahlt netto',esc(offenText(k)))]]
   ];
-  if(voll)gruppen.push(['Zum Gehalt',[zeile('Personalkosten der Stunden',k.gehalt==null?'Gehälter unvollständig':esc(euro(k.gehalt))),
-    zeile('Ergebnis bisher netto',esc(plus(k.ergebnisGehalt)),plusKlasse(k.ergebnisGehalt)),
-    zeile('Prognose am Ende netto',esc(plus(k.prognoseGehalt)),plusKlasse(k.prognoseGehalt))],true]);
   return '<section class="card pb-box" aria-label="Kennzahlen"><div class="ct-kopf-zeile"><div><h2 class="pb-h2">'+esc(p.bezeichnung)+'</h2>'+
-    (p.leistung?'<p class="meta">'+esc(p.leistung)+'</p>':'')+'</div><div class="ct-kopf-rechts"><div class="pb-chips">'+chips(p,k)+'</div>'+
+    (p.leistung?'<p class="meta">'+esc(p.leistung)+'</p>':'')+'</div><div class="ct-kopf-rechts"><div class="pb-chips">'+chips(p,k,false)+'</div>'+
     '<button type="button" class="ct-info" data-rechenweg aria-haspopup="dialog"><span aria-hidden="true">i</span>So wird gerechnet</button></div></div>'+
     '<p class="meta ct-netto">Alle Beträge in Euro netto, ohne MwSt; das Honorar ohne Nebenkosten.</p>'+
-    '<div class="ct-balken-paar">'+balkenStunden(k)+balkenHonorar(k)+'</div>'+
-    '<div class="ct-gruppen">'+gruppen.map(([titel,zeilen,nurAdmin])=>'<div class="ct-gruppe"><h3 class="pb-h3">'+esc(titel)+
-      (nurAdmin?' <span class="ct-nur-admin">vertraulich</span>':'')+'</h3><dl class="pb-merkmale">'+zeilen.join('')+'</dl></div>').join('')+'</div>'+
+    lagePanel(k)+
+    '<div class="ct-gruppen">'+gruppen.map(([titel,zeilen])=>'<div class="ct-gruppe"><h3 class="pb-h3">'+esc(titel)+'</h3><dl class="pb-merkmale">'+zeilen.join('')+'</dl></div>').join('')+'</div>'+
+    (voll&&bew?vertraulichBlock(k,bew):'')+
     (p.notiz?'<p class="meta">'+esc(p.notiz)+'</p>':'')+
     (voll?'<button type="button" class="btn" data-paket-bearbeiten>Paket bearbeiten</button>':'')+'</section>'+
     '<div class="ct-reiter" role="tablist" aria-label="Paket">'+
     '<button type="button" role="tab" data-reiter="staende" aria-selected="'+(ui.reiter==='staende')+'">Stände und Stunden</button>'+
     '<button type="button" role="tab" data-reiter="zahlungen" aria-selected="'+(ui.reiter==='zahlungen')+'">Zahlungen</button></div>'+
-    (ui.reiter==='zahlungen'?zahlungenTabelle(p,k):staendeTabelle(p));
+    (ui.reiter==='zahlungen'?zahlungenTabelle(p,k):staendeTabelle(p,bew));
 }
-function staendeTabelle(p){
+// Zum Gehalt (vertraulich, nur mit vollem Zugang). Gari (25.11.2026): neben jedem Wert, wie er gerechnet ist. Personalkosten
+// = Stunden je Person × Stundensatz aus dem Gehalt; Selbstkosten = Stunden je Person × Bruttogehalt-Stundensatz ×
+// Gemeinkostenfaktor; Ergebnis nach Gehältern und Gewinn nach Bürokosten = Erarbeitet minus diese Kosten; am Ende
+// hochgerechnet mit dem Leistungsstand wie die Prognose.
+function vertraulichBlock(k,bew){
+  const a=K.annahmen(daten.einstellungen),e=x=>esc(euro(x)),pl=x=>esc(plus(x));
+  const name=x=>x.person_id?person(x.person_id)||'Person':x.name||'Team (ohne Aufteilung)';
+  const hoch=k.leistungsstand!=null&&!k.abgeschlossen?'<span class="ct-so-teil">am Ende ÷ '+esc(proz(k.leistungsstand))+' Leistungsstand</span>':'';
+  const jePerson=(satz,wert)=>bew.personen.filter(x=>x.stunden).map(x=>'<span class="ct-so-teil" data-so-person>'+esc(name(x))+': '+esc(std(x.stunden))+
+    (x[satz]!=null?' × '+esc(euro(x[satz],2))+'/h':x[wert]!=null?' = '+e(x[wert])+' (Sätze wechselten)':' – ohne Gehalt')+'</span>').join('');
+  const differenz=(kosten,ende,name)=>k.erarbeitet==null||kosten==null?'Erarbeitet − '+name
+    :'Erarbeitet '+e(k.erarbeitet)+' − '+e(kosten)+(ende!=null&&!k.abgeschlossen?'<span class="ct-so-teil">am Ende: Honorar '+e(k.honorar)+' − '+e(ende)+'</span>':'');
+  const zelle=(spalte,wert,text,klasse='')=>'<td class="num'+klasse+'" data-label="'+spalte+'">'+(wert==null?'<span class="ct-klein">'+esc(text)+'</span>':wert)+'</td>';
+  const bis=(...x)=>zelle('bis jetzt',...x),am=(...x)=>zelle('am Ende',...x);
+  const fehlt=!a.faktor?'Faktor fehlt':'Gehälter unvollständig';
+  const zeile=(schluessel,titel,einheit,bis,ende,so)=>'<tr data-vertraulich-zeile="'+schluessel+'"><th scope="row">'+esc(titel)+
+    (einheit?'<span class="ct-einheit">'+esc(einheit)+'</span>':'')+'</th>'+bis+ende+'<td class="ct-so">'+so+'</td></tr>';
+  const zeilen=[
+    zeile('personalkosten','Personalkosten','Bruttogehalt + '+proz(a.ag)+' Arbeitgeberanteil',bis(k.gehalt==null?null:e(k.gehalt),'Gehälter unvollständig'),
+      am(k.prognosePersonalkosten==null?null:e(k.prognosePersonalkosten),'—'),jePerson('satzGehalt','personalkosten')+hoch),
+    zeile('ergebnis-gehalt','Ergebnis nach Gehältern netto','',bis(k.ergebnisGehalt==null?null:pl(k.ergebnisGehalt),'—',plusKlasse(k.ergebnisGehalt)),
+      am(k.prognoseGehalt==null?null:pl(k.prognoseGehalt),'—',plusKlasse(k.prognoseGehalt)),differenz(k.gehalt,k.prognosePersonalkosten,'Personalkosten')),
+    zeile('selbstkosten','Selbstkosten',a.faktor?'Bruttogehalt × '+zahl(a.faktor,2):'Bruttogehalt × Gemeinkostenfaktor',bis(k.selbstkosten==null?null:e(k.selbstkosten),fehlt),
+      am(k.prognoseSelbstkosten==null?null:e(k.prognoseSelbstkosten),'—'),
+      a.faktor?jePerson('satzSelbstkosten','selbstkosten')+hoch:'Ohne Gemeinkostenfaktor keine Selbstkosten: unter «Sätze und Gehälter» eintragen.'),
+    zeile('gewinn','Gewinn nach Bürokosten netto','',bis(k.gewinn==null?null:pl(k.gewinn),'—',plusKlasse(k.gewinn)),
+      am(k.prognoseGewinn==null?null:pl(k.prognoseGewinn),'—',plusKlasse(k.prognoseGewinn)),differenz(k.selbstkosten,k.prognoseSelbstkosten,'Selbstkosten'))
+  ];
+  const bestaetigt=daten.einstellungen?.annahmen_bestaetigt;
+  return '<div class="ct-vertraulich" data-vertraulich><h3 class="pb-h3">Zum Gehalt <span class="ct-nur-admin">vertraulich</span></h3>'+
+    '<div class="ct-vertraulich-tabelle"><table><thead><tr><th><span class="sr">Kennzahl</span></th><th class="num">bis jetzt</th><th class="num">am Ende</th><th>So gerechnet</th></tr></thead>'+
+    '<tbody>'+zeilen.join('')+'</tbody></table></div>'+
+    '<p class="meta ct-annahmen-hinweis" data-annahmen-hinweis>Annahmen: '+esc(proz(a.ag))+' Arbeitgeberanteil, '+esc(zahl(a.jahresstunden))+' Jahresstunden bei '+
+    esc(zahl(a.vollzeit,a.vollzeit%1?1:0))+' h in der Woche'+(a.faktor?', Gemeinkostenfaktor '+esc(zahl(a.faktor,2))+' auf das Bruttogehalt':', noch ohne Gemeinkostenfaktor')+'. '+
+    (bestaetigt?'Bestätigt am '+esc(datum(bestaetigt))+'. ':'<strong>Noch nicht bestätigt.</strong> ')+
+    '<a href="./controlling.html?ansicht=saetze#annahmen">Annahmen und offene Fragen</a></p></div>';
+}
+function staendeTabelle(p,bew){
   const reihen=summenVon(p).reverse();
   const honorar=Number(p.honorar_netto)||0,abgeschlossen=p.status==='abgeschlossen';
+  const personalkosten=s=>bew?bew.staende.find(x=>x.stand_id===s.stand_id)?.personalkosten??null:s.wert_gehalt??null;
   const kopf='<tr><th>Stichtag</th><th class="num">Leistungsstand</th><th class="num">Stunden</th><th class="num">Wert netto<span class="ct-einheit">zum Kalkulationssatz</span></th>'+
     '<th class="num">Erarbeitet netto</th><th class="num">Ergebnis netto</th>'+(voll?'<th class="num">Personalkosten<span class="ct-einheit">zum Gehalt</span></th><th></th>':'')+'</tr>';
   const body=reihen.map((s,i)=>{
@@ -296,7 +413,7 @@ function staendeTabelle(p){
     return '<tr><td>'+esc(datum(s.stichtag))+(notiz?'<span class="ct-personen">'+esc(notiz)+'</span>':'')+(je?'<span class="ct-personen" data-je-person>'+esc(je)+'</span>':'')+'</td>'+
       '<td class="num">'+esc(proz(ls))+'</td><td class="num">'+esc(std(Number(s.stunden)))+'</td><td class="num">'+esc(euro(s.wert_kalkulation))+'</td>'+
       '<td class="num">'+esc(euro(erarbeitet))+'</td><td class="num'+plusKlasse(ergebnis)+'">'+esc(plus(ergebnis))+'</td>'+
-      (voll?'<td class="num">'+esc(s.wert_gehalt==null?'—':euro(s.wert_gehalt))+'</td><td><button type="button" class="btn btn-quiet" data-stand="'+esc(s.stand_id)+'">Bearbeiten</button></td>':'')+'</tr>';
+      (voll?'<td class="num">'+esc(personalkosten(s)==null?'—':euro(personalkosten(s)))+'</td><td><button type="button" class="btn btn-quiet" data-stand="'+esc(s.stand_id)+'">Bearbeiten</button></td>':'')+'</tr>';
   }).join('');
   return '<section class="card pb-box" role="tabpanel" aria-label="Stände und Stunden"><div class="pb-box-kopf"><h2 class="pb-h2">Stände und Stunden</h2>'+
     (voll?'<button type="button" class="btn btn-primary" data-stand-neu>Neuer Stand</button>':'')+'</div>'+
@@ -333,42 +450,118 @@ function zahlungenTabelle(p,k){
       :'<p class="meta">Noch keine Zahlung erfasst.</p>')+'</section>';
 }
 
-// ---------- Sätze und Gehälter (nur Admins) ----------
+// ---------- Sätze und Gehälter (vertraulich) ----------
 function renderSaetze(){
-  const e=daten.einstellungen||{arbeitgeberanteil_prozent:21,jahresstunden:1600};
-  const aktive=daten.personen.filter(x=>x.is_active!==false).sort((a,b)=>String(a.display_name||'').localeCompare(String(b.display_name||''),'de'));
+  const e=daten.einstellungen||{},a=K.annahmen(e);
+  const aktive=daten.personen.filter(x=>x.is_active!==false).sort((x,y)=>String(x.display_name||'').localeCompare(String(y.display_name||''),'de'));
   const reihen=aktive.map(x=>{
-    const eigene=daten.saetze.filter(s=>s.person_id===x.user_id).sort((a,b)=>String(b.gueltig_ab).localeCompare(String(a.gueltig_ab)));
-    const k=K.satzAm(daten.saetze,x.user_id,heute(),'kalkulationssatz'),g=K.satzAm(daten.saetze,x.user_id,heute(),'monatsgehalt');
+    const eigene=daten.saetze.filter(s=>s.person_id===x.user_id).sort((u,v)=>String(v.gueltig_ab).localeCompare(String(u.gueltig_ab)));
+    const k=K.satzAm(daten.saetze,x.user_id,heute(),'kalkulationssatz'),g=K.gehaltAm(daten.saetze,x.user_id,heute());
+    const gs=g?K.gehaltSatz(g.monatsgehalt,e,g.wochenstunden):null,ss=g?K.selbstkostenSatz(g.monatsgehalt,e,g.wochenstunden):null;
     const ab=eigene.find(s=>s.gueltig_ab<=heute())?.gueltig_ab;
     return '<tr><td>'+esc(x.display_name||'—')+(eigene.length>1?'<span class="ct-personen">'+eigene.length+' Einträge</span>':'')+'</td>'+
       '<td class="num">'+(k==null?'<span class="meta">Satz des Pakets</span>':esc(euro(k,k%1?2:0))+'/h')+'</td>'+
-      '<td class="num">'+(g==null?'—':esc(euro(g)))+'</td><td class="num">'+(g==null?'—':esc(euro(K.gehaltSatz(g,e),2))+'/h')+'</td>'+
+      '<td class="num">'+(g?esc(euro(g.monatsgehalt)):'—')+'</td><td class="num">'+(g?(g.wochenstunden!=null?esc(std(Number(g.wochenstunden))):'Vollzeit'):'—')+'</td>'+
+      '<td class="num">'+(gs==null?'—':esc(euro(gs,2))+'/h')+'</td><td class="num">'+(ss==null?'—':esc(euro(ss,2))+'/h')+'</td>'+
       '<td>'+esc(ab?datum(ab):'—')+'</td><td><button type="button" class="btn btn-quiet" data-person="'+esc(x.user_id)+'">Sätze</button></td></tr>';
   }).join('');
   root.innerHTML='<div class="pb-wrap"><a class="pb-back" href="./controlling.html">‹ Controlling</a>'+
     '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling · vertraulich</p><h1>Sätze und Gehälter</h1>'+
-    '<p class="pb-intro">Der Kalkulationssatz bewertet die Stunden einer Person; ohne eigenen Satz gilt der des Pakets. Aus dem Monatsgehalt rechnet das Controlling '+
-    'einen Stundensatz: Gehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden. Ein neuer Satz gilt ab seinem Datum und bewertet frühere Stunden nicht neu.</p></div></header>'+
+    '<p class="pb-intro">Der Kalkulationssatz bewertet die Stunden einer Person; ohne eigenen Satz gilt der des Pakets. Aus dem Monatsgehalt rechnet das '+
+    'Controlling zwei Sätze je Stunde: den Stundensatz aus dem Gehalt (Personalkosten) und den Selbstkostensatz (mit den Kosten des Büros); wie, steht unter '+
+    '«Annahmen». Ein neuer Eintrag gilt ab seinem Datum und bewertet frühere Stunden nicht neu.</p></div></header>'+
     '<p class="pb-banner info" data-meldung hidden></p>'+
     '<section class="card pb-box"><h2 class="pb-h2">Personen</h2><div class="pb-tabelle ct-tabelle"><table><thead><tr><th>Person</th><th class="num">Kalkulationssatz</th>'+
-    '<th class="num">Monatsgehalt</th><th class="num">Stundensatz aus Gehalt</th><th>gültig ab</th><th></th></tr></thead><tbody>'+reihen+'</tbody></table></div></section>'+
-    '<section class="card pb-box"><h2 class="pb-h2">Annahmen für den Stundensatz aus dem Gehalt</h2><form class="pb-felder" data-einstellungen>'+
-    '<label>Arbeitgeberanteil (%)<input name="ag" class="pb-input" inputmode="decimal" required value="'+esc(eingabe(e.arbeitgeberanteil_prozent))+'"></label>'+
-    '<label>Jahresstunden (produktiv)<input name="h" class="pb-input" inputmode="decimal" required value="'+esc(eingabe(e.jahresstunden))+'"></label>'+
-    '<label class="breit"><span class="meta">Arbeitgeberanteil: Sozialversicherung und Umlagen auf das Bruttogehalt. Jahresstunden: bezahlte Stunden abzüglich Urlaub, Feiertage und Krankheit.</span></label>'+
-    '<div class="pb-actions"><button class="btn btn-primary">Speichern</button></div></form></section>'+
+    '<th class="num">Monatsgehalt<span class="ct-einheit">brutto</span></th><th class="num">Wochenstunden</th>'+
+    '<th class="num">Stundensatz aus Gehalt<span class="ct-einheit">Personalkosten</span></th><th class="num">Selbstkostensatz<span class="ct-einheit">'+
+    esc(a.faktor?'Bruttogehalt × '+zahl(a.faktor,2):'ohne Gemeinkostenfaktor')+'</span></th><th>gültig ab</th><th></th></tr></thead><tbody>'+reihen+'</tbody></table></div></section>'+
+    annahmenBox(e,a)+fragenBox(a,aktive)+
     (istAdmin&&voll?zugangBox(aktive):'')+'</div>';
   root.querySelectorAll('[data-person]').forEach(b=>b.addEventListener('click',()=>satzFormular(b.dataset.person)));
   bindeZugang();
-  root.querySelector('[data-einstellungen]').addEventListener('submit',async ev=>{
+  const form=root.querySelector('[data-einstellungen]');
+  const beispiel=()=>{root.querySelector('[data-beispiel]').textContent=beispielText({arbeitgeberanteil_prozent:K.leseZahl(form.ag.value),
+    jahresstunden:K.leseZahl(form.h.value),vollzeit_wochenstunden:K.leseZahl(form.vollzeit.value),gemeinkostenfaktor:K.leseZahl(form.faktor.value)})};
+  form.addEventListener('input',beispiel);
+  form.addEventListener('submit',async ev=>{
     ev.preventDefault();
-    const f=ev.currentTarget,ag=K.leseZahl(f.ag.value),h=K.leseZahl(f.h.value);
+    const ag=K.leseZahl(form.ag.value),h=K.leseZahl(form.h.value),vz=K.leseZahl(form.vollzeit.value);
+    const faktorText=form.faktor.value.trim(),faktor=faktorText?K.leseZahl(faktorText):null;
     if(ag==null||ag<0||ag>100||h==null||h<100||h>4000){meldung('Arbeitgeberanteil 0–100 %, Jahresstunden 100–4.000.','warn');return}
-    const {error}=await sb.from('office_controlling_einstellungen').update({arbeitgeberanteil_prozent:ag,jahresstunden:h}).eq('id',true);
+    if(vz==null||vz<=0||vz>80){meldung('Wochenstunden der Vollzeit über 0 und höchstens 80.','warn');return}
+    if(faktorText&&(faktor==null||faktor<1||faktor>5)){meldung('Gemeinkostenfaktor zwischen 1 und 5, etwa 2,1; leer: keine Selbstkosten.','warn');return}
+    const {error}=await sb.from('office_controlling_einstellungen').update({arbeitgeberanteil_prozent:ag,jahresstunden:h,vollzeit_wochenstunden:vz,
+      gemeinkostenfaktor:faktor,annahmen_bestaetigt:form.bestaetigt.value||null,annahmen_notiz:form.notiz.value.trim()||null}).eq('id',true);
     if(error){meldung('Nicht gespeichert: '+error.message,'warn');return}
     await neuLaden('Gespeichert.');
   });
+}
+// Ein Gehalt zum Anfassen: was die Annahmen aus 4.000 € brutto in Vollzeit machen.
+function beispielText(e){
+  const a=K.annahmen(e),g=K.gehaltSatz(4000,e),s=K.selbstkostenSatz(4000,e);
+  if(g==null)return '';
+  return 'Beispiel: 4.000 € brutto bei '+zahl(a.vollzeit,a.vollzeit%1?1:0)+' h in der Woche → '+euro(g,2)+'/h Personalkosten'+
+    (s!=null?', '+euro(s,2)+'/h Selbstkosten':'')+'. Halbe Stelle mit halbem Gehalt: dieselben Sätze.';
+}
+// Gari (25.11.2026): eine Erklärung zu jeder Annahme, damit klar ist, was sie bewirkt und was zu fragen ist.
+function annahmenBox(e,a){
+  const feld=(name,titel,wert,hilfe,extra='')=>'<div class="ct-feld"><label for="an-'+name+'">'+esc(titel)+'</label>'+
+    '<input id="an-'+name+'" name="'+name+'" class="pb-input" '+extra+' value="'+esc(wert)+'" aria-describedby="an-'+name+'-hilfe">'+
+    '<p class="ct-feld-hilfe" id="an-'+name+'-hilfe">'+hilfe+'</p></div>';
+  return '<section class="card pb-box" id="annahmen" data-annahmen><h2 class="pb-h2">Annahmen für den Stundensatz aus dem Gehalt</h2>'+
+    '<p class="ct-erklaerung">Aus dem Monatsgehalt brutto einer Person rechnet das Controlling zwei Sätze je Stunde. Der <strong>Stundensatz aus dem Gehalt</strong> '+
+    '(Personalkosten) ist Bruttogehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden der Person. Der <strong>Selbstkostensatz</strong> ist Bruttogehalt × 12 × '+
+    'Gemeinkostenfaktor ÷ Jahresstunden der Person: was eine Stunde das Büro mit allem kostet. Die Jahresstunden der Person sind die einer Vollzeitkraft, '+
+    'anteilig nach ihren Wochenstunden. Daraus folgen im Projektblatt das Ergebnis nach Gehältern und der Gewinn nach Bürokosten.</p>'+
+    '<p class="ct-vorschau" data-beispiel>'+esc(beispielText(e))+'</p>'+
+    '<form class="ct-annahmen" data-einstellungen>'+
+    feld('ag','Arbeitgeberanteil (%)',eingabe(a.ag),'Was das Büro über das Bruttogehalt hinaus zahlt: Renten-, Kranken-, Pflege- und Arbeitslosenversicherung '+
+      '(2026 rund 21 %), dazu Umlagen und Berufsgenossenschaft. Zählt nur für die Personalkosten, nicht für die Selbstkosten.','inputmode="decimal" required')+
+    feld('h','Jahresstunden Vollzeit (produktiv)',eingabe(a.jahresstunden),'Stunden, die eine Vollzeitkraft im Jahr für Projekte arbeitet: 52 Wochen × '+
+      esc(zahl(a.vollzeit,a.vollzeit%1?1:0))+' h = '+esc(zahl(52*a.vollzeit))+' h bezahlt, abzüglich Urlaub, Feiertage, Krankheit, Fortbildung und Büroarbeit ohne Projekt.','inputmode="decimal" required')+
+    feld('vollzeit','Wochenstunden Vollzeit',eingabe(a.vollzeit),'Bezug für Teilzeit: wer 20 von 40 Stunden arbeitet, hat die Hälfte der Jahresstunden. '+
+      'Die Wochenstunden je Person stehen bei ihren Sätzen; ohne Angabe gilt Vollzeit.','inputmode="decimal" required')+
+    feld('faktor','Gemeinkostenfaktor auf das Bruttogehalt',eingabe(a.faktor),'Alle Kosten des Büros im Jahr ÷ Summe der Bruttogehälter. Er deckt neben dem Gehalt, '+
+      'was keinem Projekt direkt gehört: Miete, Software, Geräte, Versicherungen, Verwaltung, Akquise, Zeit ohne Projekt und, so gerechnet, den Arbeitgeberanteil. '+
+      'Leer: keine Selbstkosten.','inputmode="decimal" placeholder="leer: keine Selbstkosten"')+
+    feld('bestaetigt','Bestätigt am',e.annahmen_bestaetigt||'','Leer lassen, bis die Fragen unten geklärt sind; bis dahin gilt der Gewinn im Projektblatt als vorläufig.','type="date"')+
+    '<div class="ct-feld breit"><label for="an-notiz">Notiz zu den Annahmen</label><textarea id="an-notiz" name="notiz" class="pb-input" maxlength="2000" rows="3" '+
+    'placeholder="Woher die Werte stammen, wer sie bestätigt hat">'+esc(e.annahmen_notiz||'')+'</textarea></div>'+
+    '<div class="pb-actions breit"><button class="btn btn-primary">Speichern</button></div></form></section>';
+}
+// Was vor dem Gespräch mit der Büroleitung offen ist (Gari, 25.11.2026): je Frage, warum sie zählt und was jetzt gilt.
+function fragenBox(a,aktive){
+  const f=a.faktor?zahl(a.faktor,2):null,ag=proz(a.ag),h=zahl(a.jahresstunden),vz=zahl(a.vollzeit,a.vollzeit%1?1:0);
+  const deckung=K.deckungBisGehalt(85,{arbeitgeberanteil_prozent:a.ag,jahresstunden:a.jahresstunden,vollzeit_wochenstunden:a.vollzeit,gemeinkostenfaktor:a.faktor});
+  const ohneWoche=aktive.filter(x=>{const g=K.gehaltAm(daten.saetze,x.user_id,heute());return g&&g.wochenstunden==null}).length;
+  const fragen=[
+    ['faktor-basis','Wird der Gemeinkostenfaktor'+(f?' '+f:'')+' auf das Bruttogehalt allein gerechnet oder auf Bruttogehalt plus Arbeitgeberanteil?',
+      'Gilt er für Bruttogehalt plus Arbeitgeberanteil, sind die Selbstkosten um den Arbeitgeberanteil (rund '+ag+') höher und der Gewinn entsprechend kleiner.',
+      'auf das Bruttogehalt allein (Festlegung vom 25.11.2026).'],
+    ['faktor-inhalt','Was deckt der Faktor ab: nur die Bürokosten oder auch Unternehmerlohn und Gewinn?',
+      'Steckt schon ein Gewinnaufschlag darin, zeigt «Gewinn nach Bürokosten» nur, was über dem geplanten Gewinn bleibt.',
+      'nur Bürokosten; Gewinn ist, was danach vom Honorar bleibt.'],
+    ['faktor-herkunft','Woher stammt der Faktor und für welches Jahr: aus der Buchhaltung (alle Kosten ÷ Bruttogehälter) oder als Erfahrungswert? Gilt er auch für Teilzeit und Werkstudenten?',
+      'Der Faktor ändert sich mit Miete, Software und der Zahl der Köpfe; aus einem abgeschlossenen Jahr gerechnet ist er belastbar.',
+      f?f+' für alle Personen.':'noch kein Faktor eingetragen.'],
+    ['arbeitgeberanteil','Gilt der Arbeitgeberanteil von '+ag+' für alle, oder lassen sich die tatsächlichen Arbeitgeberkosten je Person aus der Lohnabrechnung nehmen?',
+      'Rund 21 % gilt für reguläre Stellen (dazu Umlagen und Berufsgenossenschaft); für Werkstudenten zahlt das Büro meist nur die Rentenversicherung, '+
+      'im Übergangsbereich bis 2.000 € im Monat mehr. Betrifft nur die Personalkosten, nicht die Selbstkosten.',ag+' für alle.'],
+    ['jahresstunden','Sind '+h+' Stunden im Jahr die Projektstunden einer Vollzeitkraft, nach Urlaub, Feiertagen, Krankheit, Fortbildung und Büroarbeit ohne Projekt?',
+      'Weniger Projektstunden heißen: jede Stunde kostet mehr. Bezahlt sind 52 × '+vz+' h = '+zahl(52*a.vollzeit)+' h.',h+' h bei '+vz+' h in der Woche.'],
+    ['wochenstunden','Stimmen die Wochenstunden je Person laut Vertrag, und wie zählen Überstunden?',
+      'Der Stundensatz einer Teilzeitkraft rechnet mit ihrem Anteil an den Jahresstunden. Unbezahlte Überstunden senken die tatsächlichen Kosten je Stunde.',
+      'je Person in der Tabelle oben; ohne Angabe Vollzeit'+(ohneWoche?' ('+ohneWoche+(ohneWoche===1?' Person':' Personen')+' mit Gehalt ohne Wochenstunden)':'')+'.'],
+    ['sonderzahlungen','Gibt es ein 13. Gehalt, Urlaubsgeld, Boni oder Zuschüsse (etwa ein Jobticket), die nicht im Monatsgehalt stecken?',
+      'Gerechnet wird Monatsgehalt × 12; ein 13. Gehalt macht jede Stunde gut 8 % teurer.','Monatsgehalt × 12, ohne Sonderzahlungen.'],
+    ['kalkulationssatz','Was deckt der Kalkulationssatz von 85 €/h: die Selbstkosten und einen Gewinn? Mit welchem Gehalt und welchem Faktor wurde er gerechnet?',
+      deckung?'Mit diesen Annahmen deckt 85 €/h die Selbstkosten bis zu einem Bruttogehalt von rund '+euro(deckung)+' im Monat (Vollzeit); wer mehr verdient, kostet je Stunde mehr, als kalkuliert ist.'
+        :'Ohne Gemeinkostenfaktor lässt sich das nicht prüfen.','85 €/h je Paket, je Person änderbar.']
+  ];
+  return '<section class="card pb-box" data-zu-klaeren><h2 class="pb-h2">Zu klären</h2>'+
+    '<p class="meta">Fragen für das Gespräch mit der Büroleitung, je Frage, warum sie zählt und was jetzt angenommen ist. Danach die Werte oben anpassen und «Bestätigt am» setzen.</p>'+
+    '<ol class="ct-fragen">'+fragen.map(([key,frage,warum,jetzt])=>'<li data-frage="'+key+'"><strong>'+esc(frage)+'</strong>'+
+      '<span><em>Warum:</em> '+esc(warum)+'</span><span><em>Jetzt angenommen:</em> '+esc(jetzt)+'</span></li>').join('')+'</ol></section>';
 }
 
 // Voller Zugang zum Controlling: nur wer auf der Liste steht (Gari, 25.11.2026: er, die Buchhaltung und später der Chef),
@@ -425,15 +618,29 @@ function rechenweg(p){
       k&&k.jeStunde!=null?e(k.erarbeitet)+' ÷ '+h(k.stunden)+' = '+e(k.jeStunde,2)+'/h':''),
     z('Bezahlt netto','Summe der bezahlten Abschläge (AZ): nur das Honorar, ohne Nebenkosten und MwSt. Je Zahlung: Netto ÷ (1 + Nebenkosten).',
       k?(k.zahlungen?e(k.bezahlt):'keine Zahlungen erfasst'):''),
-    z('Erarbeitet, nicht bezahlt','Erarbeitet − Bezahlt: was abgerechnet werden kann. Negativ heißt: im Voraus bezahlt.',
+    z('Erarbeitet, nicht bezahlt netto','Erarbeitet − Bezahlt: was abgerechnet werden kann. Negativ heißt: im Voraus bezahlt.',
       k&&k.offen!=null&&k.zahlungen?e(k.erarbeitet)+' − '+e(k.bezahlt)+' = '+e(k.offen):''),
-    z('Die Balken','Stunden: grau bis jetzt, der Strich ist das Soll beim Leistungsstand (Budget × Leistungsstand), bernsteinfarben, wenn darüber. Honorar: dunkel bezahlt, hell erarbeitet.','')
+    z('Die Lage','Aus dem Ergebnis am Ende, gemessen am Honorar: im Budget, solange es nicht ins Minus geht; leicht über Budget bis 10 % des Honorars im Minus; '+
+      'deutlich über Budget darüber. Abgeschlossen zählt das Ergebnis. Ohne Leistungsstand bleibt die Lage offen.',
+      k&&lageWert(k)?lageWert(k):''),
+    z('Die Balken','Im Projektblatt Leistung, Stunden (vom Budget) und Bezahltes (vom Honorar) auf derselben Skala; der Strich ist der Leistungsstand: '+
+      'die Stunden sollten links davon bleiben, das Bezahlte ihn erreichen. Auf den Karten der Übersicht: Stunden grau, der Strich ist das Soll beim '+
+      'Leistungsstand, bernsteinfarben, wenn darüber; Honorar dunkel bezahlt, hell erarbeitet.','')
   ];
-  if(voll)zeilen.push(z('Zum Gehalt (vertraulich)','Wie «Wert der Stunden», aber mit den Personalkosten jeder Person: Monatsgehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden. Bleibt leer, solange Stunden nur als Team erfasst sind oder ein Gehalt fehlt. Das Ergebnis zum Gehalt ist, was nach den Gehältern für Bürokosten und Gewinn bleibt.',''));
+  if(voll)zeilen.push(z('Zum Gehalt (vertraulich)','Personalkosten: je Person Stunden × Bruttogehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden der Person; '+
+    'die Jahresstunden der Person sind die einer Vollzeitkraft × Wochenstunden ÷ Vollzeit-Wochenstunden. Selbstkosten: dasselbe mit dem Gemeinkostenfaktor '+
+    'statt des Arbeitgeberanteils, auf das Bruttogehalt allein. Ergebnis nach Gehältern = Erarbeitet − Personalkosten; Gewinn nach Bürokosten = '+
+    'Erarbeitet − Selbstkosten; am Ende jeweils mit den Kosten ÷ Leistungsstand. Leer, solange Stunden nur als Team erfasst sind oder ein Gehalt fehlt.',''));
   oeffneDialog('<form method="dialog" class="pb-form ct-rechenweg"><h2>So wird gerechnet</h2>'+
     '<p class="meta">'+(p?esc(p.bezeichnung)+' · ':'')+'alle Beträge netto, ohne MwSt'+(p?'':'; im Projektblatt mit den Zahlen des Pakets')+'.</p>'+
     '<ol class="ct-rw">'+zeilen.join('')+'</ol>'+
     '<div class="pb-actions"><button value="abbrechen" class="btn btn-primary">Schließen</button></div></form>');
+}
+
+function lageWert(k){
+  const l=K.lage(k);
+  if(l.stufe==='offen')return '';
+  return esc(plus(l.ergebnis))+' = '+(l.anteil<0?'− ':'')+esc(prozentHonorar(l))+' des Honorars → '+esc(LAGE[l.stufe]);
 }
 
 // ---------- Formulare ----------
@@ -639,23 +846,33 @@ function zahlungFormular(p,z){
   });
 }
 
-// Sätze einer Person: ein neuer Eintrag gilt ab seinem Datum; ältere bleiben für frühere Stände.
+// Sätze einer Person: ein neuer Eintrag gilt ab seinem Datum; ältere bleiben für frühere Stände. Zum Gehalt gehören die
+// Wochenstunden laut Vertrag (Gari, 25.11.2026: sonst stimmt der Stundensatz für Teilzeit nicht); vorbelegt mit denen des
+// letzten Eintrags.
 function satzFormular(personId){
-  const e=daten.einstellungen||{arbeitgeberanteil_prozent:21,jahresstunden:1600};
-  const eigene=daten.saetze.filter(s=>s.person_id===personId).sort((a,b)=>String(b.gueltig_ab).localeCompare(String(a.gueltig_ab)));
+  const e=daten.einstellungen||{},a=K.annahmen(e);
+  const eigene=daten.saetze.filter(s=>s.person_id===personId).sort((x,y)=>String(y.gueltig_ab).localeCompare(String(x.gueltig_ab)));
+  const woche=eigene.find(s=>s.wochenstunden!=null)?.wochenstunden;
   const form=oeffneDialog('<form method="dialog" class="pb-form"><h2>Sätze</h2><p class="meta">'+esc(person(personId)||'Person')+'</p>'+
-    (eigene.length?'<div class="pb-tabelle ct-tabelle"><table><thead><tr><th>gültig ab</th><th class="num">Kalkulationssatz</th><th class="num">Monatsgehalt</th><th></th></tr></thead><tbody>'+
+    (eigene.length?'<div class="pb-tabelle ct-tabelle"><table><thead><tr><th>gültig ab</th><th class="num">Kalkulationssatz</th><th class="num">Monatsgehalt</th>'+
+      '<th class="num">Wochenstunden</th><th></th></tr></thead><tbody>'+
       eigene.map(s=>'<tr><td>'+esc(datum(s.gueltig_ab))+'</td><td class="num">'+esc(s.kalkulationssatz==null?'—':euro(s.kalkulationssatz,2)+'/h')+'</td>'+
-        '<td class="num">'+esc(s.monatsgehalt==null?'—':euro(s.monatsgehalt))+'</td><td><button type="button" class="btn btn-quiet btn-danger" data-satz-weg="'+esc(s.id)+'">Entfernen</button></td></tr>').join('')+
+        '<td class="num">'+esc(s.monatsgehalt==null?'—':euro(s.monatsgehalt))+'</td><td class="num">'+esc(s.wochenstunden==null?(s.monatsgehalt==null?'—':'Vollzeit'):std(Number(s.wochenstunden)))+'</td>'+
+        '<td><button type="button" class="btn btn-quiet btn-danger" data-satz-weg="'+esc(s.id)+'">Entfernen</button></td></tr>').join('')+
       '</tbody></table></div>':'<p class="meta">Noch kein eigener Satz: es gilt der Kalkulationssatz des Pakets.</p>')+
     '<h3 class="pb-h3">Neuer Eintrag</h3><div class="pb-felder">'+
     '<label>gültig ab<input type="date" name="ab" class="pb-input" required value="'+esc(heute())+'"></label>'+
     '<label>Kalkulationssatz (€/h)<input name="satz" class="pb-input" inputmode="decimal" placeholder="leer: Satz des Pakets"></label>'+
     '<label>Monatsgehalt brutto (€)<input name="gehalt" class="pb-input" inputmode="decimal" placeholder="leer: unbekannt"></label>'+
+    '<label>Wochenstunden laut Vertrag<input name="woche" class="pb-input" inputmode="decimal" value="'+esc(eingabe(woche))+'" placeholder="leer: Vollzeit ('+esc(zahl(a.vollzeit,a.vollzeit%1?1:0))+' h)"></label>'+
     '<label class="breit">Notiz<input name="notiz" class="pb-input" maxlength="500"></label></div>'+
     '<p class="ct-vorschau" data-vorschau></p>'+knoepfe('Eintragen','')+'</form>');
-  const vorschau=()=>{const g=K.leseZahl(form.gehalt.value);dialog.querySelector('[data-vorschau]').textContent=g?'Stundensatz aus Gehalt '+euro(K.gehaltSatz(g,e),2)+
-    '/h (mit '+proz(Number(e.arbeitgeberanteil_prozent))+' Arbeitgeberanteil und '+zahl(e.jahresstunden)+' Jahresstunden)':''};
+  const vorschau=()=>{
+    const g=K.leseZahl(form.gehalt.value),w=form.woche.value.trim()?K.leseZahl(form.woche.value):null;
+    const gs=g?K.gehaltSatz(g,e,w):null,ss=g?K.selbstkostenSatz(g,e,w):null;
+    dialog.querySelector('[data-vorschau]').textContent=gs==null?'':'Stundensatz aus Gehalt '+euro(gs,2)+'/h'+(ss!=null?', Selbstkostensatz '+euro(ss,2)+'/h':'')+
+      ' ('+zahl(K.jahresstundenPerson(w,e))+' Jahresstunden, '+proz(a.ag)+' Arbeitgeberanteil'+(a.faktor?', Faktor '+zahl(a.faktor,2):'')+')';
+  };
   form.addEventListener('input',vorschau);
   dialog.querySelectorAll('[data-satz-weg]').forEach(b=>b.addEventListener('click',async()=>{
     if(b.dataset.sicher!=='1'){b.dataset.sicher='1';b.textContent='Wirklich?';return}
@@ -666,13 +883,14 @@ function satzFormular(personId){
   form.addEventListener('submit',async ev=>{
     if(ev.submitter?.value!=='speichern')return;
     ev.preventDefault();
-    const satzText=form.satz.value.trim(),gehaltText=form.gehalt.value.trim();
-    const satz=satzText?K.leseZahl(satzText):null,gehalt=gehaltText?K.leseZahl(gehaltText):null;
+    const satzText=form.satz.value.trim(),gehaltText=form.gehalt.value.trim(),wocheText=form.woche.value.trim();
+    const satz=satzText?K.leseZahl(satzText):null,gehalt=gehaltText?K.leseZahl(gehaltText):null,wochenstunden=wocheText?K.leseZahl(wocheText):null;
     if(!satzText&&!gehaltText){zeigeFehler('Bitte einen Kalkulationssatz oder ein Monatsgehalt eintragen.');return}
     if(satzText&&!(satz>0)){zeigeFehler('Kalkulationssatz in Euro je Stunde, etwa 85.');return}
     if(gehaltText&&(gehalt==null||gehalt<0)){zeigeFehler('Monatsgehalt als Betrag in Euro.');return}
+    if(wocheText&&(wochenstunden==null||wochenstunden<=0||wochenstunden>80)){zeigeFehler('Wochenstunden über 0 und höchstens 80, etwa 20.');return}
     const {error}=await sb.from('office_controlling_saetze').insert({person_id:personId,gueltig_ab:form.ab.value,kalkulationssatz:satz,monatsgehalt:gehalt,
-      notiz:form.notiz.value.trim()||null,created_by:nutzer.id});
+      wochenstunden,notiz:form.notiz.value.trim()||null,created_by:nutzer.id});
     if(error){zeigeFehler(error.code==='23505'?'Für diesen Tag gibt es schon einen Eintrag; bitte ihn entfernen oder ein anderes Datum wählen.':'Nicht gespeichert: '+error.message);return}
     dialog.close();await neuLaden('Eingetragen.');
   });

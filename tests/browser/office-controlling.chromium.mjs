@@ -3,7 +3,9 @@
 // Honorar mit bezahlt und erarbeitet); Projektblatt mit Kennzahlen, Ständen und Zahlungen; als Admin einen Stand mit
 // Stunden je Person erfassen, eine Zahlung aus dem Bruttobetrag erfassen und das Paket ändern; als Mitglied des Teams
 // alles sehen außer Personen, Sätzen und Gehältern; Sätze und Gehälter nur für Admins; im Rahmen von Work ohne Weg zur
-// Übersicht; iPhone ohne Querscrollen. Bildschirmfotos nur mit CONTROLLING_FOTOS.
+// Übersicht; iPhone ohne Querscrollen. Seit 25.11.2026 nachmittags: die Lage auf einen Blick, der vertrauliche Teil mit
+// «So gerechnet», Wochenstunden, Selbstkosten mit einem erfundenen Gemeinkostenfaktor und «Zu klären».
+// Bildschirmfotos nur mit CONTROLLING_FOTOS.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
@@ -47,6 +49,8 @@ const db=page=>page.evaluate(()=>window.__fake.db);
 const karte=(page,name)=>page.locator('.ct-karte',{has:page.locator('[data-titel]',{hasText:name})});
 const text=async l=>(await l.textContent()).replace(/\s+/g,' ').trim();
 const merkmal=(page,gruppe,feld)=>page.locator('.ct-gruppe',{has:page.locator('h3',{hasText:gruppe})}).locator('.pb-merkmale div',{has:page.locator('dt',{hasText:new RegExp('^'+feld+'$')})}).locator('dd');
+const vertraulich=(page,zeile)=>page.locator('[data-vertraulich-zeile="'+zeile+'"]');
+const kachel=(page,name)=>page.locator('[data-kachel="'+name+'"]');
 const ohneQuerscrollen=page=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1);
 
 test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst',async()=>{
@@ -59,12 +63,14 @@ test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst'
     assert.equal(await text(k1.locator('.ct-nummer')),'T-01');
     assert.equal(await text(k1.locator('.ct-paket')),'LPH 3 · Entwurfsplanung');
     assert.equal(await text(k1.locator('h2 a')),'Testhaus · LPH 3','der Link nennt Projekt und Paket');
-    assert.deepEqual(await k1.locator('.chip').allTextContents(),['beauftragt','vorläufig','Stand 01.11.2026']);
+    // Die Lage zuerst, mit Zeichen und Wort (Gari, 25.11.2026): −16.250 € sind 16,3 % des Honorars, deutlich über Budget.
+    assert.deepEqual(await k1.locator('.chip').allTextContents(),['deutlich über Budget','beauftragt','vorläufig','Stand 01.11.2026']);
+    assert.equal(await k1.locator('.ct-lage-chip svg').count(),1);
     // 100.000 € ÷ 80 €/h = 1.250 h; 300 + 250 h; Soll bei 40 %: 500 h – darüber.
     const stunden=k1.locator('.ct-balken-block').first();
     assert.deepEqual(await stunden.locator('.ct-balken-kopf>span').allTextContents(),['Stunden','550 h von 1.250 h']);
     assert.equal(await text(stunden.locator('.meta')),'Soll beim Leistungsstand 40 %: 500 h · darüber');
-    assert.equal(await stunden.locator('.ct-balken').getAttribute('class'),'ct-balken ueber');
+    assert.equal(await stunden.locator('.ct-balken').getAttribute('class'),'ct-balken ueber kritisch');
     assert.equal(await stunden.locator('.ct-marke').getAttribute('style'),'left:40.00%');
     // Honorar: 21.000 € netto mit 5 % Nebenkosten → 20.000 € Honorar bezahlt; erarbeitet 40 % von 100.000 €.
     const honorar=k1.locator('.ct-balken-block').nth(1);
@@ -75,10 +81,13 @@ test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst'
     assert.equal(await k1.locator('[data-ergebnis]').getAttribute('class'),'ct-minus');
     assert.equal(await text(k1.locator('.ct-zahlen div').nth(1).locator('dd')),'73 €/h','40.000 € erarbeitet ÷ 550 h');
     assert.equal(await text(k1.locator('.ct-zahlen div').nth(2).locator('dd')),'20.000 €');
+    // Dieselben Begriffe wie im Projektblatt (Gari, 25.11.2026).
+    assert.deepEqual(await k1.locator('.ct-zahlen dt').allTextContents(),['Ergebnis am Ende netto','Honorar je Stunde netto','Erarbeitet, nicht bezahlt netto']);
     // Abgeschlossen: Leistungsstand 100 %, 400 h × 80 € = 32.000 € gegen 50.000 € → + 18.000 €; keine Zahlungen erfasst.
     const k2=karte(page,'Nachbarhaus');
     assert.equal(await text(k2.locator('[data-ergebnis]')),'+ 18.000 €');
     assert.equal(await k2.locator('.ct-zahlen dt').first().textContent(),'Ergebnis netto');
+    assert.equal(await text(k2.locator('.ct-lage-chip')),'im Budget');
     assert.equal(await text(k2.locator('.ct-zahlen div').nth(1).locator('dd')),'125 €/h');
     assert.equal(await text(k2.locator('.ct-zahlen div').nth(2).locator('dd.ct-klein')),'keine Zahlungen erfasst');
     assert.match(await text(k2.locator('.ct-balken-block').nth(1).locator('.meta')),/^Zahlungen noch nicht erfasst · erarbeitet 50\.000 € netto$/);
@@ -105,8 +114,27 @@ test('Projektblatt als Admin: Kennzahlen, Stände mit Personen, Zahlungen; Stand
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Wert der Stunden netto')),'46.500 €');
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Ergebnis bisher netto')),'− 6.500 €');
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Honorar je Stunde netto')),'72,73 €/h');
-    assert.equal(await text(merkmal(page,'Prognose am Ende','Stunden')),'1.375 h');
-    assert.equal(await text(merkmal(page,'Zahlungen','Erarbeitet, nicht bezahlt, netto')),'20.000 €');
+    assert.equal(await text(merkmal(page,'Prognose am Ende','Stunden am Ende')),'1.375 h');
+    assert.equal(await text(merkmal(page,'Prognose am Ende','Ergebnis am Ende netto')),'− 16.250 €');
+    assert.equal(await text(merkmal(page,'Zahlungen','Erarbeitet, nicht bezahlt netto')),'20.000 €');
+    // Lage auf einen Blick (Gari, 25.11.2026): Stufe mit Zeichen und Wort, ein Satz, drei Balken auf einer Skala, Kacheln.
+    const lage=page.locator('.ct-lage');
+    assert.equal(await lage.getAttribute('data-lage'),'kritisch');
+    assert.equal(await text(lage.locator('.ct-lage-titel')),'Deutlich über Budget');
+    assert.equal(await text(lage.locator('.ct-lage-satz')),'Im bisherigen Takt braucht das Paket 1.375 h statt 1.250 h; am Ende fehlen 16.250 € gegenüber der Kalkulation (16,3 % des Honorars).');
+    assert.deepEqual(await lage.locator('.ct-meter-zahl').allTextContents(),['40 % erledigt','44 % · 550 h von 1.250 h','20 % · 20.000 € von 100.000 €']);
+    assert.equal(await lage.locator('[data-meter="stunden"] .ct-meter-spur').getAttribute('class'),'ct-meter-spur kritisch');
+    assert.deepEqual(await lage.locator('.ct-meter-marke').evaluateAll(l=>l.map(m=>m.style.left)),['40%','40%'],'der Leistungsstand als Strich bei Stunden und Bezahlt');
+    assert.deepEqual([await text(kachel(page,'ergebnis').locator('strong')),await text(kachel(page,'rest').locator('strong')),await text(kachel(page,'rest').locator('.ct-kachel-unter')),
+      await text(kachel(page,'offen').locator('strong')),await text(kachel(page,'offen').locator('.ct-kachel-unter'))],
+      ['− 16.250 €','700 h','im bisherigen Takt nötig: 825 h','20.000 €','kann abgerechnet werden']);
+    // Gewinn mit dem erfundenen Faktor 2: 300 h × 60 €/h + 250 h × 72 €/h = 36.000 € → am Ende 100.000 − 36.000 ÷ 40 %.
+    assert.equal(await text(kachel(page,'gewinn').locator('strong')),'+ 10.000 €');
+    assert.equal(await text(kachel(page,'gewinn').locator('.ct-kachel-unter')),'nach Gehältern und Bürokosten · Annahmen vorläufig');
+    // Im Kopf des Pakets keine zweite Lage.
+    assert.deepEqual(await page.locator('.ct-kopf-rechts .chip').allTextContents(),['beauftragt','vorläufig','Stand 01.11.2026']);
+    // Klickbar heißt blau, auch «Paket bearbeiten» (Gari, 25.11.2026).
+    assert.equal(await page.locator('[data-paket-bearbeiten]').evaluate(b=>getComputedStyle(b).color),'rgb(0, 98, 204)');
     // Gari: bei jedem Betrag sagen, ob netto oder brutto.
     assert.equal(await text(page.locator('.ct-netto')),'Alle Beträge in Euro netto, ohne MwSt; das Honorar ohne Nebenkosten.');
     assert.deepEqual(await page.locator('.ct-gruppe').first().locator('dt').allTextContents(),['Honorar netto','Nebenkosten netto (5 %)','Kalkulationssatz netto','Stundenbudget']);
@@ -122,12 +150,25 @@ test('Projektblatt als Admin: Kennzahlen, Stände mit Personen, Zahlungen; Stand
     assert.equal(await text(zeile('Prognose am Ende')),'550 h ÷ 40 % = 1.375 h · 100.000 € − 46.500 € ÷ 40 % = − 16.250 €');
     assert.equal(await text(zeile('Bezahlt netto')),'20.000 €');
     assert.equal(await rw.locator('li strong',{hasText:'Zum Gehalt (vertraulich)'}).count(),1);
+    assert.equal(await text(zeile('Die Lage')),'− 16.250 € = − 16,3 % des Honorars → deutlich über Budget');
+    assert.equal(await text(zeile('Erarbeitet, nicht bezahlt netto')),'40.000 € − 20.000 € = 20.000 €');
     await foto(page,'rechenweg');
     await page.locator('#ctDialog button[value="abbrechen"]').click();
-    // Zum Gehalt (vertraulich): 300 h × 36,30 €/h + 250 h × 27,225 €/h = 17.696,25 € → Ergebnis 40.000 − 17.696 €.
-    assert.match(await text(page.locator('.ct-gruppe h3',{hasText:'Zum Gehalt'})),/vertraulich/);
-    assert.equal(await text(merkmal(page,'Zum Gehalt','Personalkosten der Stunden')),'17.696 €');
-    assert.equal(await text(merkmal(page,'Zum Gehalt','Ergebnis bisher netto')),'+ 22.304 €');
+    // Zum Gehalt (vertraulich), neben jedem Wert, wie er gerechnet ist (Gari, 25.11.2026). Person B arbeitet 25 von 40 h:
+    // 3.000 € × 12 × 1,21 ÷ 1.000 h = 43,56 €/h; Test Admin in Vollzeit 4.000 € → 36,30 €/h. 300 h × 36,30 + 250 h × 43,56 = 21.780 €.
+    assert.match(await text(page.locator('[data-vertraulich] h3')),/^Zum Gehalt vertraulich$/);
+    const spalten=async z=>(await vertraulich(page,z).locator('td.num').allTextContents()).map(t=>t.replace(/\s+/g,' ').trim());
+    assert.deepEqual(await spalten('personalkosten'),['21.780 €','54.450 €']);
+    assert.deepEqual(await vertraulich(page,'personalkosten').locator('.ct-so-teil').allTextContents(),
+      ['Test Admin: 300 h × 36,30 €/h','Person B: 250 h × 43,56 €/h','am Ende ÷ 40 % Leistungsstand']);
+    assert.deepEqual(await spalten('ergebnis-gehalt'),['+ 18.220 €','+ 45.550 €']);
+    assert.equal(await text(vertraulich(page,'ergebnis-gehalt').locator('.ct-so')),'Erarbeitet 40.000 € − 21.780 €am Ende: Honorar 100.000 € − 54.450 €');
+    // Selbstkosten mit dem Faktor auf das Bruttogehalt allein: 4.000 × 12 × 2 ÷ 1.600 = 60 €/h; 3.000 × 12 × 2 ÷ 1.000 = 72 €/h.
+    assert.equal(await text(vertraulich(page,'selbstkosten').locator('th .ct-einheit')),'Bruttogehalt × 2,00');
+    assert.deepEqual(await spalten('selbstkosten'),['36.000 €','90.000 €']);
+    assert.deepEqual(await vertraulich(page,'selbstkosten').locator('[data-so-person]').allTextContents(),['Test Admin: 300 h × 60,00 €/h','Person B: 250 h × 72,00 €/h']);
+    assert.deepEqual(await spalten('gewinn'),['+ 4.000 €','+ 10.000 €']);
+    assert.match(await text(page.locator('[data-annahmen-hinweis]')),/^Annahmen: 21 % Arbeitgeberanteil, 1\.600 Jahresstunden bei 40 h in der Woche, Gemeinkostenfaktor 2,00 auf das Bruttogehalt\. Noch nicht bestätigt\./);
     assert.equal(await text(page.locator('[data-je-person]')),'Test Admin 300 h · Person B 250 h');
     await foto(page,'projektblatt');
 
@@ -147,6 +188,10 @@ test('Projektblatt als Admin: Kennzahlen, Stände mit Personen, Zahlungen; Stand
     // Nur der Zuwachs zählt neu: 50 h × 80 € dazu → 50.500 €.
     assert.equal(await text(merkmal(page,'Stand 20.11.2026','Wert der Stunden netto')),'50.500 €');
     assert.equal(await page.locator('.ct-tabelle tbody tr').count(),2);
+    // Personalkosten je Stand aus der Bewertung je Person: + 50 h × 36,30 €/h = 23.595 €. Die Lage folgt: 600 h bei 50 %.
+    assert.equal(await text(page.locator('.ct-tabelle tbody tr').first().locator('td').nth(6)),'23.595 €');
+    assert.equal(await page.locator('.ct-lage').getAttribute('data-lage'),'achtung');
+    assert.equal(await text(page.locator('.ct-lage-titel')),'Leicht über Budget');
     const neu=(await db(page)).office_controlling_stunden.filter(h=>h.stand_id!=='c1111111-1111-4111-8111-111111111111'&&h.stand_id!=='c2222222-2222-4222-8222-222222222222');
     assert.deepEqual(neu.map(h=>h.stunden).sort((a,b)=>a-b),[250,350]);
     // Derselbe Tag noch einmal: abgelehnt, mit Erklärung.
@@ -201,7 +246,9 @@ test('Als Mitglied: Honorar, Stunden, Zahlungen und Ergebnis ja; Personen, Sätz
   try{
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Stunden')),'550 h');
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Ergebnis bisher netto')),'− 6.500 €');
-    assert.equal(await page.locator('.ct-gruppe h3',{hasText:'Zum Gehalt'}).count(),0);
+    // Die Lage sieht das ganze Team; Gewinn, Personal- und Selbstkosten nicht.
+    assert.equal(await page.locator('.ct-lage').getAttribute('data-lage'),'kritisch');
+    assert.equal(await page.locator('[data-vertraulich],[data-kachel="gewinn"],.ct-nur-admin').count(),0);
     assert.equal(await page.locator('[data-je-person]').count(),0);
     assert.equal(await page.locator('[data-stand-neu],[data-stand],[data-paket-bearbeiten],[data-paket-neu]').count(),0);
     assert.match(await page.locator('.ct-tabelle thead').textContent(),/^(?!.*Gehalt)/);
@@ -230,7 +277,7 @@ test('Buchhaltung mit vollem Zugang: alle Projekte, Personen und Gehalt, eintrag
     await page.goto(adresse('controlling.html?projekt='+P1));
     await page.locator('h1',{hasText:'T-01 · Testhaus'}).waitFor();
     assert.equal(await text(page.locator('[data-je-person]')),'Test Admin 300 h · Person B 250 h');
-    assert.equal(await text(merkmal(page,'Zum Gehalt','Personalkosten der Stunden')),'17.696 €');
+    assert.equal(await text(vertraulich(page,'personalkosten').locator('td.num').first()),'21.780 €');
     await page.locator('[data-reiter="zahlungen"]').click();
     await page.locator('[data-zahlung-neu]').click();
     const d=page.locator('#ctDialog');
@@ -250,7 +297,7 @@ test('Admin ohne Eintrag auf der Liste: keine Sätze, keine Gehälter, keine Stu
   const {ctx,page,fehler}=await oeffne('controlling.html?projekt='+P1,{rolle:'admin-ohne-liste'});
   try{
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Stunden')),'550 h');
-    assert.equal(await page.locator('.ct-gruppe h3',{hasText:'Zum Gehalt'}).count(),0);
+    assert.equal(await page.locator('[data-vertraulich],[data-kachel="gewinn"]').count(),0);
     assert.equal(await page.locator('[data-je-person],[data-stand-neu],[data-paket-bearbeiten]').count(),0);
     const tabellen=await page.evaluate(()=>window.__fake.aufrufe.map(a=>a.table));
     for(const t of ['office_controlling_stunden','office_controlling_saetze','office_controlling_einstellungen'])assert.ok(!tabellen.includes(t),t);
@@ -261,28 +308,64 @@ test('Admin ohne Eintrag auf der Liste: keine Sätze, keine Gehälter, keine Stu
   }finally{await ctx.close()}
 });
 
-test('Sätze und Gehälter: Stundensatz aus dem Gehalt, neuer Satz ab Datum, Annahmen',async()=>{
+test('Sätze und Gehälter: Wochenstunden, Stundensatz und Selbstkostensatz, neuer Satz ab Datum, Annahmen mit Erklärung und «Zu klären»',async()=>{
   const {ctx,page,fehler}=await oeffne('controlling.html?ansicht=saetze');
   try{
     assert.equal(await page.locator('h1').textContent(),'Sätze und Gehälter');
     const reihe=name=>page.locator('tbody tr',{has:page.locator('td',{hasText:new RegExp('^'+name)})});
-    // Person B: 90 €/h; 3.000 € × 12 × 1,21 ÷ 1.600 h = 27,23 €/h.
-    assert.deepEqual((await reihe('Person B').locator('td').allTextContents()).slice(1,5),['90 €/h','3.000 €','27,23 €/h','01.01.2026']);
-    assert.equal(await text(reihe('Test Admin').locator('td').nth(1)),'Satz des Pakets');
+    const zellen=async name=>(await reihe(name).locator('td').allTextContents()).slice(1,7);
+    // Person B: 90 €/h; 25 von 40 h → 1.000 Jahresstunden: 3.000 € × 12 × 1,21 ÷ 1.000 = 43,56 €/h; × 2 statt × 1,21: 72,00 €/h.
+    assert.deepEqual(await zellen('Person B'),['90 €/h','3.000 €','25 h','43,56 €/h','72,00 €/h','01.01.2026']);
+    assert.deepEqual(await zellen('Test Admin'),['Satz des Pakets','4.000 €','Vollzeit','36,30 €/h','60,00 €/h','01.01.2026']);
+    // Die Annahmen mit Erklärung je Feld und einem Beispiel (Gari, 25.11.2026).
+    const an=page.locator('[data-annahmen]');
+    assert.equal(await text(an.locator('h2')),'Annahmen für den Stundensatz aus dem Gehalt');
+    assert.match(await text(an.locator('.ct-erklaerung')),/Bruttogehalt × 12 × \(1 \+ Arbeitgeberanteil\) ÷ Jahresstunden der Person/);
+    assert.equal(await text(an.locator('[data-beispiel]')),'Beispiel: 4.000 € brutto bei 40 h in der Woche → 36,30 €/h Personalkosten, 60,00 €/h Selbstkosten. Halbe Stelle mit halbem Gehalt: dieselben Sätze.');
+    assert.equal(await an.locator('.ct-feld-hilfe').count(),5);
+    assert.equal(await an.locator('[name="faktor"]').getAttribute('aria-describedby'),'an-faktor-hilfe');
+    // Zu klären: acht Fragen, je mit Warum und dem, was jetzt angenommen ist.
+    const fragen=page.locator('[data-zu-klaeren] li');
+    assert.equal(await fragen.count(),8);
+    assert.equal(await text(fragen.first().locator('strong')),'Wird der Gemeinkostenfaktor 2,00 auf das Bruttogehalt allein gerechnet oder auf Bruttogehalt plus Arbeitgeberanteil?');
+    assert.equal(await text(fragen.first().locator('span').nth(1)),'Jetzt angenommen: auf das Bruttogehalt allein (Festlegung vom 25.11.2026).');
+    assert.match(await text(page.locator('[data-frage="wochenstunden"]')),/\(1 Person mit Gehalt ohne Wochenstunden\)\.$/);
+    assert.match(await text(page.locator('[data-frage="kalkulationssatz"]')),/bis zu einem Bruttogehalt von rund 5\.667 € im Monat \(Vollzeit\)/);
+    // Neuer Satz mit Wochenstunden: 3.200 € bei 20 h → 800 Jahresstunden.
     await reihe('Person C').locator('[data-person]').click();
     const d=page.locator('#ctDialog');
     await d.locator('[name="ab"]').fill('2026-11-01');
     await d.locator('[name="satz"]').fill('95');
     await d.locator('[name="gehalt"]').fill('3.200');
-    assert.equal(await text(d.locator('[data-vorschau]')),'Stundensatz aus Gehalt 29,04 €/h (mit 21 % Arbeitgeberanteil und 1.600 Jahresstunden)');
+    await d.locator('[name="woche"]').fill('20');
+    assert.equal(await text(d.locator('[data-vorschau]')),'Stundensatz aus Gehalt 58,08 €/h, Selbstkostensatz 96,00 €/h (800 Jahresstunden, 21 % Arbeitgeberanteil, Faktor 2,00)');
     await d.locator('button[value="speichern"]').click();
     await page.locator('[data-meldung]:not([hidden])').waitFor();
-    assert.equal(await text(reihe('Person C').locator('td').nth(1)),'95 €/h');
-    // Annahmen ändern: 1.500 Jahresstunden → Person B 29,04 €/h.
-    await page.locator('[name="h"]').fill('1.500');
-    await page.locator('[data-einstellungen] button').click();
-    await page.locator('[data-meldung]:not([hidden])').waitFor();
-    assert.equal(await text(reihe('Person B').locator('td').nth(3)),'29,04 €/h');
+    assert.deepEqual(await zellen('Person C'),['95 €/h','3.200 €','20 h','58,08 €/h','96,00 €/h','01.11.2026']);
+    assert.equal((await db(page)).office_controlling_saetze.find(x=>x.monatsgehalt===3200).wochenstunden,20);
+    // Annahmen ändern: Faktor außerhalb von 1 bis 5 abgelehnt; 1.500 Jahresstunden und Faktor 2,5, bestätigt, mit Notiz.
+    await an.locator('[name="faktor"]').fill('0,5');
+    await an.locator('[data-einstellungen] button').click();
+    await page.locator('.pb-banner.warn:not([hidden])').waitFor();
+    assert.match(await text(page.locator('[data-meldung]')),/^Gemeinkostenfaktor zwischen 1 und 5/);
+    await an.locator('[name="h"]').fill('1.500');
+    await an.locator('[name="faktor"]').fill('2,5');
+    assert.equal(await text(an.locator('[data-beispiel]')),'Beispiel: 4.000 € brutto bei 40 h in der Woche → 38,72 €/h Personalkosten, 80,00 €/h Selbstkosten. Halbe Stelle mit halbem Gehalt: dieselben Sätze.');
+    await an.locator('[name="bestaetigt"]').fill('2026-11-26');
+    await an.locator('[name="notiz"]').fill('Mit der Büroleitung geklärt');
+    await an.locator('[data-einstellungen] button').click();
+    await page.locator('[data-meldung]:not([hidden])',{hasText:'Gespeichert.'}).waitFor();
+    // Person B: 1.500 × 25 ÷ 40 = 937,5 h → 43.560 ÷ 937,5 = 46,46 €/h; 3.000 × 12 × 2,5 ÷ 937,5 = 96,00 €/h.
+    assert.deepEqual((await zellen('Person B')).slice(3,5),['46,46 €/h','96,00 €/h']);
+    const e=(await db(page)).office_controlling_einstellungen[0];
+    assert.deepEqual([e.jahresstunden,e.gemeinkostenfaktor,e.vollzeit_wochenstunden,e.annahmen_bestaetigt,e.annahmen_notiz],[1500,2.5,40,'2026-11-26','Mit der Büroleitung geklärt']);
+    // Bestätigt: der Gewinn im Projektblatt ist nicht mehr vorläufig.
+    await page.goto(adresse('controlling.html?projekt='+P1));
+    await page.locator('[data-kachel="gewinn"]').waitFor();
+    assert.equal(await text(kachel(page,'gewinn').locator('.ct-kachel-unter')),'nach Gehältern und Bürokosten');
+    assert.match(await text(page.locator('[data-annahmen-hinweis]')),/Bestätigt am 26\.11\.2026\./);
+    await page.goto(adresse('controlling.html?ansicht=saetze'));
+    await page.locator('[data-zugang]').waitFor();
     // Voller Zugang (nur Admins vergeben ihn): Person C bekommt ihn und verliert ihn wieder.
     const zugang=page.locator('[data-zugang]');
     // Nur die Liste zählt: der Admin steht darauf (seit der Migration), sich selbst entfernt er hier nicht.
@@ -319,12 +402,12 @@ test('Im Rahmen von Work: kein Weg zur Übersicht; iPhone ohne Querscrollen',asy
     await f.locator('[data-reiter="zahlungen"]').click();
     assert.match(page.frames()[1].url(),/\/controlling\.html\?projekt=a1111111-1111-4111-8111-111111111111&paket=b1111111-1111-4111-8111-111111111111&reiter=zahlungen$/);
   }finally{await ctx.close()}
-  for(const ziel of ['controlling.html','controlling.html?projekt='+P1]){
+  for(const ziel of ['controlling.html','controlling.html?projekt='+P1,'controlling.html?ansicht=saetze']){
     const {ctx:c,page:p,fehler:fe}=await oeffne(ziel,{viewport:{width:390,height:844}});
     try{
       assert.equal(await ohneQuerscrollen(p),true,ziel);
       if(ziel.includes('projekt')){await p.locator('[data-reiter="zahlungen"]').click();assert.equal(await ohneQuerscrollen(p),true,ziel+' Zahlungen')}
-      await foto(p,'iphone-'+(ziel.includes('projekt')?'blatt':'uebersicht'));
+      await foto(p,'iphone-'+(ziel.includes('projekt')?'blatt':ziel.includes('saetze')?'saetze':'uebersicht'));
       assert.deepEqual(fe,[]);
     }finally{await c.close()}
   }

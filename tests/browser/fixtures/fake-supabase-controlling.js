@@ -6,13 +6,15 @@
 // voller Zugang, die Liste ändern nur Admins auf der Liste; office_controlling_summen rechnet wie die
 // Funktion (Stunden kumuliert, fehlende Person zählt weiter, Zuwachs zum Satz am Stichtag, Gehalt nur für Admins und
 // nur vollständig). Eindeutig: ein Stand je Paket und Tag, eine Zeile je Person und Stand, ein Satz je Person und Tag.
+// Seit office_controlling_annahmen: Wochenstunden je Satz (Person B arbeitet 25 von 40 h), Vollzeit-Wochenstunden und ein
+// erfundener Gemeinkostenfaktor (2); der Wert zum Gehalt rechnet mit den Jahresstunden der Person.
 (function(){
   const ROLLE=['member','buchhaltung','admin-ohne-liste'].includes(window.__ctRolle)?window.__ctRolle:'admin';
   const UID='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222',C='33333333-3333-4333-8333-333333333333';
   const P1='a1111111-1111-4111-8111-111111111111',P2='a2222222-2222-4222-8222-222222222222',P3='a3333333-3333-4333-8333-333333333333';
   const K1='b1111111-1111-4111-8111-111111111111',K2='b2222222-2222-4222-8222-222222222222';
   const S1='c1111111-1111-4111-8111-111111111111',S2='c2222222-2222-4222-8222-222222222222';
-  const KEY='tba_controlling_fake_db_v1';
+  const KEY='tba_controlling_fake_db_v2';
   const session={access_token:'fake',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,
     user:{id:UID,email:'test@fixture.invalid',aud:'authenticated',role:'authenticated'}};
   const zeit=t=>new Date(t).toISOString();
@@ -40,9 +42,10 @@
       {id:crypto.randomUUID(),paket_id:K1,datum:'2026-10-15',bezeichnung:'1. Abschlag',netto:21000,mwst:3990,status:'bezahlt',vorlaeufig:false,notiz:null,
         created_by:UID,created_at:zeit('2026-10-15'),updated_at:zeit('2026-10-15')}],
     office_controlling_saetze:[
-      {id:crypto.randomUUID(),person_id:B,gueltig_ab:'2026-01-01',kalkulationssatz:90,monatsgehalt:3000,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')},
-      {id:crypto.randomUUID(),person_id:UID,gueltig_ab:'2026-01-01',kalkulationssatz:null,monatsgehalt:4000,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')}],
-    office_controlling_einstellungen:[{id:true,arbeitgeberanteil_prozent:21,jahresstunden:1600,updated_at:zeit('2026-11-01')}],
+      {id:crypto.randomUUID(),person_id:B,gueltig_ab:'2026-01-01',kalkulationssatz:90,monatsgehalt:3000,wochenstunden:25,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')},
+      {id:crypto.randomUUID(),person_id:UID,gueltig_ab:'2026-01-01',kalkulationssatz:null,monatsgehalt:4000,wochenstunden:null,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')}],
+    office_controlling_einstellungen:[{id:true,arbeitgeberanteil_prozent:21,jahresstunden:1600,vollzeit_wochenstunden:40,gemeinkostenfaktor:2,
+      annahmen_notiz:null,annahmen_bestaetigt:null,updated_at:zeit('2026-11-01')}],
     office_controlling_zugang:[]
   });
   let db=null;try{db=JSON.parse(sessionStorage.getItem(KEY)||'null')}catch{}
@@ -148,10 +151,10 @@
 
   // office_controlling_summen wie in der Datenbank.
   const r2=x=>Math.round(x*100)/100;
-  function satzAm(personId,tag,feld){
-    const l=db.office_controlling_saetze.filter(s=>s.person_id===personId&&s[feld]!=null&&s.gueltig_ab<=tag).sort((a,b)=>b.gueltig_ab.localeCompare(a.gueltig_ab));
-    return l.length?Number(l[0][feld]):null;
+  function eintragAm(personId,tag,feld){
+    return db.office_controlling_saetze.filter(s=>s.person_id===personId&&s[feld]!=null&&s.gueltig_ab<=tag).sort((a,b)=>b.gueltig_ab.localeCompare(a.gueltig_ab))[0]||null;
   }
+  function satzAm(personId,tag,feld){const e=eintragAm(personId,tag,feld);return e?Number(e[feld]):null}
   function summen(pid){
     if(!imTeam(pid))return [];
     const e=db.office_controlling_einstellungen[0];
@@ -168,9 +171,10 @@
           const kum=zeile?Number(zeile.stunden):(letzte.get(key)||0),delta=kum-(letzte.get(key)||0);
           letzte.set(key,kum);stunden+=kum;
           const satzK=(personId&&satzAm(personId,s.stichtag,'kalkulationssatz'))??Number(k.kalkulationssatz);
-          const g=personId?satzAm(personId,s.stichtag,'monatsgehalt'):null;
+          const g=personId?eintragAm(personId,s.stichtag,'monatsgehalt'):null;
           wertK+=delta*satzK;
-          if(g==null){if(delta!==0)hier=false}else zuG+=delta*g*12*(1+Number(e.arbeitgeberanteil_prozent)/100)/Number(e.jahresstunden);
+          const vollzeit=Number(e.vollzeit_wochenstunden??40),jahr=Number(e.jahresstunden)*Number(g?.wochenstunden??vollzeit)/vollzeit;
+          if(g==null){if(delta!==0)hier=false}else zuG+=delta*Number(g.monatsgehalt)*12*(1+Number(e.arbeitgeberanteil_prozent)/100)/jahr;
         }
         if(!hier)vollstaendig=false;
         wertG+=zuG;
