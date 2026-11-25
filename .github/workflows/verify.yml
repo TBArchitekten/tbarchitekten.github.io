@@ -10,6 +10,7 @@ on:
       - 'tests/sql/office-work-*.sql'
       - 'tests/sql/office-produkt*.sql'
       - 'tests/sql/office-projektdokumente-*.sql'
+      - 'tests/sql/office-controlling-*.sql'
       - 'tests/office-kostenberechnung.test.mjs'
       - 'tests/office-romy-*.test.mjs'
       - '.github/workflows/verify.yml'
@@ -130,6 +131,11 @@ jobs:
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < tests/sql/office-projektdokumente-bilder-acceptance.sql
+      - name: Verify the Controlling (project reads totals, admins see persons, rates and salaries; only admins write)
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-controlling-acceptance.sql
       - name: Verify no generated fixtures persist in the ephemeral database
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
