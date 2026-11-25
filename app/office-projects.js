@@ -57,6 +57,10 @@ function projectCard(project,target){
     if(project.status==='aktiv'){const work=document.createElement('button');work.type='button';work.textContent='In Work öffnen';work.onclick=()=>openWork(project.id);actions.append(work)}
     else{const archiv=document.createElement('a');archiv.href='../kostenberechnung.html#kostenarchiv';archiv.textContent='Kostenarchiv';actions.append(archiv)}
     const people=document.createElement('button');people.type='button';people.textContent='Mitglieder';people.onclick=()=>manageMembers(project);actions.append(people);
+    // Nummer und Name ändern (Gari, 25.11.2026): wie die Datenbank erlaubt, Admin oder Projektleitung des Projekts.
+    if(role==='admin'||project.projektleiter_id===userId){
+      const edit=document.createElement('button');edit.type='button';edit.textContent='Bearbeiten';edit.onclick=()=>editProject(project);actions.append(edit);
+    }
     if(!target){
       const details=document.createElement('button');details.type='button';details.textContent='Terminpläne ansehen';
       details.onclick=()=>{history.replaceState(null,'','#section=projects&project='+encodeURIComponent(project.id));showProjects()};
@@ -279,6 +283,34 @@ function newPlan(project,onCreated=null){
       window.location.assign('../terminplan.html?id='+encodeURIComponent(data.id));
     }catch(e){error.textContent=e?.message||'Terminplan konnte nicht erstellt werden.';submit.disabled=false}
   });
+}
+// Projektnummer und Name ändern. Work, Planner und die Werkzeuge lesen beides aus dem Projekt; Terminpläne und
+// Kostenberechnungen tragen ihre Kopfzeile selbst und behalten sie, bis man sie dort ändert.
+function editProject(project){
+  const plansOf=plans.filter(x=>x.project_id===project.id).length;
+  window.ISABELLA_APP?.openModal?.('Projekt bearbeiten',
+    '<form id="officeEditProjectForm" class="form">'+
+    '<label>Projektnummer<input name="number" required maxlength="20" autocomplete="off" value="'+esc(project.number)+'"></label>'+
+    '<label>Projektname<input name="name" required maxlength="120" autocomplete="off" value="'+esc(project.name)+'"></label>'+
+    (plansOf?'<p class="small">Vorhandene Terminpläne behalten ihre Kopfzeile, bis du sie dort änderst.</p>':'')+
+    '<p id="officeEditProjectError" class="small" role="alert"></p>'+
+    '<button type="submit" class="primary">Speichern</button></form>');
+  const form=document.getElementById('officeEditProjectForm');if(!form)return;
+  form.onsubmit=async e=>{
+    e.preventDefault();
+    const number=form.elements.number.value.trim(),name=form.elements.name.value.trim();
+    const error=document.getElementById('officeEditProjectError');
+    if(!number||!name){error.textContent='Bitte Nummer und Name eintragen.';return}
+    if(number===project.number&&name===project.name){window.ISABELLA_APP?.closeModal?.();return}
+    const button=form.querySelector('[type="submit"]');button.disabled=true;
+    const {data,error:saveError}=await sb().from('office_projects').update({number,name}).eq('id',project.id).select('id').maybeSingle();
+    if(saveError||!data?.id){
+      error.textContent=saveError?.code==='23505'?'Diese Projektnummer ist bereits vergeben.':'Nicht gespeichert'+(saveError?.message?': '+saveError.message:': keine Berechtigung.');
+      button.disabled=false;return;
+    }
+    window.ISABELLA_APP?.closeModal?.();
+    await refresh();
+  };
 }
 function membersMarkup(selected=[]){
   const set=new Set(selected);

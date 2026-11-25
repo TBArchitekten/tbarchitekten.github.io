@@ -32,7 +32,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office54','shell.js?v=office56','office-projects.js?v=office60','work-polish.css?v=6','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office54','shell.js?v=office56','office-projects.js?v=office61','work-polish.css?v=6','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 
@@ -134,4 +134,11 @@ test('Seiten im Reiter eines Projekts: Marke im Rahmen, kein Sprung in die App, 
   assert.match(pb,/if\(PROJEKT\)\{ui\.projekt=PROJEKT;ui\.kategorie='alle'\}/);
   assert.match(hk,/const imProjekt=f=>kontakteVon\(f\)\.some\(k=>k\.projekt_id===PROJEKT\)\|\|imProjektProdukte\(f\)\.length>0;/);
   assert.match(hk,/sb\.from\('office_produkt_verwendungen'\)\.select\('produkt_id,projekt_id,code,status'\)\.eq\('projekt_id',PROJEKT\)/);
+});
+
+test('Projekte: Nummer und Name bearbeiten, nur Admin oder Projektleitung (wie die Datenbank)',()=>{
+  const projects=read('app/office-projects.js');
+  assert.match(projects,/if\(role==='admin'\|\|project\.projektleiter_id===userId\)\{\n      const edit=document\.createElement\('button'\);edit\.type='button';edit\.textContent='Bearbeiten';edit\.onclick=\(\)=>editProject\(project\);/);
+  assert.match(projects,/sb\(\)\.from\('office_projects'\)\.update\(\{number,name\}\)\.eq\('id',project\.id\)\.select\('id'\)\.maybeSingle\(\)/);
+  assert.match(projects,/saveError\?\.code==='23505'\?'Diese Projektnummer ist bereits vergeben\.'/);
 });
