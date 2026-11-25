@@ -830,11 +830,14 @@ function workAvatarInitials(name){
 // Mustermappe, Produkte und Hersteller (Gari, 25.11.2026): die Mappen des Projekts wie die Fassungen eines Terminplans
 // (eine je Themenpaket, eine weitere über «Neue Mustermappe» neben der Wahl); Produkte und Hersteller sind je Projekt
 // eine Seite, gefiltert auf das Projekt (?projekt=): was dafür ausgewählt ist und die Firmen dazu.
+// Controlling (Gari, 25.11.2026): das Projektblatt (Honorar, Stände, Zahlungen) als eine Seite je Projekt.
 const WORK_TOOLS={
  terminplan:{table:'office_terminplan_instances',page:'../terminplan.html',name:'Terminplan',
   none:'Für dieses Projekt gibt es noch keinen Terminplan.',create:'Terminplan anlegen'},
  kosten:{table:'office_kosten_instances',page:'../kostenberechnung.html',name:'Kostenberechnung',
   none:'Für dieses Projekt gibt es noch keine Kostenberechnung.',create:'Kostenberechnung anlegen'},
+ controlling:{page:'../controlling.html',name:'Controlling',single:true,
+  src:pid=>'../controlling.html?projekt='+encodeURIComponent(pid)},
  mustermappe:{page:'../projektdokumente.html',name:'Mustermappe',idParam:'vorlage',load:loadMustermappen,
   none:'Für dieses Projekt gibt es noch keine Mustermappe.',create:'Mustermappe anlegen',add:'Neue Mustermappe',
   src:(pid,id,neu)=>'../projektdokumente.html?'+new URLSearchParams(neu?{projekt:pid,werkzeug:'mustermappe',neu:'1'}:{projekt:pid,vorlage:id})},

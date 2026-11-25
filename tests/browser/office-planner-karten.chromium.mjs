@@ -51,7 +51,7 @@ const fixtures={
 const harness=`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${pageCss}</head>
 <body data-section="work" class="office-app"><div class="app" id="app"><main id="swipeArea" class="swipe-area"><section id="workScreen" class="screen work-screen active" data-screen="work"><div class="work-shell">
 <div class="work-head"><div><h1 id="workProjectTitle">Work</h1></div><div class="work-project-switch"></div></div>
-<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button><button data-work-view="mustermappe" hidden>Mustermappe</button><button data-work-view="produkte" hidden>Produkte</button><button data-work-view="hersteller" hidden>Hersteller</button></div>
+<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button><button data-work-view="controlling" hidden>Controlling</button><button data-work-view="mustermappe" hidden>Mustermappe</button><button data-work-view="produkte" hidden>Produkte</button><button data-work-view="hersteller" hidden>Hersteller</button></div>
 <div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div><div id="workToolHost" class="work-tool-host" hidden></div></div></section></main></div>
 <div id="modalRoot" hidden></div>
 <script>
@@ -329,9 +329,9 @@ test('Bucket: Beschreibung nur beim Zeigen auf den Titel oder über «Info» im 
 // als Seite je Projekt, gefiltert auf das Projekt.
 test('Reiter Mustermappe, Produkte und Hersteller: Mappen wählen, weitere anlegen, Seiten des Projekts',async()=>{
   const {page,errors}=await board();
-  await page.route(/\/(projektdokumente|produktbibliothek|herstellerkatalog)\.html/,r=>r.fulfill({contentType:'text/html',body:werkzeug}));
+  await page.route(/\/(projektdokumente|produktbibliothek|herstellerkatalog|controlling)\.html/,r=>r.fulfill({contentType:'text/html',body:werkzeug}));
   try{
-    for(const v of ['mustermappe','produkte','hersteller'])assert.equal(await page.locator('[data-work-view="'+v+'"]').isVisible(),true,v);
+    for(const v of ['controlling','mustermappe','produkte','hersteller'])assert.equal(await page.locator('[data-work-view="'+v+'"]').isVisible(),true,v);
     await page.locator('[data-work-view="mustermappe"]').click();
     await bereit(page,'mustermappe');
     assert.deepEqual(await rahmen(page,'mustermappe'),{src:'../projektdokumente.html?projekt=p1&vorlage=mm-1',ziel:'mm-1',url:'/projektdokumente.html?projekt=p1&vorlage=mm-1',marke:null});
@@ -382,6 +382,11 @@ test('Reiter Mustermappe, Produkte und Hersteller: Mappen wählen, weitere anleg
     await page.locator('[data-work-tool-pane="produkte"]').waitFor();
     assert.equal((await rahmen(page,'produkte')).url,'/produktbibliothek.html?id=pr-1&projekt=p1');
     assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('tba-office-work-tool-v1')||'{}').p1?.produkte??null),null,'keine Fassung gemerkt');
+    // Controlling (25.11.2026): das Projektblatt als eine Seite je Projekt.
+    await page.locator('[data-work-view="controlling"]').click();
+    await bereit(page,'controlling');
+    assert.equal((await rahmen(page,'controlling')).src,'../controlling.html?projekt=p1');
+    assert.equal(await page.locator('[data-work-tool-pane="controlling"] .work-tool-bar').isVisible(),false);
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });

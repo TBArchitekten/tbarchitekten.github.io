@@ -1,0 +1,74 @@
+/* TBA Office · Controlling (25.11.2026, Claude). Gleiche Gestalt wie Produktbibliothek und Herstellerkatalog (deren
+   Stile lädt die Seite); hier die Karten der Übersicht mit zwei Balken (Vorschlag B), das Projektblatt (Vorschlag C),
+   die Reiter «Stände und Stunden» und «Zahlungen» und die Zeilen je Person. Farben nur aus shared/minds-design-tokens.css:
+   Blau bleibt dem Klickbaren; die Balken sind grau, über dem Soll bernsteinfarben; Gewinn grün, Verlust rot. */
+.ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.ct-karte{padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ct-karte h2{margin:0;font-size:18px;line-height:1.3;letter-spacing:-.01em}
+.ct-karte h2 a{color:var(--m-ink)}
+.ct-karte h2 a:hover{color:var(--m-link)}
+.ct-karte>.meta{margin:0}
+
+/* Balken: Spur = Budget (Stunden) oder Honorar; Füllung = verbraucht oder bezahlt; Marke = Soll beim Leistungsstand. */
+.ct-balken-block{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ct-balken-kopf{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--m-ink-soft)}
+.ct-balken-kopf strong{color:var(--m-ink);font-weight:650}
+.ct-balken{position:relative;height:12px;border-radius:var(--m-radius-pill);background:var(--m-fill);overflow:visible}
+.ct-balken>span{position:absolute;left:0;top:0;bottom:0;border-radius:var(--m-radius-pill)}
+.ct-fuellung{background:var(--m-ink-soft)}
+.ct-balken.ueber .ct-fuellung{background:var(--m-attention)}
+.ct-erarbeitet{background:var(--m-border-strong)}
+.ct-bezahlt{background:var(--m-ink-soft)}
+.ct-marke{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--m-ink);border-radius:1px}
+.ct-balken-block .meta{margin:0}
+.ct-legende{display:inline-flex;align-items:center;gap:6px}
+.ct-legende i{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--m-ink-soft)}
+.ct-legende i.hell{background:var(--m-border-strong)}
+
+/* Kennzahlen */
+.ct-zahlen{margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;border-top:1px solid var(--m-border-soft);padding-top:12px}
+.ct-zahlen div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ct-zahlen dt{font-size:12px;color:var(--m-ink-soft)}
+.ct-zahlen dd{margin:0;font-size:16px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ct-zahlen dd.ct-klein{font-size:13px;font-weight:500;color:var(--m-ink-soft);white-space:normal}
+.ct-plus{color:var(--m-success)}
+.ct-minus{color:var(--m-error)}
+.ct-gruppen{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px 24px}
+.ct-gruppe{min-width:0}
+.ct-gruppe .pb-h3{margin:0 0 2px;font-size:13px;color:var(--m-ink-soft);font-weight:650;text-transform:uppercase;letter-spacing:.08em}
+.ct-gruppe .pb-merkmale{grid-template-columns:minmax(0,1fr)}
+.ct-gruppe .pb-merkmale dd{font-variant-numeric:tabular-nums}
+.ct-nur-admin{font-size:12px;color:var(--m-decision);background:var(--m-decision-soft);border-radius:var(--m-radius-pill);padding:2px 8px;font-weight:600}
+.ct-kopf-zeile{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px 16px}
+.ct-kopf-zeile h2{margin:0}
+.ct-balken-paar{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 24px}
+
+/* Reiter im Projektblatt */
+.ct-reiter{display:flex;gap:4px;border-bottom:1px solid var(--m-border);overflow-x:auto}
+.ct-reiter button{border:0;background:transparent;min-height:44px;padding:0 14px;font-size:15px;color:var(--m-ink-soft);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.ct-reiter button:hover{color:var(--m-link)}
+.ct-reiter button[aria-selected="true"]{color:var(--m-ink);font-weight:650;border-bottom-color:var(--m-ink)}
+.ct-tabelle td.num,.ct-tabelle th.num{text-align:right}
+.ct-tabelle td{vertical-align:middle}
+.ct-tabelle tfoot td{font-weight:650;border-top:1px solid var(--m-border);background:var(--m-surface)}
+.ct-personen{display:block;margin-top:2px;font-size:12px;color:var(--m-ink-soft)}
+
+/* Formulare */
+.ct-person-liste{display:flex;flex-direction:column;gap:8px}
+.ct-person{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ct-person select{flex:1 1 200px}
+.ct-person input[name="name"]{flex:1 1 160px}
+.ct-person input[name="stunden"]{width:110px;flex:0 0 auto;text-align:right}
+.ct-vorschau{margin:0;font-size:13px;color:var(--m-ink-soft);font-variant-numeric:tabular-nums}
+.ct-leer{padding:22px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.ct-leer p{margin:0}
+.ct-ohne{margin:0;font-size:13px;color:var(--m-ink-soft)}
+
+@media (max-width:520px){
+  .ct-grid{grid-template-columns:minmax(0,1fr)}
+  .ct-zahlen{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ct-person input[name="stunden"]{flex:1 1 90px}
+}
+/* Als Reiter «Controlling» eines Projekts in Work: Work nennt das Projekt schon; kein Weg zur Übersicht aller Projekte. */
+.im-reiter .ct-zur-uebersicht{display:none}

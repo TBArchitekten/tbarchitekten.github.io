@@ -17,6 +17,8 @@ NAV_ICONS.produkte='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 NAV_ICONS.hersteller='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0"/><path d="M15 9h3"/><path d="M15 13h3"/></svg>';
 // Mustermappe: Blätter mit Bild, im Strich der übrigen Symbole.
 NAV_ICONS.mappe='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="m22 13-1.3-1.3a2.4 2.4 0 0 0-3.4 0L11 18"/><circle cx="12" cy="8" r="2"/><rect width="16" height="16" x="6" y="2" rx="2"/></svg>';
+// Controlling: Kurve über der Achse, im Strich der übrigen Symbole.
+NAV_ICONS.controlling='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 14 4-4 4 4 5-5"/></svg>';
 // Kostenberechnung: Rechner, im Strich der übrigen Symbole.
 NAV_ICONS.kosten='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>';
 // Only «Zu bestätigen» carries a number; the web and the iPhone show the same count.
@@ -115,6 +117,11 @@ document.body.innerHTML = `
           <span><strong>Kostenberechnung</strong><small>Nach DIN 276 bis zur 3. Ebene: Mengen aus Archicad, Kennwerte mit Herkunft, Vergleich mit der Kostenschätzung und Bericht für die Kostenbesprechung.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
+        <button type="button" class="office-tools-card" id="officeToolsControlling" aria-label="Controlling öffnen">
+          <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.controlling}</span>
+          <span><strong>Controlling</strong><small>Honorar laut Vertrag gegen die Stunden: Stundenbudget zum Kalkulationssatz, Leistungsstand, Zahlungen und Prognose je Projekt. Sätze und Gehälter sehen nur Admins.</small></span>
+          <span class="office-tools-arrow" aria-hidden="true">›</span>
+        </button>
         <button type="button" class="office-tools-card" id="officeToolsProdukte" aria-label="Produktbibliothek öffnen">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.produkte}</span>
           <span><strong>Produktbibliothek</strong><small>Materialien einmal erfassen, in jedem Projekt verwenden: Herstellerdatenblatt mit Seitenangabe, Preise mit Herkunft und die Projekte, in denen sie stecken.</small></span>
@@ -179,6 +186,7 @@ document.body.innerHTML = `
           <button data-work-view="planner">Planner</button>
           <button data-work-view="terminplan" hidden>Terminplan</button>
           <button data-work-view="kosten" hidden>Kostenberechnung</button>
+          <button data-work-view="controlling" hidden>Controlling</button>
           <button data-work-view="mustermappe" hidden>Mustermappe</button>
           <button data-work-view="produkte" hidden>Produkte</button>
           <button data-work-view="hersteller" hidden>Hersteller</button>
