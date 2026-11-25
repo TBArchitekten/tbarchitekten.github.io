@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-25 · Projekte: Nummer und Name bearbeiten · Claude
+- Qué cambió y por qué: Gari (25.11.2026): Projektnummer und -name müssen änderbar sein (die neuen Projekte bekommen zuerst eine vorläufige Nummer). In Werkzeuge › Projekte hat jede Projektkarte «Bearbeiten» (Nummer und Name), sichtbar für Admins und die Projektleitung des Projekts, wie es die Datenbank erlaubt (`office_projects_lead_update`). Eine schon vergebene Nummer meldet «Diese Projektnummer ist bereits vergeben.». Work, Planner und die Werkzeuge lesen Nummer und Name aus dem Projekt; Terminpläne und Kostenberechnungen tragen ihre Kopfzeile selbst und behalten sie (Hinweis im Dialog, wenn es Terminpläne gibt).
+- Archivos: `app/office-projects.js` (`?v=office61`), `app/index.html`, `tests/browser/office-app-boot.chromium.mjs` (neuer Test), `tests/browser/fixtures/fake-supabase.js` (Projekt und Schreibprotokoll), `tests/office-work-reiter.test.mjs`, Versionen in zwei weiteren Tests, `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (450); Chromium `office-app-boot` grün (Dialog, Werte, gespeicherte Änderung).
+- Quedó pendiente o sin probar: —
+- Riesgos o decisiones que necesitan a Gari: —
+- PR: #166
+
 ### 2026-11-25 · Romy: ein direkt angelegter Termin steht nicht mehr doppelt im Kalender · Claude
 - Qué cambió y por qué: Gari (25.11.2026): Ein Termin, den Romy angelegt hatte, stand zweimal im Kalender, einmal unter «Arbeit», einmal unter «Persönlich». Ursache: Romy legt Termine und Aufgaben direkt an (Schlüssel «direct:<request_id>»), der Server speichert für die Office aber zusätzlich die Karte desselben Zugs mit den Vorschlägen («Anlage freigegeben, Bestätigung steht noch aus.») und «Vorschlag prüfen». Wer dort bestätigte, legte über den alten lokalen Weg eine zweite Kopie an, und zwar ohne Kategorie, also «Persönlich».
   - Eine Karte, deren Einträge Romy schon angelegt hat, ist erledigt: kein «Vorschlag prüfen», der Text lautet «Eingetragen.»; sie wird gleich nach der direkten Anlage so markiert und auch, wenn sie erst später aus dem Verlauf kommt.

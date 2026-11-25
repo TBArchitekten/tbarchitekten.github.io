@@ -320,7 +320,7 @@ test('die Werkzeuge führen zur Kostenberechnung, und sie zurück',()=>{
   assert.match(shell,/NAV_ICONS\.kosten='<svg /);
   assert.match(projekte,/getElementById\('officeToolsKosten'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/kostenberechnung\.html';/);
   assert.match(index,/\.\/shell\.js\?v=office56/);
-  assert.match(index,/\.\/office-projects\.js\?v=office60/);
+  assert.match(index,/\.\/office-projects\.js\?v=office61/);
   assert.match(ui,/href="\.\/app\/#section=tools">‹ Werkzeuge/);
 });
 

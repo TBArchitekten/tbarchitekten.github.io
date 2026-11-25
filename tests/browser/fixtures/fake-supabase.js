@@ -5,16 +5,17 @@
   const rows={
     office_members:[{user_id:UID,email:'gari@fixture.invalid',display_name:'Gari Beispiel',role:'admin',is_active:true,must_change_password:false}],
     isabella_projects:[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',client_key:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',name:'Beispielhaus',number:'101',archived:false}],
+    office_projects:[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',number:'101',name:'Beispielhaus',status:'aktiv',projektleiter_id:null}],
     isabella_categories:[{id:'c1',client_key:'arbeit',name:'Arbeit',color:'#6D7278'}],
     isabella_tasks:[{id:'t1',user_id:UID,title:'Test',due_date:'2026-11-04',completed_at:null,archived_at:null,project_id:null,updated_at:new Date().toISOString(),created_at:new Date().toISOString()}],
   };
-  window.__calls=[];
+  window.__calls=[];window.__writes=[];
   function builder(table){
     let single=false,head=false;
     const q={};
     const pass=()=>q;
     ['select','eq','neq','in','is','lt','lte','gt','gte','order','limit','range','match','not','or','filter','contains','ilike','like','textSearch','overlaps'].forEach(k=>q[k]=(...a)=>{if(k==='select'&&a[1]&&a[1].head)head=true;return q});
-    ['insert','update','upsert','delete'].forEach(k=>q[k]=()=>q);
+    ['insert','update','upsert','delete'].forEach(k=>q[k]=v=>{window.__writes.push({table,op:k,value:v===undefined?null:JSON.parse(JSON.stringify(v))});return q});
     q.single=()=>{single=true;return q};q.maybeSingle=()=>{single=true;return q};
     q.then=(ok,bad)=>{window.__calls.push(table);const r=rows[table]||[];const v=head?{count:r.length,data:null,error:null}:{data:single?(r[0]||null):r,error:null,count:r.length};return Promise.resolve(v).then(ok,bad)};
     return q;

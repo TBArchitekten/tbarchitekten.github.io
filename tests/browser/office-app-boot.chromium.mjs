@@ -128,3 +128,25 @@ test('Romy legte den Termin schon an: keine zweite Kopie, kein «Vorschlag prüf
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });
+
+// Projekte (Gari, 25.11.2026): Nummer und Name eines Projekts ändern, als Admin oder Projektleitung.
+test('Projekte: Nummer und Name bearbeiten',async()=>{
+  const {page,errors}=await boot('');
+  try{
+    await page.evaluate(()=>{window.ISABELLA_APP.show('projects');history.replaceState(null,'','#section=projects')});
+    await page.evaluate(()=>document.getElementById('officeToolsManage')?.click());
+    const karte=page.locator('#projectsScreen .office-project-card',{hasText:'Beispielhaus'});
+    await karte.waitFor();
+    await karte.locator('button',{hasText:'Bearbeiten'}).click();
+    const form=page.locator('#officeEditProjectForm');
+    await form.waitFor();
+    assert.deepEqual([await form.locator('input[name="number"]').inputValue(),await form.locator('input[name="name"]').inputValue()],['101','Beispielhaus']);
+    await form.locator('input[name="number"]').fill('2601');
+    await form.locator('input[name="name"]').fill('Beispielhaus Nord');
+    await form.locator('button[type="submit"]').click();
+    await form.waitFor({state:'hidden'});
+    const writes=await page.evaluate(()=>window.__writes.filter(w=>w.table==='office_projects'));
+    assert.deepEqual(writes,[{table:'office_projects',op:'update',value:{number:'2601',name:'Beispielhaus Nord'}}]);
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
