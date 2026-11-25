@@ -8,14 +8,15 @@
 // nur vollständig). Eindeutig: ein Stand je Paket und Tag, eine Zeile je Person und Stand, ein Satz je Person und Tag.
 // Seit office_controlling_annahmen: Wochenstunden je Satz (Person B arbeitet 25 von 40 h), Vollzeit-Wochenstunden und ein
 // erfundener Gemeinkostenfaktor (2); der Wert zum Gehalt rechnet mit den Jahresstunden der Person. Seit
-// office_controlling_jahresstunden: die Angaben der Herleitung aus dem Kalender (leer).
+// office_controlling_jahresstunden: die Angaben der Herleitung aus dem Kalender (leer); seit office_controlling_urlaub
+// Urlaubstage und Arbeitstage je Woche an den Sätzen (leer).
 (function(){
   const ROLLE=['member','buchhaltung','admin-ohne-liste'].includes(window.__ctRolle)?window.__ctRolle:'admin';
   const UID='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222',C='33333333-3333-4333-8333-333333333333';
   const P1='a1111111-1111-4111-8111-111111111111',P2='a2222222-2222-4222-8222-222222222222',P3='a3333333-3333-4333-8333-333333333333';
   const K1='b1111111-1111-4111-8111-111111111111',K2='b2222222-2222-4222-8222-222222222222';
   const S1='c1111111-1111-4111-8111-111111111111',S2='c2222222-2222-4222-8222-222222222222';
-  const KEY='tba_controlling_fake_db_v3';
+  const KEY='tba_controlling_fake_db_v4';
   const session={access_token:'fake',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,
     user:{id:UID,email:'test@fixture.invalid',aud:'authenticated',role:'authenticated'}};
   const zeit=t=>new Date(t).toISOString();
@@ -43,8 +44,8 @@
       {id:crypto.randomUUID(),paket_id:K1,datum:'2026-10-15',bezeichnung:'1. Abschlag',netto:21000,mwst:3990,status:'bezahlt',vorlaeufig:false,notiz:null,
         created_by:UID,created_at:zeit('2026-10-15'),updated_at:zeit('2026-10-15')}],
     office_controlling_saetze:[
-      {id:crypto.randomUUID(),person_id:B,gueltig_ab:'2026-01-01',kalkulationssatz:90,monatsgehalt:3000,wochenstunden:25,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')},
-      {id:crypto.randomUUID(),person_id:UID,gueltig_ab:'2026-01-01',kalkulationssatz:null,monatsgehalt:4000,wochenstunden:null,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')}],
+      {id:crypto.randomUUID(),person_id:B,gueltig_ab:'2026-01-01',kalkulationssatz:90,monatsgehalt:3000,wochenstunden:25,urlaubstage:null,arbeitstage_woche:null,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')},
+      {id:crypto.randomUUID(),person_id:UID,gueltig_ab:'2026-01-01',kalkulationssatz:null,monatsgehalt:4000,wochenstunden:null,urlaubstage:null,arbeitstage_woche:null,notiz:null,created_by:UID,created_at:zeit('2026-01-01'),updated_at:zeit('2026-01-01')}],
     office_controlling_einstellungen:[{id:true,arbeitgeberanteil_prozent:21,jahresstunden:1600,vollzeit_wochenstunden:40,gemeinkostenfaktor:2,
       annahmen_notiz:null,annahmen_bestaetigt:null,urlaubstage:null,krankheitstage:null,weitere_tage:null,projektanteil_prozent:null,updated_at:zeit('2026-11-01')}],
     office_controlling_zugang:[]
@@ -174,7 +175,9 @@
           const satzK=(personId&&satzAm(personId,s.stichtag,'kalkulationssatz'))??Number(k.kalkulationssatz);
           const g=personId?eintragAm(personId,s.stichtag,'monatsgehalt'):null;
           wertK+=delta*satzK;
-          const vollzeit=Number(e.vollzeit_wochenstunden??40),jahr=Number(e.jahresstunden)*Number(g?.wochenstunden??vollzeit)/vollzeit;
+          const vollzeit=Number(e.vollzeit_wochenstunden??40),woche=Number(g?.wochenstunden??vollzeit);
+          const jahr=Number(e.jahresstunden)*woche/vollzeit+(g?.urlaubstage!=null&&e.urlaubstage!=null
+            ?(Number(e.urlaubstage)*woche/5-Number(g.urlaubstage)*woche/Number(g.arbeitstage_woche??5))*Number(e.projektanteil_prozent??100)/100:0);
           if(g==null){if(delta!==0)hier=false}else zuG+=delta*Number(g.monatsgehalt)*12*(1+Number(e.arbeitgeberanteil_prozent)/100)/jahr;
         }
         if(!hier)vollstaendig=false;

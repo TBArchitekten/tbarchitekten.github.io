@@ -65,7 +65,7 @@ test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst'
   try{
     assert.equal(await page.locator('h1').textContent(),'Controlling');
     // Fett das Projekt, darunter das Paket (Gari, 25.11.2026).
-    assert.deepEqual(await page.locator('.ct-karte [data-titel]').allTextContents(),['Testhaus','Nachbarhaus'],'beauftragt vor abgeschlossen');
+    assert.deepEqual(await page.locator('.ct-karte [data-titel]').allTextContents(),['Testhaus','Nachbarhaus'],'nach Projektnummer (Gari, 25.11.2026)');
     const k1=karte(page,'Testhaus');
     assert.equal(await text(k1.locator('.ct-nummer')),'T-01');
     assert.equal(await text(k1.locator('.ct-paket')),'LPH 3 · Entwurfsplanung');
@@ -383,10 +383,10 @@ test('Sätze und Gehälter: Wochenstunden, Stundensatz und Selbstkostensatz, neu
   try{
     assert.equal(await page.locator('h1').textContent(),'Sätze und Gehälter');
     const reihe=name=>page.locator('tbody tr',{has:page.locator('td',{hasText:new RegExp('^'+name)})});
-    const zellen=async name=>(await reihe(name).locator('td').allTextContents()).slice(1,7);
+    const zellen=async name=>(await reihe(name).locator('td').allTextContents()).slice(1,9);
     // Person B: 90 €/h; 25 von 40 h → 1.000 Jahresstunden: 3.000 € × 12 × 1,21 ÷ 1.000 = 43,56 €/h; × 2 statt × 1,21: 72,00 €/h.
-    assert.deepEqual(await zellen('Person B'),['90 €/h','3.000 €','25 h','43,56 €/h','72,00 €/h','01.01.2026']);
-    assert.deepEqual(await zellen('Test Admin'),['Satz des Pakets','4.000 €','Vollzeit','36,30 €/h','60,00 €/h','01.01.2026']);
+    assert.deepEqual(await zellen('Person B'),['90 €/h','3.000 €','25 h','wie das Büro','1.000 h','43,56 €/h','72,00 €/h','01.01.2026']);
+    assert.deepEqual(await zellen('Test Admin'),['Satz des Pakets','4.000 €','Vollzeit','wie das Büro','1.600 h','36,30 €/h','60,00 €/h','01.01.2026']);
     // Die Annahmen mit Erklärung je Feld und einem Beispiel (Gari, 25.11.2026).
     const an=page.locator('[data-annahmen]');
     assert.equal(await text(an.locator('h2')),'Annahmen für den Stundensatz aus dem Gehalt');
@@ -411,7 +411,7 @@ test('Sätze und Gehälter: Wochenstunden, Stundensatz und Selbstkostensatz, neu
     assert.equal(await text(d.locator('[data-vorschau]')),'Stundensatz aus Gehalt 58,08 €/h, Selbstkostensatz 96,00 €/h (800 Jahresstunden, 21 % Arbeitgeberanteil, Faktor 2,00)');
     await d.locator('button[value="speichern"]').click();
     await page.locator('[data-meldung]:not([hidden])').waitFor();
-    assert.deepEqual(await zellen('Person C'),['95 €/h','3.200 €','20 h','58,08 €/h','96,00 €/h','01.11.2026']);
+    assert.deepEqual(await zellen('Person C'),['95 €/h','3.200 €','20 h','wie das Büro','800 h','58,08 €/h','96,00 €/h','01.11.2026']);
     assert.equal((await db(page)).office_controlling_saetze.find(x=>x.monatsgehalt===3200).wochenstunden,20);
     // Annahmen ändern: Faktor außerhalb von 1 bis 5 abgelehnt; 1.500 Jahresstunden und Faktor 2,5, bestätigt, mit Notiz.
     await an.locator('[name="faktor"]').fill('0,5');
@@ -426,7 +426,7 @@ test('Sätze und Gehälter: Wochenstunden, Stundensatz und Selbstkostensatz, neu
     await an.locator('[data-einstellungen] button.btn-primary').click();
     await page.locator('[data-meldung]:not([hidden])',{hasText:'Gespeichert.'}).waitFor();
     // Person B: 1.500 × 25 ÷ 40 = 937,5 h → 43.560 ÷ 937,5 = 46,46 €/h; 3.000 × 12 × 2,5 ÷ 937,5 = 96,00 €/h.
-    assert.deepEqual((await zellen('Person B')).slice(3,5),['46,46 €/h','96,00 €/h']);
+    assert.deepEqual((await zellen('Person B')).slice(5,7),['46,46 €/h','96,00 €/h']);
     const e=(await db(page)).office_controlling_einstellungen[0];
     assert.deepEqual([e.jahresstunden,e.gemeinkostenfaktor,e.vollzeit_wochenstunden,e.annahmen_bestaetigt,e.annahmen_notiz],[1500,2.5,40,'2026-11-26','Mit der Büroleitung geklärt']);
     // Bestätigt: der Gewinn im Projektblatt ist nicht mehr vorläufig.
@@ -490,6 +490,26 @@ test('Jahresstunden aus dem Kalender: Feiertage in Augsburg, Urlaub, Krankheit, 
     assert.deepEqual([e.jahresstunden,e.urlaubstage,e.krankheitstage,e.weitere_tage,e.projektanteil_prozent],[soll.jahresstunden,30,15,3,null]);
     // Die Frage zu den Jahresstunden nennt jetzt die Herleitung.
     assert.match(await text(page.locator('[data-frage="jahresstunden"]')),new RegExp('aus dem Kalender '+soll.jahresstunden.toLocaleString('de-DE').replace('.','\\.')+' h\\.$'));
+    // Urlaub je Person (Gari, 25.11.2026): Person B (25 h) bekommt 25 statt der 30 Tage des Büros → 25 h mehr im Jahr.
+    const reihe=name=>page.locator('tbody tr',{has:page.locator('td',{hasText:new RegExp('^'+name)})});
+    await reihe('Person B').locator('[data-person]').click();
+    const d=page.locator('#ctDialog');
+    assert.equal(await d.locator('[name="woche"]').inputValue(),'25','Wochenstunden aus dem letzten Eintrag');
+    await d.locator('[name="ab"]').fill('2026-11-02');
+    await d.locator('[name="gehalt"]').fill('3.000');
+    await d.locator('[name="urlaub"]').fill('25');
+    const jb=await page.evaluate(j=>Math.round(j*25/40+25),soll.jahresstunden);
+    assert.match(await text(d.locator('[data-vorschau]')),new RegExp('\\('+jb.toLocaleString('de-DE').replace('.','\\.')+' Jahresstunden, 21 % Arbeitgeberanteil'));
+    await d.locator('[name="urlaub"]').fill('70');
+    await d.locator('button[value="speichern"]').click();
+    assert.match(await text(d.locator('[data-dialog-fehler]')),/^Urlaubstage 0 bis 60/);
+    await d.locator('[name="urlaub"]').fill('25');
+    await d.locator('button[value="speichern"]').click();
+    await page.locator('[data-meldung]:not([hidden])',{hasText:'Eingetragen.'}).waitFor();
+    const zeile=await reihe('Person B').locator('td').allTextContents();
+    assert.deepEqual([zeile[4],zeile[5]],['25 Tage',jb.toLocaleString('de-DE')+' h']);
+    assert.equal((await db(page)).office_controlling_saetze.find(x=>x.gueltig_ab==='2026-11-02').urlaubstage,25);
+    assert.match(await text(page.locator('[data-urlaub-hinweis]')),/^Jahresstunden der Person: /);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

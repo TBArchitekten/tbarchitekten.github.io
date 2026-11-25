@@ -33,7 +33,12 @@ async function enhance({sb,folders,files,refresh,projectName,office=false,projec
   if(!userId)return;
   // All active Office employees can manage shared files and folders, as on
   // the existing shared Windows drive. The DB and Storage policies enforce it.
+  // Exception (25.11.2026): the stored file itself can only be deleted by the
+  // person who uploaded it (Storage policy office_romy_work_storage_delete_guard;
+  // the first path segment is the uploader). Without this check, a teammate's
+  // delete removed the entry but left the file in storage.
   const canManage=()=>true;
+  const ownUpload=item=>String(item?.storage_path||'').split('/')[0]===userId;
   async function update(table,item,patch,errorMessage,successMessage){
     if(!item)return;
     let query=sb.from(table).update(patch).eq('id',item.id);
@@ -78,6 +83,7 @@ async function enhance({sb,folders,files,refresh,projectName,office=false,projec
     await refresh();setStatus('Ordner gelöscht.');
   }
   async function removeFile(item){
+    if(!office&&!ownUpload(item)){setStatus('Löschen kann diese Datei nur, wer sie hochgeladen hat.');return}
     if(!window.confirm('Datei „'+label(item)+'“ endgültig löschen?'))return;
     const removed=await sb.storage.from('minds-work').remove([item.storage_path]);
     if(removed.error){setStatus('Datei konnte nicht gelöscht werden.');return}
@@ -97,9 +103,10 @@ async function enhance({sb,folders,files,refresh,projectName,office=false,projec
     if(!canManage(item))return;
     const actions=document.createElement('div');
     actions.className='office-desktop-actions';
-    const create=(name,callback)=>{
+    const create=(name,callback,gefahr=false)=>{
       const button=document.createElement('button');
       button.type='button';button.textContent=name;
+      if(gefahr)button.className='is-danger';
       button.setAttribute('aria-label',name+' · '+(isFolder?item.name:label(item)));
       button.addEventListener('click',()=>void callback());
       actions.appendChild(button);
@@ -107,7 +114,7 @@ async function enhance({sb,folders,files,refresh,projectName,office=false,projec
     const table=isFolder?folderTable:fileTable;
     create('Umbenennen',()=>rename(table,item));
     create('Verschieben',()=>move(table,item));
-    create('Löschen',()=>isFolder?removeFolder(item):removeFile(item));
+    if(isFolder||office||ownUpload(item))create('Löschen',()=>isFolder?removeFolder(item):removeFile(item),true);
     wrapper.appendChild(actions);
   }
   for(const tile of document.querySelectorAll(office?'#workBody [data-office-work^="folder:"]':'#workBody [data-work-folder]')){

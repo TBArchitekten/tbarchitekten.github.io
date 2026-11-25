@@ -12,7 +12,8 @@
 -- schreibt; den Zugang vergeben nur Admins; C sieht weiter nichts, auch nicht, wer Zugang hat.
 -- Seit der Migration office_controlling_annahmen (25.11.2026): Teilzeit rechnet mit dem Anteil an den Jahresstunden;
 -- die Annahmen (mit dem Gemeinkostenfaktor) ändert nur die Liste, der Faktor bleibt zwischen 1 und 5. Seit
--- office_controlling_jahresstunden auch die Angaben der Herleitung (Urlaub höchstens 60 Tage).
+-- office_controlling_jahresstunden auch die Angaben der Herleitung (Urlaub höchstens 60 Tage); seit office_controlling_urlaub
+-- eigene Urlaubstage je Person gegenüber denen des Büros.
 begin;
 insert into auth.users(id,aud,role,email,instance_id) values
  ('a7000000-0000-4000-8000-00000000000a','authenticated','authenticated','ct-a@example.invalid','00000000-0000-0000-0000-000000000000'),
@@ -46,7 +47,8 @@ declare
     || 'A2_stunden=0; A2_saetze=0; A2_einstellungen=0; A2_s1_gehalt=null; A2_aendert_ohne_liste=0; A2_selbst=verweigert; A_nimmt_A2_auf=ok; '
     || 'A2_aendert_A=1; projekt_fest=verweigert; urheber_fest=verweigert; doppelt=verweigert; A_einstellungen=1; '
     || 'A_teilzeit=2; A_s1_teilzeit=774.40; A_faktor=1; faktor_grenze=verweigert; B_faktor=0; '
-    || 'A_kalender=1; kalender_grenze=verweigert; B_kalender=0; ';
+    || 'A_kalender=1; kalender_grenze=verweigert; B_kalender=0; '
+    || 'A_urlaub=2; A_s1_urlaub=742.02; ';
   ua constant text := '{"sub":"a7000000-0000-4000-8000-00000000000a","role":"authenticated"}';
   ua2 constant text := '{"sub":"a7000000-0000-4000-8000-0000000000a2","role":"authenticated"}';
   ub constant text := '{"sub":"b7000000-0000-4000-8000-00000000000b","role":"authenticated"}';
@@ -221,6 +223,17 @@ begin
   execute 'set local role authenticated';
   update public.office_controlling_einstellungen set urlaubstage = 1;
   get diagnostics n = row_count; r := r || 'B_kalender=' || n || '; ';
+  execute 'reset role';
+
+  -- Urlaub je Person (Migration office_controlling_urlaub): A hat 20 statt der 30 Urlaubstage des Büros, an 5 Tagen; bei
+  -- 20 von 40 Wochenstunden, 1.650 Jahresstunden und 90 % Projektanteil: 825 h + (30 × 4 − 20 × 4) × 0,9 = 861 h.
+  -- Stand 1 (11 h): 11 × 4.000 × 12 × 1,21 ÷ 861 = 742,02 €.
+  perform set_config('request.jwt.claims', ua, true);
+  execute 'set local role authenticated';
+  update public.office_controlling_saetze set urlaubstage = 20, arbeitstage_woche = 5 where person_id = a;
+  get diagnostics n = row_count; r := r || 'A_urlaub=' || n || '; ';
+  select * into x from public.office_controlling_summen(p) where stand_id = s1;
+  r := r || 'A_s1_urlaub=' || coalesce(x.wert_gehalt::text,'null') || '; ';
   execute 'reset role';
 
   if r <> erwartet then raise exception 'Controlling weicht ab: % (erwartet: %)', r, erwartet; end if;
