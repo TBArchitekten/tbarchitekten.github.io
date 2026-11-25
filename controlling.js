@@ -43,7 +43,8 @@ const heute=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 const STATUS=[['angeboten','angeboten'],['beauftragt','beauftragt'],['abgeschlossen','abgeschlossen']];
 const ZAHLUNG=[['bezahlt','bezahlt'],['gestellt','gestellt, noch offen']];
 
-// voll: voller Zugang zum Controlling (Admin oder Eintrag in office_controlling_zugang); istAdmin: vergibt den Zugang.
+// voll: voller Zugang zum Controlling = Eintrag in office_controlling_zugang (seit 25.11.2026 nur die Liste, Admin allein
+// reicht nicht; Wunsch von Gari: er, die Buchhaltung und später der Chef); istAdmin und voll zusammen: vergibt den Zugang.
 let nutzer=null,voll=false,istAdmin=false;
 const daten={projekte:[],pakete:[],staende:[],summen:[],zahlungen:[],stunden:[],saetze:[],einstellungen:null,personen:[],team:[],zugang:[]};
 const ui={paket:UUID.test(params.get('paket')||'')?params.get('paket'):null,reiter:params.get('reiter')==='zahlungen'?'zahlungen':'staende'};
@@ -70,7 +71,7 @@ async function start(){
   if(me||!m){fehler('Kein Zugriff auf TBA Office.');return}
   if(m.must_change_password){if(inApp||IM_REITER){fehler('Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.');return}location.href='./';return}
   istAdmin=m.role==='admin';
-  voll=istAdmin||await hatZugang();
+  voll=await hatZugang();
   try{await ladeAlles();zeichne()}catch(e){console.error('Controlling',e);fehler(e?.message||'Controlling nicht erreichbar.')}
 }
 const leer=()=>Promise.resolve({data:[],error:null});
@@ -110,7 +111,7 @@ async function ladeAlles(){
     daten.stunden=h.data||[];daten.saetze=sa.data||[];daten.einstellungen=(ei.data||[])[0]||null;
   }
   daten.zugang=[];
-  if(istAdmin&&ANSICHT==='saetze'){
+  if(istAdmin&&voll&&ANSICHT==='saetze'){
     const zu=await sb.from('office_controlling_zugang').select('user_id,created_at').limit(500);
     if(!zu.error)daten.zugang=zu.data||[];
   }
@@ -155,8 +156,8 @@ function balkenStunden(k){
 function balkenHonorar(k){
   if(!(k.honorar>0))return '';
   const b=Math.min(Math.max(k.bezahlt,0)/k.honorar,1)*100,e=k.erarbeitet!=null?Math.min(k.erarbeitet/k.honorar,1)*100:0;
-  const teile=[(k.zahlungen?'bezahlt '+euro(k.bezahlt):'Zahlungen noch nicht erfasst'),k.erarbeitet!=null?'erarbeitet '+euro(k.erarbeitet):''].filter(Boolean);
-  return '<div class="ct-balken-block"><div class="ct-balken-kopf"><span>Honorar</span><strong>'+euro(k.honorar)+'</strong></div>'+
+  const teile=[(k.zahlungen?'bezahlt '+euro(k.bezahlt)+' netto':'Zahlungen noch nicht erfasst'),k.erarbeitet!=null?'erarbeitet '+euro(k.erarbeitet)+' netto':''].filter(Boolean);
+  return '<div class="ct-balken-block"><div class="ct-balken-kopf"><span>Honorar netto</span><strong>'+euro(k.honorar)+'</strong></div>'+
     '<div class="ct-balken" role="img" aria-label="'+esc(teile.join(', ')+' von '+euro(k.honorar))+'">'+
     '<span class="ct-erarbeitet" style="width:'+e.toFixed(2)+'%"></span><span class="ct-bezahlt" style="width:'+b.toFixed(2)+'%"></span></div>'+
     '<p class="meta"><span class="ct-legende"><i></i>'+esc(teile[0])+'</span>'+(teile[1]?' · <span class="ct-legende"><i class="hell"></i>'+esc(teile[1])+'</span>':'')+'</p></div>';
@@ -183,8 +184,9 @@ function renderUebersicht(){
     '<a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a>'+
     '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling</p><h1>Controlling</h1>'+
     '<p class="pb-intro">Honorar laut Vertrag gegen die Stunden im Projekt. Die Kalkulation rechnet mit dem Kalkulationssatz (85 €/h, je Person änderbar); '+
-    'erarbeitet ist das Honorar mal Leistungsstand, die Prognose rechnet die bisherigen Stunden auf 100 % hoch.</p></div>'+
-    (voll?'<div class="pb-actions"><a class="btn" href="./controlling.html?ansicht=saetze">Sätze und Gehälter</a><button type="button" class="btn btn-primary" data-paket-neu>Neues Honorarpaket</button></div>':'')+
+    'erarbeitet ist das Honorar mal Leistungsstand, die Prognose rechnet die bisherigen Stunden auf 100 % hoch. Alle Beträge netto, ohne MwSt.</p></div>'+
+    '<div class="pb-actions"><button type="button" class="ct-info" data-rechenweg aria-haspopup="dialog"><span aria-hidden="true">i</span>So wird gerechnet</button>'+
+    (voll?'<a class="btn" href="./controlling.html?ansicht=saetze">Sätze und Gehälter</a><button type="button" class="btn btn-primary" data-paket-neu>Neues Honorarpaket</button>':'')+'</div>'+
     '</header><p class="pb-banner info" data-meldung hidden></p>'+
     (eintraege.length?'<div class="ct-grid">'+eintraege.map(karte).join('')+'</div>'
       :'<div class="card ct-leer"><p><strong>Noch kein Honorar erfasst.</strong></p><p class="meta">'+
@@ -192,6 +194,7 @@ function renderUebersicht(){
     (ohne.length?'<p class="ct-ohne">Noch ohne Honorar: '+ohne.map(p=>'<a href="'+esc(urlProjekt(p.id))+'">'+esc(projektName(p))+'</a>').join(', ')+'</p>':'')+
     '</div>';
   root.querySelector('[data-paket-neu]')?.addEventListener('click',()=>paketFormular(null,null));
+  root.querySelector('[data-rechenweg]')?.addEventListener('click',()=>rechenweg(null));
 }
 function karte({paket:p,k}){
   const pr=projekt(p.project_id);
@@ -204,9 +207,9 @@ function karte({paket:p,k}){
     '<p class="ct-paket">'+esc(p.bezeichnung)+(p.leistung?' <span class="meta">· '+esc(p.leistung)+'</span>':'')+'</p>'+
     '<div class="pb-chips">'+chips(p,k)+'</div>'+balkenStunden(k)+balkenHonorar(k)+
     '<dl class="ct-zahlen">'+
-    '<div><dt>'+(k.abgeschlossen?'Ergebnis':'Prognose am Ende')+'</dt><dd class="'+plusKlasse(ergebnis).trim()+'" data-ergebnis>'+esc(plus(ergebnis))+'</dd></div>'+
-    '<div><dt>Honorar je Stunde</dt><dd>'+(k.jeStunde==null?'—':esc(euro(k.jeStunde))+'/h')+'</dd></div>'+
-    '<div><dt>Offen</dt><dd'+(k.zahlungen||k.erarbeitet==null?'':' class="ct-klein"')+'>'+esc(offenText(k))+'</dd></div></dl></article>';
+    '<div><dt>'+(k.abgeschlossen?'Ergebnis netto':'Prognose netto')+'</dt><dd class="'+plusKlasse(ergebnis).trim()+'" data-ergebnis>'+esc(plus(ergebnis))+'</dd></div>'+
+    '<div><dt>Honorar je Stunde netto</dt><dd>'+(k.jeStunde==null?'—':esc(euro(k.jeStunde))+'/h')+'</dd></div>'+
+    '<div><dt>Offen netto</dt><dd'+(k.zahlungen||k.erarbeitet==null?'':' class="ct-klein"')+'>'+esc(offenText(k))+'</dd></div></dl></article>';
 }
 
 // ---------- Projektblatt ----------
@@ -223,7 +226,7 @@ function renderProjekt(pr){
     (pakete.length>1?'<div class="pb-pills" role="group" aria-label="Honorarpakete">'+pakete.map(x=>
       '<button type="button" class="pill" data-paket-wahl="'+esc(x.id)+'" aria-pressed="'+(x.id===ui.paket)+'">'+esc(x.bezeichnung)+'</button>').join('')+'</div>':'')+
     (p?paketBlatt(p):'<div class="card ct-leer"><p><strong>Für dieses Projekt ist noch kein Honorar erfasst.</strong></p><p class="meta">'+
-      (voll?'Ein Honorarpaket je Auftrag, etwa «LPH 3» oder «Machbarkeitsstudie».':'Eintragen können Admins und wer vollen Zugang zum Controlling hat.')+'</p>'+
+      (voll?'Ein Honorarpaket je Auftrag, etwa «LPH 3» oder «Machbarkeitsstudie».':'Eintragen kann, wer vollen Zugang zum Controlling hat.')+'</p>'+
       (voll?'<button type="button" class="btn btn-primary" data-paket-neu>Honorarpaket anlegen</button>':'')+'</div>')+
     '</div>';
   root.querySelectorAll('[data-paket-neu]').forEach(b=>b.addEventListener('click',()=>paketFormular(null,pr.id)));
@@ -231,6 +234,7 @@ function renderProjekt(pr){
   root.querySelectorAll('[data-reiter]').forEach(b=>b.addEventListener('click',()=>{ui.reiter=b.dataset.reiter;adresse();renderProjekt(pr)}));
   if(!p)return;
   root.querySelector('[data-paket-bearbeiten]')?.addEventListener('click',()=>paketFormular(p,pr.id));
+  root.querySelector('[data-rechenweg]')?.addEventListener('click',()=>rechenweg(p));
   root.querySelector('[data-stand-neu]')?.addEventListener('click',()=>standFormular(p,null));
   root.querySelectorAll('[data-stand]').forEach(b=>b.addEventListener('click',()=>standFormular(p,standZeile(b.dataset.stand))));
   root.querySelector('[data-zahlung-neu]')?.addEventListener('click',()=>zahlungFormular(p,null));
@@ -247,24 +251,28 @@ function zeile(dt,dd,klasse=''){return '<div><dt>'+esc(dt)+'</dt><dd'+(klasse?' 
 function paketBlatt(p){
   const k=kz(p);
   const satz=euro(k.satz,k.satz%1?2:0)+'/h';
+  // Gari (25.11.2026): bei jedem Betrag sagen, ob netto oder brutto. Alles hier ist netto (ohne MwSt), das Honorar ohne
+  // Nebenkosten; «zum Gehalt» sind Personalkosten (Bruttogehalt mit Arbeitgeberanteil).
   const gruppen=[
-    ['Vertrag',[zeile('Honorar netto',esc(euro(k.honorar))),zeile('Nebenkosten '+proz(k.nebenkostenProzent),esc(euro(k.nebenkosten))),
-      zeile('Kalkulationssatz',esc(satz)),zeile('Stundenbudget',esc(std(k.budget)))]],
+    ['Vertrag',[zeile('Honorar netto',esc(euro(k.honorar))),zeile('Nebenkosten netto ('+proz(k.nebenkostenProzent)+')',esc(euro(k.nebenkosten))),
+      zeile('Kalkulationssatz netto',esc(satz)),zeile('Stundenbudget',esc(std(k.budget)))]],
     [k.stand?'Stand '+datum(k.stand):'Stand',[zeile('Stunden',esc(std(k.stunden))),
       zeile('Leistungsstand',k.leistungsstand==null?'noch nicht geschätzt':esc(proz(k.leistungsstand))+(k.abgeschlossen&&k.geschaetzt!==100?' <span class="meta">(abgeschlossen)</span>':'')),
-      zeile('Wert der Stunden',esc(euro(k.wert))),zeile('Erarbeitet',esc(euro(k.erarbeitet))),
-      zeile('Ergebnis bisher',esc(plus(k.ergebnisBisher)),plusKlasse(k.ergebnisBisher)),
-      zeile('Honorar je Stunde',k.jeStunde==null?'—':esc(euro(k.jeStunde,2))+'/h')]],
+      zeile('Wert der Stunden netto',esc(euro(k.wert))),zeile('Erarbeitet netto',esc(euro(k.erarbeitet))),
+      zeile('Ergebnis bisher netto',esc(plus(k.ergebnisBisher)),plusKlasse(k.ergebnisBisher)),
+      zeile('Honorar je Stunde netto',k.jeStunde==null?'—':esc(euro(k.jeStunde,2))+'/h')]],
     [k.abgeschlossen?'Am Ende':'Prognose am Ende',[zeile('Stunden',esc(std(k.prognoseStunden))),
-      zeile('Ergebnis',esc(plus(k.prognoseErgebnis)),plusKlasse(k.prognoseErgebnis))]],
-    ['Zahlungen',[zeile('Bezahlt (Honorar)',k.zahlungen?esc(euro(k.bezahlt)):'noch nicht erfasst'),
-      ...(k.gestellt?[zeile('Gestellt, noch offen',esc(euro(k.gestellt)))]:[]),zeile('Erarbeitet, nicht bezahlt',esc(offenText(k)))]]
+      zeile('Ergebnis netto',esc(plus(k.prognoseErgebnis)),plusKlasse(k.prognoseErgebnis))]],
+    ['Zahlungen',[zeile('Bezahlt netto (Abschläge)',k.zahlungen?esc(euro(k.bezahlt)):'noch nicht erfasst'),
+      ...(k.gestellt?[zeile('Gestellt, noch offen, netto',esc(euro(k.gestellt)))]:[]),zeile('Erarbeitet, nicht bezahlt, netto',esc(offenText(k)))]]
   ];
-  if(voll)gruppen.push(['Zum Gehalt',[zeile('Wert der Stunden',k.gehalt==null?'Gehälter unvollständig':esc(euro(k.gehalt))),
-    zeile('Ergebnis bisher',esc(plus(k.ergebnisGehalt)),plusKlasse(k.ergebnisGehalt)),
-    zeile('Prognose am Ende',esc(plus(k.prognoseGehalt)),plusKlasse(k.prognoseGehalt))],true]);
+  if(voll)gruppen.push(['Zum Gehalt',[zeile('Personalkosten der Stunden',k.gehalt==null?'Gehälter unvollständig':esc(euro(k.gehalt))),
+    zeile('Ergebnis bisher netto',esc(plus(k.ergebnisGehalt)),plusKlasse(k.ergebnisGehalt)),
+    zeile('Prognose am Ende netto',esc(plus(k.prognoseGehalt)),plusKlasse(k.prognoseGehalt))],true]);
   return '<section class="card pb-box" aria-label="Kennzahlen"><div class="ct-kopf-zeile"><div><h2 class="pb-h2">'+esc(p.bezeichnung)+'</h2>'+
-    (p.leistung?'<p class="meta">'+esc(p.leistung)+'</p>':'')+'</div><div class="pb-chips">'+chips(p,k)+'</div></div>'+
+    (p.leistung?'<p class="meta">'+esc(p.leistung)+'</p>':'')+'</div><div class="ct-kopf-rechts"><div class="pb-chips">'+chips(p,k)+'</div>'+
+    '<button type="button" class="ct-info" data-rechenweg aria-haspopup="dialog"><span aria-hidden="true">i</span>So wird gerechnet</button></div></div>'+
+    '<p class="meta ct-netto">Alle Beträge in Euro netto, ohne MwSt; das Honorar ohne Nebenkosten.</p>'+
     '<div class="ct-balken-paar">'+balkenStunden(k)+balkenHonorar(k)+'</div>'+
     '<div class="ct-gruppen">'+gruppen.map(([titel,zeilen,nurAdmin])=>'<div class="ct-gruppe"><h3 class="pb-h3">'+esc(titel)+
       (nurAdmin?' <span class="ct-nur-admin">vertraulich</span>':'')+'</h3><dl class="pb-merkmale">'+zeilen.join('')+'</dl></div>').join('')+'</div>'+
@@ -278,8 +286,8 @@ function paketBlatt(p){
 function staendeTabelle(p){
   const reihen=summenVon(p).reverse();
   const honorar=Number(p.honorar_netto)||0,abgeschlossen=p.status==='abgeschlossen';
-  const kopf='<tr><th>Stichtag</th><th class="num">Leistungsstand</th><th class="num">Stunden</th><th class="num">Wert (Kalkulation)</th>'+
-    '<th class="num">Erarbeitet</th><th class="num">Ergebnis</th>'+(voll?'<th class="num">Wert (Gehalt)</th><th></th>':'')+'</tr>';
+  const kopf='<tr><th>Stichtag</th><th class="num">Leistungsstand</th><th class="num">Stunden</th><th class="num">Wert netto<span class="ct-einheit">zum Kalkulationssatz</span></th>'+
+    '<th class="num">Erarbeitet netto</th><th class="num">Ergebnis netto</th>'+(voll?'<th class="num">Personalkosten<span class="ct-einheit">zum Gehalt</span></th><th></th>':'')+'</tr>';
   const body=reihen.map((s,i)=>{
     const ls=abgeschlossen&&i===0?100:s.leistungsstand;
     const erarbeitet=ls!=null?honorar*Number(ls)/100:null,ergebnis=erarbeitet!=null?erarbeitet-Number(s.wert_kalkulation||0):null;
@@ -293,30 +301,34 @@ function staendeTabelle(p){
   return '<section class="card pb-box" role="tabpanel" aria-label="Stände und Stunden"><div class="pb-box-kopf"><h2 class="pb-h2">Stände und Stunden</h2>'+
     (voll?'<button type="button" class="btn btn-primary" data-stand-neu>Neuer Stand</button>':'')+'</div>'+
     '<p class="meta">Je Stand die Stunden seit Beginn des Pakets bis zum Stichtag und der geschätzte Leistungsstand. '+
-    (voll?'Stunden je Person und der Wert zum Gehalt sind vertraulich: sichtbar nur für Admins und mit vollem Zugang.':'Die Aufteilung auf Personen ist vertraulich.')+'</p>'+
+    (voll?'Stunden je Person und der Wert zum Gehalt sind vertraulich: sichtbar nur mit vollem Zugang zum Controlling.':'Die Aufteilung auf Personen ist vertraulich.')+'</p>'+
     (reihen.length?'<div class="pb-tabelle ct-tabelle"><table><thead>'+kopf+'</thead><tbody>'+body+'</tbody></table></div>'
       :'<p class="meta">Noch kein Stand erfasst.</p>')+'</section>';
 }
+// Spalten in der Reihenfolge der Rechnung des Büros (Gari und die Buchhaltung, 25.11.2026): Abschlag (AZ), zzgl.
+// Nebenkosten, Netto inkl. Nebenkosten, MwSt, Brutto.
 function zahlungenTabelle(p,k){
   const liste=zahlungenVon(p),nk=Number(p.nebenkosten_prozent)||0;
-  const summe=f=>liste.reduce((s,z)=>s+f(z),0);
-  const kopf='<tr><th>Datum</th><th>Bezeichnung</th><th class="num">Netto</th><th class="num">davon Honorar</th><th class="num">davon Nebenkosten</th>'+
+  const teile=z=>{const r=K.rechnung({netto:Number(z.netto)||0},nk);r.mwst=K.r2(Number(z.mwst)||0);r.brutto=K.r2(r.netto+r.mwst);return r};
+  const summe=f=>K.r2(liste.reduce((s,z)=>s+teile(z)[f],0));
+  const kopf='<tr><th>Datum</th><th>Bezeichnung</th><th class="num">Abschlag (AZ)<span class="ct-einheit">Honorar netto</span></th>'+
+    '<th class="num">zzgl. '+esc(proz(nk))+' Nebenkosten</th><th class="num">Netto<span class="ct-einheit">inkl. Nebenkosten</span></th>'+
     '<th class="num">MwSt</th><th class="num">Brutto</th><th>Status</th>'+(voll?'<th></th>':'')+'</tr>';
   const body=liste.map(z=>{
-    const netto=Number(z.netto)||0,mwst=Number(z.mwst)||0,h=K.honorarAnteil(netto,nk);
+    const r=teile(z);
     return '<tr><td>'+esc(datum(z.datum)||'offen')+'</td><td>'+esc(z.bezeichnung||'')+(z.notiz?'<span class="ct-personen">'+esc(z.notiz)+'</span>':'')+'</td>'+
-      '<td class="num">'+esc(euro(netto,2))+'</td><td class="num">'+esc(euro(h,2))+'</td><td class="num">'+esc(euro(K.r2(netto-h),2))+'</td>'+
-      '<td class="num">'+esc(euro(mwst,2))+'</td><td class="num">'+esc(euro(K.r2(netto+mwst),2))+'</td>'+
+      '<td class="num">'+esc(euro(r.abschlag,2))+'</td><td class="num">'+esc(euro(r.nebenkosten,2))+'</td><td class="num">'+esc(euro(r.netto,2))+'</td>'+
+      '<td class="num">'+esc(euro(r.mwst,2))+'</td><td class="num">'+esc(euro(r.brutto,2))+'</td>'+
       '<td><span class="chip'+(z.status==='bezahlt'?' chip-ok':' chip-att')+'">'+esc(z.status)+'</span>'+(z.vorlaeufig?' <span class="chip chip-att">vorläufig</span>':'')+'</td>'+
       (voll?'<td><button type="button" class="btn btn-quiet" data-zahlung="'+esc(z.id)+'">Bearbeiten</button></td>':'')+'</tr>';
   }).join('');
-  const fuss=liste.length?'<tfoot><tr><td colspan="2">Summe</td><td class="num">'+esc(euro(summe(z=>Number(z.netto)||0),2))+'</td>'+
-    '<td class="num">'+esc(euro(summe(z=>K.honorarAnteil(z.netto,nk)),2))+'</td><td class="num">'+esc(euro(summe(z=>(Number(z.netto)||0)-K.honorarAnteil(z.netto,nk)),2))+'</td>'+
-    '<td class="num">'+esc(euro(summe(z=>Number(z.mwst)||0),2))+'</td><td class="num">'+esc(euro(summe(z=>(Number(z.netto)||0)+(Number(z.mwst)||0)),2))+'</td><td></td>'+(voll?'<td></td>':'')+'</tr></tfoot>':'';
+  const fuss=liste.length?'<tfoot><tr><td colspan="2">Summe</td>'+['abschlag','nebenkosten','netto','mwst','brutto'].map(f=>'<td class="num">'+esc(euro(summe(f),2))+'</td>').join('')+
+    '<td></td>'+(voll?'<td></td>':'')+'</tr></tfoot>':'';
   return '<section class="card pb-box" role="tabpanel" aria-label="Zahlungen"><div class="pb-box-kopf"><h2 class="pb-h2">Zahlungen</h2>'+
     (voll?'<button type="button" class="btn btn-primary" data-zahlung-neu>Zahlung erfassen</button>':'')+'</div>'+
-    '<p class="meta">Abschläge und Schlussrechnung: netto mit Nebenkosten, dazu die MwSt. Das Controlling zählt den Honoraranteil (netto ÷ '+
-    esc(zahl(1+nk/100,2))+'); bezahlt '+esc(euro(k.bezahlt))+(k.gestellt?', gestellt '+esc(euro(k.gestellt)):'')+'.</p>'+
+    '<p class="meta">Wie auf der Rechnung: Abschlag (Honorar netto) zzgl. '+esc(proz(nk))+' Nebenkosten = Netto, zzgl. MwSt = Brutto. '+
+    'Als bezahlt zählt das Controlling nur den Abschlag, ohne Nebenkosten und MwSt: bisher '+esc(euro(k.bezahlt))+' netto'+
+    (k.gestellt?', gestellt und noch offen '+esc(euro(k.gestellt))+' netto':'')+'.</p>'+
     (liste.length?'<div class="pb-tabelle ct-tabelle"><table><thead>'+kopf+'</thead><tbody>'+body+'</tbody>'+fuss+'</table></div>'
       :'<p class="meta">Noch keine Zahlung erfasst.</p>')+'</section>';
 }
@@ -346,7 +358,7 @@ function renderSaetze(){
     '<label>Jahresstunden (produktiv)<input name="h" class="pb-input" inputmode="decimal" required value="'+esc(eingabe(e.jahresstunden))+'"></label>'+
     '<label class="breit"><span class="meta">Arbeitgeberanteil: Sozialversicherung und Umlagen auf das Bruttogehalt. Jahresstunden: bezahlte Stunden abzüglich Urlaub, Feiertage und Krankheit.</span></label>'+
     '<div class="pb-actions"><button class="btn btn-primary">Speichern</button></div></form></section>'+
-    (istAdmin?zugangBox(aktive):'')+'</div>';
+    (istAdmin&&voll?zugangBox(aktive):'')+'</div>';
   root.querySelectorAll('[data-person]').forEach(b=>b.addEventListener('click',()=>satzFormular(b.dataset.person)));
   bindeZugang();
   root.querySelector('[data-einstellungen]').addEventListener('submit',async ev=>{
@@ -359,16 +371,15 @@ function renderSaetze(){
   });
 }
 
-// Voller Zugang zum Controlling (nur Admins vergeben ihn): Admins haben ihn immer; zusätzlich etwa die Buchhaltung.
-// Wer ihn hat, sieht alle Projekte, Stunden je Person, Sätze und Gehälter und trägt ein, wird aber nicht Admin des Office.
+// Voller Zugang zum Controlling: nur wer auf der Liste steht (Gari, 25.11.2026: er, die Buchhaltung und später der Chef),
+// auch Admins nicht von selbst. Vergeben und entziehen: wer auf der Liste steht und Admin ist; sich selbst nicht.
 function zugangBox(aktive){
   const mit=new Set(daten.zugang.map(z=>z.user_id));
-  const admins=aktive.filter(x=>x.role==='admin'),weitere=aktive.filter(x=>x.role!=='admin'&&mit.has(x.user_id));
-  const ohne=aktive.filter(x=>x.role!=='admin'&&!mit.has(x.user_id));
+  const drauf=aktive.filter(x=>mit.has(x.user_id)),ohne=aktive.filter(x=>!mit.has(x.user_id));
   return '<section class="card pb-box" data-zugang><h2 class="pb-h2">Voller Zugang zum Controlling</h2>'+
-    '<p class="meta">Sieht alle Projekte, Stunden je Person, Sätze und Gehälter und kann eintragen, etwa die Buchhaltung. Admin des Office wird die Person dadurch nicht.</p>'+
-    '<ul class="ct-zugang">'+admins.map(x=>'<li><span>'+esc(x.display_name||'—')+'</span><span class="meta">Admin, immer</span></li>').join('')+
-    weitere.map(x=>'<li><span>'+esc(x.display_name||'—')+'</span><button type="button" class="btn btn-quiet btn-danger" data-zugang-weg="'+esc(x.user_id)+'">Entfernen</button></li>').join('')+'</ul>'+
+    '<p class="meta">Nur wer hier steht, sieht Sätze, Gehälter und die Stunden je Person aller Projekte und trägt im Controlling ein. Admin zu sein reicht dafür nicht.</p>'+
+    '<ul class="ct-zugang">'+drauf.map(x=>'<li><span>'+esc(x.display_name||'—')+(x.role==='admin'?' <span class="meta">Admin</span>':'')+'</span>'+
+      (x.user_id===nutzer.id?'<span class="meta">du</span>':'<button type="button" class="btn btn-quiet btn-danger" data-zugang-weg="'+esc(x.user_id)+'">Entfernen</button>')+'</li>').join('')+'</ul>'+
     (ohne.length?'<div class="pb-dok-neu"><select class="pb-input" data-zugang-person aria-label="Person">'+ohne.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.display_name||'—')+'</option>').join('')+'</select>'+
       '<button type="button" class="btn" data-zugang-geben>Zugang geben</button></div>':'')+'</section>';
 }
@@ -385,6 +396,44 @@ function bindeZugang(){
     if(error){meldung('Nicht entfernt: '+error.message,'warn');return}
     await neuLaden('Zugang entfernt.');
   }));
+}
+
+// «So wird gerechnet» (Gari und die Buchhaltung, 25.11.2026: woher kommen die Zahlen?): jeder Wert mit seiner Herkunft,
+// im Projektblatt mit den Zahlen des Pakets eingesetzt. Dieselben Formeln wie controlling-kern.js.
+function rechenweg(p){
+  const k=p?kz(p):null,e=(x,d=0)=>esc(euro(x,d)),h=x=>esc(std(x)),pr=x=>esc(proz(x));
+  const satz=k?e(k.satz,k.satz%1?2:0)+'/h':'';
+  const einheitlich=k&&k.stunden>0&&Math.abs(k.wert-k.stunden*k.satz)<0.01;
+  const z=(titel,text,wert)=>'<li><strong>'+esc(titel)+'</strong><span>'+esc(text)+'</span>'+(wert?'<span class="ct-rw-wert">'+wert+'</span>':'')+'</li>';
+  const zeilen=[
+    z('Honorar netto','Laut Vertrag, ohne Nebenkosten und MwSt; eingetragen im Paket.',k?e(k.honorar):''),
+    z('Stundenbudget','Honorar ÷ Kalkulationssatz. Der Kalkulationssatz ist der Preis, mit dem das Büro eine Stunde plant (85 €/h, je Person änderbar), kein Gehalt.',
+      k?e(k.honorar)+' ÷ '+satz+' = '+h(k.budget):''),
+    z('Stunden','Aus dem letzten Stand: die Stunden seit Beginn des Pakets bis zum Stichtag, je Person oder als Team (Reiter «Stände und Stunden»).',
+      k&&k.stand?h(k.stunden)+' am '+esc(datum(k.stand)):''),
+    z('Wert der Stunden netto','Stunden × Kalkulationssatz; wer einen eigenen Satz hat, mit seinem. Neue Stunden zählen zum Satz, der am Stichtag gilt.',
+      k&&k.stand?(einheitlich?h(k.stunden)+' × '+satz+' = '+e(k.wert):'Summe je Person = '+e(k.wert)):''),
+    z('Leistungsstand','Geschätzt von der Projektleitung im Stand: wie viel der beauftragten Leistung fertig ist. Abgeschlossen zählt als 100 %.',
+      k?(k.leistungsstand==null?'noch nicht geschätzt':pr(k.leistungsstand)):''),
+    z('Erarbeitet netto','Honorar × Leistungsstand: was die Leistung bis jetzt wert ist, bezahlt oder nicht.',
+      k&&k.erarbeitet!=null?e(k.honorar)+' × '+pr(k.leistungsstand)+' = '+e(k.erarbeitet):''),
+    z('Ergebnis bisher netto','Erarbeitet − Wert der Stunden. Positiv: die Leistung ist mehr wert, als die Stunden zum Kalkulationssatz kosten.',
+      k&&k.ergebnisBisher!=null?e(k.erarbeitet)+' − '+e(k.wert)+' = '+esc(plus(k.ergebnisBisher)):''),
+    z('Prognose am Ende','Auf 100 % hochgerechnet, als ginge es im gleichen Takt weiter: Stunden ÷ Leistungsstand; Ergebnis = Honorar − Wert der Stunden ÷ Leistungsstand.',
+      k&&k.prognoseErgebnis!=null?h(k.stunden)+' ÷ '+pr(k.leistungsstand)+' = '+h(k.prognoseStunden)+' · '+e(k.honorar)+' − '+e(k.wert)+' ÷ '+pr(k.leistungsstand)+' = '+esc(plus(k.prognoseErgebnis)):''),
+    z('Honorar je Stunde netto','Erarbeitet ÷ Stunden: was eine Stunde bisher eingebracht hat, zum Vergleich mit dem Kalkulationssatz.',
+      k&&k.jeStunde!=null?e(k.erarbeitet)+' ÷ '+h(k.stunden)+' = '+e(k.jeStunde,2)+'/h':''),
+    z('Bezahlt netto','Summe der bezahlten Abschläge (AZ): nur das Honorar, ohne Nebenkosten und MwSt. Je Zahlung: Netto ÷ (1 + Nebenkosten).',
+      k?(k.zahlungen?e(k.bezahlt):'keine Zahlungen erfasst'):''),
+    z('Erarbeitet, nicht bezahlt','Erarbeitet − Bezahlt: was abgerechnet werden kann. Negativ heißt: im Voraus bezahlt.',
+      k&&k.offen!=null&&k.zahlungen?e(k.erarbeitet)+' − '+e(k.bezahlt)+' = '+e(k.offen):''),
+    z('Die Balken','Stunden: grau bis jetzt, der Strich ist das Soll beim Leistungsstand (Budget × Leistungsstand), bernsteinfarben, wenn darüber. Honorar: dunkel bezahlt, hell erarbeitet.','')
+  ];
+  if(voll)zeilen.push(z('Zum Gehalt (vertraulich)','Wie «Wert der Stunden», aber mit den Personalkosten jeder Person: Monatsgehalt × 12 × (1 + Arbeitgeberanteil) ÷ Jahresstunden. Bleibt leer, solange Stunden nur als Team erfasst sind oder ein Gehalt fehlt. Das Ergebnis zum Gehalt ist, was nach den Gehältern für Bürokosten und Gewinn bleibt.',''));
+  oeffneDialog('<form method="dialog" class="pb-form ct-rechenweg"><h2>So wird gerechnet</h2>'+
+    '<p class="meta">'+(p?esc(p.bezeichnung)+' · ':'')+'alle Beträge netto, ohne MwSt'+(p?'':'; im Projektblatt mit den Zahlen des Pakets')+'.</p>'+
+    '<ol class="ct-rw">'+zeilen.join('')+'</ol>'+
+    '<div class="pb-actions"><button value="abbrechen" class="btn btn-primary">Schließen</button></div></form>');
 }
 
 // ---------- Formulare ----------
@@ -532,29 +581,44 @@ function standFormular(p,stand){
   });
 }
 
-// Eine Zahlung: netto (mit Nebenkosten) und MwSt; wer nur den Bruttobetrag kennt, trägt ihn ein und das Formular teilt ihn.
+// Eine Zahlung wie die Rechnung des Büros (Gari und die Buchhaltung, 25.11.2026): Abschlag (Honorar netto) zzgl.
+// Nebenkosten = Netto; zzgl. MwSt = Brutto. Eingetragen wird, was zur Hand ist: der Abschlag, das Netto oder das Brutto;
+// die übrigen Felder rechnen sich mit (controlling-kern.js, rechnung). Die MwSt folgt jeder Änderung und lässt sich danach
+// noch von Hand setzen. Gespeichert werden Netto und MwSt; der Abschlag ist Netto ÷ (1 + Nebenkosten).
 function zahlungFormular(p,z){
-  const nk=Number(p.nebenkosten_prozent)||0;
+  const nk=Number(p.nebenkosten_prozent)||0,mw=K.MWST_PROZENT;
+  const start=z?K.rechnung({netto:Number(z.netto)},nk):null;
+  if(start&&z.mwst!=null){start.mwst=K.r2(z.mwst);start.brutto=K.r2(start.netto+start.mwst)}
+  const feld=(name,text,wert,extra='')=>'<label>'+text+'<input name="'+name+'" class="pb-input" inputmode="decimal" value="'+esc(eingabe(wert))+'"'+extra+'></label>';
   const form=oeffneDialog('<form method="dialog" class="pb-form"><h2>'+(z?'Zahlung bearbeiten':'Zahlung erfassen')+'</h2><p class="meta">'+esc(p.bezeichnung)+'</p>'+
     '<div class="pb-felder">'+
     '<label>Datum<input type="date" name="datum" class="pb-input" value="'+esc(z?.datum||'')+'"></label>'+
-    '<label>Bezeichnung<input name="bezeichnung" class="pb-input" maxlength="160" value="'+esc(z?.bezeichnung||'')+'" placeholder="z. B. 1. Abschlag"></label>'+
-    '<label class="breit">Brutto (€), wird aufgeteilt<input name="brutto" class="pb-input" inputmode="decimal" placeholder="z. B. 25.000 – füllt Netto und MwSt zu '+K.MWST_PROZENT+' %"></label>'+
-    '<label>Netto mit Nebenkosten (€)<input name="netto" class="pb-input" inputmode="decimal" required value="'+esc(eingabe(z?.netto))+'"></label>'+
-    '<label>MwSt (€)<input name="mwst" class="pb-input" inputmode="decimal" value="'+esc(eingabe(z?.mwst??''))+'"></label>'+
+    '<label>Bezeichnung<input name="bezeichnung" class="pb-input" maxlength="160" value="'+esc(z?.bezeichnung||'')+'" placeholder="z. B. RE 2401/04/2026 – 1. AZ LPH 3"></label>'+
+    '</div><p class="meta ct-rechnung-hinweis">Wie auf der Rechnung. Eintragen, was zur Hand ist – Abschlag, Netto oder Brutto –, der Rest rechnet sich mit.</p>'+
+    '<div class="ct-rechnung">'+
+    feld('abschlag','Abschlag (AZ), Honorar netto (€)',start?.abschlag,' placeholder="z. B. 18.388,36"')+
+    '<div class="ct-rechnung-zeile"><span>zzgl. '+esc(proz(nk))+' Nebenkosten</span><strong data-nk>'+esc(start?euro(start.nebenkosten,2):'—')+'</strong></div>'+
+    feld('netto','Netto inkl. Nebenkosten (€)',start?.netto,' required')+
+    feld('mwst','zzgl. '+mw+' % MwSt (€)',start?.mwst)+
+    feld('brutto','Brutto (€)',start?.brutto)+
+    '</div><div class="pb-felder">'+
     '<label>Status<select name="status" class="pb-input">'+optionen(ZAHLUNG,z?.status||'bezahlt')+'</select></label>'+
     '<label class="pb-check"><input type="checkbox" name="vorlaeufig"'+(z?.vorlaeufig?' checked':'')+'>vorläufig (noch nicht bestätigt)</label>'+
     '<label class="breit">Notiz<input name="notiz" class="pb-input" maxlength="1000" value="'+esc(z?.notiz||'')+'"></label></div>'+
-    '<p class="ct-vorschau" data-vorschau></p>'+knoepfe('Speichern',z?'Zahlung entfernen':'')+'</form>');
-  const vorschau=()=>{
-    const n=K.leseZahl(form.netto.value),m=K.leseZahl(form.mwst.value)||0;
-    dialog.querySelector('[data-vorschau]').textContent=n==null?'':'davon Honorar '+euro(K.honorarAnteil(n,nk),2)+' · Nebenkosten '+euro(K.r2(n-K.honorarAnteil(n,nk)),2)+' · brutto '+euro(K.r2(n+m),2);
+    knoepfe('Speichern',z?'Zahlung entfernen':'')+'</form>');
+  // Was eingetragen wird, bestimmt die übrigen Felder; das Feld selbst bleibt, wie es getippt wurde.
+  const setze=(r,ausser)=>{
+    for(const f of ['abschlag','netto','mwst','brutto'])if(f!==ausser)form[f].value=r?eingabe(r[f]):'';
+    dialog.querySelector('[data-nk]').textContent=r?euro(r.nebenkosten,2):'—';
   };
-  form.brutto.addEventListener('input',()=>{
-    const b=K.leseZahl(form.brutto.value);if(b==null)return;
-    const t=K.ausBrutto(b);form.netto.value=eingabe(t.netto);form.mwst.value=eingabe(t.mwst);vorschau();
+  for(const f of ['abschlag','netto','brutto'])form[f].addEventListener('input',()=>{
+    const w=K.leseZahl(form[f].value);setze(w==null?null:K.rechnung({[f]:w},nk),f);
   });
-  form.addEventListener('input',vorschau);vorschau();
+  // MwSt von Hand: Netto bleibt, Brutto folgt.
+  form.mwst.addEventListener('input',()=>{
+    const n=K.leseZahl(form.netto.value),m=K.leseZahl(form.mwst.value);
+    if(n!=null&&m!=null)form.brutto.value=eingabe(K.r2(n+m));
+  });
   if(z)entfernenFrage('Wirklich entfernen?',async()=>{
     const {error}=await sb.from('office_controlling_zahlungen').delete().eq('id',z.id);
     if(error){zeigeFehler('Nicht entfernt: '+error.message);return}
@@ -564,7 +628,7 @@ function zahlungFormular(p,z){
     if(ev.submitter?.value!=='speichern')return;
     ev.preventDefault();
     const netto=K.leseZahl(form.netto.value),mwst=form.mwst.value.trim()?K.leseZahl(form.mwst.value):0;
-    if(netto==null||netto<0){zeigeFehler('Netto als Betrag in Euro, etwa 21.008,40.');return}
+    if(netto==null||netto<0){zeigeFehler('Bitte den Abschlag, das Netto oder das Brutto als Betrag in Euro eintragen, etwa 18.388,36.');return}
     if(mwst==null||mwst<0){zeigeFehler('MwSt als Betrag in Euro.');return}
     const zeile={datum:form.datum.value||null,bezeichnung:form.bezeichnung.value.trim()||null,netto,mwst,status:form.status.value,
       vorlaeufig:form.vorlaeufig.checked,notiz:form.notiz.value.trim()||null};

@@ -69,6 +69,36 @@
 .ct-person input[name="name"]{flex:1 1 160px}
 .ct-person input[name="stunden"]{width:110px;flex:0 0 auto;text-align:right}
 .ct-vorschau{margin:0;font-size:13px;color:var(--m-ink-soft);font-variant-numeric:tabular-nums}
+/* «So wird gerechnet» (Gari und die Buchhaltung, 25.11.2026): blau, weil man es anklickt; der Dialog nennt je Wert seine
+   Herkunft und, im Projektblatt, die Zahlen des Pakets. */
+.ct-info{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 4px;border:0;background:transparent;
+  color:var(--m-link);font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.ct-info:hover{color:var(--m-link-hover)}
+.ct-info>span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:var(--m-radius-pill);
+  border:1.5px solid currentColor;font-size:12px;font-weight:700;font-style:italic;font-family:var(--m-type-reading);line-height:1}
+.ct-kopf-rechts{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px 14px}
+.ct-netto{margin:-4px 0 0}
+.ct-einheit{display:block;font-size:11px;font-weight:500;color:var(--m-ink-soft);text-transform:none;letter-spacing:0}
+.ct-rw{margin:0;padding:0 0 0 22px;display:flex;flex-direction:column;gap:12px}
+.ct-rw li{display:flex;flex-direction:column;gap:2px;padding-left:2px}
+.ct-rw li strong{font-size:14px}
+.ct-rw li span{font-size:13px;color:var(--m-ink-soft);line-height:1.45}
+.ct-rw li .ct-rw-wert{color:var(--m-ink);font-variant-numeric:tabular-nums;font-weight:600}
+.ct-rechenweg{max-width:640px}
+
+/* Zahlung wie die Rechnung: Abschlag, zzgl. Nebenkosten, Netto, MwSt, Brutto untereinander. */
+.ct-rechnung{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:12px 14px;border:1px solid var(--m-border-soft);
+  border-radius:var(--m-radius-control);background:var(--m-surface)}
+.ct-rechnung label{display:grid;grid-template-columns:minmax(0,1fr) 170px;align-items:center;gap:12px;font-size:14px}
+.ct-rechnung input{text-align:right;font-variant-numeric:tabular-nums}
+.ct-rechnung-zeile{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:12px;align-items:center;font-size:14px;
+  color:var(--m-ink-soft);padding:0 2px}
+.ct-rechnung-zeile strong{text-align:right;padding-right:14px;color:var(--m-ink);font-variant-numeric:tabular-nums;font-weight:600}
+.ct-rechnung-hinweis{margin:0}
+@media (max-width:520px){
+  .ct-rechnung label,.ct-rechnung-zeile{grid-template-columns:minmax(0,1fr) 130px}
+}
+
 /* Voller Zugang zum Controlling (Sätze und Gehälter, nur Admins) */
 .ct-zugang{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .ct-zugang li{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid var(--m-border-soft)}

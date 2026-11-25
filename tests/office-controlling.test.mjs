@@ -6,10 +6,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
 const require=createRequire(import.meta.url);
 const K=require('../controlling-kern.js');
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const MIGRATION='supabase/migrations/20261125085053_office_controlling_v1.sql';
+const NAMEN=new Set(['dd428b9e787711c2','2993f8453f06da87','879d13f4257efdfd','9b7a0f2e159a5d55','bd84dc633654d437','eb203bf139e410c2','a3e187e1bef887dd','a19d126e91d01af4']);
 
 test('Zahlen wie im Büro eingegeben: Tausenderpunkt, Komma, Euro',()=>{
   assert.equal(K.leseZahl('112.000'),112000);
@@ -80,9 +82,9 @@ test('Übersicht: laufende Pakete zuerst, darin die schlechteste Prognose oben',
 
 test('Seite: Tokens zuerst, Kern vor der Seite, Marke im Rahmen, Anmeldung wie die anderen Werkzeuge',()=>{
   const html=read('controlling.html'),js=read('controlling.js');
-  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=2">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office2">/);
+  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=2">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office3">/);
   assert.match(html,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  assert.ok(html.indexOf('controlling-kern.js?v=office1')<html.indexOf('controlling.js?v=office2'));
+  assert.ok(html.indexOf('controlling-kern.js?v=office2')<html.indexOf('controlling.js?v=office3'));
   assert.ok(html.includes("<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>"));
   assert.match(js,/const IM_REITER=window\.self!==window\.top;/);
   assert.match(js,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
@@ -102,8 +104,9 @@ test('Sichtbarkeit: Personen, Sätze, Gehälter und Einstellungen fragt die Seit
   }
   assert.match(js,/sb\.rpc\('office_controlling_summen',\{p_project:id\}\)/);
   // Voller Zugang: Admin oder eigener Eintrag in office_controlling_zugang; den Zugang vergeben nur Admins.
-  assert.match(js,/istAdmin=m\.role==='admin';\n  voll=istAdmin\|\|await hatZugang\(\);/);
-  assert.match(js,/\(istAdmin\?zugangBox\(aktive\):''\)/);
+  // Seit office_controlling_nur_liste: nur die Liste, Admin allein reicht nicht; vergeben: Admin auf der Liste.
+  assert.match(js,/istAdmin=m\.role==='admin';\n  voll=await hatZugang\(\);/);
+  assert.match(js,/\(istAdmin&&voll\?zugangBox\(aktive\):''\)/);
   // Bearbeiten-Knöpfe nur mit vollem Zugang.
   for(const k of ['data-stand-neu','data-zahlung-neu','data-paket-bearbeiten','data-paket-neu'])
     assert.match(js,new RegExp("voll\\?[^:]*"+k),k);
@@ -156,10 +159,58 @@ test('Tools und Work: Karte «Controlling», Reiter je Projekt nach der Kostenbe
 test('Keine Namen aus Projekten und Team, keine spanischen Wörter',()=>{
   for(const f of ['controlling.html','controlling.js','controlling-kern.js','controlling.css',MIGRATION,'tests/sql/office-controlling-acceptance.sql',
     'tests/browser/fixtures/fake-supabase-controlling.js','tests/browser/office-controlling.chromium.mjs',
-    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
+    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
     const s=read(f);
-    assert.doesNotMatch(s,/Bernried|Schwarz|Yvonne|Antonia|Höhenweg|Reichenau|Titus/,f);
+    // Namen von Projekten, Bauherren und Kolleginnen nur als Prüfsumme (sha256, 16 Zeichen), damit sie selbst nicht im
+    // öffentlichen Repo stehen.
+    for(const w of new Set(s.toLowerCase().match(/[a-zäöüß]+/g)||[]))
+      assert.ok(!NAMEN.has(createHash('sha256').update(w).digest('hex').slice(0,16)),f+' enthält einen Namen aus dem Büro');
     assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(s.replace(/@supabase\/supabase-js@2\.57\.0/g,'').replace(/[\w.+-]+@[\w-]+\.invalid\b/g,'')),f+' enthält eine E-Mail-Adresse');
     assert.ok(!/\b(para|que|como|desde|proyecto|pagos|horas|sueldo|también|cálculo)\b/i.test(s),'spanische Wörter in '+f);
   }
+});
+
+test('Rechnung wie die des Büros: Abschlag zzgl. Nebenkosten = Netto, zzgl. MwSt = Brutto, aus jedem Eingang auf den Cent',()=>{
+  const r={abschlag:18388.36,nebenkosten:919.42,netto:19307.78,mwst:3668.48,brutto:22976.26};
+  assert.deepEqual(K.rechnung({abschlag:18388.36},5),r);
+  assert.deepEqual(K.rechnung({netto:19307.78},5),r);
+  assert.deepEqual(K.rechnung({brutto:22976.26},5),r);
+  assert.deepEqual(K.rechnung({brutto:25000},5),{abschlag:20008,nebenkosten:1000.4,netto:21008.4,mwst:3991.6,brutto:25000});
+  assert.equal(K.rechnung({},5),null);
+  assert.equal(K.r2(1.005),1.01,'kaufmännisch gerundet');
+  // Vom Netto zurück zum Abschlag trifft den Cent, solange die Nebenkosten aus dem Abschlag gerundet sind.
+  for(let c=1;c<300000;c+=37){const a=c/100;assert.equal(K.honorarAnteil(K.rechnung({abschlag:a},5).netto,5),a,String(a))}
+  // Bezahlt: je Zahlung ihr Abschlag, dann die Summe (wie die Tabelle).
+  const k=K.kennzahlen({honorar_netto:90365.63,nebenkosten_prozent:5,kalkulationssatz:85,status:'beauftragt'},[],
+    [{netto:19307.78,mwst:3668.48,status:'bezahlt'},{netto:19307.78,mwst:3668.48,status:'bezahlt'}]);
+  assert.equal(k.bezahlt,36776.72);
+});
+
+test('Zahlungen: Spalten in der Reihenfolge der Rechnung, die MwSt folgt dem Netto (Gari und die Buchhaltung, 25.11.2026)',()=>{
+  const js=read('controlling.js');
+  const kopf=js.slice(js.indexOf('function zahlungenTabelle'),js.indexOf('const body=',js.indexOf('function zahlungenTabelle')));
+  const reihe=['Abschlag (AZ)','Nebenkosten</th>','>Netto<','>MwSt<','>Brutto<'].map(t=>kopf.indexOf(t));
+  assert.ok(reihe.every(i=>i>0)&&reihe.every((i,n)=>!n||i>reihe[n-1]),'Abschlag, Nebenkosten, Netto, MwSt, Brutto: '+reihe);
+  assert.match(js,/for\(const f of \['abschlag','netto','brutto'\]\)form\[f\]\.addEventListener\('input',\(\)=>\{\n    const w=K\.leseZahl\(form\[f\]\.value\);setze\(w==null\?null:K\.rechnung\(\{\[f\]:w\},nk\),f\);/);
+  // So wird gerechnet: im Projektblatt und in der Übersicht.
+  assert.equal((js.match(/data-rechenweg aria-haspopup="dialog"/g)||[]).length,2);
+  assert.match(js,/addEventListener\('click',\(\)=>rechenweg\(p\)\)/);
+  assert.match(js,/addEventListener\('click',\(\)=>rechenweg\(null\)\)/);
+  assert.match(js,/Alle Beträge in Euro netto, ohne MwSt; das Honorar ohne Nebenkosten\./);
+});
+
+test('Migration nur Liste: Sätze, Gehälter, Stunden je Person und Annahmen nur mit Eintrag, auch für Admins; nichts entfernt',()=>{
+  const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_controlling_nur_liste\.sql$/.test(f));
+  assert.equal(datei.length,1);
+  const sql=read('supabase/migrations/'+datei[0]),ohne=sql.replace(/--.*$/gm,'');
+  assert.doesNotMatch(ohne,/\b(drop|truncate|delete\s+from|alter\s+table\s+\S+\s+drop)\b/i,'nichts Destruktives');
+  // Heutige Admins behalten ihren Zugang: sie kommen auf die Liste, bevor die Liste allein zählt.
+  assert.ok(sql.indexOf("where m.role = 'admin' and m.is_active")<sql.indexOf('create or replace function private.office_controlling_voll()'));
+  assert.match(sql,/create or replace function private\.office_controlling_voll\(\) returns boolean\nlanguage sql stable security definer set search_path = '' as \$\$\n  select exists \(select 1 from public\.office_controlling_zugang z/);
+  assert.doesNotMatch(sql.slice(sql.indexOf('create or replace function private.office_controlling_voll()')),/office_is_admin/,'Admin allein reicht nicht');
+  for(const t of ['saetze','stunden','einstellungen'])
+    assert.match(sql,new RegExp('create policy office_controlling_'+t+'_nur_liste on public\\.office_controlling_'+t+'\\n  as restrictive for all to authenticated'),t);
+  assert.match(sql,/office_controlling_zugang_nur_liste_vergeben on public\.office_controlling_zugang\n  as restrictive for insert/);
+  const abnahme=read('tests/sql/office-controlling-acceptance.sql');
+  assert.match(abnahme,/A2_stunden=0; A2_saetze=0; A2_einstellungen=0; A2_s1_gehalt=null; A2_aendert_ohne_liste=0; A2_selbst=verweigert; A_nimmt_A2_auf=ok; /);
 });

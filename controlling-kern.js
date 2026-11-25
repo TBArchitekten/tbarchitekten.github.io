@@ -9,7 +9,8 @@
 (function(root){
 'use strict';
 const zahl=x=>{const n=Number(x);return Number.isFinite(n)?n:0};
-const r2=x=>Math.round(zahl(x)*100)/100;
+// Auf Cent wie auf der Rechnung (kaufmännisch; 1,005 → 1,01, was x*100 bei Gleitkommazahlen verfehlt).
+const r2=x=>{const n=zahl(x),v=Number(Math.round(Number(n+'e2'))+'e-2');return Number.isFinite(v)?v:Math.round(n*100)/100};
 const MWST_PROZENT=19;
 const STATUS={angeboten:'angeboten',beauftragt:'beauftragt',abgeschlossen:'abgeschlossen'};
 
@@ -29,6 +30,19 @@ function ausBrutto(brutto,mwstProzent=MWST_PROZENT){
 }
 // Vom Netto einer Zahlung ist der Anteil des Honorars ohne die Nebenkosten (Prozent auf das Honorar).
 function honorarAnteil(netto,nkProzent){return r2(zahl(netto)/(1+zahl(nkProzent)/100))}
+// Eine Rechnung wie die des Büros (Gari und die Buchhaltung, 25.11.2026): Abschlag (Honorar netto) zzgl. Nebenkosten in
+// Prozent = Netto; zzgl. MwSt = Brutto; jeder Schritt auf Cent gerundet. Ausgang ist, was eingetragen wurde: der Abschlag,
+// das Netto oder das Brutto; der Rest folgt daraus. Vom Netto zurück zum Abschlag trifft ÷ (1 + Nebenkosten) den Cent,
+// solange die Nebenkosten auf den Cent gerundet aus dem Abschlag stammen.
+function rechnung(eingabe,nkProzent,mwstProzent=MWST_PROZENT){
+  const nk=zahl(nkProzent)/100,m=zahl(mwstProzent)/100,{abschlag,netto,brutto}=eingabe||{};
+  let a,n,mw;
+  if(abschlag!=null){a=r2(abschlag);n=r2(a+r2(a*nk));mw=r2(n*m)}
+  else if(netto!=null){n=r2(netto);a=honorarAnteil(n,nkProzent);mw=r2(n*m)}
+  else if(brutto!=null){n=r2(zahl(brutto)/(1+m));a=honorarAnteil(n,nkProzent);mw=r2(zahl(brutto)-n)}
+  else return null;
+  return {abschlag:a,nebenkosten:r2(n-a),netto:n,mwst:mw,brutto:r2(n+mw)};
+}
 
 function kennzahlen(paket,staende=[],zahlungen=[]){
   const honorar=zahl(paket?.honorar_netto),satz=zahl(paket?.kalkulationssatz)||85,nk=zahl(paket?.nebenkosten_prozent);
@@ -39,9 +53,11 @@ function kennzahlen(paket,staende=[],zahlungen=[]){
   const geschaetzt=letzter&&letzter.leistungsstand!=null&&letzter.leistungsstand!==''?zahl(letzter.leistungsstand):null;
   const leistungsstand=abgeschlossen?100:geschaetzt;
   const budget=satz>0?honorar/satz:0;
-  const summe=status=>r2((zahlungen||[]).filter(z=>z.status===status).reduce((s,z)=>s+zahl(z.netto),0));
-  const bezahltNetto=summe('bezahlt'),gestelltNetto=summe('gestellt');
-  const bezahlt=honorarAnteil(bezahltNetto,nk),gestellt=honorarAnteil(gestelltNetto,nk);
+  // Je Zahlung ihr Abschlag (wie in der Tabelle), dann die Summe: so stimmt die Kennzahl auf den Cent mit der Tabelle.
+  const mitStatus=status=>(zahlungen||[]).filter(z=>z.status===status);
+  const summe=(status,f)=>r2(mitStatus(status).reduce((s,z)=>s+f(z),0));
+  const bezahltNetto=summe('bezahlt',z=>zahl(z.netto)),gestelltNetto=summe('gestellt',z=>zahl(z.netto));
+  const bezahlt=summe('bezahlt',z=>honorarAnteil(z.netto,nk)),gestellt=summe('gestellt',z=>honorarAnteil(z.netto,nk));
   const erarbeitet=leistungsstand!=null?r2(honorar*leistungsstand/100):null;
   const prozent=leistungsstand!=null&&leistungsstand>0?leistungsstand:null;
   const gehalt=letzter&&letzter.wert_gehalt!=null?zahl(letzter.wert_gehalt):null;
@@ -86,7 +102,7 @@ function satzAm(saetze,personId,tag,feld='kalkulationssatz'){
   return l.length?zahl(l[0][feld]):null;
 }
 
-const api={MWST_PROZENT,STATUS,leseZahl,ausBrutto,honorarAnteil,kennzahlen,ordnung,gehaltSatz,satzAm,r2};
+const api={MWST_PROZENT,STATUS,leseZahl,ausBrutto,honorarAnteil,rechnung,kennzahlen,ordnung,gehaltSatz,satzAm,r2};
 if(typeof module==='object'&&module.exports)module.exports=api;
 else root.TBA_CONTROLLING=api;
 })(typeof window!=='undefined'?window:globalThis);

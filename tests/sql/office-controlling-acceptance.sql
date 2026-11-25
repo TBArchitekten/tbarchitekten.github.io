@@ -5,6 +5,8 @@
 -- schreiben nur Admins, und ein Admin ändert auch, was der andere eingetragen hat; Pakete, Stände und Stunden bleiben
 -- an ihrem Platz; je Stand eine Zeile je Person; die Summen: Stunden mit Fortschreibung, Wert zum Satz ab Stichtag
 -- (ein späterer Satz bewertet frühere Stunden nicht neu), Wert zum Gehalt nur für Admins und nur vollständig.
+-- Seit der Migration office_controlling_nur_liste (25.11.2026) zählt für Stunden je Person, Sätze, Gehälter und Annahmen
+-- nur die Liste office_controlling_zugang, auch für Admins: A steht darauf, A2 erst, nachdem A ihn aufnimmt.
 -- Dazu (Migration office_controlling_zugang, 25.11.2026): D = Mitglied außerhalb des Teams mit vollem Zugang zum
 -- Controlling (Buchhaltung). D liest alles wie ein Admin, auch Stunden je Person, Sätze und den Wert zum Gehalt, und
 -- schreibt; den Zugang vergeben nur Admins; C sieht weiter nichts, auch nicht, wer Zugang hat.
@@ -25,6 +27,9 @@ insert into public.office_projects(id,number,name,status,projektleiter_id,create
  ('e7000000-0000-4000-8000-0000000000e1','CT-1','Controlling-Test','aktiv',null,'a7000000-0000-4000-8000-00000000000a');
 insert into public.office_project_members(project_id,user_id,added_by) values
  ('e7000000-0000-4000-8000-0000000000e1','b7000000-0000-4000-8000-00000000000b','a7000000-0000-4000-8000-00000000000a');
+-- A steht auf der Liste wie die Admins, die es beim Einspielen der Migration office_controlling_nur_liste gab; A2 nicht.
+insert into public.office_controlling_zugang(user_id,created_by) values
+ ('a7000000-0000-4000-8000-00000000000a','a7000000-0000-4000-8000-00000000000a');
 
 do $test$
 declare
@@ -35,6 +40,7 @@ declare
     || 'B_paket_anlegen=verweigert; B_zahlung_aendern=0; A_s1_gehalt=363.00; A_s2_gehalt=null; '
     || 'D_pakete=1; D_stunden=4; D_saetze=2; D_einstellungen=1; D_s1_gehalt=363.00; D_zugang_eigen=1; D_zahlung_anlegen=ok; '
     || 'D_zugang_vergeben=verweigert; C_zugang=0; C_pakete_danach=0; '
+    || 'A2_stunden=0; A2_saetze=0; A2_einstellungen=0; A2_s1_gehalt=null; A2_aendert_ohne_liste=0; A2_selbst=verweigert; A_nimmt_A2_auf=ok; '
     || 'A2_aendert_A=1; projekt_fest=verweigert; urheber_fest=verweigert; doppelt=verweigert; A_einstellungen=1; ';
   ua constant text := '{"sub":"a7000000-0000-4000-8000-00000000000a","role":"authenticated"}';
   ua2 constant text := '{"sub":"a7000000-0000-4000-8000-0000000000a2","role":"authenticated"}';
@@ -139,7 +145,29 @@ begin
   select count(*) into n from public.office_controlling_pakete; r := r || 'C_pakete_danach=' || n || '; ';
   execute 'reset role';
 
-  -- A2 ändert, was A eingetragen hat; was festliegt, bleibt; je Stand eine Zeile je Person.
+  -- A2 ist Admin, steht aber nicht auf der Liste (Migration office_controlling_nur_liste): sieht weder Stunden je Person
+  -- noch Sätze, Annahmen oder den Wert zum Gehalt, ändert sie nicht und setzt sich nicht selbst auf die Liste.
+  perform set_config('request.jwt.claims', ua2, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.office_controlling_stunden; r := r || 'A2_stunden=' || n || '; ';
+  select count(*) into n from public.office_controlling_saetze; r := r || 'A2_saetze=' || n || '; ';
+  select count(*) into n from public.office_controlling_einstellungen; r := r || 'A2_einstellungen=' || n || '; ';
+  select * into x from public.office_controlling_summen(p) where stand_id = s1;
+  r := r || 'A2_s1_gehalt=' || coalesce(x.wert_gehalt::text,'null') || '; ';
+  update public.office_controlling_stunden set stunden = 11 where id = h;
+  get diagnostics n = row_count; r := r || 'A2_aendert_ohne_liste=' || n || '; ';
+  begin insert into public.office_controlling_zugang(user_id) values ('a7000000-0000-4000-8000-0000000000a2'); r := r || 'A2_selbst=ERLAUBT(FEHLER); ';
+  exception when others then r := r || 'A2_selbst=verweigert; '; end;
+  execute 'reset role';
+
+  -- A (Admin auf der Liste) nimmt A2 auf.
+  perform set_config('request.jwt.claims', ua, true);
+  execute 'set local role authenticated';
+  insert into public.office_controlling_zugang(user_id) values ('a7000000-0000-4000-8000-0000000000a2');
+  r := r || 'A_nimmt_A2_auf=ok; ';
+  execute 'reset role';
+
+  -- A2 (jetzt auf der Liste) ändert, was A eingetragen hat; was festliegt, bleibt; je Stand eine Zeile je Person.
   perform set_config('request.jwt.claims', ua2, true);
   execute 'set local role authenticated';
   update public.office_controlling_stunden set stunden = 11 where id = h;
