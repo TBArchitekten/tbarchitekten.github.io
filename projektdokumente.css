@@ -333,12 +333,13 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-text:focus{outline:none;border:1px solid var(--m-focus);background:var(--m-paper)}
 .mm-text.mm-titel-feld{font-size:1.8cqw;font-weight:600}
 .mm-frage{font-size:1.15cqw}
-.mm-kandidaten{flex:1;min-height:0;display:grid;gap:1.8cqw;grid-template-columns:repeat(var(--mm-n,2),minmax(0,1fr))}
+.mm-kandidaten{flex:1;min-height:0;display:grid;gap:.6cqw 1.8cqw;grid-auto-flow:column;grid-template-columns:repeat(var(--mm-n,2),minmax(0,1fr));grid-template-rows:minmax(12cqw,1fr) auto}
 .mm-n1{--mm-n:1}.mm-n2{--mm-n:2}.mm-n3{--mm-n:3}
-.mm-kand{display:flex;flex-direction:column;gap:.55cqw;min-height:0}
+.mm-kand{display:contents}
+.mm-kand-text{display:flex;flex-direction:column;gap:.55cqw;min-height:0}
 .mm-foto{display:block;width:100%;object-fit:cover;background:var(--m-surface)}
-.mm-foto-kand{flex:1 1 auto;height:0;min-height:12cqw}
-.mm-n1 .mm-foto-kand{min-height:16cqw}
+.mm-foto-kand{height:100%;min-height:0;align-self:stretch}
+.mm-n1{grid-template-rows:minmax(16cqw,1fr) auto}
 .mm-foto-leer{display:flex;align-items:center;justify-content:center;color:var(--m-ink-faint);font-size:.8cqw}
 .mm-kand-kopf{display:flex;justify-content:space-between;align-items:baseline;gap:1cqw}
 .mm-seite .mm-kand h3,.mm-seite .mm-material-name{font-size:1.3cqw;font-weight:600;letter-spacing:0}

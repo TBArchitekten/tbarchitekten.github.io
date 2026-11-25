@@ -243,17 +243,19 @@ function seiteUebersicht(inh){
 }
 function seiteVergleich(seite,inh,p,{modus,bild}){
   const kand=kandidatenDerSeite(seite,p);
+  // Foto und Text je Kandidat in zwei Zeilen eines Rasters: die Fotos stehen gleich hoch, auch bei ungleich langen Texten.
   const spalten=kand.length?kand.map(o=>'<div class="mm-kand">'+foto(o.fotos[0],bild,o.name,'mm-foto-kand')+
-    '<div class="mm-kand-kopf"><h3>'+esc(o.id+' · '+o.name)+'</h3>'+(p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'<span class="mm-empf">Empfehlung</span>':'')+'</div>'+
+    '<div class="mm-kand-text"><div class="mm-kand-kopf"><h3>'+esc(o.id+' · '+o.name)+'</h3>'+(p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'<span class="mm-empf">Empfehlung</span>':'')+'</div>'+
     ((o.hersteller||o.serie)?'<p class="mm-klein">'+esc([o.hersteller,o.serie].filter(Boolean).join(' · '))+'</p>':'')+
-    (zeigt(seite,'kennwerte')?kennwerte(o,5):'')+(zeigt(seite,'kosten')?kostenKasten({},o):'')+'</div>').join('')
-    :'<p class="mm-p mm-leer">Noch kein Kandidat. Rechts einen aus der Bibliothek wählen.</p>';
+    (zeigt(seite,'kennwerte')?kennwerte(o,5):'')+(zeigt(seite,'kosten')?kostenKasten({},o):'')+'</div></div>').join('')
+    :modus==='bearbeiten'?'<p class="mm-p mm-leer">Noch kein Kandidat. Rechts einen aus der Bibliothek wählen.</p>':'';
   const empf=zeigt(seite,'empfehlung')?(modus==='bearbeiten'
     ?'<div class="mm-empfehlung"><strong>'+esc(p.empfehlung?'Empfehlung: Variante '+p.empfehlung+'.':'Empfehlung offen.')+'</strong>'+feld(modus,'data-mmtext="begruendung" data-z="'+esc(p.id)+'"',p.begruendung,{zeilen:2,platz:'Begründung der Empfehlung',id:'mm-'+p.id+'-begruendung'})+'</div>'
     :(p.empfehlung||s(p.begruendung).trim()?'<div class="mm-empfehlung"><strong>'+esc(p.empfehlung?'Empfehlung: Variante '+p.empfehlung+'.':'')+'</strong> '+esc(p.begruendung)+'</div>':'')):'';
   const kostenPos=zeigt(seite,'kosten')&&!kand.some(o=>s(o.kennwert).trim())?kostenKasten(p,null):'';
   return kopfPosition(p)+feld(modus,'data-mmtext="frage" data-z="'+esc(p.id)+'"',p.frage,{zeilen:1,platz:'Frage an den Bauherrn, z. B. Welcher Belag für diese Zonen?',klasse:'mm-frage',id:'mm-'+p.id+'-frage'})+
-    '<div class="mm-kandidaten mm-n'+Math.max(1,kand.length)+'">'+spalten+'</div>'+
+    // Eine Position ohne Produkt (etwa eine Leistung wie geschliffener Estrich) zeigt im PDF nur Kopf, Frage, Kosten und Hinweise.
+    (spalten?'<div class="mm-kandidaten mm-n'+Math.max(1,kand.length)+'">'+spalten+'</div>':'<div class="mm-kandidaten mm-n1"></div>')+
     '<div class="mm-unten">'+empf+'<div class="mm-unten-rechts">'+kostenPos+zuBeachten(p)+'</div></div>'+entschiedenZeile(p);
 }
 function seiteMaterial(seite,inh,p,{modus,bild}){

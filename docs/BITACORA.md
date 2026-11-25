@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-25 · Mustermappe: Position ohne Produkt im PDF, Fotos gleich hoch · Claude
+- Qué cambió y por qué: Beim Anlegen der ersten echten Mappe (Auftrag Gari, 25.11.2026) zeigte sich zweierlei: Eine Position ohne Produkt aus der Bibliothek (etwa geschliffener Zementestrich als Leistung) trug im PDF den Hinweis fürs Büro «Noch kein Kandidat. Rechts einen aus der Bibliothek wählen.»; und auf der Vergleichsseite standen die Fotos ungleich hoch, wenn ein Kandidat einen längeren Namen oder mehr Kennwerte hatte.
+  - Ohne Kandidat zeigt die Seite im PDF und im Stand nur Kopf, Frage, Kostenrahmen und Hinweise; der Hinweis zum Wählen bleibt beim Bearbeiten.
+  - Foto und Text je Kandidat stehen in zwei Zeilen eines Rasters: die Fotos sind auf einer Seite gleich hoch.
+- Archivos: `mustermappe-kern.js` (`?v=office2`), `projektdokumente.css` (`?v=office7`), `projektdokumente.html`, `tests/office-mustermappe.test.mjs`, `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (445); Chromium `office-mustermappe` und `office-projektdokumente` grün; neun Seiten A3 mit langen echten Texten als PDF gesetzt: kein Überlauf, Fotos gleich hoch.
+- Quedó pendiente o sin probar: —
+- Riesgos o decisiones que necesitan a Gari: —
+- PR: #163
+
 ### 2026-11-24 · Mustermappe: Präsentieren und Entscheidung im Bemusterungstermin (Schritt 2) · Claude
 - Qué cambió y por qué: Gari (24.11.2026): Die Mustermappe wird mit dem Bemusterungstermin vorgestellt und dort entschieden; der Bauherr unterschreibt nicht jedes Blatt. Schritt 2 des Konzepts (OK «Avanza con todos los pasos»).
   - **«Präsentieren»** in der Mappe: die Seiten groß auf dunkler Fläche (Vollbild, wo der Browser es erlaubt), blättern mit Pfeiltasten oder Knöpfen, ohne Eingabefelder auf der Seite; oben «Entschieden: n von m».

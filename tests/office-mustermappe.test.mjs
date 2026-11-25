@@ -138,3 +138,15 @@ test('Seite der Projektdokumente lädt den Kern vor der Seite, mit Version',()=>
   assert.match(js,/@page\{size:A3 landscape;margin:0\}/,'A3 quer nur für den Druck der Mappe');
   assert.match(js,/mappeStandZeigen/);assert.doesNotMatch(js,/Unterschrift Bauherr/);
 });
+
+test('Position ohne Kandidat: im Bearbeiten ein Hinweis, im PDF kein Text für das Büro',()=>{
+  const {v,za,zb,zc}=beispiel();
+  v.daten.seiten.push({id:'s7',typ:'vergleich',punkt:'e3'});
+  zc.daten.muster.kosten='80–125 €/m²';
+  const inh=M.mappeInhalt(v,[za,zb,zc]);
+  const s7=inh.seiten.find(x=>x.id==='s7');
+  assert.match(M.seiteHtml(s7,inh,{modus:'bearbeiten'}),/Noch kein Kandidat/);
+  const druck=M.seiteHtml(s7,inh,{modus:'druck'});
+  assert.doesNotMatch(druck,/Noch kein Kandidat|Bibliothek wählen/);
+  assert.match(druck,/80–125 €\/m²/);
+});
