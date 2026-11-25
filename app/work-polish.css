@@ -459,6 +459,12 @@ body[data-section="work"] .work-tool-versions button small{font-size:11px;font-w
 body[data-section="work"] .work-tool-versions button[aria-selected="true"]{
   background:var(--work-accent-soft,rgba(0,98,204,.1));border-color:var(--m-blue-line);color:var(--work-accent,var(--m-blue))}
 body[data-section="work"] .work-tool-versions button[aria-selected="true"] small{color:inherit;opacity:.8}
+/* Mustermappe (Gari, 25.11.2026): «Neue Mustermappe» steht neben der Wahl der Mappen, gestrichelt wie ein leerer Platz. */
+body[data-section="work"] .work-tool-bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--m-space-2)}
+body[data-section="work"] .work-tool-add{
+  border:1px dashed var(--m-border-strong);background:transparent;color:var(--m-blue);border-radius:var(--m-radius-pill);
+  padding:6px 12px;font:inherit;font-size:12px;font-weight:560;cursor:pointer}
+body[data-section="work"] .work-tool-add:hover{background:var(--m-blue-wash);border-color:var(--m-blue-line)}
 body[data-section="work"] .work-tool-stage{
   flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
   background:#fafafa;border:1px solid rgba(42,48,59,.085);border-radius:14px}

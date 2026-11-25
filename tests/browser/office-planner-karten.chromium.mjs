@@ -43,12 +43,15 @@ const fixtures={
     {id:'tp-lph5',project_id:'p1',phase:'LPH5',updated_at:'2026-11-22T10:00:00Z',server_revision:1,is_archived:false},
     {id:'tp-lph3',project_id:'p1',phase:'LPH3',updated_at:'2026-11-20T10:00:00Z',server_revision:1,is_archived:false}
   ],
-  office_kosten_instances:[]
+  office_kosten_instances:[],
+  // Mustermappe: eine Mappe im Projekt (Zeile der Entscheidungsvorlagen, form «mustermappe»).
+  office_projektdokumente:[{id:'dok-v',project_id:'p1',art:'entscheidungsvorlagen'}],
+  office_projektdokument_zeilen:[{id:'mm-1',dokument_id:'dok-v',nr:1,themenpaket:'Bodenbeläge',titel:'Mustermappe Bodenbeläge',updated_at:'2026-11-24T10:00:00Z',server_revision:1}]
 };
 const harness=`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${pageCss}</head>
 <body data-section="work" class="office-app"><div class="app" id="app"><main id="swipeArea" class="swipe-area"><section id="workScreen" class="screen work-screen active" data-screen="work"><div class="work-shell">
 <div class="work-head"><div><h1 id="workProjectTitle">Work</h1></div><div class="work-project-switch"></div></div>
-<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button></div>
+<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button><button data-work-view="mustermappe" hidden>Mustermappe</button><button data-work-view="produkte" hidden>Produkte</button><button data-work-view="hersteller" hidden>Hersteller</button></div>
 <div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div><div id="workToolHost" class="work-tool-host" hidden></div></div></section></main></div>
 <div id="modalRoot" hidden></div>
 <script>
@@ -318,6 +321,67 @@ test('Bucket: Beschreibung nur beim Zeigen auf den Titel oder über «Info» im 
     assert.equal(await page.locator('[data-work-bucket-info="b0"]').textContent(),'Info ausblenden');
     await page.locator('[data-work-bucket-info="b0"]').click();
     assert.equal(await info.isVisible(),false);
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
+
+// Gari, 25.11.2026: die Mustermappe des Projekts als Reiter wie Terminplan und Kostenberechnung; Produkte und Hersteller
+// als Seite je Projekt, gefiltert auf das Projekt.
+test('Reiter Mustermappe, Produkte und Hersteller: Mappen wählen, weitere anlegen, Seiten des Projekts',async()=>{
+  const {page,errors}=await board();
+  await page.route(/\/(projektdokumente|produktbibliothek|herstellerkatalog)\.html/,r=>r.fulfill({contentType:'text/html',body:werkzeug}));
+  try{
+    for(const v of ['mustermappe','produkte','hersteller'])assert.equal(await page.locator('[data-work-view="'+v+'"]').isVisible(),true,v);
+    await page.locator('[data-work-view="mustermappe"]').click();
+    await bereit(page,'mustermappe');
+    assert.deepEqual(await rahmen(page,'mustermappe'),{src:'../projektdokumente.html?projekt=p1&vorlage=mm-1',ziel:'mm-1',url:'/projektdokumente.html?projekt=p1&vorlage=mm-1',marke:null});
+    // Schon bei einer Mappe steht die Wahl da, mit «Neue Mustermappe» daneben.
+    const wahl=()=>page.locator('[data-work-tool-pane="mustermappe"] [data-work-tool-pick]').evaluateAll(b=>b.map(x=>[x.textContent,x.getAttribute('aria-selected')]));
+    assert.deepEqual(await wahl(),[['Bodenbeläge','true']]);
+    const neu=page.locator('[data-work-tool-pane="mustermappe"] .work-tool-add');
+    assert.equal(await neu.textContent(),'Neue Mustermappe');
+    // Eine weitere Mappe: was aussteht, wird vorher gespeichert; die Seite öffnet den Dialog (?neu=1).
+    await page.evaluate(()=>{document.querySelector('[data-work-tool-pane="mustermappe"] iframe').contentWindow.__pending=true});
+    await neu.click();
+    await page.waitForFunction(()=>/neu=1/.test(document.querySelector('[data-work-tool-pane="mustermappe"] iframe').contentWindow.location.search));
+    assert.deepEqual(await page.evaluate(()=>window.__flushes),['/projektdokumente.html?projekt=p1&vorlage=mm-1']);
+    assert.equal((await rahmen(page,'mustermappe')).url,'/projektdokumente.html?projekt=p1&werkzeug=mustermappe&neu=1');
+    // Zum Planner und zurück: der Dialog bleibt, Work lädt nicht die alte Mappe.
+    await bereit(page,'mustermappe');await markiere(page,'mustermappe','N');
+    await page.locator('[data-work-view="planner"]').click();await page.locator('[data-work-task="liste"]').waitFor();
+    await page.locator('[data-work-view="mustermappe"]').click();
+    await page.locator('[data-work-tool-pane="mustermappe"] [data-work-tool-pick]').first().waitFor();
+    assert.equal((await rahmen(page,'mustermappe')).marke,'N');
+    // Abgebrochen: zurück zur gewählten Mappe.
+    await page.frames().find(f=>/projektdokumente/.test(f.url())).evaluate(()=>parent.postMessage({tbaOfficeTool:'abgebrochen'},location.origin));
+    await page.waitForFunction(()=>/vorlage=mm-1/.test(document.querySelector('[data-work-tool-pane="mustermappe"] iframe')?.contentWindow?.location.search||''));
+    // Angelegt: die Seite öffnet die neue Mappe über ihre Adresse; Work wählt sie.
+    await neu.click();await bereit(page,'mustermappe');
+    await page.evaluate(()=>{FIX.office_projektdokument_zeilen.push({id:'mm-2',dokument_id:'dok-v',nr:2,themenpaket:'Bäder',titel:'Mustermappe Bäder',updated_at:'2026-11-25T08:00:00Z',server_revision:1})});
+    await page.frames().find(f=>/projektdokumente/.test(f.url())).evaluate(()=>location.assign('/projektdokumente.html?projekt=p1&vorlage=mm-2'));
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('tba-office-work-tool-v1')||'{}').p1?.mustermappe==='mm-2');
+    await page.locator('[data-work-tool-pick="mm-2"][aria-selected="true"]').waitFor();
+    assert.deepEqual(await wahl(),[['Bodenbeläge','false'],['Bäder','true']]);
+    assert.equal((await rahmen(page,'mustermappe')).ziel,'mm-2');
+    // Bildschirmfoto nur, wenn WORK_FOTOS auf einen Ordner zeigt.
+    if(process.env.WORK_FOTOS)await page.screenshot({path:path.join(process.env.WORK_FOTOS,'work-mustermappe.png')});
+
+    // Produkte und Hersteller: eine Seite je Projekt, ohne Wahl; was man in der Seite öffnet, bleibt offen.
+    await page.locator('[data-work-view="produkte"]').click();
+    await bereit(page,'produkte');
+    assert.equal((await rahmen(page,'produkte')).src,'../produktbibliothek.html?projekt=p1');
+    assert.equal(await page.locator('[data-work-tool-pane="produkte"] .work-tool-bar').isVisible(),false);
+    assert.equal(await page.locator('[data-work-tool-pane="mustermappe"]').isVisible(),false);
+    await page.frames().find(f=>/produktbibliothek/.test(f.url())).evaluate(()=>location.assign('/produktbibliothek.html?id=pr-1&projekt=p1'));
+    await page.waitForFunction(()=>/id=pr-1/.test(document.querySelector('[data-work-tool-pane="produkte"] iframe').contentWindow.location.search));
+    await bereit(page,'produkte');
+    await page.locator('[data-work-view="hersteller"]').click();
+    await bereit(page,'hersteller');
+    assert.equal((await rahmen(page,'hersteller')).src,'../herstellerkatalog.html?projekt=p1');
+    await page.locator('[data-work-view="produkte"]').click();
+    await page.locator('[data-work-tool-pane="produkte"]').waitFor();
+    assert.equal((await rahmen(page,'produkte')).url,'/produktbibliothek.html?id=pr-1&projekt=p1');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('tba-office-work-tool-v1')||'{}').p1?.produkte??null),null,'keine Fassung gemerkt');
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });

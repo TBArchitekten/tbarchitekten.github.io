@@ -15,6 +15,8 @@ NAV_ICONS.tools='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 NAV_ICONS.produkte='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z"/><path d="M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7"/><path d="M7 17h.01"/><path d="m11 8 2.3-2.3a2.4 2.4 0 0 1 3.4 0l1.9 1.9a2.4 2.4 0 0 1 0 3.4L9.9 19.8"/></svg>';
 // Herstellerkatalog: Kontaktkarte, im Strich der übrigen Symbole.
 NAV_ICONS.hersteller='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0"/><path d="M15 9h3"/><path d="M15 13h3"/></svg>';
+// Mustermappe: Blätter mit Bild, im Strich der übrigen Symbole.
+NAV_ICONS.mappe='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="m22 13-1.3-1.3a2.4 2.4 0 0 0-3.4 0L11 18"/><circle cx="12" cy="8" r="2"/><rect width="16" height="16" x="6" y="2" rx="2"/></svg>';
 // Kostenberechnung: Rechner, im Strich der übrigen Symbole.
 NAV_ICONS.kosten='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>';
 // Only «Zu bestätigen» carries a number; the web and the iPhone show the same count.
@@ -123,6 +125,11 @@ document.body.innerHTML = `
           <span><strong>Herstellerkatalog</strong><small>Firmen mit Kontakt für das ganze Büro: was sie anbieten, wie man sie erreicht und wer im Büro in welchem Projekt schon Kontakt hatte.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
+        <button type="button" class="office-tools-card" id="officeToolsMappe" aria-label="Mustermappe öffnen">
+          <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.mappe}</span>
+          <span><strong>Mustermappe</strong><small>Je Themenpaket eine Mappe A3 quer: Positionen aus dem Plan, Kandidaten aus der Produktbibliothek. Vorgestellt im Bemusterungstermin, entschieden in der Entscheidungsliste.</small></span>
+          <span class="office-tools-arrow" aria-hidden="true">›</span>
+        </button>
         <button type="button" class="office-tools-card" id="officeToolsStart" aria-label="Projektstart öffnen">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
           <span><strong>Projektstart</strong><small>Die Bürovorlagen LPH 3 als Dokumente des Projekts: Klärungsliste, Entscheidungsliste und Entscheidungsvorlagen im Office bearbeiten und als Excel, Word oder PDF ausgeben. Dazu das Muster mit fünf Bürovorlagen für die LPH 3.</small></span>
@@ -172,6 +179,9 @@ document.body.innerHTML = `
           <button data-work-view="planner">Planner</button>
           <button data-work-view="terminplan" hidden>Terminplan</button>
           <button data-work-view="kosten" hidden>Kostenberechnung</button>
+          <button data-work-view="mustermappe" hidden>Mustermappe</button>
+          <button data-work-view="produkte" hidden>Produkte</button>
+          <button data-work-view="hersteller" hidden>Hersteller</button>
           <button data-work-view="knowledge" hidden>Wissen</button>
           <button data-work-view="threads">Threads</button>
         </div>

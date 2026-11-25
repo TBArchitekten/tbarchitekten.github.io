@@ -10,11 +10,12 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const shell=read('app/shell.js'),work=read('app/work.js'),index=read('app/index.html');
 
 test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigenem Platz für die Werkzeugseite',()=>{
-  assert.match(shell,/<button data-work-view="planner">Planner<\/button>\s*<button data-work-view="terminplan" hidden>Terminplan<\/button>\s*<button data-work-view="kosten" hidden>Kostenberechnung<\/button>/);
+  assert.match(shell,/<button data-work-view="planner">Planner<\/button>\s*<button data-work-view="terminplan" hidden>Terminplan<\/button>\s*<button data-work-view="kosten" hidden>Kostenberechnung<\/button>\s*<button data-work-view="mustermappe" hidden>Mustermappe<\/button>\s*<button data-work-view="produkte" hidden>Produkte<\/button>\s*<button data-work-view="hersteller" hidden>Hersteller<\/button>/);
   assert.match(shell,/<div id="workBody" class="work-body">[^\n]*<\/div>\s*<div id="workToolHost" class="work-tool-host" hidden><\/div>/);
   assert.doesNotMatch(shell+work,/data-work-tool="|openProjectTool|work-tool-menu/,'kein Menü mehr, das Work verlässt');
   assert.match(work,/:isToolView\(view\)\?renderTool\(view\)/);
-  assert.match(work,/\['overview','planner','terminplan','kosten'\]\.includes\(b\.dataset\.workView\)\)b\.hidden=projectKey===OFFICE_ROOT/);
+  // Jedes Werkzeug von Work ist ein Reiter des Projekts (nicht im Büro).
+  assert.match(work,/\['overview','planner'\]\.includes\(b\.dataset\.workView\)\|\|isToolView\(b\.dataset\.workView\)\)b\.hidden=projectKey===OFFICE_ROOT/);
   // Die Seite läuft in einem Rahmen und bleibt beim Wechsel offen; Work leitet nicht um.
   assert.match(work,/frame=document\.createElement\('iframe'\)/);
   assert.doesNotMatch(work,/location\.assign\(page/);
@@ -31,7 +32,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office53','shell.js?v=office55','office-projects.js?v=office59','work-polish.css?v=5','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office54','shell.js?v=office56','office-projects.js?v=office60','work-polish.css?v=6','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 
@@ -78,4 +79,59 @@ test('Bucket: Beschreibung beim Zeigen auf den Titel oder über «Info», im Mus
   assert.match(css,/\.work-bucket-explanation\.is-tip\{display:none\}/);
   assert.match(css,/\.work-bucket\.is-info-open \.work-bucket-explanation\.is-tip\{display:block\}/);
   assert.match(css,/:has\(\.work-bucket-grab:hover\) \.work-bucket-explanation\.is-tip \.work-bucket-explanation-body\{\n\s*position:absolute;/);
+});
+
+// Mustermappe, Produkte und Hersteller (Gari, 25.11.2026): die Mappe eines Projekts als Reiter wie Terminplan und
+// Kostenberechnung; Produkte und Hersteller zeigen nur, was für das Projekt ausgewählt ist.
+test('Reiter Mustermappe, Produkte, Hersteller: Mappen je Projekt, eine Seite je Projekt für Produkte und Hersteller',()=>{
+  // Die Mappen: Zeilen der Entscheidungsvorlagen mit form «mustermappe», in der Reihenfolge des Anlegens; die Wahl heißt nach dem Themenpaket.
+  assert.match(work,/mustermappe:\{page:'\.\.\/projektdokumente\.html',name:'Mustermappe',idParam:'vorlage',load:loadMustermappen,/);
+  assert.match(work,/\.eq\('project_id',pid\)\.eq\('art','entscheidungsvorlagen'\)/);
+  assert.match(work,/\.in\('dokument_id',ids\)\.eq\('daten->>form','mustermappe'\)\.order\('nr'\)/);
+  assert.match(work,/phase:r\.themenpaket\|\|r\.titel\|\|'Mustermappe'/);
+  assert.match(work,/new URLSearchParams\(neu\?\{projekt:pid,werkzeug:'mustermappe',neu:'1'\}:\{projekt:pid,vorlage:id\}\)/);
+  assert.match(work,/searchParams\.get\(tool\.idParam\|\|'id'\)/);
+  // «Neue Mustermappe» neben der Wahl; vorher speichert die offene Mappe; der Dialog bleibt offen, bis er angelegt oder abgebrochen ist.
+  assert.match(work,/bar\.hidden=rows\.length<\(tool\.add\?1:2\);/);
+  assert.match(work,/<button type="button" class="work-tool-add" data-work-tool-create>'\+esc\(tool\.add\)\+'<\/button>/);
+  assert.match(work,/if\(kind==='mustermappe'\)\{const frame=pane\.querySelector\('iframe'\);if\(frame\)await flushToolFrame\(frame\);showToolFrame\(pane,kind,pid,true\);return\}/);
+  assert.match(work,/if\(frame&&pane\.dataset\.creating==='1'\)return;\n rememberToolPick\(pid,kind,pick\);/);
+  // Produkte und Hersteller: eine Seite je Projekt, mit ?projekt=; Work verfolgt dort keine Fassung.
+  assert.match(work,/produkte:\{page:'\.\.\/produktbibliothek\.html',name:'Produkte',single:true,\n  src:pid=>'\.\.\/produktbibliothek\.html\?projekt='\+encodeURIComponent\(pid\)\}/);
+  assert.match(work,/hersteller:\{page:'\.\.\/herstellerkatalog\.html',name:'Hersteller',single:true,\n  src:pid=>'\.\.\/herstellerkatalog\.html\?projekt='\+encodeURIComponent\(pid\)\}/);
+  assert.match(work,/if\(tool\.single\)\{if\(!pane\.querySelector\('\.work-tool-stage iframe'\)\)showToolFrame\(pane,kind,pid\);return\}/);
+  assert.match(work,/const tool=WORK_TOOLS\[kind\];\n if\(tool\.single\)return;/);
+  // Präsentieren darf im Rahmen den ganzen Bildschirm nehmen.
+  assert.match(work,/frame\.allow='fullscreen';/);
+  const css=read('app/work-polish.css');
+  assert.match(css,/body\[data-section="work"\] \.work-tool-add\{\n  border:1px dashed var\(--m-border-strong\)/);
+  // Werkzeugkarte «Mustermappe» unter Tools; sie öffnet die Mappen je Projekt.
+  assert.match(shell,/id="officeToolsMappe" aria-label="Mustermappe öffnen"/);
+  assert.match(shell,/NAV_ICONS\.mappe='<svg /);
+  assert.match(read('app/office-projects.js'),/getElementById\('officeToolsMappe'\)\?\.addEventListener\('click',\(\)=>\{\n  window\.location\.href='\.\.\/projektdokumente\.html\?werkzeug=mustermappe';/);
+});
+
+test('Seiten im Reiter eines Projekts: Marke im Rahmen, kein Sprung in die App, Links bleiben im Projekt',()=>{
+  const marke="<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>";
+  for(const p of ['projektdokumente.html','produktbibliothek.html','herstellerkatalog.html'])assert.ok(read(p).includes(marke),p);
+  const pd=read('projektdokumente.js'),pdCss=read('projektdokumente.css'),pb=read('produktbibliothek.js'),hk=read('herstellerkatalog.js'),pbCss=read('produktbibliothek.css');
+  for(const [name,js] of [['projektdokumente.js',pd],['produktbibliothek.js',pb],['herstellerkatalog.js',hk]]){
+    assert.match(js,/const IM_REITER=window\.self!==window\.top;/,name);
+    assert.match(js,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/,name);
+  }
+  // Mustermappe: Revision der offenen Mappe, Speichern auf Zuruf, Abbrechen gemeldet, die neue Mappe über die Adresse.
+  assert.match(pd,/window\.TBA_OFFICE_TOOL=Object\.freeze\(\{kind:'mustermappe',revision:\(\)=>vorlageZeile\(\)\?\.rev\|\|0,\n  pending:\(\)=>ungespeichert\(\)\|\|speicher\.laeuft>0,flush:\(\)=>alleSpeichern\(\)\}\)/);
+  assert.match(pd,/if\(IM_REITER\)dialog\.addEventListener\('close',\(\)=>\{if\(!angelegt\)window\.parent\.postMessage\(\{tbaOfficeTool:'abgebrochen'\},location\.origin\)\},\{once:true\}\)/);
+  assert.match(pd,/if\(IM_REITER\)\{await alleSpeichern\(\);location\.assign\(url\(\{projekt:projekt\.id,vorlage:v\.id\}\)\);return\}/);
+  assert.match(pdCss,/\.im-reiter \.pd-back\[href\^="\.\/app\/"\],\.im-reiter \.pd-mappe-wrap>\.pd-back,\.im-reiter \.pd-mappe-wrap \.pd-head \.kicker\{display:none\}/);
+  assert.match(pbCss,/\.im-reiter \.pb-back\[href\^="\.\/app\/"\]\{display:none\}/);
+  // Produkte und Hersteller: ?projekt= filtert; jeder Link zwischen den beiden Seiten behält das Projekt.
+  for(const js of [pb,hk]){
+    assert.match(js,/const PROJEKT=UUID\.test\(params\.get\('projekt'\)\|\|''\)\?params\.get\('projekt'\):null;/);
+    assert.match(js,/\/\\\/\(produktbibliothek\|herstellerkatalog\)\\\.html\$\/\.test\(u\.pathname\)/);
+    assert.match(js,/if\(PROJEKT\)document\.addEventListener\('click',ev=>\{/);
+  }
+  assert.match(pb,/if\(PROJEKT\)\{ui\.projekt=PROJEKT;ui\.kategorie='alle'\}/);
+  assert.match(hk,/const imProjekt=f=>kontakteVon\(f\)\.some\(k=>k\.projekt_id===PROJEKT\)\|\|imProjektProdukte\(f\)\.length>0;/);
+  assert.match(hk,/sb\.from\('office_produkt_verwendungen'\)\.select\('produkt_id,projekt_id,code,status'\)\.eq\('projekt_id',PROJEKT\)/);
 });

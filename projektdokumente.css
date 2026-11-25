@@ -426,3 +426,9 @@ html.mm-praes-offen{overflow:hidden}
   .mm-praes-mitte{flex-direction:column;overflow:auto;align-items:stretch}
   .mm-praes-panel{width:auto}
 }
+
+/* Mustermappe als Reiter in Work (Gari, 25.11.2026): Work nennt Projekt und Werkzeug schon. Kein Rücksprung in die App
+   (das hieße die App im Rahmen), kein «‹ Mustermappen» und keine zweite Projektzeile über der Mappe. */
+.im-reiter .pd{padding-top:14px}
+.im-reiter .pd-back[href^="./app/"],.im-reiter .pd-mappe-wrap>.pd-back,.im-reiter .pd-mappe-wrap .pd-head .kicker{display:none}
+.im-reiter .pd-mappe-wrap .pd-head h1{margin-top:0}

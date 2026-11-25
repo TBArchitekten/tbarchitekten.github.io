@@ -6,7 +6,10 @@
    der in mehreren alten Kostenberechnungen gleich steht, zählt als eine Quelle. Daten: office_produkte und Nachbarn
    (Migration 20261123180000), Dateien im privaten Bucket «office-produkte», Leser: Edge Function office-produkt-ai.
    Seit 24.11.2026 hängt ein Produkt an seiner Firma im Herstellerkatalog (hersteller_id): Karte und Produktblatt zeigen
-   deren Kontakt, ?hersteller=<id> zeigt die Produkte einer Firma. */
+   deren Kontakt, ?hersteller=<id> zeigt die Produkte einer Firma.
+   Reiter «Produkte» eines Projekts in Work (25.11.2026, Gari): ?projekt=<id> zeigt nur, was für dieses Projekt ausgewählt
+   ist (ausgewählt wird in der Bibliothek mit «Zu Projekt»); jeder Link zwischen Bibliothek und Herstellerkatalog behält
+   das Projekt, und im Rahmen springt die Seite nie in die App oder zur Startseite. */
 (()=>{
 'use strict';
 const OFFICE=window.TBA_OFFICE_CONFIG;
@@ -55,6 +58,23 @@ const ui={kategorie:'bodenbelag',suche:'',herkunft:'alle',projekt:'alle',sort:'z
 if(params.get('suche')){ui.suche=params.get('suche').slice(0,80);ui.kategorie='alle'}
 // Aus dem Herstellerkatalog: ?hersteller=<id> zeigt die Produkte dieser Firma in allen Kategorien.
 if(HERSTELLER&&/^[0-9a-f-]{36}$/i.test(HERSTELLER)){ui.hersteller=HERSTELLER;ui.kategorie='alle'}
+// Aus Work: ?projekt=<id> zeigt die Auswahl dieses Projekts in allen Kategorien.
+const PROJEKT=UUID.test(params.get('projekt')||'')?params.get('projekt'):null;
+const IM_REITER=window.self!==window.top;
+if(PROJEKT){ui.projekt=PROJEKT;ui.kategorie='alle'}
+function mitProjekt(href){
+  if(!PROJEKT)return href;
+  try{
+    const u=new URL(href,location.href);
+    if(u.origin!==location.origin||!/\/(produktbibliothek|herstellerkatalog)\.html$/.test(u.pathname)||u.searchParams.has('projekt'))return href;
+    u.searchParams.set('projekt',PROJEKT);return u.href;
+  }catch{return href}
+}
+// Links ohne eigenes Ziel bleiben im Projekt (Produktblatt, Bearbeiten, Firma im Herstellerkatalog …).
+if(PROJEKT)document.addEventListener('click',ev=>{
+  const a=ev.target.closest?.('a[href]');if(!a||a.target)return;
+  const ziel=mitProjekt(a.getAttribute('href'));if(ziel!==a.getAttribute('href'))a.setAttribute('href',ziel);
+},true);
 let bilder=new Map();
 
 function fehler(text){root.innerHTML='<div class="pb-wrap"><a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a><div class="pb-banner warn">'+esc(text)+'</div></div>'}
@@ -65,12 +85,14 @@ async function start(){
   if(!sb){fehler('Office-Verbindung nicht verfügbar.');return}
   const {data,error}=await sb.auth.getSession();
   const session=data?.session;
-  if(error||!session){if(inApp){void window.WINDOW_NATIVE.call('session.signIn');fehler('Bitte in der App anmelden.');return}location.href='./';return}
+  if(error||!session){if(inApp){void window.WINDOW_NATIVE.call('session.signIn');fehler('Bitte in der App anmelden.');return}
+    if(IM_REITER){fehler('Bitte in TBA Office neu anmelden.');return}
+    location.href='./';return}
   nutzer=session.user;
   const {data:m,error:me}=await sb.from('office_members').select('role,display_name,is_active,must_change_password')
     .eq('user_id',nutzer.id).eq('is_active',true).maybeSingle();
   if(me||!m){fehler('Kein Zugriff auf TBA Office.');return}
-  if(m.must_change_password){if(inApp){fehler('Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.');return}location.href='./';return}
+  if(m.must_change_password){if(inApp||IM_REITER){fehler('Bitte zuerst im Browser auf tbarchitekten.github.io das Startpasswort ändern.');return}location.href='./';return}
   mitglied=m;
   try{
     await ladeAlles();
@@ -233,6 +255,10 @@ function verwendungenVon(e){return daten.verwendungen.filter(v=>v.produkt_id===e
 function verwendungsZeile(e){
   let v=verwendungenVon(e).filter(x=>x.status!=='verworfen');
   if(!v.length)return 'Noch in keinem Projekt ausgewählt';
+  if(PROJEKT){
+    const hier=v.find(x=>x.projekt_id===PROJEKT),andere=new Set(v.filter(x=>x.projekt_id!==PROJEKT).map(x=>x.projekt_id)).size;
+    return [hier?.code,hier?.status||'nicht ausgewählt'].filter(Boolean).join(' · ')+(andere?' · auch in '+(andere===1?'einem weiteren Projekt':andere+' weiteren Projekten'):'');
+  }
   if(ui.projekt!=='alle')v=[...v.filter(x=>x.projekt_id===ui.projekt),...v.filter(x=>x.projekt_id!==ui.projekt)];
   const p=projekt(v[0].projekt_id);
   return 'Ausgewählt in '+[p?.name||'einem Projekt',v[0].code,v[0].status].filter(Boolean).join(' · ')+(v.length>1?' · +'+(v.length-1):'');
@@ -319,16 +345,26 @@ function hinweisText(){
   teile.push(markt.length?(markt.length===1?'1 Preis stammt':markt.length+' Preise stammen')+' aus Angeboten oder Abrechnungen.':'Erst ein Angebot oder eine Abrechnung macht daraus einen Marktpreis.');
   return teile.join(' ');
 }
-function renderListe(){
-  const zaehler=new Map();for(const e of daten.produkte)if(ui.archiv?e.archiviert:!e.archiviert)zaehler.set(e.kategorie,(zaehler.get(e.kategorie)||0)+1);
-  const chips=[...KATEGORIEN.map(([k,mehr])=>[k,mehr+(zaehler.get(k)?' · '+zaehler.get(k):'')]),['alle','Alle']]
-    .map(([k,text])=>'<button type="button" class="pill" aria-pressed="'+(ui.kategorie===k)+'" data-kat="'+k+'">'+esc(text)+'</button>').join('');
-  root.innerHTML=`<div class="pb-wrap">
-    <a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a>
+// Im Projekt (Reiter in Work): ausgewählt, nicht verworfen.
+const imProjekt=e=>verwendungenVon(e).some(v=>v.projekt_id===PROJEKT&&v.status!=='verworfen');
+function kopfListe(){
+  if(!PROJEKT)return `<a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a>
     <header class="pb-head"><div class="pb-head-text"><p class="kicker">Werkzeuge</p><h1>Produktbibliothek</h1>
       <p class="pb-intro">Einmal erfassen, in jedem Projekt verwenden: Produkte mit Herstellerdatenblatt, Preisen mit ihrer Herkunft und den Projekten, in denen sie stecken.</p></div>
       <div class="pb-actions"><a class="btn btn-primary" href="./produktbibliothek.html?neu=datenblatt">${ICON_HOCH}Herstellerdatenblatt hochladen</a>
-      <a class="btn" href="./produktbibliothek.html?neu=hand">Von Hand anlegen</a></div></header>
+      <a class="btn" href="./produktbibliothek.html?neu=hand">Von Hand anlegen</a></div></header>`;
+  // Im Reiter nennt Work Projekt und Werkzeug schon; dort führt ein Knopf in die ganze Bibliothek (ganze Seite, nicht im Rahmen).
+  return (IM_REITER?'':'<a class="pb-back" href="./produktbibliothek.html">‹ Produktbibliothek</a>')+
+    `<header class="pb-head pb-auswahl-kopf"><div class="pb-head-text">${IM_REITER?'':'<p class="kicker">Produktbibliothek · Auswahl für das Projekt</p><h1>'+esc(projektName(projekt(PROJEKT))||'Projekt')+'</h1>'}
+      <p class="pb-intro">Was für dieses Projekt ausgewählt ist, nach Code: Stand im Projekt, Preis mit Herkunft und Datenblatt. Ausgewählt wird in der Produktbibliothek mit «Zu Projekt».</p></div>
+      ${IM_REITER?'<div class="pb-actions"><a class="btn" href="./produktbibliothek.html" target="_top">Produktbibliothek öffnen</a></div>':''}</header>`;
+}
+function renderListe(){
+  const zaehler=new Map();for(const e of daten.produkte)if((ui.archiv?e.archiviert:!e.archiviert)&&(!PROJEKT||imProjekt(e)))zaehler.set(e.kategorie,(zaehler.get(e.kategorie)||0)+1);
+  const chips=[...KATEGORIEN.filter(([k])=>!PROJEKT||zaehler.get(k)).map(([k,mehr])=>[k,mehr+(zaehler.get(k)?' · '+zaehler.get(k):'')]),['alle','Alle']]
+    .map(([k,text])=>'<button type="button" class="pill" aria-pressed="'+(ui.kategorie===k)+'" data-kat="'+k+'">'+esc(text)+'</button>').join('');
+  root.innerHTML=`<div class="pb-wrap${PROJEKT?' pb-auswahl':''}">
+    ${kopfListe()}
     <div class="pb-banner" data-meldung hidden></div>
     <section class="card pb-filter" aria-label="Suchen und filtern">
       <div class="pb-filter-zeile">
@@ -337,11 +373,11 @@ function renderListe(){
         <div class="pb-gruppe"><label for="pbHerkunft" class="meta">Preis aus</label>
         <select id="pbHerkunft" class="pb-input">${[['alle','allen Quellen'],['markt','Angebot oder Abrechnung'],['ansatz','Kostenberechnung (Ansatz)'],['liste','Datenblatt (Listenpreis)'],['ohne','noch ohne Preis']]
           .map(([k,t])=>'<option value="'+k+'"'+(ui.herkunft===k?' selected':'')+'>'+t+'</option>').join('')}</select></div>
-        <div class="pb-gruppe"><label for="pbProjekt" class="meta">Projekt</label>
+        ${PROJEKT?'':`<div class="pb-gruppe"><label for="pbProjekt" class="meta">Projekt</label>
         <select id="pbProjekt" class="pb-input"><option value="alle">alle Projekte</option>${daten.projekte.filter(p=>p.status==='aktiv')
-          .map(p=>'<option value="'+esc(p.id)+'"'+(ui.projekt===p.id?' selected':'')+'>'+esc(projektName(p))+'</option>').join('')}</select></div>
+          .map(p=>'<option value="'+esc(p.id)+'"'+(ui.projekt===p.id?' selected':'')+'>'+esc(projektName(p))+'</option>').join('')}</select></div>`}
         <div class="pb-gruppe"><label for="pbSort" class="meta">Sortieren</label>
-        <select id="pbSort" class="pb-input">${[['zuletzt','zuletzt geändert'],['preis','Preis eingebaut'],['projekte','Anzahl Projekte'],['name','Name']]
+        <select id="pbSort" class="pb-input">${[['zuletzt',PROJEKT?'Code im Projekt':'zuletzt geändert'],['preis','Preis eingebaut'],['projekte','Anzahl Projekte'],['name','Name']]
           .map(([k,t])=>'<option value="'+k+'"'+(ui.sort===k?' selected':'')+'>'+t+'</option>').join('')}</select></div>
         <button type="button" class="btn btn-quiet" data-archiv aria-pressed="${ui.archiv}">${ui.archiv?'Zurück zur Bibliothek':'Archiv'}</button>
       </div>
@@ -355,7 +391,7 @@ function renderListe(){
   root.querySelector('#pbSuche').addEventListener('input',ev=>{ui.suche=ev.target.value;renderErgebnis()});
   root.querySelector('#pbHerkunft').addEventListener('change',ev=>{ui.herkunft=ev.target.value;renderErgebnis()});
   root.querySelector('#pbSort').addEventListener('change',ev=>{ui.sort=ev.target.value;renderErgebnis()});
-  root.querySelector('#pbProjekt').addEventListener('change',ev=>{ui.projekt=ev.target.value;renderErgebnis()});
+  root.querySelector('#pbProjekt')?.addEventListener('change',ev=>{ui.projekt=ev.target.value;renderErgebnis()});
   root.querySelector('[data-archiv]').addEventListener('click',()=>{ui.archiv=!ui.archiv;void zeigeListe()});
   root.querySelectorAll('[data-kat]').forEach(b=>b.addEventListener('click',()=>{
     ui.kategorie=b.dataset.kat;root.querySelectorAll('[data-kat]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderErgebnis()}));
@@ -369,9 +405,11 @@ function renderErgebnis(){
   if(anzahl)anzahl.textContent=liste.length+' '+(liste.length===1?'Eintrag':'Einträge')+(firma?' von '+firma.firma:'')+(fuer?' ausgewählt für '+projektName(fuer):'')+
     (ui.kategorie!=='alle'?' · '+katName(ui.kategorie):'')+(KG_HINWEIS[ui.kategorie]?' · '+KG_HINWEIS[ui.kategorie]:'');
   el.innerHTML=`${liste.length?'<div class="pb-grid">'+liste.map(karte).join('')+'</div>':
+      (PROJEKT?'<div class="card pb-leer"><p>'+(daten.produkte.some(imProjekt)?'Nichts gefunden. Andere Kategorie oder weniger Suchbegriffe?':
+        'Für dieses Projekt ist noch nichts ausgewählt.')+'</p><p class="meta">Ausgewählt wird in der Produktbibliothek: «Zu Projekt» auf der Karte eines Produkts.</p></div>':
       '<div class="card pb-leer"><p>'+(fuer?'Für dieses Projekt ist hier noch nichts ausgewählt. «Zu Projekt» auf einer Karte wählt aus.':
         daten.produkte.length?'Nichts gefunden. Andere Kategorie oder weniger Suchbegriffe?':'Die Bibliothek ist noch leer.')+'</p>'+
-      '<p class="meta">Am schnellsten mit einem Herstellerdatenblatt: Romy liest es, du prüfst, die Bibliothek übernimmt.</p></div>'}`;
+      '<p class="meta">Am schnellsten mit einem Herstellerdatenblatt: Romy liest es, du prüfst, die Bibliothek übernimmt.</p></div>')}`;
   el.querySelectorAll('[data-zu-projekt]').forEach(b=>b.addEventListener('click',()=>zuProjekt(daten.produkte.find(e=>e.id===b.dataset.zuProjekt))));
 }
 function karte(e){
@@ -391,7 +429,7 @@ function karte(e){
       <p class="meta">${esc(b.meta)}</p>
       ${badges.length?'<div class="pb-chips">'+badges.map(badge).join('')+'</div>':''}
       <p class="pb-verwendung">${esc(verwendungsZeile(e))}</p>
-      <div class="pb-karte-aktionen"><button type="button" class="btn" data-zu-projekt="${esc(e.id)}">Zu Projekt</button></div>
+      ${PROJEKT?'':'<div class="pb-karte-aktionen"><button type="button" class="btn" data-zu-projekt="'+esc(e.id)+'">Zu Projekt</button></div>'}
     </div></article>`;
 }
 
@@ -410,7 +448,7 @@ function renderProdukt(e){
     e.status==='geprueft'&&e.geprueft_am?'geprüft am '+datum(e.geprueft_am):'Entwurf'].filter(Boolean).join(' · ');
   const hinweise=hinweiseFuer(eigene),hinweiseFamilie=hinweiseFuer(familie);
   root.innerHTML=`<div class="pb-wrap">
-    <a class="pb-back" href="./produktbibliothek.html">‹ Produktbibliothek</a>
+    <a class="pb-back" href="${esc(mitProjekt('./produktbibliothek.html'))}">${PROJEKT?'‹ Auswahl des Projekts':'‹ Produktbibliothek'}</a>
     <header class="pb-head"><div class="pb-head-text"><p class="kicker">${e.typ==='leistung'?'Leistung':'Produkt'} · ${esc(katEins(e.kategorie))}${e.bestand?' · Bestand':''}${e.archiviert?' · archiviert':''}</p>
       <h1>${esc(e.name)}</h1><p class="pb-intro">${esc(kopf)}</p></div>
       <div class="pb-actions"><button type="button" class="btn btn-primary" data-zu-projekt>Zu Projekt</button>
@@ -566,7 +604,7 @@ function preisDialog(e){
       <label>€ netto<input name="betrag" class="pb-input" inputmode="decimal" required placeholder="z. B. 85,50"></label>
       <label>Einheit<select name="einheit" class="pb-input">${EINHEITEN.map(x=>'<option>'+x+'</option>').join('')}</select></label>
       <label>Stand<input name="stand" type="date" class="pb-input"></label>
-      <label>Projekt<select name="projekt" class="pb-input"><option value="">—</option>${projekte.map(p=>'<option value="'+esc(p.id)+'">'+esc(projektName(p))+'</option>').join('')}<option value="frei">anderes Projekt …</option></select></label>
+      <label>Projekt<select name="projekt" class="pb-input"><option value="">—</option>${projekte.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===PROJEKT?' selected':'')+'>'+esc(projektName(p))+'</option>').join('')}<option value="frei">anderes Projekt …</option></select></label>
       <label>anderes Projekt<input name="projektText" class="pb-input" maxlength="160" placeholder="Projektnummer oder Name"></label>
       <label>Menge<input name="menge" class="pb-input" inputmode="decimal"></label>
       <label>KG<input name="kg" class="pb-input" inputmode="numeric" maxlength="3" placeholder="z. B. 353"></label>
@@ -607,10 +645,11 @@ function zuProjekt(e){
     oeffneDialog('<form method="dialog" class="pb-frage"><h2>Zu Projekt</h2><p>In keinem aktiven Projekt bist du im Team oder in der Projektleitung. Die Projektleitung kann dich im Projekt aufnehmen.</p><div class="pb-actions"><button class="btn">Schließen</button></div></form>');
     return;
   }
-  const erstes=projekte[0].id;
+  // Im Projekt (Reiter in Work) ist es schon gewählt.
+  const erstes=projekte.some(p=>p.id===PROJEKT)?PROJEKT:projekte[0].id;
   const form=oeffneDialog(`<form method="dialog" class="pb-form"><h2>Zu Projekt</h2><p class="meta">${esc(e.name)}</p>
     <div class="pb-felder">
-      <label class="breit">Projekt<select name="projekt" class="pb-input">${projekte.map(p=>'<option value="'+esc(p.id)+'">'+esc(projektName(p))+'</option>').join('')}</select></label>
+      <label class="breit">Projekt<select name="projekt" class="pb-input">${projekte.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===erstes?' selected':'')+'>'+esc(projektName(p))+'</option>').join('')}</select></label>
       <label>Code<input name="code" class="pb-input" value="${esc(naechsterCode(erstes,e.kategorie))}" maxlength="8" pattern="[A-Za-z]{1,4}-[0-9]{1,3}" title="z. B. BO-01"></label>
       <label class="breit">Notiz<input name="notiz" class="pb-input" maxlength="1000" placeholder="z. B. Variante für Wohnen, Muster bestellt"></label>
     </div>
@@ -854,7 +893,7 @@ async function uebernehmen(form){
       const {error}=await sb.from('office_produkt_verwendungen').insert({produkt_id:eintrag.id,projekt_id:projektId,code:/^[A-Z]{1,4}-\d{1,3}$/.test(code)?code:null});
       if(error)console.warn('Verwendung',error);
     }
-    location.href='./produktbibliothek.html?id='+encodeURIComponent(eintrag.id);
+    location.href=mitProjekt('./produktbibliothek.html?id='+encodeURIComponent(eintrag.id));
   }catch(e){
     console.error('Übernehmen',e);knopf.disabled=false;
     meldung('Nicht übernommen: '+(e?.message||e),'warn');window.scrollTo({top:0,behavior:'smooth'});
@@ -915,7 +954,7 @@ function zeigeFormular(e){
     const q=e?sb.from('office_produkte').update(zeile).eq('id',e.id):sb.from('office_produkte').insert(zeile);
     const {data,error}=await q.select('*').single();
     if(error){knopf.disabled=false;meldung('Nicht gespeichert: '+error.message,'warn');return}
-    location.href='./produktbibliothek.html?id='+encodeURIComponent(data.id);
+    location.href=mitProjekt('./produktbibliothek.html?id='+encodeURIComponent(data.id));
   });
 }
 

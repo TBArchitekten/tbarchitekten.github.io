@@ -15,3 +15,6 @@
 .hk-kategorien{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 16px}
 .hk-kategorien legend{padding:0;margin-bottom:2px}
 @media (max-width:520px){.hk-kontakt div{grid-template-columns:88px minmax(0,1fr)}}
+/* Im Projekt (Reiter «Hersteller» in Work, 25.11.2026): die dafür ausgewählten Produkte der Firma mit Code und Stand. */
+.hk-im-projekt{list-style:none;padding-left:0;font-size:14px;gap:4px}
+.hk-im-projekt .meta{font-size:12px}
