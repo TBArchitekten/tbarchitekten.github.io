@@ -121,10 +121,11 @@ test('Mappe anlegen, Position mit Code, Kandidaten aus der Bibliothek, Texte auf
   const d=await db(page);
   assert.deepEqual(d.office_produkt_verwendungen.filter(v=>v.projekt_id===d.office_projects[0].id).map(v=>v.status+':'+v.code).sort(),['vorgeschlagen:BO-01','vorgeschlagen:BO-02']);
   const buehne=page.locator('.mm-buehne');
-  // Seit 26.11.2026 stehen Name und Kennwerte auf der Bühne in Feldern (für diese Mappe anpassbar), im PDF als Text.
+  // Seit 26.11.2026 stehen Name und Kennwerte auf der Seite wie im PDF; geschrieben wird direkt darin (für diese Mappe).
   assert.match(await buehne.innerText(),/A ·/);
-  assert.equal(await page.locator('textarea[data-mmanp="'+e.id+'|A|name"]').inputValue(),'Parkett Eiche geölt');
-  assert.match(await page.locator('textarea[data-mmanp="'+e.id+'|A|kennwerte"]').inputValue(),/^Aufbau: massiv 16 mm$/m);
+  assert.equal(await page.locator('#mm-'+e.id+'-A-name').innerText(),'Parkett Eiche geölt');
+  assert.match(await page.locator('.mm-buehne table[data-mmkwtab="'+e.id+'|A"]').innerText(),/Aufbau\s+massiv 16 mm/);
+  assert.equal(await page.locator('.mm-buehne textarea').count(),0,'keine Eingabefelder auf der Seite');
   assert.equal(await page.locator('.mm-buehne .mm-geaendert').count(),0,'nichts geändert: nichts markiert');
   // Texte auf der Seite und Angaben der Position rechts.
   await page.locator('#mm-'+e.id+'-frage').fill('Welcher Belag für das Obergeschoss?');
@@ -149,7 +150,7 @@ test('Mappe anlegen, Position mit Code, Kandidaten aus der Bibliothek, Texte auf
   await page.locator('.mm-seitenliste .active',{hasText:'B2 · Parkett Eiche geölt · Material'}).waitFor();
   // Seit 26.11.2026 steht das Foto in einem Rahmen (Ausschnitt); das Bild darin.
   assert.ok(await page.locator('.mm-buehne .mm-foto-gross img').count(),'großes Foto auf der Materialseite');
-  await page.locator('textarea[data-mmopt="'+e.id+'|A"]').fill('Eiche natur, geölt; Muster liegt vor.');
+  await page.locator('[data-mmopt="'+e.id+'|A"]').fill('Eiche natur, geölt; Muster liegt vor.');
   await gespeichert(page);
   e=(await zeilen(page,'entscheidungsliste'))[0];
   assert.equal(e.daten.optionen[0].muster_text,'Eiche natur, geölt; Muster liegt vor.');
@@ -172,14 +173,18 @@ test('Neuer Stand der Bibliothek erst nach «Übernehmen»; Kennwert nur mit Bel
   await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');
   const hinweis=page.locator('.mm-intern',{hasText:'neuer Stand in der Bibliothek'});
   await hinweis.waitFor();
-  const kennA=page.locator('.mm-buehne textarea[data-mmanp$="|A|kennwerte"]');
-  assert.doesNotMatch(await kennA.inputValue(),/R9/,'die Seite bleibt beim übernommenen Stand');
+  const kennA=page.locator('.mm-buehne table[data-mmkwtab$="|A"]');
+  assert.doesNotMatch(await kennA.innerText(),/R9/,'die Seite bleibt beim übernommenen Stand');
   await hinweis.locator('button',{hasText:'Übernehmen'}).click();
-  await page.waitForFunction(()=>/Rutschhemmung: R9/.test(document.querySelector('.mm-buehne textarea[data-mmanp$="|A|kennwerte"]')?.value||''));
+  await page.waitForFunction(()=>/Rutschhemmung\s+R9/.test(document.querySelector('.mm-buehne table[data-mmkwtab$="|A"]')?.innerText||''));
   assert.equal(await page.locator('.mm-buehne .mm-geaendert').count(),0,'der neue Stand ist keine Anpassung');
   await gespeichert(page);
   const e=(await zeilen(page,'entscheidungsliste'))[0];
   assert.equal(e.daten.optionen[0].muster_produkt.stand,'2026-11-24T09:00:00.000Z');
+  // Schrift in Millimetern des Blatts: der Titel hat 20 pt (7,056 mm), wie groß die Seite auch gezeigt wird.
+  const mmGroesse=sel=>page.evaluate(sel=>{const e=document.querySelector(sel);
+    return Math.round(parseFloat(getComputedStyle(e).fontSize)/(e.closest('.mm-seite').getBoundingClientRect().width/420)*100)/100},sel);
+  assert.equal(await mmGroesse('.mm-buehne h2.mm-t-titel'),7.06,'nicht die 19 px der Überschriften der App');
   // PDF: A3 quer, alle Seiten, Beleg ja, Fundstelle nein, keine Eingabefelder, keine Unterschrift.
   await page.evaluate(()=>{window.__gedruckt=null;window.print=()=>{window.__gedruckt={html:document.querySelector('.mm-druck').innerHTML,
     klasse:document.documentElement.className,stil:[...document.querySelectorAll('style')].map(s=>s.textContent).join('\n')}}});
@@ -189,12 +194,18 @@ test('Neuer Stand der Bibliothek erst nach «Übernehmen»; Kennwert nur mit Bel
   assert.match(g.stil,/@page\{size:A3 landscape;margin:0\}/);assert.match(g.klasse,/mm-drucken/);
   assert.equal((g.html.match(/class="mm-blatt"/g)||[]).length,4);
   assert.match(g.html,/Angebot 2025, fortgeschrieben/);assert.match(g.html,/189,69 €\/m²/);
-  assert.doesNotMatch(g.html,/T-90|Altbau|Zeile 12/);assert.doesNotMatch(g.html,/<textarea/);assert.doesNotMatch(g.html,/Unterschrift/);
+  assert.doesNotMatch(g.html,/T-90|Altbau|Zeile 12/);assert.doesNotMatch(g.html,/<textarea|contenteditable|mm-raster/);assert.doesNotMatch(g.html,/Unterschrift/);
   assert.match(g.html,/<img class="mm-foto/);
+  // Im Druck dieselbe Schrift (Titel 20 pt, Deckblatt 40 pt) und kein Abstand unter den Absätzen (alles auf der Grundlinie).
+  await page.emulateMedia({media:'print'});
+  assert.equal(await mmGroesse('.mm-druck h2.mm-t-titel'),7.06);
+  assert.equal(await mmGroesse('.mm-druck h2.mm-t-gross'),14.11);
+  assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.mm-druck .mm-seite :is(p,h2)')].map(e=>getComputedStyle(e).marginBottom).filter(x=>x!=='0px')),[]);
   if(FOTOS){
     // Nur zum Ansehen: das PDF so, wie der Druck es setzt (A3 quer).
     await page.pdf({path:path.join(FOTOS,'mappe-druck.pdf'),preferCSSPageSize:true,printBackground:true});
   }
+  await page.emulateMedia({media:null});
   await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));
   assert.doesNotMatch(await page.evaluate(()=>document.documentElement.className),/mm-drucken/);
   assert.deepEqual(fehler,[]);
@@ -398,19 +409,41 @@ test('Bearbeiten nach dem Erzeugen: Texte für diese Mappe, Bild ersetzen, zusch
   await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');
   let e=(await zeilen(page,'entscheidungsliste'))[0];
   const produktVorher=JSON.stringify((await db(page)).office_produkte);
-  // Name und Kennwerte nur für diese Mappe; markiert, unter der Seite «zurücksetzen».
-  const name=page.locator('textarea[data-mmanp="'+e.id+'|A|name"]');
-  assert.equal(await name.inputValue(),'Parkett Eiche geölt');
+  // Name und Kennwerte nur für diese Mappe, direkt auf der Seite; markiert, rechts «zurücksetzen».
+  const name=page.locator('#mm-'+e.id+'-A-name');
+  assert.equal(await name.innerText(),'Parkett Eiche geölt');
   assert.equal(await name.evaluate(t=>t.classList.contains('mm-geaendert')),false);
   await name.fill('Eiche Landhausdiele, geölt');
-  await name.press('Tab');
+  await name.press('Enter');
   await gespeichert(page);
   assert.equal(await name.evaluate(t=>t.classList.contains('mm-geaendert')),true);
-  const kenn=page.locator('textarea[data-mmanp="'+e.id+'|A|kennwerte"]');
-  await kenn.fill('Aufbau: 21 mm Landhausdiele\nOberfläche: geölt');
+  // Kennwerte in der Tabelle: Wert ändern, Enter springt zur nächsten Zeile; die letzte Zeile ersetzen.
+  const zellen=()=>page.locator('.mm-buehne table[data-mmkwtab="'+e.id+'|A"] tbody tr');
+  const n0=await zellen().count();
+  await page.locator('#mm-'+e.id+'-A-kw0w').fill('21 mm Landhausdiele');
+  for(let i=1;i<n0;i++){await page.locator('#mm-'+e.id+'-A-kw'+i+'f').fill('');await page.locator('#mm-'+e.id+'-A-kw'+i+'w').fill('')}
+  await page.locator('#mm-'+e.id+'-A-kw1f').fill('Oberfläche');await page.locator('#mm-'+e.id+'-A-kw1w').fill('geölt');
   await gespeichert(page);
   e=(await zeilen(page,'entscheidungsliste'))[0];
   assert.equal(e.daten.optionen[0].muster_name,'Eiche Landhausdiele, geölt');
+  assert.deepEqual(e.daten.optionen[0].muster_merkmale,[{feld:'Aufbau',wert:'21 mm Landhausdiele'},{feld:'Oberfläche',wert:'geölt'}]);
+  // Beim Verlassen des Rahmens fallen leere Zeilen weg.
+  await page.locator('#mm-'+e.id+'-frage').click();
+  await page.waitForFunction(id=>document.querySelectorAll('.mm-buehne table[data-mmkwtab="'+id+'|A"] tbody tr').length===2,e.id);
+  // «+ Kennwert» hängt eine leere Zeile an; Enter im Feld springt zum Wert; leer fällt sie beim Verlassen wieder weg.
+  await page.locator('.mm-buehne [data-act="mm-kw-neu"][data-o="A"]').click({force:true});
+  await page.locator('#mm-'+e.id+'-A-kw2f').waitFor();
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),'mm-'+e.id+'-A-kw2f');
+  await page.keyboard.type('Format');await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),'mm-'+e.id+'-A-kw2w');
+  await page.keyboard.type('1200 × 200 mm');
+  await gespeichert(page);
+  e=(await zeilen(page,'entscheidungsliste'))[0];
+  assert.deepEqual(e.daten.optionen[0].muster_merkmale.at(-1),{feld:'Format',wert:'1200 × 200 mm'});
+  await page.locator('#mm-'+e.id+'-A-kw2f').fill('');await page.locator('#mm-'+e.id+'-A-kw2w').fill('');
+  await page.locator('#mm-'+e.id+'-frage').click();
+  await gespeichert(page);
+  e=(await zeilen(page,'entscheidungsliste'))[0];
   assert.deepEqual(e.daten.optionen[0].muster_merkmale,[{feld:'Aufbau',wert:'21 mm Landhausdiele'},{feld:'Oberfläche',wert:'geölt'}]);
   assert.equal(e.daten.optionen[0].muster_produkt.name,'Parkett Eiche geölt','der Auszug der Bibliothek bleibt');
   const hinweis=page.locator('.mm-intern .mm-geaendert-zeile',{hasText:'A: in dieser Mappe geändert.'});
@@ -423,13 +456,13 @@ test('Bearbeiten nach dem Erzeugen: Texte für diese Mappe, Bild ersetzen, zusch
   await page.locator('button[data-act="mm-pdf"]').click();
   await page.waitForFunction(()=>window.__gedruckt);
   let druck=await page.evaluate(()=>window.__gedruckt);
-  assert.match(druck,/A · Eiche Landhausdiele, geölt/);assert.match(druck,/<th scope="row">Oberfläche<\/th><td>geölt<\/td>/);
-  assert.doesNotMatch(druck,/<textarea|mm-bild-knopf|data-bildplatz/);
+  assert.match(druck,/<b>A · <\/b><b>Eiche Landhausdiele, geölt<\/b>/);assert.match(druck,/<th scope="row">Oberfläche<\/th><td>geölt<\/td>/);
+  assert.doesNotMatch(druck,/<textarea|contenteditable|mm-bild-knopf|data-bildplatz/);
   await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));
   // Zurücksetzen: wieder der Name aus der Bibliothek, die Kennwerte bleiben geändert.
   await hinweis.locator('button',{hasText:'Name zurücksetzen'}).click();
   await page.locator('.pd-meldung',{hasText:'Name von A wieder wie in der Produktbibliothek.'}).waitFor();
-  assert.equal(await page.locator('textarea[data-mmanp="'+e.id+'|A|name"]').inputValue(),'Parkett Eiche geölt');
+  assert.equal(await page.locator('#mm-'+e.id+'-A-name').innerText(),'Parkett Eiche geölt');
   await gespeichert(page);
   e=(await zeilen(page,'entscheidungsliste'))[0];
   assert.equal(e.daten.optionen[0].muster_name,undefined);assert.ok(Array.isArray(e.daten.optionen[0].muster_merkmale));
@@ -454,15 +487,17 @@ test('Bearbeiten nach dem Erzeugen: Texte für diese Mappe, Bild ersetzen, zusch
   // Zuschneiden: vergrößern und ziehen; die Seite zeigt den Ausschnitt.
   const feld=dlg.locator('.mm-ausschnitt');
   await feld.waitFor();
-  // Die Vorschau hat das Seitenverhältnis des Fotos im PDF; auf der Bühne ist es flacher (die Felder sind höher als der Text).
+  // Die Vorschau hat das Seitenverhältnis des Fotos im PDF (auf dem Raster seit 26.11.2026 gleich wie auf der Bühne: 6 × 4 Felder).
   const verh=await page.evaluate(()=>{
     const d=document.querySelector('.mm-druck');d.style.display='block';
-    const r=[...d.querySelectorAll('.mm-blatt')].find(x=>x.querySelector('.mm-kand')).querySelector('.mm-kand .mm-foto').getBoundingClientRect();
+    const r=[...d.querySelectorAll('.mm-blatt .mm-typ-vergleich [data-mmfoto="A|0"]')][0].getBoundingClientRect();
     d.style.display='';
-    const v=document.querySelector('#pdDialog .mm-ausschnitt').getBoundingClientRect(),b=document.querySelector('.mm-buehne .mm-kand .mm-foto').getBoundingClientRect();
+    const v=document.querySelector('#pdDialog .mm-ausschnitt').getBoundingClientRect(),b=document.querySelector('.mm-buehne [data-mmfoto="A|0"]').getBoundingClientRect();
     return {pdf:r.width/r.height,vorschau:v.width/v.height,buehne:b.width/b.height};
   });
   assert.ok(Math.abs(verh.vorschau/verh.pdf-1)<0.02,'wie im PDF: '+JSON.stringify(verh));
+  assert.ok(Math.abs(verh.buehne/verh.pdf-1)<0.01,'die Bühne wie das PDF: '+JSON.stringify(verh));
+  assert.ok(Math.abs(verh.pdf-188/124)<0.01,'6 × 4 Felder: '+JSON.stringify(verh));
   await dlg.locator('input[data-bd="zoom"]').evaluate(r=>{r.value='2';r.dispatchEvent(new Event('input',{bubbles:true}));r.dispatchEvent(new Event('change',{bubbles:true}))});
   await gespeichert(page);
   const b=await dlg.locator('.mm-ausschnitt').boundingBox();
@@ -489,7 +524,7 @@ test('Bearbeiten nach dem Erzeugen: Texte für diese Mappe, Bild ersetzen, zusch
   await dlg.waitFor();
   assert.match(await dlg.locator('h2').innerText(),/Bild · Variante A, Bild 2/);
   await dlg.locator('input[data-bd="datei"]').setInputFiles({name:'Detail.png',mimeType:'image/png',buffer:PNG});
-  await page.locator('.mm-buehne .mm-foto-reihe .mm-foto-klein img').waitFor();
+  await page.locator('.mm-buehne .mm-foto-klein img').waitFor();
   await gespeichert(page);
   e=(await zeilen(page,'entscheidungsliste'))[0];
   assert.equal(e.daten.optionen[0].muster_fotos.length,2);

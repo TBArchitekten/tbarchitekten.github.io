@@ -10,7 +10,10 @@
    Entschieden wird im Bemusterungstermin, nicht auf dem Blatt (Gari, 24.11.2026): keine Unterschrift auf den Seiten.
    Anpassen für diese Mappe (Gari, 26.11.2026): Name, Hersteller und Serie, Kennwerte und Beschreibung einer Variante
    lassen sich auf der Seite ändern, nur für die Mappe, markiert und mit «Zurücksetzen»; jedes Foto lässt sich ersetzen
-   (aus der Bibliothek oder ein eigenes Bild, das in der Mappe bleibt) und zuschneiden. Die Seitenraster bleiben fest. */
+   (aus der Bibliothek oder ein eigenes Bild, das in der Mappe bleibt) und zuschneiden.
+   TBA-Raster (Gari, 26.11.2026): alle Seiten stehen auf einem Raster A3 quer aus 12 × 8 quadratischen Feldern mit
+   Grundlinie 4 mm, Kopf- und Fußzeile wie im Archicad-Master, Schrift Arial; beim Bearbeiten sieht die Seite aus wie
+   im PDF, die Texte werden direkt auf ihr geschrieben. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -150,7 +153,7 @@ function anpassen(o,feld,wert){
   const a=o?.muster_produkt||{},n={...o};
   if(feld==='name'){const w=s(wert).trim().slice(0,200);if(!w||w===(s(a.name)||s(o?.text)).trim())delete n.muster_name;else n.muster_name=w}
   else if(feld==='herkunft'){const w=s(wert).trim().slice(0,240);if(w===herkunftVon(a))delete n.muster_herkunft;else n.muster_herkunft=w}
-  else if(feld==='kennwerte'){const l=merkmaleAusText(wert);if(gleicheMerkmale(l,a.merkmale))delete n.muster_merkmale;else n.muster_merkmale=l}
+  else if(feld==='kennwerte'){const l=Array.isArray(wert)?merkmaleSauber(wert):merkmaleAusText(wert);if(gleicheMerkmale(l,a.merkmale))delete n.muster_merkmale;else n.muster_merkmale=l}
   else if(feld==='beschreibung'){const w=s(wert);if(!w.trim()||w.trim()===s(a.beschreibung).trim())delete n.muster_text;else n.muster_text=w}
   return n;
 }
@@ -229,6 +232,7 @@ function mappeInhalt(vorlage,entscheidungen,{projekt={},stand='',nummer=null}={}
   return {schema:SCHEMA,titel:s(v.titel).trim()||'Mustermappe',themenpaket:s(v.themenpaket),
     projekt:{nummer:s(projekt.number??projekt.nummer),name:s(projekt.name)},termin:s(v.besprechung_am),auftraggeber:s(v.auftraggeber),
     verfasser:s(v.verfasser),status:s(v.status)||'Entwurf',vorgelegtAm:s(v.vorgelegt_am),stand:s(stand),deckblatt:s(v.deckblatt_text),
+    kopf:{projekt:s(v.kopf_projekt).trim()||[s(projekt.number??projekt.nummer),s(projekt.name)].filter(Boolean).join(' '),phase:s(v.kopf_phase).trim(),untertitel:s(v.kopf_untertitel).trim()||s(v.titel).trim()||'Mustermappe'},
     strategien:{A:s(v.strategie_a),B:s(v.strategie_b)},seiten:seitenVon(v),punkte};
 }
 // Fotos, die niemand gewählt hat: das erste Foto des Produkts in der Bibliothek (wie die Karte der Bibliothek).
@@ -241,7 +245,7 @@ function mitStandardFotos(inhalt,fotosVon){
 function allePfade(inhalt){
   const produkt=new Set(),mappe=new Set();
   for(const p of inhalt.punkte||[])for(const o of p.optionen||[])for(const f of o.fotos||[])(f.quelle==='mappe'?mappe:produkt).add(f.pfad);
-  for(const x of inhalt.seiten||[])if(x.typ==='frei'&&s(x.bild?.pfad))mappe.add(x.bild.pfad);
+  for(const x of inhalt.seiten||[])if(['frei','deckblatt'].includes(x.typ)&&s(x.bild?.pfad))mappe.add(x.bild.pfad);
   return {produkt:[...produkt],mappe:[...mappe]};
 }
 function kandidatenDerSeite(seite,punkt){
@@ -270,70 +274,90 @@ function uebersichtGruppen(inh){
 }
 
 // ---------- Seiten als HTML ----------
-// modus «bearbeiten»: die Texte der Mappe als Eingabefelder auf der Seite; «druck»: Lesefassung für PDF und Stand.
-// bild(pfad,bucket) liefert die Adresse eines Fotos oder ''. Alles Eingegebene wird maskiert.
-function feld(modus,attr,wert,{zeilen=2,platz='',klasse='',titel=false,id=''}={}){
-  if(modus!=='bearbeiten'){
-    if(!s(wert).trim())return '';
-    return titel?'<h2 class="mm-titel">'+esc(wert)+'</h2>':'<p class="mm-p '+klasse+'">'+esc(wert).replace(/\n/g,'<br>')+'</p>';
-  }
-  return '<textarea'+(id?' id="'+esc(id)+'"':'')+' class="mm-text '+klasse+'" '+attr+' rows="'+zeilen+'" placeholder="'+esc(platz)+'" aria-label="'+esc(platz)+'">'+esc(wert)+'</textarea>';
+// TBA-Raster A3 quer (Gari, 26.11.2026, nach den Rastersystemen von Müller-Brockmann und Gerstner): 12 Spalten und
+// 8 Zeilen quadratischer Felder von 28 mm, Abstand 4 mm = Grundlinie; Ränder 20 mm seitlich, 24 mm oben, 21 mm unten;
+// Satzspiegel 380 × 252 mm. Jede Seite setzt ihre Teile in Rahmen auf diese Felder; Kopf- und Fußzeile stehen wie im
+// Archicad-Master auf den Grundlinien 16 und 284 mm. Schrift Arial (wie in Archicad, auf Mac und Windows gleich):
+// 9 pt auf 4 mm, klein 7,5 pt, Titel 20 pt auf 8 mm; alle Zeilen auf der Grundlinie, so endet ein voller Rahmen an
+// einer Zeile. modus «bearbeiten»: dieselbe Seite, die Texte zum Hineinschreiben, dazu das Raster (eingeblendet nach
+// Wahl); «druck»: für PDF, Präsentieren und Stand. bild(pfad,bucket) liefert die Adresse eines Fotos oder ''.
+// Alles Eingegebene wird maskiert.
+const RASTER=Object.freeze({breite:420,hoehe:297,links:20,oben:24,unten:21,spalten:12,zeilen:8,feld:28,abstand:4,grundlinie:4,kopf:16,fuss:284});
+const BUERO=Object.freeze(['Titus Bernhard','Architekten','BDA']);
+function rasterMass(n){return n*(RASTER.feld+RASTER.abstand)-RASTER.abstand}
+const RASTER_HTML='<div class="mm-raster" aria-hidden="true">'+'<i></i>'.repeat(RASTER.spalten*RASTER.zeilen)+'</div>'+
+  '<div class="mm-raster-gross" aria-hidden="true">'+'<i></i>'.repeat(RASTER.spalten*RASTER.zeilen/4)+'</div><div class="mm-raster-linien" aria-hidden="true"></div>';
+// Ein Rahmen ab Spalte c und Zeile r, w Felder breit und h hoch. name nennt ihn beim Bearbeiten (Hinweis, wenn der
+// Inhalt nicht hineinpasst; im PDF wird an der letzten ganzen Zeile abgeschnitten).
+function rahmen(c,r,w,h,innen,{klasse='',name='',modus='druck'}={}){
+  return '<div class="mm-r'+(klasse?' '+klasse:'')+'" style="grid-column:'+c+' / span '+w+';grid-row:'+r+' / span '+h+'"'+
+    (modus==='bearbeiten'&&name?' data-rahmen="'+esc(name)+'"':'')+'>'+innen+'</div>';
 }
-// Fotos der Varianten stehen in einem Rahmen fester Größe; der Ausschnitt verschiebt und vergrößert das Bild darin.
-// platz (nur beim Bearbeiten): Position, Variante und Stelle des Fotos, dazu «Bild ändern» und, wenn noch Platz ist,
-// «+ Bild». Die freie Seite zeigt ihr Bild ganz (ein Plan wird nicht beschnitten).
+// Text auf der Seite: im Druck als Text, beim Bearbeiten dasselbe Element zum Hineinschreiben (gleiche Schrift, gleiche
+// Stelle; die Seite sieht beim Bearbeiten aus wie im PDF). Leer: im Druck nichts, beim Bearbeiten der Platzhalter.
+function text(modus,tag,klasse,wert,{attr='',leer='',id='',einzeilig=false,geaendert=false}={}){
+  const t=s(wert);
+  if(modus!=='bearbeiten')return t.trim()?'<'+tag+(klasse?' class="'+klasse+'"':'')+'>'+esc(t)+'</'+tag+'>':'';
+  return '<'+tag+' class="'+(klasse?klasse+' ':'')+'mm-ed'+(geaendert?' mm-geaendert':'')+'"'+(id?' id="'+esc(id)+'"':'')+(attr?' '+attr:'')+
+    ' contenteditable="plaintext-only" role="textbox"'+(einzeilig?' data-einzeilig':' aria-multiline="true"')+' aria-label="'+esc(leer)+'" data-leer="'+esc(leer)+'"'+
+    (geaendert?' title="In dieser Mappe geändert"':'')+'>'+esc(t)+'</'+tag+'>';
+}
+// Fotos der Varianten stehen in einem Rahmen; der Ausschnitt verschiebt und vergrößert das Bild darin. ort: Position,
+// Variante und Stelle des Fotos (data-mmfoto, auch im Druck: daran misst der Dialog «Bild ändern» den Rahmen im PDF);
+// beim Bearbeiten dazu «Bild ändern» und, solange Platz ist, «+ Bild». Bilder der freien Seite und des Deckblatts liegen
+// im Speicher der Mappe; die freie Seite zeigt ihr Bild ganz (ein Plan wird nicht beschnitten).
 function bildStil(a){
   const x=ausschnittVon(a);if(!x)return '';
   return ' style="object-position:'+x.x+'% '+x.y+'%'+(x.z>1?';transform:scale('+x.z+');transform-origin:'+x.x+'% '+x.y+'%':'')+'"';
 }
-function foto(f,bild,alt,klasse,bucket=BUCKET_PRODUKTE,platz=null){
+function foto(f,bild,alt,klasse,{bucket=BUCKET_PRODUKTE,ort=null,edit=false}={}){
   const b=f?.quelle==='mappe'?BUCKET:bucket;
   const url=f?.pfad?bild(f.pfad,b):'';
-  const knopf=(i,t)=>'<button type="button" class="mm-bild-knopf" data-act="mm-bild" data-z="'+esc(platz.z)+'" data-o="'+esc(platz.o)+'" data-i="'+i+'">'+t+'</button>';
-  const knoepfe=platz?'<span class="mm-bild-knoepfe">'+knopf(platz.i,url?'Bild ändern':'Bild wählen')+
-    (url&&Number.isInteger(platz.plus)?knopf(platz.plus,'+ Bild'):'')+'</span>':'';
-  const ort=platz?' data-bildplatz="'+esc(platz.z+'|'+platz.o+'|'+platz.i)+'"':'';
-  if(!url)return '<div class="mm-foto mm-foto-leer '+klasse+'" role="img" aria-label="'+esc(alt+': kein Foto')+'"'+ort+'><span>kein Foto</span>'+knoepfe+'</div>';
+  const knopf=(i,t)=>'<button type="button" class="mm-bild-knopf" data-act="mm-bild" data-z="'+esc(ort.z)+'" data-o="'+esc(ort.o)+'" data-i="'+i+'">'+t+'</button>';
+  const knoepfe=edit&&ort?'<span class="mm-bild-knoepfe">'+knopf(ort.i,url?'Bild ändern':'Bild wählen')+
+    (url&&Number.isInteger(ort.plus)?knopf(ort.plus,'+ Bild'):'')+'</span>':'';
+  const stelle=(ort?' data-mmfoto="'+esc(ort.o+'|'+ort.i)+'"':'')+(edit&&ort?' data-bildplatz="'+esc(ort.z+'|'+ort.o+'|'+ort.i)+'"':'');
+  if(!url)return '<div class="mm-foto mm-foto-leer '+klasse+'" role="img" aria-label="'+esc(alt+': kein Foto')+'"'+stelle+'><span>kein Foto</span>'+knoepfe+'</div>';
   if(bucket===BUCKET)return '<img class="mm-foto '+klasse+'" src="'+esc(url)+'" data-pfad="'+esc(f.pfad)+'" alt="'+esc(alt)+'">';
-  return '<span class="mm-foto mm-rahmen '+klasse+'"'+ort+'><img class="mm-foto-bild" src="'+esc(url)+'" data-pfad="'+esc(f.pfad)+'" alt="'+esc(alt)+'"'+
+  return '<span class="mm-foto mm-rahmen '+klasse+'"'+stelle+'><img class="mm-foto-bild" src="'+esc(url)+'" data-pfad="'+esc(f.pfad)+'" alt="'+esc(alt)+'"'+
     bildStil(f.ausschnitt)+'>'+knoepfe+'</span>';
 }
-// Texte der Variante aus der Bibliothek: im Druck wie bisher, beim Bearbeiten als Feld; geändert = durchgezogen umrandet.
-function anpassFeld(modus,p,o,feld,{wert,druck,klasse='',platz='',zeilen=1}){
-  if(modus!=='bearbeiten')return druck;
-  const g=!!o.geaendert?.[feld];
-  return '<textarea id="'+esc('mm-'+p.id+'-'+o.id+'-'+feld)+'" class="mm-text '+klasse+(g?' mm-geaendert':'')+'" data-mmanp="'+esc(p.id+'|'+o.id+'|'+feld)+
-    '" rows="'+zeilen+'" placeholder="'+esc(platz)+'" aria-label="'+esc(platz)+'"'+(g?' title="In dieser Mappe geändert"':'')+'>'+esc(wert)+'</textarea>';
-}
 function herkunftText(o){return typeof o.herkunft==='string'?o.herkunft:[o.hersteller,o.serie].filter(Boolean).join(' · ')}
-function herkunftZeile(modus,p,o){
-  const t=herkunftText(o);
-  return anpassFeld(modus,p,o,'herkunft',{wert:t,druck:t?'<p class="mm-klein">'+esc(t)+'</p>':'',klasse:'mm-text-klein',platz:'Hersteller · Serie'});
+// Kopfzeile wie im Archicad-Master: links «Projekt | Phase | Untertitel», rechts Datum und Büro; Fußzeile «Seite/Seiten»
+// und der Name der Seite. Die Texte kommen aus den Angaben der Mappe.
+function kopfzeile(inh){
+  const k=inh.kopf||{},projekt=s(k.projekt)||[inh.projekt?.nummer,inh.projekt?.name].filter(Boolean).join(' '),untertitel=s(k.untertitel)||s(inh.titel);
+  const links=[esc(projekt),s(k.phase).trim()?'<b>'+esc(k.phase)+'</b>':'',esc(untertitel)].filter(Boolean).join(' | ');
+  const tag=datum(inh.stand);
+  return '<header class="mm-kopfzeile"><span>'+links+'</span><span class="mm-kz-rechts">'+(tag?'<span>'+esc(tag)+'</span>':'')+
+    '<span>'+esc(BUERO[0])+' <b>'+esc(BUERO[1])+'</b> '+esc(BUERO[2])+'</span></span></header>';
 }
-function kennwerteFeld(modus,p,o,n){
-  if(modus!=='bearbeiten')return kennwerte(o,n);
-  const t=merkmaleText(o.merkmale),zeilen=t?t.split('\n').length:0;
-  return anpassFeld(modus,p,o,'kennwerte',{wert:t,druck:'',klasse:'mm-text-kennwerte',platz:'Kennwerte, je Zeile «Feld: Wert»',zeilen:Math.max(2,Math.min(zeilen,MAX_MERKMALE))})+
-    (zeilen>n?'<p class="mm-feldhinweis">Auf dieser Seite stehen die ersten '+n+' Zeilen.</p>':'');
+function fusszeile(nr,gesamt,name){return '<footer class="mm-fusszeile"><span>'+nr+'/'+gesamt+'</span><b>'+esc(name)+'</b></footer>'}
+function titelKopf(p,zusatz=''){
+  return '<h2 class="mm-t-titel"><span class="mm-code">'+esc(p.code||p.nr)+'</span> '+esc(p.bezeichnung)+(zusatz?' <span class="mm-zusatz">'+esc(zusatz)+'</span>':'')+'</h2>';
 }
-function fuss(inh,nr,gesamt){
-  const projekt=[inh.projekt.nummer,inh.projekt.name].filter(Boolean).join(' ');
-  return '<footer class="mm-fuss"><span>'+esc([inh.titel,projekt,'Vorlage zur Bemusterung'+(datum(inh.termin)?' am '+datum(inh.termin):'')].filter(Boolean).join(' · '))+
-    '</span><span>Seite '+nr+' von '+gesamt+'</span></footer>';
+function zonenText(p){const t=[p.zonen,p.flaeche].filter(x=>s(x).trim()).map(esc).join('\n');return t?'<p>'+t+'</p>':''}
+// Kennwerte als Tabelle, eine Zeile je Grundlinie; die Seite zeigt so viele, wie in den Rahmen passen. Beim Bearbeiten
+// sind Feld und Wert direkt in der Tabelle zu ändern (für diese Mappe), «+ Kennwert» hängt eine Zeile an.
+function kennwerteTabelle(modus,p,o){
+  const m=o.merkmale||[],ed=modus==='bearbeiten';
+  if(!m.length&&!ed)return '';
+  const zelle=(tag,i,feld,w)=>{
+    const sc=tag==='th'?' scope="row"':'',name=feld?'Kennwert':'Wert';
+    if(!ed)return '<'+tag+sc+'>'+esc(w)+'</'+tag+'>';
+    return '<'+tag+sc+' class="mm-ed" id="'+esc('mm-'+p.id+'-'+o.id+'-kw'+i+(feld?'f':'w'))+'" data-mmkw="'+esc(p.id+'|'+o.id)+'" contenteditable="plaintext-only" role="textbox" data-einzeilig aria-label="'+name+'" data-leer="'+name+'">'+esc(w)+'</'+tag+'>';
+  };
+  const g=ed&&!!o.geaendert?.kennwerte;
+  return '<table class="mm-kennwerte'+(g?' mm-geaendert':'')+'"'+(ed?' data-mmkwtab="'+esc(p.id+'|'+o.id)+'"'+(g?' title="In dieser Mappe geändert"':''):'')+
+    '><colgroup><col class="mm-kw-feld"><col></colgroup><tbody>'+(m.length?m:[{feld:'',wert:''}]).map((x,i)=>'<tr>'+zelle('th',i,true,x.feld)+zelle('td',i,false,x.wert)+'</tr>').join('')+'</tbody></table>'+
+    (ed?'<button type="button" class="mm-kw-plus" data-act="mm-kw-neu" data-z="'+esc(p.id)+'" data-o="'+esc(o.id)+'">+ Kennwert</button>':'');
 }
-function kopfPosition(p,zusatz=''){
-  const rechts=[p.zonen,p.flaeche].filter(x=>s(x).trim()).map(esc).join('<br>');
-  return '<header class="mm-kopf"><div class="mm-kopf-titel"><span class="mm-code">'+esc(p.code||p.nr)+'</span><span class="mm-bez">'+esc(p.bezeichnung)+
-    '</span>'+(zusatz?'<span class="mm-zusatz">'+esc(zusatz)+'</span>':'')+'</div>'+(rechts?'<p class="mm-kopf-zonen">'+rechts+'</p>':'')+'</header>';
+function kostenText(label,wert,beleg){
+  return '<p class="mm-t-klein mm-leise">'+esc(label)+'</p><p class="mm-t-mittel">'+esc(wert)+'</p>'+(s(beleg).trim()?'<p class="mm-t-klein mm-leise">'+esc(beleg)+'</p>':'');
 }
-function kennwerte(o,n){
-  const m=(o.merkmale||[]).slice(0,n);
-  if(!m.length)return '';
-  return '<table class="mm-kennwerte"><tbody>'+m.map(x=>'<tr><th scope="row">'+esc(x.feld)+'</th><td>'+esc(x.wert)+'</td></tr>').join('')+'</tbody></table>';
-}
-function kostenKasten(p,o){
-  if(o&&s(o.kennwert).trim())return '<div class="mm-kosten"><span class="mm-klein">Kennwert netto</span><strong>'+esc(o.kennwert)+'</strong>'+(o.beleg?'<span class="mm-klein">'+esc(o.beleg)+'</span>':'')+'</div>';
-  if(s(p.kosten).trim())return '<div class="mm-kosten"><span class="mm-klein">Kostenrahmen netto</span><strong>'+esc(p.kosten)+'</strong>'+(s(p.kostenBeleg).trim()?'<span class="mm-klein">'+esc(p.kostenBeleg)+'</span>':'')+'</div>';
+function kostenRahmen(p,o){
+  if(o&&s(o.kennwert).trim())return kostenText('Kennwert netto',o.kennwert,o.beleg);
+  if(s(p.kosten).trim())return kostenText('Kostenrahmen netto',p.kosten,p.kostenBeleg);
   return '';
 }
 function entschiedenZeile(p){
@@ -341,82 +365,110 @@ function entschiedenZeile(p){
   return '<p class="mm-entschieden">Entschieden am '+esc(datum(p.entschiedenAm))+(p.entscheider?' von '+esc(p.entscheider):'')+': '+esc(gewaehlt(p))+'</p>';
 }
 function zuBeachten(p){
-  const t=[s(p.anforderungen).trim()&&'Anforderungen: '+s(p.anforderungen).trim(),s(p.hinweise).trim()&&'Zu beachten: '+s(p.hinweise).trim()].filter(Boolean);
-  return t.length?'<div class="mm-beachten">'+t.map(x=>'<p>'+esc(x)+'</p>').join('')+'</div>':'';
+  return [['Anforderungen',p.anforderungen],['Zu beachten',p.hinweise]].filter(([,t])=>s(t).trim()).map(([k,t])=>'<p><b>'+esc(k)+':</b> '+esc(s(t).trim())+'</p>').join('');
 }
-function seiteDeckblatt(inh,modus){
-  const projekt=[inh.projekt.nummer,inh.projekt.name].filter(Boolean).join(' · ');
+function empfehlungText(seite,p,modus){
+  let h=entschiedenZeile(p);
+  if(!zeigt(seite,'empfehlung'))return h;
+  const kopf=p.empfehlung?'Empfehlung: Variante '+p.empfehlung+'.':modus==='bearbeiten'?'Empfehlung offen.':'';
+  const beg=text(modus,'p','mm-begruendung',p.begruendung,{attr:'data-mmtext="begruendung" data-z="'+esc(p.id)+'"',leer:'Begründung der Empfehlung',id:'mm-'+p.id+'-begruendung'});
+  return h+(kopf?'<p><b>'+esc(kopf)+'</b></p>':'')+beg;
+}
+// Name und Hersteller einer Variante; beim Bearbeiten für diese Mappe zu ändern (geändert = blau umrandet).
+function nameZeile(modus,p,o,{mitId=true,empf=''}={}){
+  const name=modus==='bearbeiten'?text(modus,'span','mm-fett',o.name,{attr:'data-mmanp="'+esc(p.id+'|'+o.id+'|name')+'"',leer:'Name der Variante',
+    id:'mm-'+p.id+'-'+o.id+'-name',einzeilig:true,geaendert:!!o.geaendert?.name}):'<b>'+esc(o.name)+'</b>';
+  return '<p class="mm-name">'+(mitId?'<b>'+esc(o.id)+' · </b>':'')+name+(empf?' <span class="mm-empf">'+esc(empf)+'</span>':'')+'</p>';
+}
+function herkunftZeile(modus,p,o){
+  return text(modus,'p','mm-t-klein mm-leise',herkunftText(o),{attr:'data-mmanp="'+esc(p.id+'|'+o.id+'|herkunft')+'"',leer:'Hersteller · Serie',
+    id:'mm-'+p.id+'-'+o.id+'-herkunft',einzeilig:true,geaendert:!!o.geaendert?.herkunft});
+}
+function seiteDeckblatt(seite,inh,{modus,bild}){
+  const ed=modus==='bearbeiten',b=seite.bild&&s(seite.bild.pfad)?seite.bild:null;
   const titel=inh.themenpaket||inh.titel.replace(/^Mustermappe\s*/,'')||inh.titel;
+  const projekt=[inh.projekt.nummer,inh.projekt.name].filter(Boolean).join(' · ');
   const stand=inh.status==='vorgelegt'&&inh.vorgelegtAm?'vorgelegt am '+datum(inh.vorgelegtAm):'Stand '+(datum(inh.stand)||'')+' · Entwurf';
-  return '<div class="mm-deck"><div class="mm-deck-oben"><p class="mm-deck-kicker">Mustermappe</p><h2 class="mm-deck-titel">'+esc(titel)+'</h2>'+
-    (projekt?'<p class="mm-deck-projekt">'+esc(projekt)+'</p>':'')+'</div><div class="mm-deck-unten">'+
-    '<p class="mm-deck-termin">Vorlage zur Bemusterung'+(datum(inh.termin)?' am '+esc(datum(inh.termin)):'')+'</p>'+
-    feld(modus,'data-mmvorlage="deckblatt_text"',inh.deckblatt,{zeilen:3,platz:'Text für das Deckblatt (optional)',klasse:'mm-deck-text',id:'mm-deckblatt'})+
-    '<p class="mm-klein">'+esc(stand)+(inh.verfasser?' · '+esc(inh.verfasser):'')+'</p></div></div>';
+  // Titelbild (optional) über die ganze Breite; ohne Bild bleibt die Fläche weiß (Titel unten links, wie ein Plakat).
+  const titelbild=b?rahmen(1,1,12,5,foto(b,bild,'Titelbild','mm-foto-deck',{bucket:BUCKET}),{klasse:'mm-r-foto'})
+    :ed?rahmen(1,1,12,5,'<div class="mm-foto mm-foto-leer"><span>Titelbild (optional): rechts ein Bild oder ein PDF hochladen.</span></div>',{klasse:'mm-r-foto'}):'';
+  return titelbild+rahmen(1,6,8,2,'<p class="mm-kicker">Mustermappe</p><h2 class="mm-t-gross">'+esc(titel)+'</h2>'+(projekt?'<p class="mm-t-mittel">'+esc(projekt)+'</p>':''),{klasse:'mm-r-kopf',name:'Titel',modus})+
+    rahmen(9,6,4,3,'<p><b>Vorlage zur Bemusterung'+(datum(inh.termin)?' am '+esc(datum(inh.termin)):'')+'</b></p>'+
+      text(modus,'p','mm-deck-text',inh.deckblatt,{attr:'data-mmvorlage="deckblatt_text"',leer:'Text für das Deckblatt (optional)',id:'mm-deckblatt'})+
+      '<p class="mm-t-klein mm-leise mm-abstand">'+esc(stand)+(inh.verfasser?' · '+esc(inh.verfasser):'')+'</p>',{klasse:'mm-r-kopf',name:'Deckblatt-Text',modus});
 }
-function seiteUebersicht(inh){
-  const gruppen=uebersichtGruppen(inh);
-  if(!inh.punkte.length)return '<h2 class="mm-titel">Übersicht</h2><p class="mm-p mm-leer">Noch keine Position.</p>';
-  return '<h2 class="mm-titel">Übersicht</h2><table class="mm-tabelle"><thead><tr><th>Code</th><th>Position</th><th>Zonen und Fläche</th><th>Kandidaten</th><th>Empfehlung</th><th>Stand</th></tr></thead><tbody>'+
-    gruppen.map(g=>(g.titel?'<tr class="mm-gruppe"><th colspan="6">'+esc(g.titel)+'</th></tr>':'')+g.punkte.map(p=>'<tr><td class="mm-code-klein">'+esc(p.code||p.nr)+'</td><td>'+esc(p.bezeichnung)+'</td><td>'+
-      esc([p.zonen,p.flaeche].filter(x=>s(x).trim()).join(' · '))+'</td><td>'+esc(p.optionen.map(o=>o.id+' · '+o.name).join('; ')||'noch offen')+'</td><td>'+
-      esc(p.empfehlung?'Variante '+p.empfehlung:'–')+'</td><td>'+esc(p.status==='entschieden'?'entschieden: '+gewaehlt(p):'offen')+'</td></tr>').join('')).join('')+'</tbody></table>';
+// Übersicht: Spalten der Tabelle auf dem Raster (1, 2, 3, 3, 1 und 2 Felder, je mit dem Abstand).
+const UEBERSICHT_SPALTEN=[['Code',32],['Position',64],['Zonen und Fläche',96],['Kandidaten',96],['Empfehlung',32],['Stand',60]];
+function seiteUebersicht(inh,{modus}){
+  const strat=['A','B'].filter(k=>s(inh.strategien?.[k]).trim()).map(k=>strategieText(inh,k)).join('\n');
+  const kopf=rahmen(1,1,12,1,'<h2 class="mm-t-titel">Übersicht</h2>'+(strat?'<p>'+esc(strat)+'</p>':''),{klasse:'mm-r-kopf',name:'Kopf',modus});
+  if(!inh.punkte.length)return kopf+rahmen(1,2,12,1,'<p class="mm-leise">Noch keine Position.</p>');
+  const n=UEBERSICHT_SPALTEN.length;
+  return kopf+rahmen(1,2,12,7,'<table class="mm-tabelle"><colgroup>'+UEBERSICHT_SPALTEN.map(([,mm])=>'<col style="width:calc(var(--mm) * '+mm+')">').join('')+'</colgroup>'+
+    '<thead><tr>'+UEBERSICHT_SPALTEN.map(([t])=>'<th>'+esc(t)+'</th>').join('')+'</tr></thead><tbody>'+
+    uebersichtGruppen(inh).map(g=>(g.titel?'<tr class="mm-gruppe"><th colspan="'+n+'">'+esc(g.titel)+'</th></tr>':'')+g.punkte.map(p=>'<tr><td><b>'+esc(p.code||p.nr)+'</b></td><td>'+esc(p.bezeichnung)+'</td><td>'+
+      esc([p.zonen,p.flaeche].filter(x=>s(x).trim()).join(' · '))+'</td><td>'+esc(p.optionen.map(o=>o.id+' · '+o.name).join('\n')||'noch offen')+'</td><td>'+
+      esc(p.empfehlung?'Variante '+p.empfehlung:'–')+'</td><td>'+esc(p.status==='entschieden'?'entschieden: '+gewaehlt(p):'offen')+'</td></tr>').join('')).join('')+'</tbody></table>',{name:'Übersicht',modus});
 }
+// Vergleich: je Variante Foto und Text in einer Spalte (2 × 6 oder 3 × 4 Felder, eine Variante 8 + 4); der Kopf darüber,
+// die Zonen rechts über der Spalte der letzten Variante (bei zwei ab Feld 7, sonst ab Feld 9); unten Empfehlung, Kosten
+// und «Zu beachten» (bei drei Varianten in deren Spalten).
 function seiteVergleich(seite,inh,p,{modus,bild}){
-  const kand=kandidatenDerSeite(seite,p);
-  // Foto und Text je Kandidat in zwei Zeilen eines Rasters: die Fotos stehen gleich hoch, auch bei ungleich langen Texten.
-  const ed=modus==='bearbeiten';
-  const name=o=>ed?'<h3 class="mm-kand-name"><span>'+esc(o.id+' · ')+'</span>'+anpassFeld(modus,p,o,'name',{wert:o.name,klasse:'mm-text-name',platz:'Name der Variante'})+'</h3>'
-    :'<h3>'+esc(o.id+' · '+o.name)+'</h3>';
-  const spalten=kand.length?kand.map(o=>'<div class="mm-kand">'+foto(o.fotos[0],bild,o.name,'mm-foto-kand',BUCKET_PRODUKTE,ed?{z:p.id,o:o.id,i:0}:null)+
-    '<div class="mm-kand-text"><div class="mm-kand-kopf">'+name(o)+(p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'<span class="mm-empf">Empfehlung</span>':'')+'</div>'+
-    herkunftZeile(modus,p,o)+
-    (zeigt(seite,'kennwerte')?kennwerteFeld(modus,p,o,5):'')+(zeigt(seite,'kosten')?kostenKasten({},o):'')+'</div></div>').join('')
-    :modus==='bearbeiten'?'<p class="mm-p mm-leer">Noch kein Kandidat. Rechts einen aus der Bibliothek wählen.</p>':'';
-  const empf=zeigt(seite,'empfehlung')?(modus==='bearbeiten'
-    ?'<div class="mm-empfehlung"><strong>'+esc(p.empfehlung?'Empfehlung: Variante '+p.empfehlung+'.':'Empfehlung offen.')+'</strong>'+feld(modus,'data-mmtext="begruendung" data-z="'+esc(p.id)+'"',p.begruendung,{zeilen:2,platz:'Begründung der Empfehlung',id:'mm-'+p.id+'-begruendung'})+'</div>'
-    :(p.empfehlung||s(p.begruendung).trim()?'<div class="mm-empfehlung"><strong>'+esc(p.empfehlung?'Empfehlung: Variante '+p.empfehlung+'.':'')+'</strong> '+esc(p.begruendung)+'</div>':'')):'';
-  const kostenPos=zeigt(seite,'kosten')&&!kand.some(o=>s(o.kennwert).trim())?kostenKasten(p,null):'';
-  return kopfPosition(p)+feld(modus,'data-mmtext="frage" data-z="'+esc(p.id)+'"',p.frage,{zeilen:1,platz:'Frage an den Bauherrn, z. B. Welcher Belag für diese Zonen?',klasse:'mm-frage',id:'mm-'+p.id+'-frage'})+
-    // Eine Position ohne Produkt (etwa eine Leistung wie geschliffener Estrich) zeigt im PDF nur Kopf, Frage, Kosten und Hinweise.
-    (spalten?'<div class="mm-kandidaten mm-n'+Math.max(1,kand.length)+'">'+spalten+'</div>':'<div class="mm-kandidaten mm-n1"></div>')+
-    '<div class="mm-unten">'+empf+'<div class="mm-unten-rechts">'+kostenPos+zuBeachten(p)+'</div></div>'+entschiedenZeile(p);
+  const kand=kandidatenDerSeite(seite,p),n=kand.length,ed=modus==='bearbeiten',kw=n===2?6:8;
+  const fotoVon=o=>foto(o.fotos[0],bild,o.name,'mm-foto-kand',{ort:{z:p.id,o:o.id,i:0},edit:ed});
+  const textVon=o=>nameZeile(modus,p,o,{empf:p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'Empfehlung':''})+herkunftZeile(modus,p,o)+
+    (zeigt(seite,'kennwerte')?kennwerteTabelle(modus,p,o):'')+
+    (zeigt(seite,'kosten')&&s(o.kennwert).trim()?'<p class="mm-t-klein mm-abstand">Kennwert netto <b>'+esc(o.kennwert)+'</b>'+(o.beleg?' · '+esc(o.beleg):'')+'</p>':'');
+  let h=rahmen(1,1,kw,1,titelKopf(p)+text(modus,'p','mm-frage',p.frage,{attr:'data-mmtext="frage" data-z="'+esc(p.id)+'"',leer:'Frage an den Bauherrn, z. B. Welcher Belag für diese Zonen?',id:'mm-'+p.id+'-frage'}),{klasse:'mm-r-kopf',name:'Kopf',modus})+
+    rahmen(1+kw,1,12-kw,1,zonenText(p),{klasse:'mm-r-kopf mm-t-klein',name:'Zonen',modus});
+  if(n===1)h+=rahmen(1,2,8,6,fotoVon(kand[0]),{klasse:'mm-r-foto'})+rahmen(9,2,4,6,textVon(kand[0]),{name:kand[0].id,modus});
+  else if(n>1){const w=12/n,fh=n===3?3:4;kand.forEach((o,i)=>{const c=1+i*w;h+=rahmen(c,2,w,fh,fotoVon(o),{klasse:'mm-r-foto'})+rahmen(c,2+fh,w,6-fh,textVon(o),{name:o.id,modus})})}
+  else if(ed)h+=rahmen(1,2,12,1,'<p class="mm-leise">Noch kein Kandidat. Rechts einen aus der Bibliothek wählen.</p>');
+  // Eine Position ohne Produkt (etwa geschliffener Estrich) zeigt Kopf, Frage, Kosten und Hinweise gleich unter dem Kopf.
+  const r=n?8:2,[we,wk]=n===3?[4,4]:[6,2],wb=12-we-wk;
+  const kostenPos=zeigt(seite,'kosten')&&!kand.some(o=>s(o.kennwert).trim())?kostenRahmen(p,null):'';
+  return h+rahmen(1,r,we,1,empfehlungText(seite,p,modus),{name:'Empfehlung',modus})+rahmen(1+we,r,wk,1,kostenPos,{name:'Kosten',modus})+
+    rahmen(1+we+wk,r,wb,1,zuBeachten(p),{klasse:'mm-t-klein',name:'Zu beachten',modus});
 }
+// Material: großes Foto links (6 × 8 Felder), rechts Kopf, zwei kleine Fotos (3 × 2), Beschreibung, Kennwerte, Kosten.
 function seiteMaterial(seite,inh,p,{modus,bild}){
-  const o=p.optionen.find(x=>x.id===seite.option)||p.optionen[0];
-  if(!o)return kopfPosition(p)+'<p class="mm-p mm-leer">Diese Variante gibt es nicht mehr.</p>';
-  const klein=o.fotos.slice(1,3),ed=modus==='bearbeiten';
+  const o=p.optionen.find(x=>x.id===seite.option)||p.optionen[0],ed=modus==='bearbeiten';
+  if(!o)return rahmen(1,1,12,1,titelKopf(p)+'<p class="mm-leise">Diese Variante gibt es nicht mehr.</p>',{klasse:'mm-r-kopf'});
+  const klein=o.fotos.slice(1,MAX_FOTOS);
   // Beim Bearbeiten: «+ Bild» auf dem großen Foto, solange die Variante weniger als drei hat; das Raster bleibt gleich.
-  const platz=i=>ed?{z:p.id,o:o.id,i,...(i===0&&o.fotos.length<MAX_FOTOS?{plus:o.fotos.length}:{})}:null;
-  const g=!!o.geaendert?.beschreibung;
-  return '<div class="mm-material"><div class="mm-material-bilder">'+foto(o.fotos[0],bild,o.name,'mm-foto-gross',BUCKET_PRODUKTE,platz(0))+
-    (klein.length?'<div class="mm-foto-reihe">'+klein.map((f,j)=>foto(f,bild,o.name,'mm-foto-klein',BUCKET_PRODUKTE,platz(j+1))).join('')+'</div>':'')+'</div>'+
-    '<div class="mm-material-text">'+kopfPosition(p,'Variante '+o.id)+
-    (ed?'<h3 class="mm-material-name">'+anpassFeld(modus,p,o,'name',{wert:o.name,klasse:'mm-text-name',platz:'Name der Variante'})+'</h3>'
-      :'<h3 class="mm-material-name">'+esc(o.name)+'</h3>')+
-    herkunftZeile(modus,p,o)+
-    feld(modus,'data-mmopt="'+esc(p.id+'|'+o.id)+'"',o.beschreibung,{zeilen:3,platz:'Beschreibung für den Bauherrn',klasse:g?'mm-geaendert':'',id:'mm-'+p.id+'-'+o.id+'-text'})+
-    (zeigt(seite,'kennwerte')?kennwerteFeld(modus,p,o,10):'')+(zeigt(seite,'kosten')?kostenKasten(p,o):'')+zuBeachten(p)+
-    (p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'<p class="mm-empf mm-empf-zeile">Empfehlung des Büros</p>':'')+entschiedenZeile(p)+'</div></div>';
+  const ort=i=>({z:p.id,o:o.id,i,...(i===0&&o.fotos.length<MAX_FOTOS?{plus:o.fotos.length}:{})});
+  let h=rahmen(1,1,6,8,foto(o.fotos[0],bild,o.name,'mm-foto-gross',{ort:ort(0),edit:ed}),{klasse:'mm-r-foto'})+
+    rahmen(7,1,6,1,titelKopf(p,'Variante '+o.id)+nameZeile(modus,p,o,{mitId:false,empf:p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'Empfehlung des Büros':''})+
+      herkunftZeile(modus,p,o)+entschiedenZeile(p),{klasse:'mm-r-kopf',name:'Kopf',modus});
+  klein.forEach((f,j)=>{h+=rahmen(7+3*j,2,3,2,foto(f,bild,o.name,'mm-foto-klein',{ort:ort(j+1),edit:ed}),{klasse:'mm-r-foto'})});
+  const tz=klein.length?4:2;
+  return h+rahmen(7,tz,6,6-tz,text(modus,'p','mm-beschreibung',o.beschreibung,{attr:'data-mmopt="'+esc(p.id+'|'+o.id)+'"',leer:'Beschreibung für den Bauherrn',
+      id:'mm-'+p.id+'-'+o.id+'-text',geaendert:!!o.geaendert?.beschreibung}),{name:'Beschreibung',modus})+
+    rahmen(7,6,6,2,zeigt(seite,'kennwerte')?kennwerteTabelle(modus,p,o):'',{name:'Kennwerte',modus})+
+    rahmen(7,8,2,1,zeigt(seite,'kosten')?kostenRahmen(p,o):'',{name:'Kosten',modus})+
+    rahmen(9,8,4,1,zuBeachten(p),{klasse:'mm-t-klein',name:'Zu beachten',modus});
 }
+// Freie Seite: Bild oder PDF-Seite über 10 × 8 Felder (ganz gezeigt, oben links), rechts Titel und Text.
 function seiteFrei(seite,{modus,bild}){
-  const b=seite.bild&&s(seite.bild.pfad)?seite.bild:null;
-  return feld(modus,'data-mmseite="'+esc(seite.id)+'|titel"',seite.titel,{zeilen:1,platz:'Titel der Seite, z. B. Bodenbelagsplan EG',klasse:'mm-titel-feld',titel:true,id:'mm-'+seite.id+'-titel'})+
-    '<div class="mm-frei-bild">'+(b?foto(b,bild,s(seite.titel)||s(b.name)||'Bild','mm-foto-frei',BUCKET)
-      :'<div class="mm-foto mm-foto-leer mm-foto-frei"><span>'+(modus==='bearbeiten'?'Rechts ein Bild oder ein PDF hochladen.':'')+'</span></div>')+'</div>'+
-    feld(modus,'data-mmseite="'+esc(seite.id)+'|text"',seite.text,{zeilen:2,platz:'Text zur Seite (optional)',id:'mm-'+seite.id+'-text'});
+  const b=seite.bild&&s(seite.bild.pfad)?seite.bild:null,ed=modus==='bearbeiten';
+  return rahmen(1,1,10,8,b?foto(b,bild,s(seite.titel)||s(b.name)||'Bild','mm-foto-frei',{bucket:BUCKET})
+      :ed?'<div class="mm-foto mm-foto-leer"><span>Rechts ein Bild oder ein PDF hochladen.</span></div>':'',{klasse:'mm-r-foto'})+
+    rahmen(11,1,2,8,text(modus,'h2','mm-t-mittel',seite.titel,{attr:'data-mmseite="'+esc(seite.id)+'|titel"',leer:'Titel der Seite',id:'mm-'+seite.id+'-titel'})+
+      text(modus,'p','mm-frei-text',seite.text,{attr:'data-mmseite="'+esc(seite.id)+'|text"',leer:'Text zur Seite (optional)',id:'mm-'+seite.id+'-text'}),{klasse:'mm-r-kopf',name:'Text',modus});
 }
 function seiteHtml(seite,inh,{nr=1,gesamt=1,modus='druck',bild=()=>''}={}){
   if(!seite)return '';
-  let innen='';
   const p=['vergleich','material'].includes(seite.typ)?inh.punkte.find(x=>x.id===seite.punkt):null;
-  if(seite.typ==='deckblatt')innen=seiteDeckblatt(inh,modus);
-  else if(seite.typ==='uebersicht')innen=seiteUebersicht(inh);
+  const o=p&&seite.typ==='material'?p.optionen.find(x=>x.id===seite.option)||p.optionen[0]:null;
+  let innen='';
+  if(seite.typ==='deckblatt')innen=seiteDeckblatt(seite,inh,{modus,bild});
+  else if(seite.typ==='uebersicht')innen=seiteUebersicht(inh,{modus});
   else if(seite.typ==='vergleich')innen=p?seiteVergleich(seite,inh,p,{modus,bild}):'';
   else if(seite.typ==='material')innen=p?seiteMaterial(seite,inh,p,{modus,bild}):'';
   else if(seite.typ==='frei')innen=seiteFrei(seite,{modus,bild});
-  return '<div class="mm-blatt" data-seite="'+esc(seite.id)+'"><article class="mm-seite mm-typ-'+esc(seite.typ)+'" aria-label="'+esc('Seite '+nr+' von '+gesamt)+'"><div class="mm-innen">'+innen+'</div>'+
-    (seite.typ==='deckblatt'?'':fuss(inh,nr,gesamt))+'</article></div>';
+  const name=seite.typ==='frei'?(s(seite.titel).trim()||'Freie Seite'):seiteName(seite,p,o);
+  return '<div class="mm-blatt" data-seite="'+esc(seite.id)+'"><article class="mm-seite mm-typ-'+esc(seite.typ)+'" aria-label="'+esc('Seite '+nr+' von '+gesamt)+'">'+
+    (modus==='bearbeiten'?RASTER_HTML:'')+kopfzeile(inh)+'<div class="mm-satz">'+innen+'</div>'+fusszeile(nr,gesamt,name)+'</article></div>';
 }
 function mappeHtml(inh,{modus='druck',bild=()=>''}={}){
   const l=inh.seiten||[];
@@ -427,5 +479,6 @@ return Object.freeze({FORM,SCHEMA,BUCKET,BUCKET_PRODUKTE,THEMEN,KATEGORIEN,SEITE
   esc,datum,neueId,naechsteOptionId,istMappe,neueMappe,thema,neuePosition,produktAuszug,veraltet,kandidat,fotosUmschalten,dateiPfad,bildPruefen,
   ausschnittVon,fotoSauber,fotoListe,fotoSetzen,fotoEntfernen,fotoNachVorn,fotoAusschnitt,
   ANPASSUNG_NAME,merkmaleText,merkmaleAusText,anpassen,zuruecksetzen,geaendert,geaenderteTexte,anpassbarAuf,
+  RASTER,BUERO,rasterMass,
   seitenVon,seiteVerschieben,seiteName,belegVon,mappeInhalt,mitStandardFotos,allePfade,kandidatenDerSeite,uebersichtGruppen,gewaehlt,seiteHtml,mappeHtml});
 });

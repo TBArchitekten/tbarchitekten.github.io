@@ -74,23 +74,24 @@ test('Inhalt und PDF: Beleg statt Fundstelle, maskiert, Termin im Fuß, keine Un
   assert.match(html,/Angebot 2025, fortgeschrieben/);
   assert.doesNotMatch(html,/<script>/);assert.match(html,/Stein &lt;script&gt;/);
   assert.doesNotMatch(html,/Unterschrift|unterschreiben/i,'entschieden wird im Termin');
-  assert.match(html,/Vorlage zur Bemusterung am 03\.12\.2026/);assert.match(html,/Seite 5 von 5/);
+  assert.match(html,/Vorlage zur Bemusterung am 03\.12\.2026/);assert.match(html,/<footer class="mm-fusszeile"><span>5\/5<\/span><b>Bodenbelagsplan EG<\/b><\/footer>/);
   assert.match(html,/office-projektdokumente\/d\/u\/plan\.jpg/,'freie Seite aus dem Bucket der Mappe');
-  assert.doesNotMatch(html,/<textarea/,'Druck ohne Eingabefelder');
+  assert.doesNotMatch(html,/<textarea|contenteditable|mm-raster/,'Druck ohne Eingabefelder und ohne Raster');
   assert.match(html,/kein Foto/,'ohne Foto ein Platzhalter');
   const ueb=M.uebersichtGruppen(inh);
   assert.deepEqual(ueb.map(g=>g.titel),['Für beide Strategien','Strategie A','Strategie B']);
   assert.deepEqual(ueb.map(g=>g.punkte.map(p=>p.code)),[['B5'],['B2'],['B3']]);
 });
 
-test('Bearbeiten: Texte als Felder mit festen ids auf der Seite, Daten der Position im Kopf',()=>{
+test('Bearbeiten: Texte direkt auf der Seite mit festen ids, Daten der Position im Kopf',()=>{
   const {v,za,zb,zc}=beispiel();
   const inh=M.mappeInhalt(v,[za,zb,zc],{projekt:{number:'T-01',name:'Testhaus'},stand:'2026-11-24'});
   const s3=M.seiteHtml(inh.seiten[2],inh,{nr:3,gesamt:5,modus:'bearbeiten'});
-  assert.match(s3,/<textarea id="mm-e1-frage"[^>]*data-mmtext="frage" data-z="e1"/);
-  assert.match(s3,/id="mm-e1-begruendung"/);assert.match(s3,/Ausstellung 537 m²<br>630 m²/);
-  // Seit 26.11.2026 ist der Name beim Bearbeiten ein Feld (für diese Mappe änderbar); im Druck bleibt «A · Name».
-  assert.match(s3,/<span>A · <\/span><textarea id="mm-e1-A-name" class="mm-text mm-text-name" data-mmanp="e1\|A\|name"[^>]*>Parkett Eiche geölt<\/textarea>/);
+  // Seit 26.11.2026 steht der Text beim Bearbeiten in denselben Elementen wie im PDF, nur zum Hineinschreiben.
+  assert.match(s3,/<p class="mm-frage mm-ed" id="mm-e1-frage" data-mmtext="frage" data-z="e1" contenteditable="plaintext-only" role="textbox" aria-multiline="true"/);
+  assert.match(s3,/id="mm-e1-begruendung"/);assert.match(s3,/<p>Ausstellung 537 m²\n630 m²<\/p>/);
+  assert.doesNotMatch(s3,/<textarea/);
+  assert.match(s3,/<p class="mm-name"><b>A · <\/b><span class="mm-fett mm-ed" id="mm-e1-A-name" data-mmanp="e1\|A\|name" contenteditable="plaintext-only" role="textbox" data-einzeilig aria-label="Name der Variante" data-leer="Name der Variante">Parkett Eiche geölt<\/span>/);
   assert.match(s3,/Empfehlung/);
   const s4=M.seiteHtml(inh.seiten[3],inh,{nr:4,gesamt:5,modus:'bearbeiten'});
   assert.match(s4,/data-mmopt="e1\|A"/);assert.match(s4,/Massiv, 16 mm\./);assert.match(s4,/Variante A/);
@@ -173,7 +174,7 @@ test('Werkzeug Mustermappe: Mappen je Projekt, nicht mehr im Projektstart; die M
   assert.match(js,/if\(neu\)history\.replaceState\(null,'',url\(\{werkzeug:ui\.werkzeug,projekt:pid\}\)\);/);
   assert.match(js,/if\(neu&&IM_REITER\)zeichne\('<div class="pd-wrap"><p class="meta">Neue Mustermappe …<\/p><\/div>',null\);else render\(\);/);
   const html=readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8');
-  assert.match(html,/projektdokumente\.css\?v=office9/);assert.match(html,/projektdokumente\.js\?v=office8/);
+  assert.match(html,/projektdokumente\.css\?v=office10/);assert.match(html,/projektdokumente\.js\?v=office9/);
 });
 
 // Gari, 26.11.2026: Layouts nach dem Erzeugen bearbeiten. Texte aus der Bibliothek nur für diese Mappe ändern (markiert,
@@ -216,17 +217,19 @@ test('Geänderte Texte stehen auf der Seite und im PDF; beim Bearbeiten durchgez
   assert.equal(a.name,'Eiche <b>Landhausdiele</b>');assert.equal(a.herkunft,'Holz AG');assert.deepEqual(a.geaendert,{name:true,herkunft:true,kennwerte:true,beschreibung:false});
   assert.equal(o.muster_produkt.name,'Parkett Eiche geölt','der Auszug der Bibliothek bleibt');
   const druck=M.seiteHtml(inh.seiten[2],inh,{modus:'druck'});
-  assert.match(druck,/<h3>A · Eiche &lt;b&gt;Landhausdiele&lt;\/b&gt;<\/h3>/,'maskiert');assert.match(druck,/<p class="mm-klein">Holz AG<\/p>/);
-  assert.match(druck,/<th scope="row">Oberfläche<\/th><td>geölt<\/td>/);assert.doesNotMatch(druck,/<th scope="row">F<\/th>/,'Vergleich: fünf Zeilen');
-  assert.doesNotMatch(druck,/<textarea|mm-geaendert|mm-bild-knopf/,'im Druck keine Felder und Knöpfe');
+  assert.match(druck,/<p class="mm-name"><b>A · <\/b><b>Eiche &lt;b&gt;Landhausdiele&lt;\/b&gt;<\/b>/,'maskiert');assert.match(druck,/<p class="mm-t-klein mm-leise">Holz AG<\/p>/);
+  // Alle Kennwerte stehen in der Tabelle; die Seite zeigt, was in den Rahmen passt (eine Zeile je Grundlinie).
+  assert.match(druck,/<th scope="row">Oberfläche<\/th><td>geölt<\/td>/);assert.match(druck,/<th scope="row">F<\/th><td>6<\/td>/);
+  assert.doesNotMatch(druck,/<textarea|contenteditable|mm-geaendert|mm-bild-knopf|mm-kw-plus|data-rahmen/,'im Druck keine Felder und Knöpfe');
   const bearb=M.seiteHtml(inh.seiten[2],inh,{modus:'bearbeiten'});
-  assert.match(bearb,/class="mm-text mm-text-name mm-geaendert" data-mmanp="e1\|A\|name"[^>]*title="In dieser Mappe geändert"/);
-  assert.match(bearb,/data-mmanp="e1\|A\|kennwerte"[^>]*>Aufbau: 21 mm\nOberfläche: geölt/);
-  assert.match(bearb,/Auf dieser Seite stehen die ersten 5 Zeilen\./);
-  assert.match(bearb,/class="mm-text mm-text-klein" data-mmanp="e2|e1\|B\|herkunft"|data-mmanp="e1\|B\|herkunft"/,'B: wie die Bibliothek, gestrichelt');
-  assert.doesNotMatch(bearb.match(/<textarea[^>]*data-mmanp="e1\|B\|name"[^>]*>/)[0],/mm-geaendert/);
+  assert.match(bearb,/class="mm-fett mm-ed mm-geaendert" id="mm-e1-A-name" data-mmanp="e1\|A\|name"[^>]*title="In dieser Mappe geändert">Eiche &lt;b&gt;Landhausdiele&lt;\/b&gt;<\/span>/);
+  assert.match(bearb,/<table class="mm-kennwerte mm-geaendert" data-mmkwtab="e1\|A" title="In dieser Mappe geändert">/);
+  assert.match(bearb,/<th scope="row" class="mm-ed" id="mm-e1-A-kw1f" data-mmkw="e1\|A" contenteditable="plaintext-only"[^>]*>Oberfläche<\/th><td class="mm-ed" id="mm-e1-A-kw1w" data-mmkw="e1\|A"[^>]*>geölt<\/td>/);
+  assert.match(bearb,/data-act="mm-kw-neu" data-z="e1" data-o="A">\+ Kennwert<\/button>/);
+  assert.doesNotMatch(bearb.match(/<p class="[^"]*" id="mm-e1-B-herkunft"[^>]*>/)[0],/mm-geaendert/,'B: wie die Bibliothek');
+  assert.doesNotMatch(bearb.match(/<span class="[^"]*" id="mm-e1-B-name"[^>]*>/)[0],/mm-geaendert/);
   const mat=M.seiteHtml(inh.seiten[3],inh,{modus:'druck'});
-  assert.match(mat,/<h3 class="mm-material-name">Eiche &lt;b&gt;Landhausdiele&lt;\/b&gt;<\/h3>/);assert.match(mat,/<th scope="row">F<\/th><td>6<\/td>/,'Material: zehn Zeilen');
+  assert.match(mat,/<p class="mm-name"><b>Eiche &lt;b&gt;Landhausdiele&lt;\/b&gt;<\/b> <span class="mm-empf">Empfehlung des Büros<\/span><\/p>/);assert.match(mat,/<th scope="row">F<\/th><td>6<\/td>/);
   assert.match(M.seiteHtml(inh.seiten[1],inh,{modus:'druck'}),/A · Eiche &lt;b&gt;Landhausdiele/,'auch in der Übersicht');
 });
 
@@ -250,7 +253,7 @@ test('Fotos: ersetzen, anhängen, entfernen, nach vorn, Ausschnitt; eigene Bilde
   const inh=M.mappeInhalt(v,[za,zb,zc]);
   const bild=(pfad,bucket)=>'https://bilder.invalid/'+bucket+'/'+pfad;
   const druck=M.seiteHtml(inh.seiten[3],inh,{modus:'druck',bild});
-  assert.match(druck,/<span class="mm-foto mm-rahmen mm-foto-gross"><img class="mm-foto-bild" src="https:\/\/bilder\.invalid\/office-projektdokumente\/d\/u\/eigen\.jpg"[^>]*style="object-position:30% 40%;transform:scale\(1\.5\);transform-origin:30% 40%">/);
+  assert.match(druck,/<span class="mm-foto mm-rahmen mm-foto-gross" data-mmfoto="A\|0"><img class="mm-foto-bild" src="https:\/\/bilder\.invalid\/office-projektdokumente\/d\/u\/eigen\.jpg"[^>]*style="object-position:30% 40%;transform:scale\(1\.5\);transform-origin:30% 40%">/);
   assert.match(druck,/office-produkte\/u\/p1\/2\.jpg/);assert.doesNotMatch(druck,/data-bildplatz|Bild ändern/);
   assert.deepEqual(M.allePfade(inh),{produkt:['u/p1/2.jpg'],mappe:['d/u/eigen.jpg','d/u/plan.jpg']});
   const bearb=M.seiteHtml(inh.seiten[3],inh,{modus:'bearbeiten',bild});
@@ -267,7 +270,8 @@ test('Fotos: ersetzen, anhängen, entfernen, nach vorn, Ausschnitt; eigene Bilde
 test('Seite: Hinweise mit «zurücksetzen», Dialog «Bild ändern», eigene Bilder in den Speicher der Mappe',()=>{
   const js=readFileSync(new URL('../projektdokumente.js',import.meta.url),'utf8');
   assert.match(js,/data-act="mm-zuruecksetzen" data-z="'\+z\.id\+'" data-o="'\+esc\(o\.id\)\+'" data-feld="'\+x\.feld\+'">'\+esc\(x\.name\)\+' zurücksetzen<\/button>/);
-  assert.match(js,/'<div data-mm-hinweise>'\+mappeHinweise\(v,seite\)\+'<\/div><\/section>'/);
+  // Seit 26.11.2026 rechts über den Eigenschaften (die Bühne füllt das Fenster).
+  assert.match(js,/'<div data-mm-hinweise>'\+mappeHinweise\(v,seite\)\+'<\/div><div data-mm-uebersatz><\/div>'\+mappeSeitenleiste\(v,inh,seite\)/);
   assert.match(js,/else if\(act==='mm-bild'&&z\)bildDialog\(z,el\.dataset\.o,el\.dataset\.i\);/);
   assert.match(js,/optionenPatch\(z,el\.dataset\.o,o=>M\.zuruecksetzen\(o,el\.dataset\.feld\)\);/);
   assert.match(js,/M\.fotoSetzen\(l,i,\{id:'m-'\+crypto\.randomUUID\(\),pfad,quelle:'mappe',name\}\)/);
@@ -275,9 +279,111 @@ test('Seite: Hinweise mit «zurücksetzen», Dialog «Bild ändern», eigene Bil
   assert.match(js,/Das Bild bleibt in dieser Mappe; die Produktbibliothek ändert sich nicht\./);
   assert.doesNotMatch(js.slice(js.indexOf('function bildDialogZeichnen'),js.indexOf('async function bildHochladenUndSetzen')),/office_produkt_dokumente|from\('office_produkte'\)/,'aus der Mappe ändert sich die Bibliothek nie');
   const css=readFileSync(new URL('../projektdokumente.css',import.meta.url),'utf8');
-  assert.match(css,/\.mm-text\.mm-geaendert\{border-style:solid;border-color:var\(--m-information\)\}/);
+  assert.match(css,/\.mm-ed\.mm-geaendert,\.mm-kennwerte\.mm-geaendert\{box-shadow:inset 0 0 0 calc\(var\(--mm\) \* \.35\) var\(--m-information\)\}/);
   assert.match(css,/\.mm-rahmen\{position:relative;overflow:hidden\}/);
   const kern=readFileSync(new URL('../mustermappe-kern.js',import.meta.url),'utf8');
-  assert.match(readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8'),/mustermappe-kern\.js\?v=office3/);
+  assert.match(readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8'),/mustermappe-kern\.js\?v=office4/);
   assert.ok(kern.includes('Anpassen für diese Mappe (Gari, 26.11.2026)'));
+});
+
+// Gari, 26.11.2026: das TBA-Raster A3 quer (Rastersysteme nach Müller-Brockmann und Gerstner) statt des 6 × 6 aus
+// Archicad; Kopf- und Fußzeile wie im Master; Bearbeiten direkt auf der Seite, die aussieht wie das PDF.
+test('TBA-Raster: 12 × 8 Felder von 28 mm, Abstand und Grundlinie 4 mm, Ränder 20/24/21 mm, Proportionen der Felder',()=>{
+  const R=M.RASTER;
+  assert.equal(R.links+M.rasterMass(R.spalten)+R.links,R.breite,'420 mm');
+  assert.equal(R.oben+M.rasterMass(R.zeilen)+R.unten,R.hoehe,'297 mm');
+  assert.equal(M.rasterMass(12),380);assert.equal(M.rasterMass(8),252);
+  assert.equal(M.rasterMass(6)/M.rasterMass(4),188/124,'6 × 4 Felder ≈ 3:2');
+  assert.ok(Math.abs(M.rasterMass(7)/M.rasterMass(5)-Math.SQRT2)<.005,'7 × 5 Felder ≈ A-Format (0,4 mm Unterschied)');
+  assert.equal((R.feld+R.abstand)%R.grundlinie,0,'Felder und Abstand auf der Grundlinie');
+  assert.equal(R.kopf,R.oben-2*R.grundlinie);assert.equal(R.fuss,R.oben+M.rasterMass(8)+2*R.grundlinie);
+  assert.deepEqual([...M.BUERO],['Titus Bernhard','Architekten','BDA']);
+});
+
+test('Seiten auf dem Raster: Rahmen je Vorlage, Kopf- und Fußzeile, Raster nur beim Bearbeiten',()=>{
+  const {v,za,zb,zc}=beispiel();
+  v.daten.kopf_phase='Entwurf';
+  const inh=M.mappeInhalt(v,[za,zb,zc],{projekt:{number:'T-01',name:'Testhaus'},stand:'2026-11-26'});
+  assert.deepEqual(inh.kopf,{projekt:'T-01 Testhaus',phase:'Entwurf',untertitel:'Mustermappe Bodenbeläge'});
+  const bild=(pfad,bucket)=>'https://bilder.invalid/'+bucket+'/'+pfad;
+  const verg=M.seiteHtml(inh.seiten[2],inh,{nr:3,gesamt:5,bild});
+  assert.match(verg,/<header class="mm-kopfzeile"><span>T-01 Testhaus \| <b>Entwurf<\/b> \| Mustermappe Bodenbeläge<\/span><span class="mm-kz-rechts"><span>26\.11\.2026<\/span><span>Titus Bernhard <b>Architekten<\/b> BDA<\/span><\/span><\/header>/);
+  assert.match(verg,/<footer class="mm-fusszeile"><span>3\/5<\/span><b>B2 Holz – Eiche · Vergleich<\/b><\/footer>/);
+  // Zwei Varianten: je 6 Felder breit, Foto 4 Zeilen (3:2), Text 2 Zeilen; die Zonen über B (ab Feld 7); unten
+  // Empfehlung 6, Kosten 2, Zu beachten 4.
+  const r=h=>[...h.matchAll(/class="mm-r[^"]*" style="grid-column:(\d+) \/ span (\d+);grid-row:(\d+) \/ span (\d+)"/g)].map(m=>m.slice(1).join(','));
+  assert.deepEqual(r(verg),['1,6,1,1','7,6,1,1','1,6,2,4','1,6,6,2','7,6,2,4','7,6,6,2','1,6,8,1','7,2,8,1','9,4,8,1']);
+  assert.doesNotMatch(verg,/mm-raster/);
+  // Drei Varianten: 3 × 4 Felder, Foto 3 Zeilen (4:3), Text 3 Zeilen, unten 4/4/4. Eine Variante: Foto 8 × 6, Text 4 × 6.
+  const z3={...za,daten:{...za.daten,optionen:[...za.daten.optionen,{...za.daten.optionen[1],id:'C'}]}};
+  const inh3=M.mappeInhalt(v,[z3,zb,zc]);
+  assert.deepEqual(r(M.seiteHtml(inh3.seiten[2],inh3,{})).slice(0,2),['1,8,1,1','9,4,1,1'],'Zonen über C');
+  assert.deepEqual(r(M.seiteHtml(inh3.seiten[2],inh3,{})).slice(2),['1,4,2,3','1,4,5,3','5,4,2,3','5,4,5,3','9,4,2,3','9,4,5,3','1,4,8,1','5,4,8,1','9,4,8,1']);
+  const z1={...za,daten:{...za.daten,optionen:za.daten.optionen.slice(0,1)}};
+  const inh1=M.mappeInhalt(v,[z1,zb,zc]);
+  assert.deepEqual(r(M.seiteHtml(inh1.seiten[2],inh1,{})).slice(2,4),['1,8,2,6','9,4,2,6']);
+  // Material: Foto 6 × 8 links, rechts Kopf, Beschreibung, Kennwerte, Kosten, Zu beachten. Freie Seite: Bild 10 × 8.
+  assert.deepEqual(r(M.seiteHtml(inh.seiten[3],inh,{})),['1,6,1,8','7,6,1,1','7,6,2,4','7,6,6,2','7,2,8,1','9,4,8,1']);
+  assert.deepEqual(r(M.seiteHtml(inh.seiten[4],inh,{bild})),['1,10,1,8','11,2,1,8']);
+  // Übersicht: Spalten der Tabelle auf dem Raster (zusammen 380 mm).
+  const ueb=M.seiteHtml(inh.seiten[1],inh,{});
+  assert.equal([...ueb.matchAll(/<col style="width:calc\(var\(--mm\) \* (\d+)\)">/g)].reduce((a,m)=>a+Number(m[1]),0),380);
+  // Beim Bearbeiten: das Raster (96 Felder, 24 große) hinter den Rahmen; die Rahmen haben einen Namen für den Übersatz.
+  const bearb=M.seiteHtml(inh.seiten[2],inh,{modus:'bearbeiten'});
+  assert.equal((bearb.match(/<div class="mm-raster" aria-hidden="true">(.*?)<\/div>/)[1].match(/<i><\/i>/g)||[]).length,96);
+  assert.equal((bearb.match(/<div class="mm-raster-gross" aria-hidden="true">(.*?)<\/div>/)[1].match(/<i><\/i>/g)||[]).length,24);
+  assert.match(bearb,/data-rahmen="Zu beachten"/);assert.match(bearb,/data-rahmen="A"/);
+  // Kopfzeile aus den Angaben der Mappe, wenn gesetzt (z. B. die Adresse wie im Archicad-Master).
+  v.daten.kopf_projekt='Musterstraße 1 Musterstadt';v.daten.kopf_untertitel='1. BA';
+  assert.deepEqual(M.mappeInhalt(v,[za,zb,zc],{projekt:{number:'T-01',name:'Testhaus'}}).kopf,{projekt:'Musterstraße 1 Musterstadt',phase:'Entwurf',untertitel:'1. BA'});
+  // Ein Stand von vor dem Raster (ohne kopf) bekommt die Kopfzeile aus Projekt und Titel.
+  const alt={...inh,kopf:undefined};
+  assert.match(M.seiteHtml(alt.seiten[0],alt,{}),/<header class="mm-kopfzeile"><span>T-01 Testhaus \| Mustermappe Bodenbeläge<\/span>/);
+});
+
+test('Deckblatt: Titelbild aus dem Speicher der Mappe (optional), Titel unten links, Text rechts',()=>{
+  const {v,za,zb,zc}=beispiel();
+  v.daten.seiten[0]={...v.daten.seiten[0],bild:{pfad:'d/u/titel.jpg',name:'Rendering'}};
+  const inh=M.mappeInhalt(v,[za,zb,zc],{projekt:{number:'T-01',name:'Testhaus'}});
+  const bild=(pfad,bucket)=>'https://bilder.invalid/'+bucket+'/'+pfad;
+  const deck=M.seiteHtml(inh.seiten[0],inh,{bild});
+  assert.match(deck,/style="grid-column:1 \/ span 12;grid-row:1 \/ span 5"><img class="mm-foto mm-foto-deck" src="https:\/\/bilder\.invalid\/office-projektdokumente\/d\/u\/titel\.jpg"/);
+  assert.match(deck,/style="grid-column:1 \/ span 8;grid-row:6 \/ span 2"><p class="mm-kicker">Mustermappe<\/p><h2 class="mm-t-gross">Bodenbeläge<\/h2><p class="mm-t-mittel">T-01 · Testhaus<\/p>/);
+  assert.ok(M.allePfade(inh).mappe.includes('d/u/titel.jpg'),'das Titelbild wird signiert');
+  const ohne=M.mappeInhalt(beispiel().v,[za,zb,zc]);
+  assert.doesNotMatch(M.seiteHtml(ohne.seiten[0],ohne,{}),/mm-foto/,'ohne Titelbild bleibt die Fläche im PDF weiß');
+  assert.match(M.seiteHtml(ohne.seiten[0],ohne,{modus:'bearbeiten'}),/Titelbild \(optional\): rechts ein Bild oder ein PDF hochladen\./);
+  // Kennwerte aus der Tabelle auf der Seite (Liste statt Text).
+  const o=za.daten.optionen[0];
+  assert.deepEqual(M.anpassen(o,'kennwerte',[{feld:' Aufbau ',wert:'21 mm'},{feld:'',wert:''}]).muster_merkmale,[{feld:'Aufbau',wert:'21 mm'}]);
+  assert.equal(M.anpassen(o,'kennwerte',[{feld:'Aufbau',wert:'massiv 16 mm'},{feld:'Brandverhalten',wert:'Cfl-s1'}]).muster_merkmale,undefined,'wie die Bibliothek');
+});
+
+test('Arbeitsfläche und Blatt: Zoom, Schalter, Übersatz, Raster in mm, Arial, Text auf der Seite',()=>{
+  const js=readFileSync(new URL('../projektdokumente.js',import.meta.url),'utf8');
+  assert.match(js,/const MM_A3=1587,MM_STUFEN=\[\.25,\.33,\.5,\.67,\.75,1,1\.25,1\.5,2,3\];/);
+  assert.match(js,/try\{localStorage\.setItem\('tba-office\.mustermappe\.ansicht',JSON\.stringify\(mm\.ansicht\)\)\}catch\{\}/);
+  assert.match(js,/if\(!\(e\.ctrlKey\|\|e\.metaKey\)\|\|ui\.ansicht!=='mappe'\|\|!e\.target\.closest\?\.\('\.mm-buehne'\)\)return;/);
+  assert.match(js,/\},\{passive:false\}\);/);
+  assert.match(js,/if\(ui\.ansicht==='mappe'&&el\.matches\('\.mm-ed'\)\)\{mappeEingabe\(el\);return\}/);
+  assert.match(js,/document\.execCommand\('insertText',false,t\);/,'Einfügen nur als Text');
+  assert.match(js,/const ueber=r\.scrollHeight>r\.clientHeight\+1;r\.classList\.toggle\('mm-uebersatz',ueber\);/);
+  assert.match(js,/Passt nicht ganz in den Rahmen/);
+  assert.match(js,/const r=box\.querySelector\('\[data-mmfoto="'\+CSS\.escape\(oid\+'\|'\+i\)\+'"\]'\)\?\.getBoundingClientRect\(\);/);
+  assert.doesNotMatch(js,/mm\.lesen|Lesegröße|textarea\.mm-text/,'kein Umschalter «Lesegröße» und keine Felder mehr auf der Seite');
+  const css=readFileSync(new URL('../projektdokumente.css',import.meta.url),'utf8');
+  assert.match(css,/\.pd-mappe-wrap\{max-width:none\}/);
+  assert.match(css,/\.mm-seite\{--mm:calc\(100cqw \/ 420\);/);
+  assert.match(css,/font-family:Arial,"Helvetica Neue",Helvetica,"Liberation Sans",sans-serif;\n  font-size:calc\(var\(--mm\) \* 3\.175\);line-height:calc\(var\(--mm\) \* 4\)/);
+  assert.match(css,/\.mm-satz\{position:absolute;left:calc\(var\(--mm\) \* 20\);top:calc\(var\(--mm\) \* 24\);width:calc\(var\(--mm\) \* 380\);height:calc\(var\(--mm\) \* 252\);\n  display:grid;grid-template-columns:repeat\(12,minmax\(0,1fr\)\);grid-template-rows:repeat\(8,minmax\(0,1fr\)\);gap:calc\(var\(--mm\) \* 4\)\}/);
+  assert.match(css,/\.mm-kopfzeile\{bottom:calc\(var\(--mm\) \* 281\);text-transform:uppercase;letter-spacing:\.02em\}/);
+  assert.match(css,/\.mm-fusszeile\{bottom:calc\(var\(--mm\) \* 13\)\}/);
+  assert.match(css,/\.mm-buehne\.raster \.mm-raster,\.mm-buehne\.raster \.mm-raster-gross\{display:grid\}/);
+  // Überschriften und Absätze der App gelten nicht auf dem Blatt (sonst 19 px statt 20 pt und 6 pt Abstand im Druck).
+  assert.match(css,/\.pd h2:where\(:not\(\.mm-seite \*\)\)\{font-size:19px;/);
+  assert.match(css,/\.pd-druck p:where\(:not\(\.mm-seite \*\)\)\{margin:0 0 6pt\}/);
+  assert.doesNotMatch(css,/^\.pd h[23]\{|\.pd-druck p\{/m);
+  // Farben nur aus den Tokens.
+  const blatt=css.slice(css.indexOf('/* Mustermappe (L3.MAP.1'),css.indexOf('/* Präsentieren im Bemusterungstermin'));
+  assert.doesNotMatch(blatt,/#[0-9a-f]{3,8}\b|rgba?\(/i);
 });
