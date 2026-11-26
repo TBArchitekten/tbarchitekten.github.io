@@ -17,6 +17,23 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Office-Connector: aus Claude-Chats ins Projekt ablegen (Thema festhalten, Dokument ablegen) · Claude
+- Qué cambió y por qué: Gari (26.11.2026): Mit dem Window-Connector sagt er einem Claude-Chat «pásalo a Window». Dasselbe will er fürs Office, um das, was er mit Claude zu einem Projekt erarbeitet hat, ins Projekt zu bringen, sichtbar für das Projektteam (seine Wahl). Der Office-Connector (`office-mcp`, #49) konnte bisher nur lesen und Aufgaben anlegen.
+  - **Wohin:** Das Panorama des Office zeigt die Projektakte noch nicht (siehe Hoja de ruta: erst nach der rechtlichen Klärung); deshalb in den gemeinsamen Desktop des Projekts, den das Team nutzt und die KI des Office liest.
+  - **`close_session` (Thema festhalten):** je Thema ein Ordner (ein vorhandener Ordner gleichen Namens wird genutzt, gleich wer ihn angelegt hat), darin datierte Stände «JJMMTT Stand <Thema>.md» mit Stand, Entscheidungen (fortgeschrieben; nicht ausdrücklich Entschiedenes «vorgeschlagen»), Offene Fragen, Nächste Schritte, Fristen und Quellen; die Felder stehen zusätzlich in `metadata.themenblatt`, damit der nächste Stand darauf aufbaut. Ein neues Thema nur mit `neues_thema`; ähnliche Namen («Lichtplanung 3. BA») gehen zum bekannten Thema (`matchTopic` wie in Window). Ein gleicher Stand wird nicht noch einmal abgelegt; am selben Tag bekommt der Name die Uhrzeit.
+  - **`file_document` (Dokument ablegen):** Markdown mit Kopf (Art, Datum, bei E-Mails Von, An, Betreff); Ordner: der angegebene, der des Themas oder nach Art (Dokumente, Recherchen, Notizen, Protokolle, Briefe, E-Mails); gleicher Inhalt im Projekt nur einmal, gleich wer ihn abgelegt hat.
+  - **Lesen:** `open_project` nennt die Themen im Desktop mit dem jüngsten Stand, `open_topic` gibt den letzten Stand zurück (zum Weiterarbeiten in einem neuen Chat).
+  - **Grenzen:** nur mit Mitgliedschaft im Projektteam (dieselbe Prüfung wie die Projektakte; Storage und RLS verlangen sie ebenfalls); nichts wird überschrieben oder gelöscht (`upsert:false`, keine Änderungen an vorhandenen Dateien). In den Anweisungen: alles deutsch, die Regeln des Leitfadens «Was darf ins TBA Office?», Fristen nur auf Wunsch als Aufgaben, danach in 3–5 Zeilen sagen, was wo liegt.
+- Archivos: `supabase/functions/office-mcp/office-ablage.mjs` (neu), `supabase/functions/office-mcp/index.ts`; Tests `tests/office-mcp-ablage.test.mjs` (neu, 6); `docs/OFFICE-CONNECTOR.md`, `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: ninguna migración (vorhandene Tabellen `minds_work_folders`, `minds_work_files` und Bucket `minds-work` mit ihrer RLS).
+- Deploy de funciones: `office-mcp` über den Workflow nach dem Merge.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (504); `deno check supabase/functions/office-mcp/index.ts` grün. Mit einer Datenbank im Speicher: Pfad und Zeile wie beim Hochladen im Desktop (Person / Projekt / Ordner), ein neues Thema erst nach Rückfrage, der zweite Stand baut auf dem ersten auf, nichts doppelt, ohne Mitgliedschaft wird nichts geschrieben.
+- Quedó pendiente o sin probar: **Der OAuth-Server des Supabase-Projekts ist aus** («OAuth server is disabled»): bis er eingeschaltet ist (Authentication → OAuth Server, Authorization Path `/oauth-consent.html`, dynamische Registrierung erlauben), kann Claude den Connector nicht verbinden; danach in Claude als benutzerdefinierten Connector hinzufügen. Mit echter Anmeldung noch nicht geprobt. Das Panorama zeigt die Themen nicht (nur der Desktop).
+- Riesgos o decisiones que necesitan a Gari: den OAuth-Server einschalten (nur im Dashboard).
+- PR: #180
+
+---
+
 ### 2026-11-26 · Controlling: der Gewinn vorn, fürs Team als Stufe; «Ergebnis» heißt «Gegenüber Kalkulation» · Claude
 - Qué cambió y por qué: Gari (26.11.2026): «Ergebnis am Ende netto» auf der Karte liest sich wie das Ergebnis des Projekts, vergleicht aber nur die Stunden zum Kalkulationssatz mit dem Honorar; was zählt, ist der Gewinn nach Gehältern und Bürokosten. Wer im Projekt arbeitet, soll wissen, ob es Geld verdient oder verliert, ohne daraus Gehälter ausrechnen zu können.
   - **Karte:** oben unverändert (Nummer, Name, LPH, Chips, Balken für Stunden und Honorar). Die Zahlenzeile: **Gewinn (am Ende)**, mit vollem Zugang als Betrag mit «vertraulich» (oder der Grund, warum er fehlt, etwa «Gehälter unvollständig»), für das Team als Stufe «im Plus» / «knapp» / «im Minus» mit Zeichen und ohne Betrag; **Gegenüber Kalkulation (am Ende) netto** (der bisherige Wert «Ergebnis», nur umbenannt); **Erarbeitet, nicht bezahlt netto**. «Honorar je Stunde netto» steht nur noch im Projektblatt. Die drei Zahlen stehen auf einer Höhe (Subgrid).

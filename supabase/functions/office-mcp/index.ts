@@ -13,6 +13,7 @@ import * as XLSX from "npm:xlsx@0.18.5";
 import {Buffer} from "node:buffer";
 import {createOfficeTools,ToolError} from "./office-tools.mjs";
 import {createOfficeAkteTools} from "./office-akte.mjs";
+import {createOfficeAblageTools} from "./office-ablage.mjs";
 
 const SUPABASE_URL=(Deno.env.get("SUPABASE_URL")||"").replace(/\/$/,"");
 // The public URL pasted into Claude; the protected-resource metadata must repeat it exactly.
@@ -74,13 +75,15 @@ How to work:
 - Start: overview (today, overdue, Fristen) or project_context for one project. For Projektakte open_project or open_topic requires explicit project-team membership.
 - Before stating anything about documents: search_files, then read_file. Cite file names. Never invent files, dates or decisions.
 - create_task / update_task change real tasks: do it when asked; otherwise propose. A task with a project is visible to the project team.
+- Filing into a project (close_session, file_document): when the person asks (e.g. "pásalo al Office", "leg das ab", "guárdalo"). It lands on the project's shared Desktop: the whole project team sees it and the office KI reads it. Check the topic first with open_topic (it returns the latest Stand); a new topic needs neues_thema:true after agreeing the title with the person. Write German, factual and complete enough for a colleague who did not see the chat. Mark as bestaetigt only what the person explicitly decided. Fristen become Planner tasks only if the person asks (create_task). Afterwards tell the person in 3–5 lines what was filed and where. Nothing is overwritten or deleted: each save adds a dated document.
+- Office guideline "Was darf ins TBA Office?": never salaries or other personnel data, ID or bank data, health data, passwords, full texts of standards (DIN), or anything a client wants kept on paper; private data of clients or neighbours only when the project needs it. If a chat contains such things, leave them out and say so.
 - Diagnostics are private to the signed-in account and omit message contents. Never infer colleague access from an admin role.\n- Keep tool calls lean: read_file is paged (next_offset).`;
 
 const text=(value:unknown)=>({content:[{type:"text" as const,text:typeof value==="string"?value:JSON.stringify(value)}]});
 const READ={readOnlyHint:true,destructiveHint:false,openWorldHint:false};
 const WRITE={readOnlyHint:false,destructiveHint:false,openWorldHint:false};
 
-function buildServer(tools:ReturnType<typeof createOfficeTools>,akte:ReturnType<typeof createOfficeAkteTools>){
+function buildServer(tools:ReturnType<typeof createOfficeTools>,akte:ReturnType<typeof createOfficeAkteTools>,ablage:ReturnType<typeof createOfficeAblageTools>){
   const server=new McpServer({name:"TBA Office",version:"1.0.0"},{instructions:INSTRUCTIONS});
   const run=(fn:(args:any)=>Promise<unknown>)=>async(args:any)=>{
     try{return text(await fn(args||{}))}
@@ -109,10 +112,21 @@ function buildServer(tools:ReturnType<typeof createOfficeTools>,akte:ReturnType<
     inputSchema:z.object({title:z.string(),project:z.string().optional(),due_date:z.string().optional(),start_date:z.string().optional(),notes:z.string().optional()}),annotations:WRITE},run(a=>tools.createTask(a)));
   server.registerTool("update_task",{title:"Aufgabe ändern",description:"Change a task's title, dates or notes, or mark it done/undone. Pass only fields to change; null clears a date. Allowed for the creator, assignees and the project team.",
     inputSchema:z.object({task_id:z.string(),title:z.string().optional(),due_date:z.string().nullable().optional(),start_date:z.string().nullable().optional(),notes:z.string().optional(),done:z.boolean().optional()}),annotations:WRITE},run(a=>tools.updateTask(a)));
-  server.registerTool("open_project",{title:"Projektakte öffnen",description:"Read the Projektakte for a project assigned to the signed-in employee. Entries keep their proposed/confirmed status, evidence and source references.",
-    inputSchema:z.object({project:z.string()}),annotations:READ},run(a=>akte.openProject(a)));
-  server.registerTool("open_topic",{title:"Themenblatt öffnen",description:"Read one topic from a project assigned to the signed-in employee; ambiguous matches return candidates rather than a guess.",
-    inputSchema:z.object({project:z.string(),topic:z.string()}),annotations:READ},run(a=>akte.openTopic(a)));
+  server.registerTool("open_project",{title:"Projektakte öffnen",description:"Read the Projektakte for a project assigned to the signed-in employee, plus the topics saved on the project Desktop with their latest Stand (themen_im_desktop). Entries keep their proposed/confirmed status, evidence and source references.",
+    inputSchema:z.object({project:z.string()}),annotations:READ},run(async a=>({...await akte.openProject(a),themen_im_desktop:await ablage.themen(a)})));
+  server.registerTool("open_topic",{title:"Themenblatt öffnen",description:"Read one topic from a project assigned to the signed-in employee: Akte entries and the latest Stand saved on the project Desktop (letzter_stand). Call it before close_session; ambiguous matches return candidates rather than a guess.",
+    inputSchema:z.object({project:z.string(),topic:z.string()}),annotations:READ},run(async a=>({...await akte.openTopic(a),letzter_stand:await ablage.letzterStand(a)})));
+  const ENTSCHEIDUNG=z.union([z.string(),z.object({text:z.string(),datum:z.string().optional().describe("YYYY-MM-DD"),quelle:z.string().optional(),bestaetigt:z.boolean().optional()})]);
+  const FRIST=z.union([z.string(),z.object({titel:z.string(),datum:z.string().optional().describe("YYYY-MM-DD"),quelle:z.string().optional(),bestaetigt:z.boolean().optional()})]);
+  server.registerTool("close_session",{title:"Thema festhalten",description:"Save where one project topic stands (e.g. 'Lichtplanung', 'Bodenbelag') as a dated Stand document in the topic's folder on the project's shared Desktop, visible to the whole project team. stand is required; entscheidungen accumulate across saves (bestaetigt only if the person explicitly decided, otherwise marked 'vorgeschlagen'); offene_fragen, naechste_schritte, fristen and quellen replace the previous lists when given. Builds on the topic's latest Stand. An unclear topic returns suggestions; neues_thema:true creates it. German only.",
+    inputSchema:z.object({project:z.string(),topic:z.string(),stand:z.string().describe("Where the topic stands, German, a few sentences"),
+      entscheidungen:z.array(ENTSCHEIDUNG).optional(),offene_fragen:z.array(z.string()).optional(),naechste_schritte:z.array(z.string()).optional(),
+      fristen:z.array(FRIST).optional(),quellen:z.array(z.string()).optional(),neues_thema:z.boolean().optional(),
+      ordner:z.string().optional().describe("Desktop folder path, e.g. 'Lichtplanung'. Default: the topic's folder")}),annotations:WRITE},run(a=>ablage.closeSession(a)));
+  server.registerTool("file_document",{title:"Dokument ablegen",description:"File a German text (summary, research, note, protocol, letter or e-mail) as a Markdown document on the project's shared Desktop, visible to the whole project team; the office KI reads it. Folder: ordner, else the topic's folder (thema), else by art (Dokumente, Recherchen, Notizen, Protokolle, Briefe, E-Mails). Identical content is not filed twice. For e-mails pass von, an, datum and betreff.",
+    inputSchema:z.object({project:z.string(),titel:z.string(),inhalt:z.string().describe("Markdown, German"),
+      art:z.enum(["dokument","recherche","notiz","protokoll","brief","email"]).optional(),ordner:z.string().optional(),thema:z.string().optional(),
+      datum:z.string().optional().describe("YYYY-MM-DD"),von:z.string().optional(),an:z.string().optional(),betreff:z.string().optional()}),annotations:WRITE},run(a=>ablage.fileDocument(a)));
   server.registerTool("search_akte",{title:"Projektquellen durchsuchen",description:"Read project claims and source passages with provenance and page/sheet locators; project membership mandatory.",
     inputSchema:z.object({project:z.string(),query:z.string(),limit:z.number().int().min(1).max(25).optional()}),annotations:READ},run(a=>akte.searchAkte(a)));
   server.registerTool("turn_diagnostics",{title:"Eigene Turn-Diagnose",description:"Read-only execution statuses and latencies for this signed-in member only. No message text or colleagues' diagnostics.",
@@ -137,7 +151,9 @@ Deno.serve(async(req:Request)=>{
   if(member.must_change_password)return json({error:"password_change_required",error_description:"Bitte zuerst im Office das Startpasswort ändern."},403);
   const tools=createOfficeTools({sb,userId:data.user.id,extractText});
   const akte=createOfficeAkteTools({sb,userId:data.user.id,base:tools});
-  const handler=createMcpHandler(()=>buildServer(tools,akte));
+  // Ablegen nur mit ausdrücklicher Mitgliedschaft im Projektteam, dieselbe Prüfung wie die Projektakte.
+  const ablage=createOfficeAblageTools({sb,userId:data.user.id,scope:akte.scopedProject});
+  const handler=createMcpHandler(()=>buildServer(tools,akte,ablage));
   const res=await handler.fetch(req);
   const headers=new Headers(res.headers);for(const [k,v] of Object.entries(CORS))headers.set(k,v);
   return new Response(res.body,{status:res.status,statusText:res.statusText,headers});
