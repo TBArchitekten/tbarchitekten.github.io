@@ -7,8 +7,9 @@
    des Leistungsstands; Honorar mit bezahlt und erarbeitet), je Projekt ein Projektblatt mit Kennzahlen, Ständen und
    Zahlungen. Begriffe wie in der Projektübersicht von untermStrich: erarbeitetes Honorar = Honorar × Leistungsstand,
    Prognose = bisheriger Wert ÷ Leistungsstand.
-   Sichtbarkeit (Gari): Alle im Projekt sehen Honorar, Zahlungen, Stunden und das Ergebnis; Sätze und Gehälter der
-   Personen und das Ergebnis zum Gehalt nur mit vollem Zugang: Admins und, wer in office_controlling_zugang steht (die
+   Sichtbarkeit (Gari): Alle im Projekt sehen Honorar, Zahlungen, Stunden, den Vergleich mit der Kalkulation und, ob
+   der Gewinn im Plus, knapp oder im Minus liegt (26.11.2026, office_controlling_gewinn_stufen, ohne Betrag); Sätze und
+   Gehälter der Personen, das Ergebnis zum Gehalt und den Betrag des Gewinns nur mit vollem Zugang: Admins und, wer in office_controlling_zugang steht (die
    Buchhaltung, Gari 25.11.2026; sie sieht alle Projekte, wird aber nicht Admin des Office). Die Datenbank setzt das
    durch (Migrationen 20261125085053 und office_controlling_zugang): Stunden je Person, Sätze, Gehälter und
    Einstellungen liest nur voller Zugang, die Summen je Stand kommen aus office_controlling_summen. Eintragen und ändern:
@@ -109,6 +110,13 @@ async function ladeAlles(){
   ]);
   const err2=st.error||za.error||su.find(x=>x.error)?.error;if(err2)throw err2;
   daten.staende=st.data||[];daten.zahlungen=za.data||[];daten.summen=su.flatMap(x=>x.data||[]);
+  // Ohne vollen Zugang: der Gewinn je Paket als Stufe (plus, knapp, minus), gerechnet in der Datenbank. Fehlt die
+  // Funktion noch, bleibt die Stufe leer, statt die Seite anzuhalten.
+  daten.stufen=[];
+  if(!voll&&projektIds.length){
+    const gs=await Promise.all(projektIds.map(id=>sb.rpc('office_controlling_gewinn_stufen',{p_project:id})));
+    daten.stufen=gs.flatMap(x=>x.error?[]:x.data||[]);
+  }
   daten.stunden=[];daten.saetze=[];daten.einstellungen=null;
   if(voll){
     const standIds=daten.staende.map(s=>s.id);
@@ -160,7 +168,14 @@ const stundenVon=standId=>daten.stunden.filter(h=>h.stand_id===standId);
 // Mit vollem Zugang bewertet die Seite die Stunden je Person selbst (wie office_controlling_summen), mit Personalkosten
 // und Selbstkosten; ohne vollen Zugang gibt es dafür keine Daten.
 const bewVon=p=>voll?K.bewertung(summenVon(p).map(s=>({id:s.stand_id,stichtag:s.stichtag})),daten.stunden,daten.saetze,daten.einstellungen,p.kalkulationssatz):null;
-const kz=p=>K.kennzahlen(p,summenVon(p),zahlungenVon(p),bewVon(p));
+// Der Gewinn (Gari, 26.11.2026): mit vollem Zugang der Betrag, dazu die Stufe aus ihm; ohne vollen Zugang nur die Stufe
+// aus der Datenbank. «vorläufig», solange die Annahmen nicht bestätigt sind.
+function mitStufe(p,k){
+  if(voll){k.gewinnStufe=K.gewinnStufe(k.abgeschlossen?k.gewinn:k.prognoseGewinn,k.honorar);k.gewinnVorlaeufig=!daten.einstellungen?.annahmen_bestaetigt}
+  else{const x=daten.stufen.find(s=>s.paket_id===p.id);k.gewinnStufe=x?.stufe||null;k.gewinnVorlaeufig=x?x.vorlaeufig!==false:true}
+  return k;
+}
+const kz=p=>mitStufe(p,K.kennzahlen(p,summenVon(p),zahlungenVon(p),bewVon(p)));
 // Ein Paket für die Übersicht, mit der Nummer seines Projekts (geordnet nach Nummer, Gari 25.11.2026).
 const eintrag=p=>({paket:p,k:kz(p),nummer:projekt(p.project_id)?.number||''});
 const wer=h=>h.person_id?person(h.person_id)||'Person':h.person_name||'Team';
@@ -235,21 +250,35 @@ function kachel(schluessel,name,wert,klasse,unter,vertraulich=false){
   return '<div class="ct-kachel" data-kachel="'+schluessel+'"><span class="ct-kachel-name">'+esc(name)+(vertraulich?' <span class="ct-nur-admin">vertraulich</span>':'')+'</span>'+
     '<strong class="ct-kachel-wert'+klasse+'">'+esc(wert)+'</strong>'+(unter?'<span class="ct-kachel-unter">'+esc(unter)+'</span>':'')+'</div>';
 }
+// Zwei Fragen, zwei Zahlen (Gari, 26.11.2026): verdient das Paket Geld (Gewinn nach Gehältern und Bürokosten), und
+// reichen die Stunden, wie kalkuliert («Gegenüber Kalkulation», früher «Ergebnis»: die Stunden zum Kalkulationssatz, also
+// nicht der Gewinn). Den Betrag des Gewinns sieht nur der volle Zugang; das Team sieht, ob er im Plus, knapp oder im
+// Minus liegt: mit Honorar, Stunden und Betrag ließe sich in kleinen Teams ein Gehalt ausrechnen.
+const STUFE={plus:'im Plus',knapp:'knapp',minus:'im Minus'},STUFE_LAGE={plus:'gut',knapp:'achtung',minus:'kritisch'};
+const stufeChip=st=>'<span class="chip ct-lage-chip ct-lage-'+STUFE_LAGE[st]+'" data-stufe="'+st+'">'+LAGE_ZEICHEN[STUFE_LAGE[st]]+esc(STUFE[st])+'</span>';
+const kalkName=k=>k.abgeschlossen?'Gegenüber Kalkulation netto':'Gegenüber Kalkulation am Ende netto';
+const gewinnWert=k=>k.abgeschlossen?k.gewinn:k.prognoseGewinn;
+const gewinnGrund=k=>!K.annahmen(daten.einstellungen).faktor?'Gemeinkostenfaktor fehlt':k.erarbeitet==null?'braucht den Leistungsstand':'Gehälter unvollständig';
+function stufeKachel(k){
+  const st=k.gewinnStufe;
+  return '<div class="ct-kachel" data-kachel="gewinn"><span class="ct-kachel-name">'+(k.abgeschlossen?'Gewinn':'Gewinn am Ende')+'</span>'+
+    '<strong class="ct-kachel-wert">'+(st?stufeChip(st):'—')+'</strong><span class="ct-kachel-unter">'+
+    esc(st?'nach Gehältern und Bürokosten; der Betrag ist vertraulich'+(k.gewinnVorlaeufig?' · vorläufig':''):'noch nicht zu rechnen')+'</span></div>';
+}
 function kacheln(k,l,mitGewinn=voll){
   const ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis,t=[];
-  t.push(kachel('ergebnis',k.abgeschlossen?'Ergebnis netto':'Ergebnis am Ende netto',plus(ergebnis),plusKlasse(ergebnis),
-    ergebnis==null?'braucht den Leistungsstand':k.abgeschlossen?'gegenüber der Kalkulation':'gegenüber der Kalkulation, hochgerechnet'));
+  if(mitGewinn){
+    const g=gewinnWert(k);
+    t.push(kachel('gewinn',k.abgeschlossen?'Gewinn netto':'Gewinn am Ende netto',plus(g),plusKlasse(g),
+      g!=null?'nach Gehältern und Bürokosten'+(k.gewinnVorlaeufig?' · Annahmen vorläufig':''):gewinnGrund(k),true));
+  }else t.push(stufeKachel(k));
+  t.push(kachel('ergebnis',kalkName(k),plus(ergebnis),plusKlasse(ergebnis),
+    ergebnis==null?'braucht den Leistungsstand':k.abgeschlossen?'Stunden zum Kalkulationssatz':'hochgerechnet, Stunden zum Kalkulationssatz'));
   if(!k.abgeschlossen&&k.budget>0)t.push(kachel('rest','Stunden für den Rest',std(K.r2(k.budget-k.stunden)),k.stunden>k.budget+0.005?' ct-minus':'',
     l.restNoetig!=null?'im bisherigen Takt nötig: '+std(l.restNoetig):'Budget minus bisherige Stunden'));
   const offen=k.erarbeitet==null||!k.zahlungen?null:k.offen;
   t.push(kachel('offen','Erarbeitet, nicht bezahlt netto',offen==null?'—':offen<-0.004?'− '+euro(-offen):euro(offen),'',
     k.erarbeitet==null?'braucht den Leistungsstand':!k.zahlungen?'keine Zahlungen erfasst':offen<-0.004?'im Voraus bezahlt':k.gestellt?'davon gestellt '+euro(k.gestellt):'kann abgerechnet werden'));
-  if(mitGewinn){
-    const g=k.abgeschlossen?k.gewinn:k.prognoseGewinn,a=K.annahmen(daten.einstellungen);
-    const unter=g!=null?'nach Gehältern und Bürokosten'+(daten.einstellungen?.annahmen_bestaetigt?'':' · Annahmen vorläufig')
-      :!a.faktor?'Gemeinkostenfaktor fehlt':k.erarbeitet==null?'braucht den Leistungsstand':'Gehälter unvollständig';
-    t.push(kachel('gewinn',k.abgeschlossen?'Gewinn netto':'Gewinn am Ende netto',plus(g),plusKlasse(g),unter,true));
-  }
   return '<div class="ct-kacheln">'+t.join('')+'</div>';
 }
 function lagePanel(k,mitGewinn=voll){
@@ -281,7 +310,8 @@ function renderUebersicht(){
     '<a class="pb-back" href="./app/#section=tools">‹ Werkzeuge</a>'+
     '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling</p><h1>Controlling</h1>'+
     '<p class="pb-intro">Honorar laut Vertrag gegen die Stunden im Projekt. Die Kalkulation rechnet mit dem Kalkulationssatz (85 €/h, je Person änderbar); '+
-    'erarbeitet ist das Honorar mal Leistungsstand, die Prognose rechnet die bisherigen Stunden auf 100 % hoch. Alle Beträge netto, ohne MwSt.</p></div>'+
+    'erarbeitet ist das Honorar mal Leistungsstand, die Prognose rechnet die bisherigen Stunden auf 100 % hoch. Der Gewinn rechnet mit Gehalt und '+
+    'Gemeinkostenfaktor; den Betrag sieht nur, wer vollen Zugang hat. Alle Beträge netto, ohne MwSt.</p></div>'+
     '<div class="pb-actions"><button type="button" class="ct-info" data-rechenweg aria-haspopup="dialog"><span aria-hidden="true">i</span>So wird gerechnet</button>'+
     (eintraege.length?'<button type="button" class="btn" data-pdf-uebersicht>Übersicht als PDF</button>':'')+
     (voll?'<a class="btn" href="./controlling.html?ansicht=saetze">Sätze und Gehälter</a><button type="button" class="btn btn-primary" data-paket-neu>Neues Honorarpaket</button>':'')+'</div>'+
@@ -297,17 +327,23 @@ function renderUebersicht(){
 }
 function karte({paket:p,k}){
   const pr=projekt(p.project_id);
-  const ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis;
+  const ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis,g=gewinnWert(k);
   // Gari (25.11.2026): fett steht das Projekt, darunter das Paket; die ganze Karte öffnet das Projektblatt (der Link
   // im Titel deckt die Karte ab, siehe .ct-karte h2 a::after). Die Begriffe wie im Projektblatt (Gari, nachmittags).
+  // Gari (26.11.2026): unten zuerst der Gewinn (voller Zugang: Betrag, vertraulich; Team: im Plus, knapp, im Minus),
+  // dann «Gegenüber Kalkulation» und «Erarbeitet, nicht bezahlt»; «Honorar je Stunde» steht im Projektblatt.
+  const vorl=k.gewinnVorlaeufig?'<span class="ct-vorlaeufig">vorläufig</span>':'';
+  const gewinn=voll?'<div><dt>'+(k.abgeschlossen?'Gewinn netto':'Gewinn am Ende netto')+' <span class="ct-nur-admin">vertraulich</span></dt>'+
+      (g==null?'<dd class="ct-klein" data-gewinn>'+esc(gewinnGrund(k))+'</dd>':'<dd class="'+plusKlasse(g).trim()+'" data-gewinn>'+esc(plus(g))+vorl+'</dd>')+'</div>'
+    :'<div><dt>'+(k.abgeschlossen?'Gewinn':'Gewinn am Ende')+'</dt><dd data-gewinn-stufe="'+esc(k.gewinnStufe||'')+'">'+
+      (k.gewinnStufe?stufeChip(k.gewinnStufe)+vorl:'<span class="ct-klein">—</span>')+'</dd></div>';
   return '<article class="card ct-karte" data-paket="'+esc(p.id)+'">'+(pr?.number?'<p class="meta ct-nummer">'+esc(pr.number)+'</p>':'')+
     '<h2><a href="'+esc(urlProjekt(p.project_id,{paket:p.id}))+'"><span data-titel>'+esc(pr?.name||'Projekt')+'</span>'+
     '<span class="sr"> · '+esc(p.bezeichnung)+'</span></a></h2>'+
     '<p class="ct-paket">'+esc(p.bezeichnung)+(p.leistung?' <span class="meta">· '+esc(p.leistung)+'</span>':'')+'</p>'+
     '<div class="pb-chips">'+chips(p,k)+'</div>'+balkenStunden(k)+balkenHonorar(k)+
     '<dl class="ct-zahlen">'+
-    '<div><dt>'+(k.abgeschlossen?'Ergebnis netto':'Ergebnis am Ende netto')+'</dt><dd class="'+plusKlasse(ergebnis).trim()+'" data-ergebnis>'+esc(plus(ergebnis))+'</dd></div>'+
-    '<div><dt>Honorar je Stunde netto</dt><dd>'+(k.jeStunde==null?'—':esc(euro(k.jeStunde))+'/h')+'</dd></div>'+
+    gewinn+'<div><dt>'+kalkName(k)+'</dt><dd class="'+plusKlasse(ergebnis).trim()+'" data-ergebnis>'+esc(plus(ergebnis))+'</dd></div>'+
     '<div><dt>Erarbeitet, nicht bezahlt netto</dt><dd'+(k.zahlungen||k.erarbeitet==null?'':' class="ct-klein"')+'>'+esc(offenText(k))+'</dd></div></dl></article>';
 }
 
@@ -319,7 +355,8 @@ function renderProjekt(pr){
   root.innerHTML='<div class="pb-wrap">'+
     '<a class="pb-back ct-zur-uebersicht" href="./controlling.html">‹ Controlling</a>'+
     '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling</p><h1>'+esc(projektName(pr))+'</h1>'+
-    '<p class="pb-intro">Honorar laut Vertrag, Stunden und Zahlungen. Ergebnis gegenüber der Kalkulation: erarbeitetes Honorar minus Wert der Stunden zum Kalkulationssatz.</p></div>'+
+    '<p class="pb-intro">Honorar laut Vertrag, Stunden und Zahlungen. Gewinn: erarbeitetes Honorar minus Selbstkosten (Gehalt mal Gemeinkostenfaktor). '+
+    'Gegenüber Kalkulation: erarbeitetes Honorar minus Wert der Stunden zum Kalkulationssatz.</p></div>'+
     (voll?'<div class="pb-actions"><button type="button" class="btn'+(p?'':' btn-primary')+'" data-paket-neu>Neues Honorarpaket</button></div>':'')+
     '</header><p class="pb-banner info" data-meldung hidden></p>'+
     (pakete.length>1?'<div class="pb-pills" role="group" aria-label="Honorarpakete">'+pakete.map(x=>
@@ -370,17 +407,17 @@ function kennzahlGruppen(k){
     [k.stand?'Stand '+datum(k.stand):'Stand',[zeile('Stunden',esc(std(k.stunden))),
       zeile('Leistungsstand',k.leistungsstand==null?'noch nicht geschätzt':esc(proz(k.leistungsstand))+(k.abgeschlossen&&k.geschaetzt!==100?' <span class="meta">(abgeschlossen)</span>':'')),
       zeile('Wert der Stunden netto',esc(euro(k.wert))),zeile('Erarbeitet netto',esc(euro(k.erarbeitet))),
-      zeile('Ergebnis bisher netto',esc(plus(k.ergebnisBisher)),plusKlasse(k.ergebnisBisher)),
+      zeile('Gegenüber Kalkulation bisher netto',esc(plus(k.ergebnisBisher)),plusKlasse(k.ergebnisBisher)),
       zeile('Honorar je Stunde netto',k.jeStunde==null?'—':esc(euro(k.jeStunde,2))+'/h')]],
     [k.abgeschlossen?'Am Ende':'Prognose am Ende',[zeile('Stunden am Ende',esc(std(k.prognoseStunden))),
-      zeile('Ergebnis am Ende netto',esc(plus(k.prognoseErgebnis)),plusKlasse(k.prognoseErgebnis))]],
+      zeile('Gegenüber Kalkulation am Ende netto',esc(plus(k.prognoseErgebnis)),plusKlasse(k.prognoseErgebnis))]],
     ['Zahlungen',[zeile('Bezahlt netto (Abschläge)',k.zahlungen?esc(euro(k.bezahlt)):'noch nicht erfasst'),
       ...(k.gestellt?[zeile('Gestellt, noch offen, netto',esc(euro(k.gestellt)))]:[]),zeile('Erarbeitet, nicht bezahlt netto',esc(offenText(k)))]]
   ];
   return '<div class="ct-gruppen">'+gruppen.map(([titel,zeilen])=>'<div class="ct-gruppe"><h3 class="pb-h3">'+esc(titel)+'</h3><dl class="pb-merkmale">'+zeilen.join('')+'</dl></div>').join('')+'</div>';
 }
 function paketBlatt(p){
-  const bew=bewVon(p),k=K.kennzahlen(p,summenVon(p),zahlungenVon(p),bew);
+  const bew=bewVon(p),k=mitStufe(p,K.kennzahlen(p,summenVon(p),zahlungenVon(p),bew));
   return '<section class="card pb-box" aria-label="Kennzahlen"><div class="ct-kopf-zeile"><div><h2 class="pb-h2">'+esc(p.bezeichnung)+'</h2>'+
     (p.leistung?'<p class="meta">'+esc(p.leistung)+'</p>':'')+'</div><div class="ct-kopf-rechts"><div class="pb-chips">'+chips(p,k,false)+'</div>'+
     '<button type="button" class="ct-info" data-rechenweg aria-haspopup="dialog"><span aria-hidden="true">i</span>So wird gerechnet</button>'+
@@ -447,7 +484,7 @@ function staendeTabelle(p,bew){
   const honorar=Number(p.honorar_netto)||0,abgeschlossen=p.status==='abgeschlossen';
   const personalkosten=s=>bew?bew.staende.find(x=>x.stand_id===s.stand_id)?.personalkosten??null:s.wert_gehalt??null;
   const kopf='<tr><th>Stichtag</th><th class="num">Leistungsstand</th><th class="num">Stunden</th><th class="num">Wert netto<span class="ct-einheit">zum Kalkulationssatz</span></th>'+
-    '<th class="num">Erarbeitet netto</th><th class="num">Ergebnis netto</th>'+(voll?'<th class="num">Personalkosten<span class="ct-einheit">zum Gehalt</span></th><th></th>':'')+'</tr>';
+    '<th class="num">Erarbeitet netto</th><th class="num">Gegenüber Kalkulation netto</th>'+(voll?'<th class="num">Personalkosten<span class="ct-einheit">zum Gehalt</span></th><th></th>':'')+'</tr>';
   const body=reihen.map((s,i)=>{
     const ls=abgeschlossen&&i===0?100:s.leistungsstand;
     const erarbeitet=ls!=null?honorar*Number(ls)/100:null,ergebnis=erarbeitet!=null?erarbeitet-Number(s.wert_kalkulation||0):null;
@@ -605,7 +642,7 @@ function annahmenBox(e,a){
       'was keinem Projekt direkt gehört: Miete, Software, Geräte, Versicherungen, Verwaltung, Akquise, Zeit ohne Projekt und, so gerechnet, den Arbeitgeberanteil. '+
       'Leer: keine Selbstkosten.','inputmode="decimal" placeholder="leer: keine Selbstkosten"')+
     herleitungBox(e,a)+
-    feld('bestaetigt','Bestätigt am',e.annahmen_bestaetigt||'','Leer lassen, bis die Fragen unten geklärt sind; bis dahin gilt der Gewinn im Projektblatt als vorläufig.','type="date"')+
+    feld('bestaetigt','Bestätigt am',e.annahmen_bestaetigt||'','Leer lassen, bis die Fragen unten geklärt sind; bis dahin gilt der Gewinn als vorläufig.','type="date"')+
     '<div class="ct-feld breit"><label for="an-notiz">Notiz zu den Annahmen</label><textarea id="an-notiz" name="notiz" class="pb-input" maxlength="2000" rows="3" '+
     'placeholder="Woher die Werte stammen, wer sie bestätigt hat">'+esc(e.annahmen_notiz||'')+'</textarea></div>'+
     '<div class="pb-actions breit"><button class="btn btn-primary">Speichern</button></div></form></section>';
@@ -719,9 +756,9 @@ function rechenweg(p){
       k?(k.leistungsstand==null?'noch nicht geschätzt':pr(k.leistungsstand)):''),
     z('Erarbeitet netto','Honorar × Leistungsstand: was die Leistung bis jetzt wert ist, bezahlt oder nicht.',
       k&&k.erarbeitet!=null?e(k.honorar)+' × '+pr(k.leistungsstand)+' = '+e(k.erarbeitet):''),
-    z('Ergebnis bisher netto','Erarbeitet − Wert der Stunden. Positiv: die Leistung ist mehr wert, als die Stunden zum Kalkulationssatz kosten.',
+    z('Gegenüber Kalkulation bisher netto','Erarbeitet − Wert der Stunden. Positiv: die Leistung ist mehr wert, als die Stunden zum Kalkulationssatz kosten.',
       k&&k.ergebnisBisher!=null?e(k.erarbeitet)+' − '+e(k.wert)+' = '+esc(plus(k.ergebnisBisher)):''),
-    z('Prognose am Ende','Auf 100 % hochgerechnet, als ginge es im gleichen Takt weiter: Stunden ÷ Leistungsstand; Ergebnis = Honorar − Wert der Stunden ÷ Leistungsstand.',
+    z('Prognose am Ende','Auf 100 % hochgerechnet, als ginge es im gleichen Takt weiter: Stunden ÷ Leistungsstand; gegenüber der Kalkulation = Honorar − Wert der Stunden ÷ Leistungsstand.',
       k&&k.prognoseErgebnis!=null?h(k.stunden)+' ÷ '+pr(k.leistungsstand)+' = '+h(k.prognoseStunden)+' · '+e(k.honorar)+' − '+e(k.wert)+' ÷ '+pr(k.leistungsstand)+' = '+esc(plus(k.prognoseErgebnis)):''),
     z('Honorar je Stunde netto','Erarbeitet ÷ Stunden: was eine Stunde bisher eingebracht hat, zum Vergleich mit dem Kalkulationssatz.',
       k&&k.jeStunde!=null?e(k.erarbeitet)+' ÷ '+h(k.stunden)+' = '+e(k.jeStunde,2)+'/h':''),
@@ -729,8 +766,12 @@ function rechenweg(p){
       k?(k.zahlungen?e(k.bezahlt):'keine Zahlungen erfasst'):''),
     z('Erarbeitet, nicht bezahlt netto','Erarbeitet − Bezahlt: was abgerechnet werden kann. Negativ heißt: im Voraus bezahlt.',
       k&&k.offen!=null&&k.zahlungen?e(k.erarbeitet)+' − '+e(k.bezahlt)+' = '+e(k.offen):''),
-    z('Die Lage','Aus dem Ergebnis am Ende, gemessen am Honorar: im Budget, solange es nicht ins Minus geht; leicht über Budget bis 10 % des Honorars im Minus; '+
-      'deutlich über Budget darüber. Abgeschlossen zählt das Ergebnis. Ohne Leistungsstand bleibt die Lage offen.',
+    z('Gewinn','Erarbeitetes Honorar − Selbstkosten (Bruttogehalt × Gemeinkostenfaktor), am Ende mit den Kosten ÷ Leistungsstand. Er weicht vom Vergleich mit '+
+      'der Kalkulation ab, weil eine Stunde des Teams mehr oder weniger kostet als der Kalkulationssatz. Den Betrag sieht nur, wer vollen Zugang zum Controlling '+
+      'hat; sonst steht da, ob er im Plus liegt (über 5 % des Honorars), knapp (zwischen −5 und +5 %) oder im Minus.',
+      k?(voll?(gewinnWert(k)!=null?esc(plus(gewinnWert(k))):''):(k.gewinnStufe?esc(STUFE[k.gewinnStufe]):'')):''),
+    z('Die Lage','Aus «Gegenüber Kalkulation am Ende», gemessen am Honorar: im Budget, solange es nicht ins Minus geht; leicht über Budget bis 10 % des Honorars '+
+      'im Minus; deutlich über Budget darüber. Abgeschlossen zählt der Wert zum Abschluss. Ohne Leistungsstand bleibt die Lage offen.',
       k&&lageWert(k)?lageWert(k):''),
     z('Die Balken','Im Projektblatt Leistung, Stunden (vom Budget) und Bezahltes (vom Honorar) auf derselben Skala; der Strich ist der Leistungsstand: '+
       'die Stunden sollten links davon bleiben, das Bezahlte ihn erreichen. Die Stunden sind grün im Budget, orange leicht und rot deutlich darüber, '+
@@ -798,7 +839,7 @@ function druckStaende(p,bew,vertraulich){
   const reihen=summenVon(p).reverse(),honorar=Number(p.honorar_netto)||0,abgeschlossen=p.status==='abgeschlossen';
   if(!reihen.length)return '<section class="ctd-teil"><h2>Stände und Stunden</h2><p>Noch kein Stand erfasst.</p></section>';
   return '<section class="ctd-teil"><h2>Stände und Stunden</h2><table><thead><tr><th>Stichtag</th><th class="num">Leistungsstand</th><th class="num">Stunden</th>'+
-    '<th class="num">Wert netto<br>zum Kalkulationssatz</th><th class="num">Erarbeitet netto</th><th class="num">Ergebnis netto</th>'+(vertraulich?'<th class="num">Personalkosten</th>':'')+
+    '<th class="num">Wert netto<br>zum Kalkulationssatz</th><th class="num">Erarbeitet netto</th><th class="num">Gegenüber<br>Kalkulation netto</th>'+(vertraulich?'<th class="num">Personalkosten</th>':'')+
     '</tr></thead><tbody>'+reihen.map((s,i)=>{
       const ls=abgeschlossen&&i===0?100:s.leistungsstand,erarbeitet=ls!=null?honorar*Number(ls)/100:null,ergebnis=erarbeitet!=null?erarbeitet-Number(s.wert_kalkulation||0):null;
       const je=vertraulich?stundenVon(s.stand_id).map(h=>wer(h)+' '+std(Number(h.stunden))).join(' · '):'',pk=bew?.staende.find(x=>x.stand_id===s.stand_id)?.personalkosten;
@@ -808,7 +849,7 @@ function druckStaende(p,bew,vertraulich){
     }).join('')+'</tbody></table></section>';
 }
 function druckBericht(pr,p,teile){
-  const vertraulich=voll&&teile.vertraulich,bew=vertraulich?bewVon(p):null,k=K.kennzahlen(p,summenVon(p),zahlungenVon(p),bewVon(p));
+  const vertraulich=voll&&teile.vertraulich,bew=vertraulich?bewVon(p):null,k=mitStufe(p,K.kennzahlen(p,summenVon(p),zahlungenVon(p),bewVon(p)));
   return '<div class="ctd">'+druckKopf('Controlling-Bericht',pr,p,vertraulich)+
     (teile.lage?'<section class="ctd-teil"><h2>Lage und Kennzahlen</h2>'+lagePanel(k,vertraulich)+kennzahlGruppen(k)+(p.notiz?'<p class="ctd-fuss">'+esc(p.notiz)+'</p>':'')+'</section>':'')+
     (vertraulich&&bew?'<section class="ctd-teil">'+vertraulichBlock(k,bew,true)+'</section>':'')+
@@ -837,18 +878,19 @@ function berichtDialog(pr,p){
 function druckUebersicht(mitGewinn){
   const eintraege=daten.pakete.map(eintrag).sort(K.ordnung);
   const reihen=eintraege.map(({paket:p,k})=>{
-    const pr=projekt(p.project_id),ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis,g=k.abgeschlossen?k.gewinn:k.prognoseGewinn;
+    const pr=projekt(p.project_id),ergebnis=k.abgeschlossen?k.ergebnisBisher:k.prognoseErgebnis,g=gewinnWert(k);
     return '<tr><td>'+esc(pr?.number||'')+'</td><td>'+esc(pr?.name||'')+'<br><span class="ctd-klein">'+esc(p.bezeichnung)+' · '+esc(p.status)+(k.vorlaeufig?', vorläufig':'')+'</span></td>'+
       '<td>'+lageChip(k)+'</td><td class="num">'+esc(euro(k.honorar))+'</td><td class="num">'+esc(proz(k.leistungsstand))+'</td>'+
       '<td class="num">'+esc(std(k.stunden))+' / '+esc(std(k.budget))+'</td><td class="num'+plusKlasse(ergebnis)+'">'+esc(plus(ergebnis))+'</td>'+
       '<td class="num">'+esc(k.zahlungen?euro(k.bezahlt):'—')+'</td><td class="num">'+esc(k.offen==null||!k.zahlungen?'—':euro(k.offen))+'</td>'+
-      (mitGewinn?'<td class="num'+plusKlasse(g)+'">'+esc(plus(g))+'</td>':'')+'</tr>';
+      (mitGewinn?'<td class="num'+plusKlasse(g)+'">'+esc(plus(g))+'</td>':'<td>'+esc(k.gewinnStufe?STUFE[k.gewinnStufe]:'—')+'</td>')+'</tr>';
   }).join('');
   return '<div class="ctd">'+druckKopf('Controlling · Übersicht',null,null,mitGewinn)+'<section class="ctd-teil"><table><thead><tr><th>Nr.</th><th>Projekt · Paket</th><th>Lage</th>'+
-    '<th class="num">Honorar netto</th><th class="num">Leistungsstand</th><th class="num">Stunden / Budget</th><th class="num">Ergebnis am Ende netto</th>'+
-    '<th class="num">Bezahlt netto</th><th class="num">Erarbeitet, nicht bezahlt netto</th>'+(mitGewinn?'<th class="num">Gewinn am Ende netto</th>':'')+'</tr></thead><tbody>'+reihen+'</tbody></table>'+
-    '<p class="ctd-fuss">Lage: Ergebnis am Ende gegenüber der Kalkulation, gemessen am Honorar (im Budget; leicht über Budget bis 10 % des Honorars im Minus; deutlich darüber). '+
-    'Abgeschlossene Pakete mit ihrem Ergebnis.'+(mitGewinn?' Gewinn: nach Gehältern und Bürokosten (Gemeinkostenfaktor auf das Bruttogehalt).':'')+'</p></section></div>';
+    '<th class="num">Honorar netto</th><th class="num">Leistungsstand</th><th class="num">Stunden / Budget</th><th class="num">Gegenüber Kalkulation am Ende netto</th>'+
+    '<th class="num">Bezahlt netto</th><th class="num">Erarbeitet, nicht bezahlt netto</th>'+(mitGewinn?'<th class="num">Gewinn am Ende netto</th>':'<th>Gewinn am Ende</th>')+'</tr></thead><tbody>'+reihen+'</tbody></table>'+
+    '<p class="ctd-fuss">Gegenüber Kalkulation: Honorar − Stunden zum Kalkulationssatz, hochgerechnet; abgeschlossene Pakete zum Abschluss. Lage: dieser Wert gemessen am Honorar '+
+    '(im Budget; leicht über Budget bis 10 % des Honorars im Minus; deutlich darüber). Gewinn: Honorar − Selbstkosten (Bruttogehalt × Gemeinkostenfaktor)'+
+    (mitGewinn?'':'; im Plus über 5 % des Honorars, knapp zwischen −5 und +5 %, im Minus darunter')+(eintraege.some(x=>x.k.gewinnVorlaeufig)?'; Annahmen vorläufig':'')+'.</p></section></div>';
 }
 function uebersichtPdf(){
   const name='Controlling – Übersicht – '+heute();

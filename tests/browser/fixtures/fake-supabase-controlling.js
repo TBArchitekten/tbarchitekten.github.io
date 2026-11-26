@@ -160,7 +160,8 @@
     return db.office_controlling_saetze.filter(s=>s.person_id===personId&&s[feld]!=null&&s.gueltig_ab<=tag).sort((a,b)=>b.gueltig_ab.localeCompare(a.gueltig_ab))[0]||null;
   }
   function satzAm(personId,tag,feld){const e=eintragAm(personId,tag,feld);return e?Number(e[feld]):null}
-  function summen(pid){
+  // innen: auch ohne vollen Zugang mit dem Wert zum Gehalt (für die Stufe des Gewinns, nie nach außen).
+  function summen(pid,innen=false){
     if(!imTeam(pid))return [];
     const e=db.office_controlling_einstellungen[0];
     const out=[];
@@ -186,15 +187,28 @@
         if(!hier)vollstaendig=false;
         wertG+=zuG;
         out.push({stand_id:s.id,paket_id:k.id,stichtag:s.stichtag,leistungsstand:s.leistungsstand,stunden,wert_kalkulation:r2(wertK),
-          wert_gehalt:voll&&vollstaendig?r2(wertG):null});
+          wert_gehalt:(voll||innen)&&vollstaendig?r2(wertG):null});
       }
     }
     return out;
   }
+  // office_controlling_gewinn_stufen wie in der Datenbank: je Paket nur die Stufe und ob die Annahmen vorläufig sind.
+  function gewinnStufen(pid){
+    if(!imTeam(pid))return [];
+    const e=db.office_controlling_einstellungen[0]||{},alle=summen(pid,true);
+    return db.office_controlling_pakete.filter(x=>x.project_id===pid).map(k=>{
+      const l=alle.filter(x=>x.paket_id===k.id).sort((a,b)=>a.stichtag.localeCompare(b.stichtag)).at(-1);
+      const ls=k.status==='abgeschlossen'?100:Number(l?.leistungsstand),h=Number(k.honorar_netto);
+      const f=e.gemeinkostenfaktor!=null?Number(e.gemeinkostenfaktor):null,ag=Number(e.arbeitgeberanteil_prozent);
+      const g=l&&l.wert_gehalt!=null&&f!=null&&h>0&&ls>0?h-l.wert_gehalt*f/(1+ag/100)*100/ls:null;
+      return {paket_id:k.id,stufe:g==null?null:g>0.05*h?'plus':g<-0.05*h?'minus':'knapp',vorlaeufig:!e.annahmen_bestaetigt};
+    });
+  }
   async function rpc(name,args){
     window.__fake.aufrufe.push({table:'rpc:'+name,op:'rpc',daten:kopie(args||{})});
-    if(name!=='office_controlling_summen')return {data:null,error:{message:'unbekannte Funktion'}};
-    return {data:summen(args?.p_project),error:null};
+    if(name==='office_controlling_summen')return {data:summen(args?.p_project),error:null};
+    if(name==='office_controlling_gewinn_stufen')return {data:gewinnStufen(args?.p_project),error:null};
+    return {data:null,error:{message:'unbekannte Funktion'}};
   }
   const client={
     auth:{getSession:async()=>({data:{session},error:null}),getUser:async()=>({data:{user:session.user},error:null}),
