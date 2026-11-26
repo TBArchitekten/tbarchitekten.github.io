@@ -68,7 +68,7 @@ Der volle Text steht in `office_wissen_regeln` und geht bei jedem Teilen an Clau
 
 ## Dateien
 
-- Datenbank: `supabase/migrations/…_office_projektwissen.sql`; Abnahme `tests/sql/office-projektwissen-acceptance.sql` (in CI gegen eine leere Supabase).
+- Datenbank: `supabase/migrations/20261126193119_office_projektwissen.sql`; Abnahme `tests/sql/office-projektwissen-acceptance.sql` (in CI gegen eine leere Supabase).
 - Connector: `supabase/functions/office-mcp/office-wissen.mjs`, Werkzeuge und Ablauf in `index.ts`.
 - Oberfläche: `app/office-wissen.js`, `app/office-wissen.css`; Reiter in `app/shell.js`, Aufruf in `app/work.js`.
 - Tests: `tests/office-projektwissen.test.mjs`, `tests/browser/office-wissen.chromium.mjs`.
