@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Office-Connector verbunden: OAuth-Server an · Claude
+- Qué cambió y por qué: Gari hat im Supabase-Dashboard des Office (Authentication → OAuth Server) den OAuth-Server eingeschaltet, den Authorization Path `/oauth-consent.html` gesetzt und «Allow Dynamic OAuth Apps» erlaubt; danach in Claude den benutzerdefinierten Connector «TBA Office» hinzugefügt (vom Handy). Damit gilt «pásalo al Office» aus seinen Claude-Chats (#180).
+- Archivos: `docs/OFFICE-CONNECTOR.md` (Stand der Einrichtung), `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: ninguna migración; nur die Einstellung im Dashboard (keine Änderung über Code).
+- Deploy de funciones: ninguno.
+- Cómo se probó: Discovery `/.well-known/oauth-authorization-server/auth/v1` antwortet mit `registration_endpoint`; die Einwilligungsseite lädt auch unter `…github.io//oauth-consent.html` (die Site URL endet mit «/»); `open_project` «Bernried» über den Connector mit Garis Login: Projekt 2401, noch keine Themen im Desktop.
+- Quedó pendiente o sin probar: der erste echte Ablagevorgang (`close_session`, `file_document`) aus einem Chat von Gari.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #181
+
+---
+
 ### 2026-11-26 · Office-Connector: aus Claude-Chats ins Projekt ablegen (Thema festhalten, Dokument ablegen) · Claude
 - Qué cambió y por qué: Gari (26.11.2026): Mit dem Window-Connector sagt er einem Claude-Chat «pásalo a Window». Dasselbe will er fürs Office, um das, was er mit Claude zu einem Projekt erarbeitet hat, ins Projekt zu bringen, sichtbar für das Projektteam (seine Wahl). Der Office-Connector (`office-mcp`, #49) konnte bisher nur lesen und Aufgaben anlegen.
   - **Wohin:** Das Panorama des Office zeigt die Projektakte noch nicht (siehe Hoja de ruta: erst nach der rechtlichen Klärung); deshalb in den gemeinsamen Desktop des Projekts, den das Team nutzt und die KI des Office liest.

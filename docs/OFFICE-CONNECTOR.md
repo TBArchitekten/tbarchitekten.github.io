@@ -46,7 +46,7 @@ Decisión de Gari: lo que se ha trabajado con Claude en un chat (Lichtplanung, B
 
 1. **Deploy:** GitHub → Actions → **Deploy Supabase Edge Functions** → Run workflow con `office-mcp`. `config.toml` pone `verify_jwt = false`, porque la función tiene que responder ella misma el `401`; el workflow comprueba ese `401` después del deploy.
 2. **Panel de Supabase (TBA Office) → Authentication → URL Configuration:** Site URL `https://tbarchitekten.github.io`.
-3. **Authentication → OAuth Server:** activarlo. **Estado 26.11.2026: todavía apagado** (`/auth/v1/.well-known/oauth-authorization-server` responde «OAuth server is disabled»); sin este paso Claude no puede conectar.
+3. **Authentication → OAuth Server:** activarlo. **Activado el 26.11.2026 (Gari):** Authorization Path `/oauth-consent.html`, «Allow Dynamic OAuth Apps» encendido. La Site URL es `https://tbarchitekten.github.io/` (con barra), así que la página queda en `…github.io//oauth-consent.html`; se abre bien igual, comprobado. El servidor no anuncia «Claude's published identity», así que en Claude se elige «Register automatically» si pregunta.
    - Authorization Path: `/oauth-consent.html`. Site URL más esta ruta tiene que dar la página de consentimiento.
    - Permitir el registro dinámico de clientes. Si no se permite, hay que crear un cliente a mano con redirect URI `https://claude.ai/api/mcp/auth_callback` y poner su Client ID en las opciones avanzadas de Claude.
 4. **Claude → Settings → Connectors → Add custom connector:** nombre `TBA Office` y la URL de arriba → Connect → iniciar sesión → **Erlauben**.
