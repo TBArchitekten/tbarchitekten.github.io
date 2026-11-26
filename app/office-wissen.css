@@ -1,0 +1,106 @@
+/* TBA Office · Projektwissen (Reiter «Wissen» in Work). Nur Farben, Abstände und Radien aus den Tokens. */
+.wissen{max-width:1180px;margin:0 auto;padding:var(--m-space-5) var(--m-space-4) var(--m-space-7);color:var(--m-ink);font-family:var(--m-type)}
+.wissen-kopf{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--m-space-4);margin-bottom:var(--m-space-4)}
+.wissen-kopf h2{font-size:26px;letter-spacing:-.02em;margin:0 0 6px}
+.wissen-kopf p{margin:0;max-width:620px;color:var(--m-ink-soft);font-size:var(--m-size-body);line-height:var(--m-leading-body)}
+.wissen-werkzeuge{display:flex;gap:var(--m-space-2);align-items:center;flex-wrap:wrap}
+.wissen-suche{min-width:240px;font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--m-border);border-radius:var(--m-radius-control);background:var(--m-field);color:var(--m-ink)}
+.wissen-suche:focus{outline:none;border-color:var(--m-blue);box-shadow:0 0 0 3px var(--m-blue-ring)}
+.wissen button{font:inherit;cursor:pointer}
+.wissen-werkzeuge>button,.wissen-aktion>button,.wissen-knoepfe>button{font-size:14px;padding:8px 14px;border-radius:var(--m-radius-button);border:1px solid var(--m-blue-line);background:var(--m-surface);color:var(--m-blue)}
+.wissen-werkzeuge>button:hover,.wissen-aktion>button:hover,.wissen-knoepfe>button:hover{background:var(--m-blue-soft)}
+.wissen-knoepfe>button.wissen-primaer{background:var(--m-blue);border-color:var(--m-blue);color:var(--m-on-blue)}
+.wissen-knoepfe>button.wissen-primaer:hover{background:var(--m-blue-hover)}
+.wissen button:focus-visible{outline:2px solid var(--m-focus);outline-offset:2px}
+.wissen button:disabled{opacity:.55;cursor:default}
+
+.wissen-raster{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:var(--m-space-5);align-items:start}
+.wissen-liste{position:sticky;top:var(--m-space-3);display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 180px);overflow:auto;padding-right:4px}
+.wissen-sonder{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;padding:9px 12px;border:0;border-radius:var(--m-radius-control);background:transparent;color:var(--m-ink);font-weight:600}
+.wissen-sonder:hover{background:var(--m-fill)}
+.wissen-sonder.is-aktiv,.wissen-eintrag.is-aktiv{background:var(--m-blue-soft);color:var(--m-blue)}
+.wissen-zahl{font-size:12px;font-weight:600;padding:2px 8px;border-radius:var(--m-radius-pill);background:var(--m-attention-soft);color:var(--m-attention)}
+.wissen-liste-kopf{margin:var(--m-space-3) 12px 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--m-ink-faint);font-weight:700}
+.wissen-liste-kopf span{letter-spacing:0;margin-left:4px}
+.wissen-seiten{display:flex;flex-direction:column;gap:2px}
+.wissen-eintrag{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:9px 12px;border:0;border-radius:var(--m-radius-control);background:transparent;color:var(--m-ink)}
+.wissen-eintrag:hover{background:var(--m-fill)}
+.wissen-eintrag strong{font-size:15px;font-weight:600;line-height:1.35}
+.wissen-eintrag small{font-size:13px;color:var(--m-ink-soft);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wissen-eintrag span{font-size:12px;color:var(--m-ink-faint)}
+.wissen-eintrag.is-aktiv small,.wissen-eintrag.is-aktiv span{color:var(--m-blue)}
+
+.wissen-blatt{min-width:0;background:var(--m-surface-raised);border:1px solid var(--m-border-soft);border-radius:var(--m-radius-card);padding:var(--m-space-5) var(--m-space-6)}
+.wissen-blatt>h3,.wissen-blatt-kopf h3{font-size:24px;letter-spacing:-.015em;margin:0 0 6px}
+.wissen-blatt-kopf{margin-bottom:var(--m-space-4);padding-bottom:var(--m-space-3);border-bottom:1px solid var(--m-border-soft)}
+.wissen-meta{margin:0;font-size:13px;color:var(--m-ink-soft);line-height:1.5}
+.wissen-hinweis-zeile{margin:0 0 var(--m-space-3);padding:10px 12px;border-radius:var(--m-radius-control);background:var(--m-information-soft);color:var(--m-information);font-size:14px}
+
+.wissen-text{font-size:16px;line-height:1.6;max-width:var(--m-measure);overflow-wrap:anywhere}
+.wissen-text h3{font-size:21px;margin:var(--m-space-5) 0 var(--m-space-2)}
+.wissen-text h4{font-size:18px;margin:var(--m-space-5) 0 var(--m-space-2)}
+.wissen-text h5,.wissen-text h6{font-size:16px;margin:var(--m-space-4) 0 var(--m-space-2)}
+.wissen-text>:first-child{margin-top:0}
+.wissen-text p,.wissen-text ul,.wissen-text ol,.wissen-text blockquote,.wissen-text pre,.wissen-tabelle{margin:0 0 var(--m-space-3)}
+.wissen-text ul,.wissen-text ol{padding-left:1.4em}
+.wissen-text li{margin:2px 0}
+.wissen-text blockquote{padding:4px 0 4px 14px;border-left:3px solid var(--m-border-strong);color:var(--m-ink-soft)}
+.wissen-text code{font-size:.9em;padding:1px 5px;border-radius:5px;background:var(--m-fill)}
+.wissen-text pre{padding:12px;border-radius:var(--m-radius-control);background:var(--m-fill);overflow:auto}
+.wissen-text pre code{padding:0;background:transparent}
+.wissen-text hr{border:0;border-top:1px solid var(--m-border-soft);margin:var(--m-space-4) 0}
+.wissen-text a{color:var(--m-link)}
+.wissen-tabelle{overflow-x:auto}
+.wissen-tabelle table{border-collapse:collapse;font-size:14px;min-width:60%}
+.wissen-tabelle th,.wissen-tabelle td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--m-border-soft)}
+.wissen-tabelle th{font-weight:600;color:var(--m-ink-soft);border-bottom-color:var(--m-border)}
+
+.wissen-verweis{display:inline;padding:0;border:0;background:transparent;color:var(--m-link);text-decoration:underline;text-decoration-color:var(--m-blue-line);text-underline-offset:3px;font:inherit}
+.wissen-verweis:hover{color:var(--m-link-hover)}
+
+.wissen-teil{margin-top:var(--m-space-5);padding-top:var(--m-space-3);border-top:1px solid var(--m-border-soft)}
+.wissen-teil h4{display:flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--m-ink-soft);margin:0 0 var(--m-space-2)}
+.wissen-teil h4 span{letter-spacing:0;text-transform:none;font-size:12px;padding:1px 8px;border-radius:var(--m-radius-pill);background:var(--m-fill);color:var(--m-ink-soft)}
+.wissen-teil>summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--m-ink-soft)}
+.wissen-wartet{border-top-color:var(--m-attention-soft)}
+.wissen-zeilen{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.wissen-zeilen li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;font-size:14px;line-height:1.5}
+.wissen-zeilen small{color:var(--m-ink-soft)}
+.wissen-zeit{color:var(--m-ink-faint);font-variant-numeric:tabular-nums}
+.wissen-treffer{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--m-space-3)}
+.wissen-treffer p{margin:4px 0 0;font-size:14px;color:var(--m-ink-soft);line-height:1.5}
+.wissen-fuss{margin:var(--m-space-2) 0 0;font-size:13px;color:var(--m-ink-faint);line-height:1.5}
+.wissen-leer-klein{margin:0;color:var(--m-ink-faint);font-size:14px}
+.wissen-liste .wissen-leer-klein{padding:0 12px}
+.wissen-leer h3{font-size:22px;margin:0 0 var(--m-space-2)}
+.wissen-leer p{max-width:var(--m-measure);color:var(--m-ink-soft);line-height:var(--m-leading-body);margin:0 0 var(--m-space-2)}
+
+.wissen-entscheidung{padding:var(--m-space-3) var(--m-space-4);border:1px solid var(--m-border-soft);border-radius:var(--m-radius-control);margin-bottom:var(--m-space-2);background:var(--m-surface)}
+.wissen-entscheidung[data-status="proposed"]{border-color:var(--m-attention-soft)}
+.wissen-entscheidung[data-status="confirmed"]{border-left:3px solid var(--m-success)}
+.wissen-entscheidung[data-status="superseded"],.wissen-entscheidung[data-status="rejected"]{opacity:.75}
+.wissen-entscheidung h4{font-size:16px;margin:0 0 4px;text-transform:none;letter-spacing:0;color:var(--m-ink)}
+.wissen-entscheidung p{margin:0 0 4px;font-size:14px;line-height:1.5}
+.wissen-knoepfe{display:flex;gap:var(--m-space-2);margin-top:var(--m-space-2)}
+.wissen-aktion{margin-top:var(--m-space-5)}
+
+.wissen-formular{margin:0 0 var(--m-space-4);padding:var(--m-space-4);border:1px solid var(--m-blue-line);border-radius:var(--m-radius-card);background:var(--m-blue-wash)}
+.wissen-aktion .wissen-formular{margin:0}
+.wissen-formular h4{margin:0 0 var(--m-space-2);font-size:16px}
+.wissen-formular label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--m-ink-soft);margin-bottom:var(--m-space-2)}
+.wissen-formular input,.wissen-formular textarea{font:inherit;font-size:15px;color:var(--m-ink);padding:9px 11px;border:1px solid var(--m-border);border-radius:var(--m-radius-control);background:var(--m-field);resize:vertical}
+.wissen-formular input:focus,.wissen-formular textarea:focus{outline:none;border-color:var(--m-blue);box-shadow:0 0 0 3px var(--m-blue-ring)}
+
+.wissen-modal .wissen-text{max-width:none}
+.wissen-modal .wissen-meta{margin-bottom:var(--m-space-2)}
+
+@media(max-width:860px){
+  .wissen{padding:var(--m-space-4) var(--m-space-3) var(--m-space-6)}
+  .wissen-raster{grid-template-columns:1fr}
+  .wissen-liste{position:static;max-height:none}
+  .wissen-seiten{max-height:260px;overflow:auto}
+  .wissen-blatt{padding:var(--m-space-4)}
+  .wissen-suche{min-width:0;flex:1}
+  .wissen-werkzeuge{width:100%}
+  .wissen-zeilen li{grid-template-columns:1fr;gap:0}
+}

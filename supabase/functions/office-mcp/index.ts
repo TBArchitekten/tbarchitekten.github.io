@@ -13,6 +13,7 @@ import * as XLSX from "npm:xlsx@0.18.5";
 import {Buffer} from "node:buffer";
 import {createOfficeTools,ToolError} from "./office-tools.mjs";
 import {createOfficeAkteTools} from "./office-akte.mjs";
+import {createOfficeWissenTools} from "./office-wissen.mjs";
 
 const SUPABASE_URL=(Deno.env.get("SUPABASE_URL")||"").replace(/\/$/,"");
 // The public URL pasted into Claude; the protected-resource metadata must repeat it exactly.
@@ -74,13 +75,19 @@ How to work:
 - Start: overview (today, overdue, Fristen) or project_context for one project. For Projektakte open_project or open_topic requires explicit project-team membership.
 - Before stating anything about documents: search_files, then read_file. Cite file names. Never invent files, dates or decisions.
 - create_task / update_task change real tasks: do it when asked; otherwise propose. A task with a project is visible to the project team.
+Projektwissen (the shared knowledge pool of each project; the whole project team reads it in Work → Wissen; you write and maintain it, nobody in the team has to organise anything):
+- When the person says "pásalo al Office", "Ins Office übernehmen", "guárdalo en el proyecto" or similar: (1) open_project to see the pages, open contributions and decisions; (2) share_knowledge with the knowledge of the chat in German: findings, figures with units, products, prices, sources, decisions, open questions; complete enough for a colleague who was not in the chat, not a summary of the conversation; (3) integrate it: read_page for each affected page, then write_page with the whole page rewritten as the current state (keep what still holds, replace what is outdated, name unresolved contradictions, cite origins, link related pages with [[Titel]]), passing quellen:[beitrag_id] and basis:stand; a new page only if nothing fits; merge pages that belong together (zusammenfuehren); (4) record_decision for decisions (beschlossen only if the person explicitly decided); (5) tell the person in 3–5 lines which pages were created or changed, which decisions were recorded and any contradictions.
+- Follow the office rules returned as regeln (German, the office guideline "Was darf ins TBA Office?"): never salaries or other personnel data, ID or bank data, health data, passwords, full texts of standards (DIN), or anything a client wants kept on paper. Leave such things out and say so.
+- Open contributions (offene_beitraege: notes and corrections from colleagues) are integrated the same way whenever you work on the project; mention them to the person.
+- On request ("pflege el conocimiento", "Wissen pflegen"): read the pages, merge duplicates, update stale statements, resolve or name contradictions, integrate open contributions; then report what changed.
+- Nothing is deleted: every earlier version of a page stays in its history; a decision is replaced by a newer one, never removed.
 - Diagnostics are private to the signed-in account and omit message contents. Never infer colleague access from an admin role.\n- Keep tool calls lean: read_file is paged (next_offset).`;
 
 const text=(value:unknown)=>({content:[{type:"text" as const,text:typeof value==="string"?value:JSON.stringify(value)}]});
 const READ={readOnlyHint:true,destructiveHint:false,openWorldHint:false};
 const WRITE={readOnlyHint:false,destructiveHint:false,openWorldHint:false};
 
-function buildServer(tools:ReturnType<typeof createOfficeTools>,akte:ReturnType<typeof createOfficeAkteTools>){
+function buildServer(tools:ReturnType<typeof createOfficeTools>,akte:ReturnType<typeof createOfficeAkteTools>,wissen:ReturnType<typeof createOfficeWissenTools>){
   const server=new McpServer({name:"TBA Office",version:"1.0.0"},{instructions:INSTRUCTIONS});
   const run=(fn:(args:any)=>Promise<unknown>)=>async(args:any)=>{
     try{return text(await fn(args||{}))}
@@ -109,12 +116,29 @@ function buildServer(tools:ReturnType<typeof createOfficeTools>,akte:ReturnType<
     inputSchema:z.object({title:z.string(),project:z.string().optional(),due_date:z.string().optional(),start_date:z.string().optional(),notes:z.string().optional()}),annotations:WRITE},run(a=>tools.createTask(a)));
   server.registerTool("update_task",{title:"Aufgabe ändern",description:"Change a task's title, dates or notes, or mark it done/undone. Pass only fields to change; null clears a date. Allowed for the creator, assignees and the project team.",
     inputSchema:z.object({task_id:z.string(),title:z.string().optional(),due_date:z.string().nullable().optional(),start_date:z.string().nullable().optional(),notes:z.string().optional(),done:z.boolean().optional()}),annotations:WRITE},run(a=>tools.updateTask(a)));
-  server.registerTool("open_project",{title:"Projektakte öffnen",description:"Read the Projektakte for a project assigned to the signed-in employee. Entries keep their proposed/confirmed status, evidence and source references.",
-    inputSchema:z.object({project:z.string()}),annotations:READ},run(a=>akte.openProject(a)));
+  server.registerTool("open_project",{title:"Projekt öffnen (Akte und Projektwissen)",description:"Open a project assigned to the signed-in employee: the Projektakte (entries with proposed/confirmed status and sources) and the Projektwissen: its pages (titel, kurz, stand), decisions (beschlossen, vorgeschlagen with ids), open contributions waiting to be integrated and what changed recently. Call it first when working on a project's knowledge.",
+    inputSchema:z.object({project:z.string()}),annotations:READ},run(async a=>({...await akte.openProject(a),projektwissen:await wissen.uebersicht(a)})));
   server.registerTool("open_topic",{title:"Themenblatt öffnen",description:"Read one topic from a project assigned to the signed-in employee; ambiguous matches return candidates rather than a guess.",
     inputSchema:z.object({project:z.string(),topic:z.string()}),annotations:READ},run(a=>akte.openTopic(a)));
   server.registerTool("search_akte",{title:"Projektquellen durchsuchen",description:"Read project claims and source passages with provenance and page/sheet locators; project membership mandatory.",
     inputSchema:z.object({project:z.string(),query:z.string(),limit:z.number().int().min(1).max(25).optional()}),annotations:READ},run(a=>akte.searchAkte(a)));
+  server.registerTool("share_knowledge",{title:"Ins Projektwissen teilen",description:"Share what was worked out in this chat with the project (\"pásalo al Office\"): stores it unchanged as a contribution with its origin, visible to the project team. Write German and complete: findings, figures with units, products and prices, sources, decisions, open questions. Returns beitrag_id, the current pages and the office rules (regeln); then integrate it with read_page and write_page.",
+    inputSchema:z.object({project:z.string(),titel:z.string().describe("Short German title of the contribution, e.g. 'Recherche Bodenbeläge Flure'"),
+      inhalt:z.string().describe("The knowledge from the chat, German Markdown"),quelle:z.string().optional().describe("Origin, e.g. the chat title and date"),
+      art:z.enum(["chat","notiz","korrektur","thread"]).optional(),seite:z.string().optional().describe("Page a correction refers to")}),annotations:WRITE},run(a=>wissen.teilen(a)));
+  server.registerTool("read_page",{title:"Wissensseite lesen",description:"Read one page of the Projektwissen: full Markdown text, stand (pass it as basis to write_page), sources, open notes from colleagues, pages it links to and pages linking here. Unknown titles return suggestions; merged pages lead to the page they went into.",
+    inputSchema:z.object({project:z.string(),titel:z.string()}),annotations:READ},run(a=>wissen.seiteLesen(a)));
+  server.registerTool("write_page",{title:"Wissensseite schreiben",description:"Create a page or rewrite it as its current state (German Markdown; first where the matter stands, then details, then open questions; cite origins; link pages with [[Titel]]; name unresolved contradictions). Pass quellen (beitrag ids integrated) and basis (stand from read_page) so nothing a colleague wrote meanwhile is overwritten; the previous version stays in the history. zusammenfuehren: titles of pages merged into this one.",
+    inputSchema:z.object({project:z.string(),titel:z.string(),inhalt:z.string().describe("The whole page, German Markdown"),kurz:z.string().optional().describe("One sentence for the overview"),
+      quellen:z.array(z.string()).optional(),basis:z.string().optional(),grund:z.string().optional().describe("Why it changed, e.g. 'Recherche Bodenbeläge eingearbeitet'"),
+      zusammenfuehren:z.array(z.string()).optional()}),annotations:WRITE},run(a=>wissen.seiteSchreiben(a)));
+  server.registerTool("record_decision",{title:"Entscheidung festhalten",description:"Record a project decision: what, when (datum YYYY-MM-DD), origin. beschlossen:true only if the person explicitly decided it; it becomes binding only for the project lead, otherwise it stays proposed until the lead confirms it in the office. ersetzt: id of the decision it replaces. Duplicates are not created.",
+    inputSchema:z.object({project:z.string(),titel:z.string(),details:z.string().optional(),datum:z.string().optional(),quelle:z.string().optional(),
+      beitrag_id:z.string().optional(),seite:z.string().optional(),beschlossen:z.boolean().optional(),ersetzt:z.string().optional()}),annotations:WRITE},run(a=>wissen.entscheidung(a)));
+  server.registerTool("search_knowledge",{title:"Projektwissen durchsuchen",description:"Search pages, decisions and contributions of a project's Projektwissen for a word or phrase; returns passages.",
+    inputSchema:z.object({project:z.string(),query:z.string(),limit:z.number().int().min(1).max(30).optional()}),annotations:READ},run(a=>wissen.suchen(a)));
+  server.registerTool("read_contribution",{title:"Beitrag lesen",description:"Read one contribution of the Projektwissen unchanged (the source of pages), paged like read_file.",
+    inputSchema:z.object({project:z.string(),beitrag_id:z.string(),offset:z.number().int().min(0).optional(),max_chars:z.number().int().min(1000).max(60000).optional()}),annotations:READ},run(a=>wissen.beitragLesen(a)));
   server.registerTool("turn_diagnostics",{title:"Eigene Turn-Diagnose",description:"Read-only execution statuses and latencies for this signed-in member only. No message text or colleagues' diagnostics.",
     inputSchema:z.object({limit:z.number().int().min(1).max(50).optional()}),annotations:READ},run(a=>akte.turnDiagnostics(a)));
   return server;
@@ -137,7 +161,9 @@ Deno.serve(async(req:Request)=>{
   if(member.must_change_password)return json({error:"password_change_required",error_description:"Bitte zuerst im Office das Startpasswort ändern."},403);
   const tools=createOfficeTools({sb,userId:data.user.id,extractText});
   const akte=createOfficeAkteTools({sb,userId:data.user.id,base:tools});
-  const handler=createMcpHandler(()=>buildServer(tools,akte));
+  // Projektwissen nur mit ausdrücklicher Mitgliedschaft im Projektteam, dieselbe Prüfung wie die Projektakte.
+  const wissen=createOfficeWissenTools({sb,userId:data.user.id,scope:akte.scopedProject});
+  const handler=createMcpHandler(()=>buildServer(tools,akte,wissen));
   const res=await handler.fetch(req);
   const headers=new Headers(res.headers);for(const [k,v] of Object.entries(CORS))headers.set(k,v);
   return new Response(res.body,{status:res.status,statusText:res.statusText,headers});

@@ -29,7 +29,9 @@ test('Romy knows the project of a Thread; Threads stay out of Romy\'s chat list'
 test('Work shows Threads in the office; Romy answers and stores the messages itself', ()=>{
   const work=read('app/work.js'),shell=read('app/shell.js');
   assert.match(shell,/<button data-work-view="threads">Threads<\/button>/);
-  assert.match(work,/return OFFICE&&v==='knowledge'\?'overview':v/);
+  // Seit dem 26.11.2026 öffnet «Wissen» im Office das Projektwissen (nicht mehr das Panorama).
+  assert.match(work,/view=localStorage\.getItem\('minds-work-view'\)\|\|'overview'/);
+  assert.match(work,/:view==='knowledge'\?\(OFFICE\?renderWissen\(\):renderKnowledge\(\)\)/);
   assert.match(work,/if\(OFFICE\)\{await sendOfficeThreadMessage\(thread,message,input\);return\}/);
   assert.match(work,/await window\.TBA_ROMY_TRANSPORT\.send\(\{\n      message,conversationId:cid,requestId:crypto\.randomUUID\(\),attachments:\[\],/);
   assert.match(work,/sb\.from\(OFFICE\?'office_assistant_messages':'conversation_messages'\)/);
