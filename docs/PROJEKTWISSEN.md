@@ -56,7 +56,7 @@ Der volle Text steht in `office_wissen_regeln` und geht bei jedem Teilen an Clau
 - Nichts erfinden; Unsicheres kennzeichnen; Zahlen mit Einheit und Stand; Herkunft in Klammern.
 - Neues wird eingearbeitet, nicht angehängt. Ungeklärte Widersprüche werden mit beiden Herkünften benannt.
 - Als Entscheidung gilt nur, was das Projekt bindet (was geplant oder gebaut wird, Umfang, Kosten, Termine, Vorgaben der Bauherrschaft). Arbeitsregeln des Teams (wie wir mit Herstellern arbeiten, wie wir E-Mails und Unterlagen formulieren) stehen auf den Seiten.
-- «beschlossen» nur, wenn ausdrücklich entschieden hat, wer es zu entscheiden hat: die Bauherrschaft, was ihr zusteht; die Projektleitung, was die eigene Planung betrifft. Eine Empfehlung an die Bauherrschaft bleibt «vorgeschlagen», bis sie zustimmt (seit dem 26.11.2026 nach dem ersten Einsatz, Migration `…_office_projektwissen_entscheidungen.sql`).
+- «beschlossen» nur, wenn ausdrücklich entschieden hat, wer es zu entscheiden hat: die Bauherrschaft, was ihr zusteht; die Projektleitung, was die eigene Planung betrifft. Eine Empfehlung an die Bauherrschaft bleibt «vorgeschlagen», bis sie zustimmt (seit dem 26.11.2026 nach dem ersten Einsatz, Migration `20261126215655_office_projektwissen_entscheidungen.sql`).
 - Was nicht hineingehört, regelt der Leitfaden «Was darf ins TBA Office?» (keine Gehälter, Personal-, Ausweis-, Bank- oder Gesundheitsdaten, Passwörter, Normtexte; was die Bauherrschaft nur auf Papier will).
 
 ## Sicherheit
