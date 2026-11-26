@@ -22,6 +22,9 @@ const server=http.createServer((req,res)=>{
   let p=decodeURIComponent(req.url.split('?')[0]);if(p.endsWith('/'))p+='index.html';
   if(p==='/rahmen.html'){res.writeHead(200,{'content-type':'text/html'});
     res.end('<!doctype html><title>Work</title><iframe id="f" style="width:1200px;height:900px" src="/controlling.html?projekt=a1111111-1111-4111-8111-111111111111"></iframe>');return}
+  if(p==='/zwei.html'){res.writeHead(200,{'content-type':'text/html'});
+    res.end('<!doctype html><title>Zwei</title><body style="margin:0;display:flex"><iframe id="blatt" style="width:1280px;height:1400px;border:0" src="/controlling.html?projekt=a1111111-1111-4111-8111-111111111111"></iframe>'+
+      '<iframe id="saetze" style="width:1280px;height:1400px;border:0" src="/controlling.html?ansicht=saetze"></iframe></body>');return}
   const file=path.join(root,p);
   if(!file.startsWith(root)){res.writeHead(403);res.end();return}
   fs.readFile(file,(e,b)=>{if(e){res.writeHead(404);res.end();return}
@@ -394,12 +397,14 @@ test('Sätze und Gehälter: Wochenstunden, Stundensatz und Selbstkostensatz, neu
     assert.equal(await text(an.locator('[data-beispiel]')),'Beispiel: 4.000 € brutto bei 40 h in der Woche → 36,30 €/h Personalkosten, 60,00 €/h Selbstkosten. Halbe Stelle mit halbem Gehalt: dieselben Sätze.');
     assert.equal(await an.locator('.ct-feld>.ct-feld-hilfe').count(),5);
     assert.equal(await an.locator('[name="faktor"]').getAttribute('aria-describedby'),'an-faktor-hilfe');
-    // Zu klären: acht Fragen, je mit Warum und dem, was jetzt angenommen ist.
+    // Zu klären: drei Fragen für die Büroleitung, je mit Warum und dem, was jetzt angenommen ist. Gestrichen am 26.11.2026
+    // (mit der Buchhaltung geklärt): Faktor auf das Bruttogehalt, Arbeitgeberanteil, Jahresstunden, Wochenstunden und
+    // Urlaub, Sonderzahlungen.
     const fragen=page.locator('[data-zu-klaeren] li');
-    assert.equal(await fragen.count(),8);
-    assert.equal(await text(fragen.first().locator('strong')),'Wird der Gemeinkostenfaktor 2,00 auf das Bruttogehalt allein gerechnet oder auf Bruttogehalt plus Arbeitgeberanteil?');
-    assert.equal(await text(fragen.first().locator('span').nth(1)),'Jetzt angenommen: auf das Bruttogehalt allein (Festlegung vom 25.11.2026).');
-    assert.match(await text(page.locator('[data-frage="wochenstunden"]')),/\(1 Person mit Gehalt ohne Wochenstunden\)\.$/);
+    assert.deepEqual(await fragen.evaluateAll(l=>l.map(x=>x.dataset.frage)),['faktor-inhalt','faktor-herkunft','kalkulationssatz']);
+    assert.equal(await text(fragen.first().locator('strong')),'Was deckt der Faktor ab: nur die Bürokosten oder auch Unternehmerlohn und Gewinn?');
+    assert.equal(await text(fragen.first().locator('span').nth(1)),'Jetzt angenommen: nur Bürokosten; Gewinn ist, was danach vom Honorar bleibt.');
+    assert.match(await text(page.locator('[data-frage="faktor-herkunft"]')),/Jetzt angenommen: 2,00 für alle Personen\.$/);
     assert.match(await text(page.locator('[data-frage="kalkulationssatz"]')),/bis zu einem Bruttogehalt von rund 5\.667 € im Monat \(Vollzeit\)/);
     // Neuer Satz mit Wochenstunden: 3.200 € bei 20 h → 800 Jahresstunden.
     await reihe('Person C').locator('[data-person]').click();
@@ -488,13 +493,14 @@ test('Jahresstunden aus dem Kalender: Feiertage in Augsburg, Urlaub, Krankheit, 
     await page.locator('[data-meldung]:not([hidden])',{hasText:'Gespeichert.'}).waitFor();
     const e=(await db(page)).office_controlling_einstellungen[0];
     assert.deepEqual([e.jahresstunden,e.urlaubstage,e.krankheitstage,e.weitere_tage,e.projektanteil_prozent],[soll.jahresstunden,30,15,3,null]);
-    // Die Frage zu den Jahresstunden nennt jetzt die Herleitung.
-    assert.match(await text(page.locator('[data-frage="jahresstunden"]')),new RegExp('aus dem Kalender '+soll.jahresstunden.toLocaleString('de-DE').replace('.','\\.')+' h\\.$'));
+    // Die Jahresstunden sind hergeleitet: keine Frage mehr dazu (Gari und die Buchhaltung, 26.11.2026).
+    assert.equal(await page.locator('[data-frage="jahresstunden"]').count(),0);
     // Urlaub je Person (Gari, 25.11.2026): Person B (25 h) bekommt 25 statt der 30 Tage des Büros → 25 h mehr im Jahr.
     const reihe=name=>page.locator('tbody tr',{has:page.locator('td',{hasText:new RegExp('^'+name)})});
     await reihe('Person B').locator('[data-person]').click();
     const d=page.locator('#ctDialog');
-    assert.equal(await d.locator('[name="woche"]').inputValue(),'25','Wochenstunden aus dem letzten Eintrag');
+    assert.equal(await d.locator('[name="woche"]').inputValue(),'25','Wochenstunden aus dem Eintrag, der heute gilt');
+    await d.locator('[name="art"][value="neu"]').check();
     await d.locator('[name="ab"]').fill('2026-11-02');
     await d.locator('[name="gehalt"]').fill('3.000');
     await d.locator('[name="urlaub"]').fill('25');
@@ -510,6 +516,71 @@ test('Jahresstunden aus dem Kalender: Feiertage in Augsburg, Urlaub, Krankheit, 
     assert.deepEqual([zeile[4],zeile[5]],['25 Tage',jb.toLocaleString('de-DE')+' h']);
     assert.equal((await db(page)).office_controlling_saetze.find(x=>x.gueltig_ab==='2026-11-02').urlaubstage,25);
     assert.match(await text(page.locator('[data-urlaub-hinweis]')),/^Jahresstunden der Person: /);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+// Gari und die Buchhaltung (26.11.2026): die Urlaubstage laut Vertrag als neuer Eintrag ab heute änderten die Sätze der
+// Person, aber nicht das Ergebnis zum Gehalt (die Stunden bis zum letzten Stand behielten den alten Satz), und der offene
+// Reiter rechnete erst nach dem Neuladen. Jetzt: ausdrücklich Korrektur oder neu ab Datum, ein Hinweis im Blatt, und
+// andere offene Seiten rechnen von selbst neu (zwei Rahmen im selben Tab teilen den synthetischen Speicher).
+test('Sätze: Korrektur oder neu ab Datum; das Projektblatt in einem anderen Rahmen rechnet von selbst neu',async()=>{
+  const ctx=await browser.newContext({viewport:{width:2560,height:1400},deviceScaleFactor:1});
+  await ctx.addInitScript(()=>{window.__ctRolle='admin'});
+  const page=await ctx.newPage();
+  const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co/,r=>r.abort());
+  try{
+    await page.goto(adresse('zwei.html'));
+    const blatt=page.frameLocator('#blatt'),saetze=page.frameLocator('#saetze');
+    await blatt.locator('[data-vertraulich]').waitFor();
+    await saetze.locator('[data-zu-klaeren]').waitFor();
+    const proPerson=()=>blatt.locator('[data-vertraulich-zeile="selbstkosten"] [data-so-person]').allTextContents();
+    assert.deepEqual(await proPerson(),['Test Admin: 300 h × 60,00 €/h','Person B: 250 h × 72,00 €/h']);
+    assert.equal(await blatt.locator('[data-neuere-saetze]').count(),0);
+    const reihe=name=>saetze.locator('tbody tr',{has:saetze.locator('td',{hasText:new RegExp('^'+name)})});
+    const d=saetze.locator('#ctDialog');
+    // Wer schon einen Eintrag hat, wählt: Korrektur oder neu ab einem Datum; ohne Wahl wird nichts gespeichert.
+    await reihe('Person B').locator('[data-person]').click();
+    assert.equal(await d.locator('[data-art] input[name="art"]').count(),2);
+    assert.equal(await d.locator('[name="gehalt"]').inputValue(),'3.000','vorbelegt mit dem Eintrag, der heute gilt');
+    assert.equal(await d.locator('[data-ab]').isHidden(),true);
+    await d.locator('button[value="speichern"]').click();
+    assert.equal(await text(d.locator('[data-dialog-fehler]')),'Bitte wählen: Korrektur des Eintrags oder neu ab einem Datum.');
+    // Neu ab 01.12.2026, nach dem letzten Stand: die Stunden bis dahin behalten den bisherigen Satz, das Blatt sagt warum.
+    await d.locator('[name="art"][value="neu"]').check();
+    assert.equal(await d.locator('[data-ab]').isVisible(),true);
+    await d.locator('[name="ab"]').fill('2026-01-01');
+    await d.locator('button[value="speichern"]').click();
+    assert.match(await text(d.locator('[data-dialog-fehler]')),/^Für diesen Tag gibt es schon einen Eintrag: dafür «Korrektur» wählen/);
+    await d.locator('[name="ab"]').fill('2026-12-01');
+    await d.locator('[name="gehalt"]').fill('3.600');
+    await d.locator('button[value="speichern"]').click();
+    await saetze.locator('[data-meldung]:not([hidden])',{hasText:'Eingetragen.'}).waitFor();
+    await blatt.locator('[data-neuere-saetze]').waitFor();
+    assert.equal(await text(blatt.locator('[data-neuere-saetze]')),'Erst für Stunden nach dem letzten Stand (01.11.2026) gilt der neue Eintrag von Person B ab 01.12.2026. '+
+      'Galt die Angabe schon vorher (etwa der Urlaub laut Vertrag), unter Sätze und Gehälter den bisherigen Eintrag korrigieren.');
+    assert.deepEqual(await proPerson(),['Test Admin: 300 h × 60,00 €/h','Person B: 250 h × 72,00 €/h']);
+    // Korrektur des Eintrags ab 01.01.2026: «Ändern» wählt ihn, Speichern ändert ihn (kein weiterer Eintrag) und bewertet
+    // die Stunden ab diesem Tag neu: 3.300 € × 12 × 2 ÷ 1.000 h = 79,20 €/h.
+    await reihe('Person B').locator('[data-person]').click();
+    await d.locator('tr',{hasText:'01.01.2026'}).locator('[data-satz-aendern]').click();
+    assert.equal(await d.locator('[name="art"][value="korrektur"]').isChecked(),true);
+    assert.equal(await text(d.locator('[data-korrektur-titel]')),'Korrektur des Eintrags ab 01.01.2026');
+    assert.equal(await d.locator('tr.ct-gewaehlt').count(),1);
+    assert.equal(await d.locator('[name="gehalt"]').inputValue(),'3.000');
+    await foto(page,'saetze-korrektur');
+    await d.locator('[name="gehalt"]').fill('3.300');
+    await d.locator('button[value="speichern"]').click();
+    await saetze.locator('[data-meldung]:not([hidden])',{hasText:'Eintrag ab 01.01.2026 korrigiert'}).waitFor();
+    const rahmen=page.frames().find(f=>f.url().includes('ansicht=saetze'));
+    const eintraege=(await rahmen.evaluate(()=>window.__fake.db.office_controlling_saetze)).filter(s=>s.person_id==='22222222-2222-4222-8222-222222222222');
+    assert.deepEqual(eintraege.map(s=>[s.gueltig_ab,s.monatsgehalt]).sort(),[['2026-01-01',3300],['2026-12-01',3600]]);
+    // Das Blatt im anderen Rahmen hat von selbst neu gerechnet.
+    await blatt.locator('[data-vertraulich-zeile="selbstkosten"] [data-so-person]',{hasText:'79,20 €/h'}).waitFor({state:'attached'});
+    assert.deepEqual(await proPerson(),['Test Admin: 300 h × 60,00 €/h','Person B: 250 h × 79,20 €/h']);
+    await foto(page,'zwei-rahmen');
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

@@ -9,7 +9,8 @@
 // Seit office_controlling_annahmen: Wochenstunden je Satz (Person B arbeitet 25 von 40 h), Vollzeit-Wochenstunden und ein
 // erfundener Gemeinkostenfaktor (2); der Wert zum Gehalt rechnet mit den Jahresstunden der Person. Seit
 // office_controlling_jahresstunden: die Angaben der Herleitung aus dem Kalender (leer); seit office_controlling_urlaub
-// Urlaubstage und Arbeitstage je Woche an den Sätzen (leer).
+// Urlaubstage und Arbeitstage je Woche an den Sätzen (leer). Seit 26.11.2026 liest jede Abfrage den Stand aus dem
+// sessionStorage, damit zwei Rahmen im selben Tab dieselben Daten sehen (Test: andere offene Seiten rechnen neu).
 (function(){
   const ROLLE=['member','buchhaltung','admin-ohne-liste'].includes(window.__ctRolle)?window.__ctRolle:'admin';
   const UID='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222',C='33333333-3333-4333-8333-333333333333';
@@ -114,6 +115,8 @@
       then(ok,bad){return Promise.resolve(lauf()).then(ok,bad)}
     };
     function lauf(){
+      // Wie eine Datenbank für alle Seiten desselben Tabs (etwa zwei Rahmen): vor jeder Abfrage den letzten Stand lesen.
+      try{const s=sessionStorage.getItem(KEY);if(s)db=JSON.parse(s)}catch{}
       window.__fake.aufrufe.push({table,op,daten:daten?kopie(daten):null});
       const zeilen=db[table]||(db[table]=[]);
       const controlling=table.startsWith('office_controlling_');

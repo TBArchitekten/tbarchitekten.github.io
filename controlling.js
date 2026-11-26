@@ -132,8 +132,20 @@ function zeichne(){
   renderUebersicht();
 }
 async function neuLaden(text){
-  try{await ladeAlles();zeichne();if(text)meldung(text)}catch(e){meldung('Nicht geladen: '+(e?.message||e),'warn')}
+  try{await ladeAlles();zeichne();if(text){meldung(text);kanal?.postMessage('geaendert')}}catch(e){meldung('Nicht geladen: '+(e?.message||e),'warn')}
 }
+// Andere offene Controlling-Seiten im selben Browser (etwa der Reiter «Controlling» in Work neben «Sätze und Gehälter»)
+// laden nach einer Änderung neu und rechnen mit den neuen Sätzen und Annahmen (Gari und die Buchhaltung, 26.11.2026). Ist
+// dort gerade ein Formular offen, erst wenn es zu ist. «Sätze und Gehälter» selbst nicht: dort wird eingetragen, und ein
+// halb ausgefülltes Formular der Annahmen soll nicht verschwinden.
+const kanal=typeof BroadcastChannel==='function'?new BroadcastChannel('tba-office-controlling'):null;
+let nachladen=false;
+kanal?.addEventListener('message',ev=>{
+  if(ev.data!=='geaendert'||!nutzer||ANSICHT==='saetze')return;
+  if(dialog?.open){nachladen=true;return}
+  void neuLaden();
+});
+dialog?.addEventListener('close',()=>{if(nachladen){nachladen=false;void neuLaden()}});
 
 // ---------- Daten ----------
 const projekt=id=>daten.projekte.find(p=>p.id===id)||null;
@@ -412,11 +424,19 @@ function vertraulichBlock(k,bew,offen=false){
       am(k.prognoseGewinn==null?null:pl(k.prognoseGewinn),'—',plusKlasse(k.prognoseGewinn)),differenz(k.selbstkosten,k.prognoseSelbstkosten,'Selbstkosten'))
   ];
   const bestaetigt=daten.einstellungen?.annahmen_bestaetigt;
+  // Ein Satz, der erst nach dem letzten Stand gilt, bewertet die Stunden bis dahin nicht (Gari und die Buchhaltung,
+  // 26.11.2026: die Urlaubstage geändert, das Ergebnis zum Gehalt blieb gleich). Hier steht, für wen und ab wann.
+  const neuere=k.stand?[...new Set(bew.personen.filter(x=>x.person_id&&x.stunden).map(x=>x.person_id))]
+    .map(id=>({id,s:K.gehaltAm(daten.saetze,id,'9999-12-31')})).filter(x=>x.s&&String(x.s.gueltig_ab)>String(k.stand)):[];
+  const neuereText=neuere.length?'<p class="meta ct-neuere-saetze" data-neuere-saetze>Erst für Stunden nach dem letzten Stand ('+esc(datum(k.stand))+') gilt der neue Eintrag von '+
+    neuere.map(x=>esc(person(x.id)||'Person')+' ab '+esc(datum(x.s.gueltig_ab))).join(', ')+'. Galt die Angabe schon vorher (etwa der Urlaub laut Vertrag), '+
+    'unter <a href="./controlling.html?ansicht=saetze">Sätze und Gehälter</a> den bisherigen Eintrag korrigieren.</p>':'';
   return '<div class="ct-vertraulich'+(offen?' offen':'')+'" data-vertraulich><div class="ct-vertraulich-kopf"><h3 class="pb-h3">Zum Gehalt <span class="ct-nur-admin">vertraulich</span></h3>'+
     '<button type="button" class="ct-info" data-so-gerechnet aria-expanded="'+offen+'" aria-controls="ctVertraulichTabelle"><span aria-hidden="true">i</span>So gerechnet</button></div>'+
     '<div class="ct-vertraulich-tabelle" id="ctVertraulichTabelle"><table><thead><tr><th><span class="sr">Kennzahl</span></th><th class="num">bis jetzt</th><th class="num">am Ende</th><th class="ct-so">So gerechnet</th></tr></thead>'+
     '<tbody>'+zeilen.join('')+'</tbody></table></div>'+
-    '<p class="meta ct-so-hinweis">Gerechnet beim Öffnen der Seite aus den Stunden, Sätzen und Annahmen von jetzt; nach jeder Änderung neu. Gespeichert wird nur, was eingetragen ist.</p>'+
+    '<p class="meta ct-so-hinweis">Gerechnet beim Öffnen der Seite aus den Stunden, Sätzen und Annahmen von jetzt; nach jeder Änderung neu, auch wenn sie in einem anderen Fenster '+
+    'gemacht wurde. Gespeichert wird nur, was eingetragen ist.</p>'+neuereText+
     '<p class="meta ct-annahmen-hinweis" data-annahmen-hinweis>Annahmen: '+esc(proz(a.ag))+' Arbeitgeberanteil, '+esc(zahl(a.jahresstunden))+' Jahresstunden bei '+
     esc(zahl(a.vollzeit,a.vollzeit%1?1:0))+' h in der Woche'+(a.faktor?', Gemeinkostenfaktor '+esc(zahl(a.faktor,2))+' auf das Bruttogehalt':', noch ohne Gemeinkostenfaktor')+'. '+
     (bestaetigt?'Bestätigt am '+esc(datum(bestaetigt))+'. ':'<strong>Noch nicht bestätigt.</strong> ')+
@@ -498,7 +518,8 @@ function renderSaetze(){
     '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling · vertraulich</p><h1>Sätze und Gehälter</h1>'+
     '<p class="pb-intro">Der Kalkulationssatz bewertet die Stunden einer Person; ohne eigenen Satz gilt der des Pakets. Aus dem Monatsgehalt rechnet das '+
     'Controlling zwei Sätze je Stunde: den Stundensatz aus dem Gehalt (Personalkosten) und den Selbstkostensatz (mit den Kosten des Büros); wie, steht unter '+
-    '«Annahmen». Ein neuer Eintrag gilt ab seinem Datum und bewertet frühere Stunden nicht neu.</p></div></header>'+
+    '«Annahmen». Ein neuer Eintrag gilt ab seinem Datum und bewertet frühere Stunden nicht neu; eine Korrektur ändert den bestehenden Eintrag '+
+    'und damit auch die Stunden, die er bewertet.</p></div></header>'+
     '<p class="pb-banner info" data-meldung hidden></p>'+
     '<section class="card pb-box"><h2 class="pb-h2">Personen</h2><div class="pb-tabelle ct-tabelle"><table><thead><tr><th>Person</th><th class="num">Kalkulationssatz</th>'+
     '<th class="num">Monatsgehalt<span class="ct-einheit">brutto</span></th><th class="num">Wochenstunden</th>'+
@@ -506,7 +527,7 @@ function renderSaetze(){
     '<th class="num">Stundensatz aus Gehalt<span class="ct-einheit">Personalkosten</span></th><th class="num">Selbstkostensatz<span class="ct-einheit">'+
     esc(a.faktor?'Bruttogehalt × '+zahl(a.faktor,2):'ohne Gemeinkostenfaktor')+'</span></th><th>gültig ab</th><th></th></tr></thead><tbody>'+reihen+'</tbody></table></div>'+
     urlaubHinweis(e,a,aktive)+'</section>'+
-    annahmenBox(e,a)+fragenBox(a,aktive)+
+    annahmenBox(e,a)+fragenBox(a)+
     (istAdmin&&voll?zugangBox(aktive):'')+'</div>';
   root.querySelectorAll('[data-person]').forEach(b=>b.addEventListener('click',()=>satzFormular(b.dataset.person)));
   bindeZugang();
@@ -629,34 +650,19 @@ function herleitungZeigen(form){
 }
 
 // Was vor dem Gespräch mit der Büroleitung offen ist (Gari, 25.11.2026): je Frage, warum sie zählt und was jetzt gilt.
-function fragenBox(a,aktive){
-  const f=a.faktor?zahl(a.faktor,2):null,ag=proz(a.ag),h=zahl(a.jahresstunden),vz=zahl(a.vollzeit,a.vollzeit%1?1:0);
+// Am 26.11.2026 mit der Buchhaltung geklärt und deshalb gestrichen (Gari): der Faktor gilt auf das Bruttogehalt allein;
+// 21 % Arbeitgeberanteil vorerst für alle; die Jahresstunden sind hergeleitet; Wochen- und Urlaubstage stehen je Person;
+// Sonderzahlungen (13. Gehalt, Urlaubsgeld, Boni, Jobticket) gibt es keine. Offen für die Büroleitung bleiben drei Fragen.
+function fragenBox(a){
+  const f=a.faktor?zahl(a.faktor,2):null;
   const deckung=K.deckungBisGehalt(85,{arbeitgeberanteil_prozent:a.ag,jahresstunden:a.jahresstunden,vollzeit_wochenstunden:a.vollzeit,gemeinkostenfaktor:a.faktor});
-  const ohneWoche=aktive.filter(x=>{const g=K.gehaltAm(daten.saetze,x.user_id,heute());return g&&g.wochenstunden==null}).length;
-  const e=daten.einstellungen||{},kalender=K.jahresstundenAusKalender({jahr:new Date().getFullYear()});
-  const herleitung=e.urlaubstage!=null?K.jahresstundenAusKalender({jahr:kalender.jahr,urlaubstage:e.urlaubstage,krankheitstage:e.krankheitstage,
-    weitereTage:e.weitere_tage,projektanteil:e.projektanteil_prozent,wochenstunden:a.vollzeit}).jahresstunden:null;
   const fragen=[
-    ['faktor-basis','Wird der Gemeinkostenfaktor'+(f?' '+f:'')+' auf das Bruttogehalt allein gerechnet oder auf Bruttogehalt plus Arbeitgeberanteil?',
-      'Gilt er für Bruttogehalt plus Arbeitgeberanteil, sind die Selbstkosten um den Arbeitgeberanteil (rund '+ag+') höher und der Gewinn entsprechend kleiner.',
-      'auf das Bruttogehalt allein (Festlegung vom 25.11.2026).'],
     ['faktor-inhalt','Was deckt der Faktor ab: nur die Bürokosten oder auch Unternehmerlohn und Gewinn?',
       'Steckt schon ein Gewinnaufschlag darin, zeigt «Gewinn nach Bürokosten» nur, was über dem geplanten Gewinn bleibt.',
       'nur Bürokosten; Gewinn ist, was danach vom Honorar bleibt.'],
     ['faktor-herkunft','Woher stammt der Faktor und für welches Jahr: aus der Buchhaltung (alle Kosten ÷ Bruttogehälter) oder als Erfahrungswert? Gilt er auch für Teilzeit und Werkstudenten?',
       'Der Faktor ändert sich mit Miete, Software und der Zahl der Köpfe; aus einem abgeschlossenen Jahr gerechnet ist er belastbar.',
       f?f+' für alle Personen.':'noch kein Faktor eingetragen.'],
-    ['arbeitgeberanteil','Gilt der Arbeitgeberanteil von '+ag+' für alle, oder lassen sich die tatsächlichen Arbeitgeberkosten je Person aus der Lohnabrechnung nehmen?',
-      'Rund 21 % gilt für reguläre Stellen (dazu Umlagen und Berufsgenossenschaft); für Werkstudenten zahlt das Büro meist nur die Rentenversicherung, '+
-      'im Übergangsbereich bis 2.000 € im Monat mehr. Betrifft nur die Personalkosten, nicht die Selbstkosten.',ag+' für alle.'],
-    ['jahresstunden','Sind '+h+' Stunden im Jahr die Projektstunden einer Vollzeitkraft? Mit wie vielen Urlaubstagen, Krankheitstagen und Tagen ohne Projekt rechnet das Büro, und welcher Anteil der Arbeitszeit geht in Projekte?',
-      'Weniger Projektstunden heißen: jede Stunde kostet mehr. '+kalender.jahr+' hat Augsburg '+zahl(kalender.feiertage)+' Feiertage an Werktagen, also '+
-      zahl(kalender.arbeitstage)+' Arbeitstage; die Herleitung oben rechnet daraus die Jahresstunden.',h+' h bei '+vz+' h in der Woche'+(herleitung?'; aus dem Kalender '+zahl(herleitung)+' h':'')+'.'],
-    ['wochenstunden','Stimmen Wochenstunden, Arbeitstage und Urlaubstage je Person laut Vertrag, und wie zählen Überstunden?',
-      'Der Stundensatz einer Teilzeitkraft rechnet mit ihrem Anteil an den Jahresstunden; anteiliger Urlaub ist darin schon enthalten. Wer mehr oder weniger Urlaub hat, bekommt eigene Jahresstunden (bei den Sätzen eintragen). Unbezahlte Überstunden senken die tatsächlichen Kosten je Stunde.',
-      'je Person in der Tabelle oben; ohne Angabe Vollzeit'+(ohneWoche?' ('+ohneWoche+(ohneWoche===1?' Person':' Personen')+' mit Gehalt ohne Wochenstunden)':'')+'.'],
-    ['sonderzahlungen','Gibt es ein 13. Gehalt, Urlaubsgeld, Boni oder Zuschüsse (etwa ein Jobticket), die nicht im Monatsgehalt stecken?',
-      'Gerechnet wird Monatsgehalt × 12; ein 13. Gehalt macht jede Stunde gut 8 % teurer.','Monatsgehalt × 12, ohne Sonderzahlungen.'],
     ['kalkulationssatz','Was deckt der Kalkulationssatz von 85 €/h: die Selbstkosten und einen Gewinn? Mit welchem Gehalt und welchem Faktor wurde er gerechnet?',
       deckung?'Mit diesen Annahmen deckt 85 €/h die Selbstkosten bis zu einem Bruttogehalt von rund '+euro(deckung)+' im Monat (Vollzeit); wer mehr verdient, kostet je Stunde mehr, als kalkuliert ist.'
         :'Ohne Gemeinkostenfaktor lässt sich das nicht prüfen.','85 €/h je Paket, je Person änderbar.']
@@ -1062,30 +1068,41 @@ function zahlungFormular(p,z){
 }
 
 // Sätze einer Person: ein neuer Eintrag gilt ab seinem Datum; ältere bleiben für frühere Stände. Zum Gehalt gehören die
-// Wochenstunden laut Vertrag (Gari, 25.11.2026: sonst stimmt der Stundensatz für Teilzeit nicht); vorbelegt mit denen des
-// letzten Eintrags.
+// Wochenstunden laut Vertrag (Gari, 25.11.2026: sonst stimmt der Stundensatz für Teilzeit nicht).
+// Korrektur oder neu ab Datum (Gari und die Buchhaltung, 26.11.2026): die Urlaubstage laut Vertrag als neuer Eintrag ab
+// heute bewerteten die Stunden davor nicht neu, das Ergebnis zum Gehalt blieb, wie es war. Wer schon Einträge hat, wählt
+// deshalb ausdrücklich: Korrektur (ändert den Eintrag, auch rückwirkend für seine Stunden) oder neu ab einem Datum (etwa
+// eine Gehaltserhöhung). Vorbelegt mit dem Eintrag, der heute gilt; «Ändern» in der Liste wählt einen anderen.
 function satzFormular(personId){
   const e=daten.einstellungen||{},a=K.annahmen(e);
   const eigene=daten.saetze.filter(s=>s.person_id===personId).sort((x,y)=>String(y.gueltig_ab).localeCompare(String(x.gueltig_ab)));
-  const woche=eigene.find(s=>s.wochenstunden!=null)?.wochenstunden,urlaub=eigene.find(s=>s.urlaubstage!=null)?.urlaubstage,
-    tage=eigene.find(s=>s.arbeitstage_woche!=null)?.arbeitstage_woche;
+  const aktuell=eigene.find(s=>String(s.gueltig_ab)<=heute())||eigene[0]||null;
+  let ziel=aktuell;
+  const mitWahl=eigene.length>0;
   const form=oeffneDialog('<form method="dialog" class="pb-form"><h2>Sätze</h2><p class="meta">'+esc(person(personId)||'Person')+'</p>'+
-    (eigene.length?'<div class="pb-tabelle ct-tabelle"><table><thead><tr><th>gültig ab</th><th class="num">Kalkulationssatz</th><th class="num">Monatsgehalt</th>'+
-      '<th class="num">Wochenstunden</th><th class="num">Urlaub</th><th></th></tr></thead><tbody>'+
-      eigene.map(s=>'<tr><td>'+esc(datum(s.gueltig_ab))+'</td><td class="num">'+esc(s.kalkulationssatz==null?'—':euro(s.kalkulationssatz,2)+'/h')+'</td>'+
+    (mitWahl?'<div class="pb-tabelle ct-tabelle ct-eintraege"><table><thead><tr><th>gültig ab</th><th class="num">Kalkulations&shy;satz</th><th class="num">Monats&shy;gehalt</th>'+
+      '<th class="num">Wochen&shy;stunden</th><th class="num">Urlaub</th><th><span class="sr">Aktionen</span></th></tr></thead><tbody>'+
+      eigene.map(s=>'<tr data-eintrag="'+esc(s.id)+'"><td>'+esc(datum(s.gueltig_ab))+'</td><td class="num">'+esc(s.kalkulationssatz==null?'—':euro(s.kalkulationssatz,2)+'/h')+'</td>'+
         '<td class="num">'+esc(s.monatsgehalt==null?'—':euro(s.monatsgehalt))+'</td><td class="num">'+esc(s.wochenstunden==null?(s.monatsgehalt==null?'—':'Vollzeit'):std(Number(s.wochenstunden)))+'</td>'+
         '<td class="num">'+(s.monatsgehalt==null?'—':urlaubText(s))+'</td>'+
-        '<td><button type="button" class="btn btn-quiet btn-danger" data-satz-weg="'+esc(s.id)+'">Entfernen</button></td></tr>').join('')+
+        '<td class="ct-eintrag-knoepfe"><button type="button" class="btn btn-quiet" data-satz-aendern="'+esc(s.id)+'">Ändern</button>'+
+        '<button type="button" class="btn btn-quiet btn-danger" data-satz-weg="'+esc(s.id)+'">Entfernen</button></td></tr>').join('')+
       '</tbody></table></div>':'<p class="meta">Noch kein eigener Satz: es gilt der Kalkulationssatz des Pakets.</p>')+
-    '<h3 class="pb-h3">Neuer Eintrag</h3><div class="pb-felder">'+
-    '<label>gültig ab<input type="date" name="ab" class="pb-input" required value="'+esc(heute())+'"></label>'+
+    '<h3 class="pb-h3">'+(mitWahl?'Eintragen':'Neuer Eintrag')+'</h3>'+
+    (mitWahl?'<fieldset class="ct-art" data-art><legend>Wie gilt es?</legend>'+
+      '<label class="ct-art-wahl"><input type="radio" name="art" value="korrektur"><span><strong data-korrektur-titel></strong>'+
+      '<span class="ct-art-hilfe">Die Angabe galt schon so, etwa der Urlaub laut Vertrag: die Stunden ab diesem Tag werden neu bewertet.</span></span></label>'+
+      '<label class="ct-art-wahl"><input type="radio" name="art" value="neu"><span><strong>Neu ab einem Datum</strong>'+
+      '<span class="ct-art-hilfe">Eine Änderung ab einem Tag, etwa eine Gehaltserhöhung: Stunden davor behalten den bisherigen Satz.</span></span></label></fieldset>':'')+
+    '<div class="pb-felder">'+
+    '<label data-ab'+(mitWahl?' hidden':'')+'>gültig ab<input type="date" name="ab" class="pb-input"'+(mitWahl?'':' required')+' value="'+esc(heute())+'"></label>'+
     '<label>Kalkulationssatz (€/h)<input name="satz" class="pb-input" inputmode="decimal" placeholder="leer: Satz des Pakets"></label>'+
     '<label>Monatsgehalt brutto (€)<input name="gehalt" class="pb-input" inputmode="decimal" placeholder="leer: unbekannt"></label>'+
-    '<label>Wochenstunden laut Vertrag<input name="woche" class="pb-input" inputmode="decimal" value="'+esc(eingabe(woche))+'" placeholder="leer: Vollzeit ('+esc(zahl(a.vollzeit,a.vollzeit%1?1:0))+' h)"></label>'+
-    '<label>Urlaubstage im Jahr laut Vertrag<input name="urlaub" class="pb-input" inputmode="decimal" value="'+esc(eingabe(urlaub))+'" placeholder="leer: wie das Büro, anteilig"></label>'+
-    '<label>Arbeitstage je Woche<input name="tage" class="pb-input" inputmode="decimal" value="'+esc(eingabe(tage))+'" placeholder="leer: 5"></label>'+
+    '<label>Wochenstunden laut Vertrag<input name="woche" class="pb-input" inputmode="decimal" placeholder="leer: Vollzeit ('+esc(zahl(a.vollzeit,a.vollzeit%1?1:0))+' h)"></label>'+
+    '<label>Urlaubstage im Jahr laut Vertrag<input name="urlaub" class="pb-input" inputmode="decimal" placeholder="leer: wie das Büro, anteilig"></label>'+
+    '<label>Arbeitstage je Woche<input name="tage" class="pb-input" inputmode="decimal" placeholder="leer: 5"></label>'+
     '<label class="breit">Notiz<input name="notiz" class="pb-input" maxlength="500"></label></div>'+
-    '<p class="ct-vorschau" data-vorschau></p>'+knoepfe('Eintragen','')+'</form>');
+    '<p class="ct-vorschau" data-vorschau></p>'+knoepfe('Speichern','')+'</form>');
   const vorschau=()=>{
     const g=K.leseZahl(form.gehalt.value),w=form.woche.value.trim()?K.leseZahl(form.woche.value):null;
     const u={urlaubstage:form.urlaub.value.trim()?K.leseZahl(form.urlaub.value):null,arbeitstage_woche:form.tage.value.trim()?K.leseZahl(form.tage.value):null};
@@ -1093,7 +1110,30 @@ function satzFormular(personId){
     dialog.querySelector('[data-vorschau]').textContent=gs==null?'':'Stundensatz aus Gehalt '+euro(gs,2)+'/h'+(ss!=null?', Selbstkostensatz '+euro(ss,2)+'/h':'')+
       ' ('+zahl(Math.round(K.jahresstundenPerson(w,e,u)))+' Jahresstunden, '+proz(a.ag)+' Arbeitgeberanteil'+(a.faktor?', Faktor '+zahl(a.faktor,2):'')+')';
   };
+  // Die Felder mit einem Eintrag füllen (ohne Eintrag: leer, wie bisher).
+  const fuellen=s=>{
+    form.satz.value=s?eingabe(s.kalkulationssatz):'';form.gehalt.value=s?eingabe(s.monatsgehalt):'';
+    form.woche.value=s?eingabe(s.wochenstunden):'';form.urlaub.value=s?eingabe(s.urlaubstage):'';
+    form.tage.value=s?eingabe(s.arbeitstage_woche):'';form.notiz.value=s?.notiz||'';
+    vorschau();
+  };
+  const art=()=>form.querySelector('[name="art"]:checked')?.value||'';
+  const zeigeArt=()=>{
+    const neuAb=art()==='neu',ab=dialog.querySelector('[data-ab]');
+    if(mitWahl){ab.hidden=!neuAb;form.ab.required=neuAb}
+    const titel=dialog.querySelector('[data-korrektur-titel]');
+    if(titel)titel.textContent='Korrektur des Eintrags ab '+datum(ziel?.gueltig_ab);
+    dialog.querySelectorAll('[data-eintrag]').forEach(tr=>tr.classList.toggle('ct-gewaehlt',art()==='korrektur'&&tr.dataset.eintrag===ziel?.id));
+  };
+  fuellen(aktuell);zeigeArt();
   form.addEventListener('input',vorschau);
+  form.querySelectorAll('[name="art"]').forEach(r=>r.addEventListener('change',()=>{zeigeFehler('');zeigeArt()}));
+  dialog.querySelectorAll('[data-satz-aendern]').forEach(b=>b.addEventListener('click',()=>{
+    ziel=eigene.find(s=>s.id===b.dataset.satzAendern)||ziel;
+    form.querySelector('[name="art"][value="korrektur"]').checked=true;
+    fuellen(ziel);zeigeFehler('');zeigeArt();
+    form.gehalt.focus();
+  }));
   dialog.querySelectorAll('[data-satz-weg]').forEach(b=>b.addEventListener('click',async()=>{
     if(b.dataset.sicher!=='1'){b.dataset.sicher='1';b.textContent='Wirklich?';return}
     const {error}=await sb.from('office_controlling_saetze').delete().eq('id',b.dataset.satzWeg);
@@ -1106,15 +1146,23 @@ function satzFormular(personId){
     const satzText=form.satz.value.trim(),gehaltText=form.gehalt.value.trim(),wocheText=form.woche.value.trim(),urlaubText_=form.urlaub.value.trim(),tageText=form.tage.value.trim();
     const satz=satzText?K.leseZahl(satzText):null,gehalt=gehaltText?K.leseZahl(gehaltText):null,wochenstunden=wocheText?K.leseZahl(wocheText):null;
     const urlaubstage=urlaubText_?K.leseZahl(urlaubText_):null,arbeitstage_woche=tageText?K.leseZahl(tageText):null;
+    if(mitWahl&&!art()){zeigeFehler('Bitte wählen: Korrektur des Eintrags oder neu ab einem Datum.');return}
     if(!satzText&&!gehaltText){zeigeFehler('Bitte einen Kalkulationssatz oder ein Monatsgehalt eintragen.');return}
     if(satzText&&!(satz>0)){zeigeFehler('Kalkulationssatz in Euro je Stunde, etwa 85.');return}
     if(gehaltText&&(gehalt==null||gehalt<0)){zeigeFehler('Monatsgehalt als Betrag in Euro.');return}
     if(wocheText&&(wochenstunden==null||wochenstunden<=0||wochenstunden>80)){zeigeFehler('Wochenstunden über 0 und höchstens 80, etwa 20.');return}
     if(urlaubText_&&(urlaubstage==null||urlaubstage<0||urlaubstage>60)){zeigeFehler('Urlaubstage 0 bis 60, etwa 30 (in den eigenen Arbeitstagen).');return}
     if(tageText&&(arbeitstage_woche==null||arbeitstage_woche<=0||arbeitstage_woche>6)){zeigeFehler('Arbeitstage je Woche über 0 und höchstens 6, etwa 2.');return}
-    const {error}=await sb.from('office_controlling_saetze').insert({person_id:personId,gueltig_ab:form.ab.value,kalkulationssatz:satz,monatsgehalt:gehalt,
-      wochenstunden,urlaubstage,arbeitstage_woche,notiz:form.notiz.value.trim()||null,created_by:nutzer.id});
-    if(error){zeigeFehler(error.code==='23505'?'Für diesen Tag gibt es schon einen Eintrag; bitte ihn entfernen oder ein anderes Datum wählen.':'Nicht gespeichert: '+error.message);return}
+    const werte={kalkulationssatz:satz,monatsgehalt:gehalt,wochenstunden,urlaubstage,arbeitstage_woche,notiz:form.notiz.value.trim()||null};
+    if(art()==='korrektur'){
+      const {error}=await sb.from('office_controlling_saetze').update(werte).eq('id',ziel.id);
+      if(error){zeigeFehler('Nicht gespeichert: '+error.message);return}
+      dialog.close();await neuLaden('Eintrag ab '+datum(ziel.gueltig_ab)+' korrigiert; die Stunden ab diesem Tag sind neu bewertet.');return;
+    }
+    if(!form.ab.value){zeigeFehler('Bitte das Datum eintragen, ab dem es gilt.');return}
+    if(eigene.some(s=>s.gueltig_ab===form.ab.value)){zeigeFehler('Für diesen Tag gibt es schon einen Eintrag: dafür «Korrektur» wählen oder ein anderes Datum.');return}
+    const {error}=await sb.from('office_controlling_saetze').insert({person_id:personId,gueltig_ab:form.ab.value,...werte,created_by:nutzer.id});
+    if(error){zeigeFehler(error.code==='23505'?'Für diesen Tag gibt es schon einen Eintrag: dafür «Korrektur» wählen oder ein anderes Datum.':'Nicht gespeichert: '+error.message);return}
     dialog.close();await neuLaden('Eingetragen.');
   });
 }
