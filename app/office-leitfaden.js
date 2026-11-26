@@ -1,5 +1,6 @@
 (()=>{'use strict';
-// TBA Office · Leitfaden «Was darf auf den Desktop?» (25.11.2026, Claude; Wunsch von Gari am 25.11.2026).
+// TBA Office · Leitfaden «Was darf ins TBA Office?» (25.11.2026, Claude; Wunsch von Gari am 25.11.2026; bis 26.11.2026
+// «Was darf auf den Desktop?»: die KI liest nicht nur den Desktop, sondern alles, was ins Office kommt, Gari 26.11.2026).
 // Wer das Office öffnet, liest den freigeschalteten Leitfaden einmal und bestätigt mit «Gelesen». Die Bestätigung
 // (Person, Stand, Zeit) steht in office_leitfaden_bestaetigungen; die Admins sehen sie in «Mitglieder». Danach steht
 // der Leitfaden im Desktop jedes Projekts zum Nachlesen. Ob er gezeigt wird und welcher Stand gilt, sagt
@@ -10,25 +11,25 @@
 const sb=window.MINDS_SUPABASE;
 const LEITFADEN='desktop';
 const TEXTE={
-  '2026-11-25':{
-    titel:'Was darf auf den Desktop?',
-    stand:'25.11.2026',
+  '2026-11-26':{
+    titel:'Was darf ins TBA Office?',
+    stand:'26.11.2026',
     bloecke:[
       {h:'Kurz gesagt'},
-      {p:'Der Desktop eines Projekts ist der gemeinsame Ordner des Projektteams. Eine KI liest die Unterlagen mit, damit wir ihr Fragen zum Projekt stellen können. So ist es eingerichtet:'},
+      {p:'Was wir ins TBA Office hochladen oder dort schreiben, kann eine KI lesen, damit wir ihr Fragen zum Projekt stellen können. So ist es eingerichtet:'},
       {punkte:[
-        ['Gemeinsam und geschützt:','Die Dateien liegen auf einem Server in Frankfurt. Sehen kann sie nur das Team des Projekts.'],
-        ['Die KI:','Neue Dateien liest das Office in wenigen Minuten automatisch aus; dafür geht der Text an ein KI-Modell von OpenAI.'],
+        ['Gemeinsam und geschützt:','Die Daten liegen auf einem Server in Frankfurt. Was zu einem Projekt gehört, sieht nur dessen Team.'],
+        ['Die KI:','Was ins Office kommt, kann die KI lesen, Dateien automatisch nach wenigen Minuten. Dafür geht der Text an ein KI-Modell von OpenAI.'],
         ['Kein Training:','OpenAI arbeitet nur im Auftrag des Büros und trainiert mit unseren Daten keine Modelle.'],
         ['Im Namen des Büros:','Die Konten bei OpenAI und Supabase laufen auf das Büro.']]},
       {p:'Für alle gilt eine einfache Regel: Grün hochladen, Gelb nur das Nötige, Rot nie.'},
       {h:'Grün: hochladen',ton:'gruen'},
-      {p:'Fast alles, was im Projekt entsteht oder ins Projekt kommt, darf auf den Desktop, auch wenn Namen, Unterschriften oder Preise anderer Büros darin stehen.'},
+      {p:'Fast alles, was im Projekt entsteht oder ins Projekt kommt, darf ins Office, auch wenn Namen, Unterschriften oder Preise anderer Büros darin stehen.'},
       {tabelle:{spalten:['Was','Warum es geht','Achten auf'],zeilen:[
         ['Pläne, Modelle, Baubeschreibung, LV, Terminpläne','Projektarbeit, kaum Daten über Personen','–'],
-        ['Unterlagen der Fachplaner, auch mit Namen und Unterschrift','Sie wurden uns für dieses Projekt gegeben; der Desktop nutzt sie für dieses Projekt. Namen sind berufliche Kontaktdaten, die wir ohnehin verarbeiten.','Vermerke wie «vertraulich» oder «nicht zur Weitergabe»: dann Gelb'],
+        ['Unterlagen der Fachplaner, auch mit Namen und Unterschrift','Sie wurden uns für dieses Projekt gegeben; das Office nutzt sie für dieses Projekt. Namen sind berufliche Kontaktdaten, die wir ohnehin verarbeiten.','Vermerke wie «vertraulich» oder «nicht zur Weitergabe»: dann Gelb'],
         ['Protokolle mit Teilnehmern und Verteiler','Wie oben: berufliche Kontaktdaten, gebraucht für das Projekt. Dieselben Protokolle liegen schon auf Server und Mail.','Private Bemerkungen über Personen gehören nicht ins Protokoll'],
-        ['Kostenberechnungen, Angebote, Honorare und Preise anderer Büros und Firmen','Daten von Firmen schützt die DSGVO nicht. Sie sind vertraulich: im Projekt nutzen ja, nach außen geben nein. Der Desktop bleibt im Projektteam, OpenAI verarbeitet nur in unserem Auftrag.','Angebote aus einer laufenden öffentlichen Vergabe: Gelb'],
+        ['Kostenberechnungen, Angebote, Honorare und Preise anderer Büros und Firmen','Daten von Firmen schützt die DSGVO nicht. Sie sind vertraulich: im Projekt nutzen ja, nach außen geben nein. Was zum Projekt gehört, bleibt im Projektteam; OpenAI verarbeitet nur in unserem Auftrag.','Angebote aus einer laufenden öffentlichen Vergabe: Gelb'],
         ['Bescheide und Schreiben von Behörden','Gehören zur Akte des Projekts; Name und Adresse des Bauherrn sind für das Projekt nötig','Anlagen mit Nachbardaten: Gelb'],
         ['Produktdatenblätter, Prospekte, Zulassungen','Öffentliche Informationen der Hersteller','–'],
         ['Baustellenfotos ohne erkennbare Personen','Zeigen den Bau, nicht Menschen','Gesichter, Kennzeichen: Gelb'],
@@ -36,10 +37,10 @@ const TEXTE={
       {fett:'Warum Namen kein Hindernis sind.',p:'Drei Regeln tragen das:'},
       {nummern:[
         'Namen und Kontaktdaten von Menschen sind personenbezogen, auch im Beruf. Das Büro darf sie für das Projekt verarbeiten, weil Vertrag und Projektabwicklung es brauchen. Das tut es heute schon in Mail, Server und Verteiler.',
-        'OpenAI und der Speicher in Frankfurt arbeiten als Auftragsverarbeiter, im Auftrag und nach Weisung des Büros. Ein Auftragsverarbeiter ist rechtlich kein «Dritter»: Es braucht keine eigene Erlaubnis für die Weitergabe. Es braucht aber einen Vertrag nach Art. 28 DSGVO und einen Hinweis in der Datenschutzinformation.',
+        'OpenAI und der Speicher in Frankfurt arbeiten als Auftragsverarbeiter, im Auftrag und nach Weisung des Büros. Ein Auftragsverarbeiter ist rechtlich kein «Dritter»: Es braucht keine eigene Erlaubnis für die Weitergabe. Es braucht aber einen Vertrag nach Art. 28 DSGVO und einen Hinweis in der Datenschutzinformation. Diesen Vertrag muss niemand aushandeln: OpenAI und Supabase, der Anbieter des Speichers, haben ihn fest in ihren Bedingungen. Er gilt mit dem Konto des Büros.',
         'Daten von Firmen, etwa Preise, Honorare oder Angebote eines Büros, fallen nicht unter die DSGVO. Sie sind Geschäftsinformationen, die wir vertraulich behandeln, aber für das Projekt nutzen dürfen.']},
       {h:'Gelb: nur das Nötige, vorher prüfen',ton:'gelb'},
-      {p:'Diese Unterlagen dürfen auf den Desktop, aber nur so weit, wie das Projekt sie braucht. Vorher prüfen, kürzen oder schwärzen.'},
+      {p:'Diese Unterlagen dürfen ins Office, aber nur so weit, wie das Projekt sie braucht. Vorher prüfen, kürzen oder schwärzen.'},
       {tabelle:{spalten:['Was','Warum Vorsicht','So geht es'],zeilen:[
         ['Private Daten von Bauherren: Grundbuchauszug, Finanzierung, private Mails, Familienverhältnisse','Private Personen, nicht nur Kontaktdaten','Nur was das Projekt braucht; den Rest weglassen oder schwärzen'],
         ['Daten von Nachbarn: Nachbarbeteiligung, Einwendungen, Eigentümerlisten','Personen, die nicht unsere Vertragspartner sind','Für die Genehmigung Nötiges ja, Namen schwärzen, wo es geht'],
@@ -49,7 +50,7 @@ const TEXTE={
         ['Sicherheitsdetails: Alarmanlage, Tresor, Kameras, Zugangskonzept','Missbrauchsgefahr, vor allem bei Privathäusern','Pläne ja, Codes und Zugangsdaten nie'],
         ['Streitfälle: Anwaltsschreiben, Mängel mit Schuldzuweisung','Bewertungen von Personen, laufende Verfahren','Die Büroleitung entscheidet']]}},
       {h:'Rot: nicht hochladen',ton:'rot'},
-      {p:'Diese Unterlagen gehören nicht auf den Desktop, auch nicht kurz: Das Office würde sie automatisch auslesen und den Text an OpenAI geben.'},
+      {p:'Diese Unterlagen gehören nicht ins Office, auch nicht kurz oder in einer Nachricht: Die KI würde sie lesen, und der Text ginge an OpenAI.'},
       {tabelle:{spalten:['Was','Warum nicht'],zeilen:[
         ['Personalunterlagen, Gehälter, Bewerbungen, Arbeitszeiten einzelner Personen','Daten von Beschäftigten, für die Projektarbeit nicht nötig'],
         ['Ausweise, Bankverbindungen, Steuernummern, Kreditkarten','Hohe Missbrauchsgefahr, für die Projektarbeit nicht nötig'],
@@ -68,6 +69,7 @@ const TEXTE={
       {quellen:[
         ['OpenAI: Your data (API)','https://developers.openai.com/api/docs/guides/your-data','kein Training seit 1. März 2023, Protokolle bis 30 Tage'],
         ['OpenAI: Data Processing Addendum','https://openai.com/policies/data-processing-addendum/','OpenAI als Auftragsverarbeiter, im EWR OpenAI Ireland'],
+        ['Supabase: Data Processing Addendum','https://supabase.com/legal/customer-resources/data-processing-addendum','Teil der Nutzungsbedingungen, gilt mit dem Konto'],
         ['OpenAI: Data residency','https://developers.openai.com/api/docs/guides/data-residency.md','Freischaltung, nur neue Projekte, europäischer Zugang'],
         ['DSK-Kurzpapier Nr. 13: Auftragsverarbeitung','https://lfd.niedersachsen.de/download/126580','Auftragsverarbeiter ist kein Dritter, keine weitere Rechtsgrundlage nötig'],
         ['Art. 28 DSGVO: Vertrag zur Auftragsverarbeitung','https://www.dr-datenschutz.de/auftragsverarbeitung-und-datenschutz-grundverordnung/',''],

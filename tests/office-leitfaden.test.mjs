@@ -27,6 +27,14 @@ test('Migration: zwei neue Tabellen mit RLS, nichts Destruktives, der Leitfaden 
   assert.match(sql,/insert into public\.office_leitfaeden \(leitfaden, version, aktiv\) values \('desktop', '2026-11-25', false\);/);
 });
 
+test('Migration 26.11.2026: neuer Stand «Was darf ins TBA Office?», nur die Version, nichts gelöscht',()=>{
+  const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_leitfaden_ins_office\.sql$/.test(f));
+  assert.equal(datei.length,1);
+  const neu=read('supabase/migrations/'+datei[0]);
+  assert.match(neu,/^update public\.office_leitfaeden set version = '2026-11-26' where leitfaden = 'desktop' and version = '2026-11-25';$/m);
+  assert.doesNotMatch(neu.replace(/^--.*$/gm,''),/\b(drop|truncate|delete|insert|create|alter|grant|revoke)\b/i);
+});
+
 test('Migration: freischalten nur Admins und nur «aktiv»; bestätigen nur für sich, nur den geltenden Stand, ohne eigene Zeit',()=>{
   assert.match(sql,/grant update \(aktiv\) on public\.office_leitfaeden to authenticated;/);
   assert.match(sql,/office_leitfaeden_lesen on public\.office_leitfaeden\s+for select to authenticated using \(\(select private\.office_is_member\(\)\)\);/);
@@ -51,8 +59,10 @@ test('Die Abnahme der Rechte läuft im isolierten Supabase',()=>{
 });
 
 test('Text: Stand der Migration, Grün, Gelb, Rot, keine Namen von Personen, KI statt Romy',()=>{
-  assert.match(modul,/'2026-11-25':\{/);
-  assert.match(modul,/titel:'Was darf auf den Desktop\?'/);
+  assert.match(modul,/'2026-11-26':\{/);
+  assert.match(modul,/titel:'Was darf ins TBA Office\?'/);
+  // Seit 26.11.2026 für alles, was ins Office kommt (Gari), nicht nur den Desktop.
+  assert.doesNotMatch(modul.slice(modul.indexOf('const TEXTE='),modul.indexOf('const zustand=')),/Desktop/);
   for(const h of ['Kurz gesagt','Grün: hochladen','Gelb: nur das Nötige, vorher prüfen','Rot: nicht hochladen','Gut zu wissen','Im Zweifel'])
     assert.ok(modul.includes(`h:'${h}'`),h);
   assert.match(modul,/Die Konten bei OpenAI und Supabase laufen auf das Büro\./);
@@ -63,7 +73,7 @@ test('Text: Stand der Migration, Grün, Gelb, Rot, keine Namen von Personen, KI 
 });
 
 test('Ablauf: nach der Mitgliedsprüfung, einmal je Stand, Bestätigung nur mit Person, Leitfaden und Stand',()=>{
-  assert.match(appIndex,/<script src="\.\/office-leitfaden\.js\?v=office1"><\/script>\n<script src="\.\/sync\.js\?v=office8"><\/script>/,'vor sync.js geladen');
+  assert.match(appIndex,/<script src="\.\/office-leitfaden\.js\?v=office2"><\/script>\n<script src="\.\/sync\.js\?v=office8"><\/script>/,'vor sync.js geladen');
   assert.match(modul,/window\.addEventListener\('office:member',e=>void pruefen\(e\.detail\)\);/);
   assert.match(modul,/from\('office_leitfaeden'\)\.select\('version,aktiv'\)\.eq\('leitfaden',LEITFADEN\)\.maybeSingle\(\)/);
   assert.match(modul,/zustand\.aktiv=l\.aktiv===true&&!!TEXTE\[l\.version\];/,'unbekannter Stand: nichts zeigen');
@@ -74,10 +84,10 @@ test('Ablauf: nach der Mitgliedsprüfung, einmal je Stand, Bestätigung nur mit 
   assert.match(modul,/data-leitfaden-weiter disabled>Weiter/);
 });
 
-test('Desktop: Link «Was darf auf den Desktop?», nur wenn freigeschaltet; Versionen',()=>{
-  assert.match(work,/window\.TBA_OFFICE_LEITFADEN\?\.verfuegbar\?\.\(\)\?'<p class="work-desktop-leitfaden"><button type="button" data-work-leitfaden>Was darf auf den Desktop\?<\/button><\/p>':''/);
+test('Desktop: Link «Was darf ins TBA Office?», nur wenn freigeschaltet; Versionen',()=>{
+  assert.match(work,/window\.TBA_OFFICE_LEITFADEN\?\.verfuegbar\?\.\(\)\?'<p class="work-desktop-leitfaden"><button type="button" data-work-leitfaden>Was darf ins TBA Office\?<\/button><\/p>':''/);
   assert.match(work,/\$\('\[data-work-leitfaden\]'\)\?\.addEventListener\('click',\(\)=>window\.TBA_OFFICE_LEITFADEN\?\.oeffnen\(\)\);/);
-  assert.match(appIndex,/work\.js\?v=office58/);
+  assert.match(appIndex,/work\.js\?v=office59/);
   assert.match(appIndex,/office\.css\?v=office46/);
 });
 
