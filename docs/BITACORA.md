@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Leitfaden «Was darf ins TBA Office?» statt «Was darf auf den Desktop?» · Claude
+- Qué cambió y por qué: Gari (26.11.2026): Hochladen und Teilen geht nicht nur auf dem Desktop, sondern auch in Threads und im Gespräch mit den Assistenten; die KI liest, was ins Office kommt. Der Leitfaden gilt deshalb allgemein, ohne jeden Ort aufzuzählen. Titel «Was darf ins TBA Office?»; «Kurz gesagt»: «Was wir ins TBA Office hochladen oder dort schreiben, kann eine KI lesen …», «Die Daten liegen auf einem Server in Frankfurt. Was zu einem Projekt gehört, sieht nur dessen Team.», «Was ins Office kommt, kann die KI lesen, Dateien automatisch nach wenigen Minuten.»; Grün und Gelb «ins Office» statt «auf den Desktop»; Rot «… auch nicht kurz oder in einer Nachricht: Die KI würde sie lesen, und der Text ginge an OpenAI.» Dazu, wie in der Fassung für die Büroleitung: den Vertrag nach Art. 28 DSGVO muss niemand aushandeln, OpenAI und Supabase haben ihn fest in ihren Bedingungen, er gilt mit dem Konto des Büros (Quelle Supabase ergänzt). Neuer Stand 2026-11-26 (der alte Text ist entfernt: niemand hatte ihn bestätigt, der Leitfaden ist noch ausgeschaltet). Der Link im Desktop jedes Projekts und die Überschrift in «Mitglieder» heißen jetzt auch so; der interne Schlüssel `desktop` bleibt.
+- Archivos: `app/office-leitfaden.js` (`?v=office2`), `app/work.js` (`office59`), `app/index.html`, `index.html`; `supabase/migrations/20261126133400_office_leitfaden_ins_office.sql` (neu); Tests `tests/office-leitfaden.test.mjs` (Stand, Titel, kein «Desktop» im Text, die neue Migration), `tests/browser/office-leitfaden.chromium.mjs` (Stand, Titel) und die Versionen von `work.js` in sieben weiteren Tests; `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: migración `20261126133400_office_leitfaden_ins_office` aplicada (antes avisado): `office_leitfaeden.version` von `2026-11-25` auf `2026-11-26`; nada borrado, `aktiv` sigue `false`.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (495); Chromium `office-leitfaden` grün (6).
+- Quedó pendiente o sin probar: Freischalten bleibt bei Gari, wenn die Büroleitung unterschrieben hat und das OpenAI-Konto auf das Büro läuft. Die Fassungen für die Büroleitung (Leitfaden mit Namen, «Freigabe und Vollmacht») liegen außerhalb des Repositorys.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #177
+
+---
+
 ### 2026-11-26 · Controlling: drei offene Fragen, Sätze korrigieren statt neu anlegen, offene Seiten rechnen neu · Claude
 - Qué cambió y por qué: Gari hat die Fragen unter «Zu klären» mit der Buchhaltung durchgesprochen (26.11.2026, vor dem Gespräch mit der Büroleitung). Gestrichen, weil geklärt: der Faktor gilt auf das Bruttogehalt allein; 21 % Arbeitgeberanteil vorerst für alle; die Jahresstunden sind hergeleitet; Wochenstunden und Urlaub stehen je Person bei den Sätzen; Sonderzahlungen (13. Gehalt, Urlaubsgeld, Boni, Jobticket) gibt es keine. Offen für die Büroleitung bleiben drei: was der Faktor deckt, woher er stammt, was der Kalkulationssatz deckt.
   - **Was die beiden gesehen haben:** Nach einer Änderung (Urlaubstage laut Vertrag) änderten sich die Sätze der Person, das Ergebnis im vertraulichen Teil des Projektblatts aber nicht. Grund: Der Dialog kannte nur «Neuer Eintrag» mit «gültig ab» heute; die Stunden bis zum letzten Stand (Stichtag davor) bewertet weiter der alte Eintrag. Dazu rechnete ein schon offener Reiter erst nach dem Neuladen.

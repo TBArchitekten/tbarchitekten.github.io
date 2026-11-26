@@ -36,7 +36,7 @@ async function boot(extra,viewport={width:1400,height:900}){
   await page.waitForTimeout(300);
   return {page,errors};
 }
-const aktiv={office_leitfaeden:[{version:'2026-11-25',aktiv:true}]};
+const aktiv={office_leitfaeden:[{version:'2026-11-26',aktiv:true}]};
 
 test('Freigeschaltet und nicht bestätigt: einmal lesen, «Gelesen», «Weiter»; Escape schließt nicht',async()=>{
   const {page,errors}=await boot(aktiv);
@@ -44,7 +44,7 @@ test('Freigeschaltet und nicht bestätigt: einmal lesen, «Gelesen», «Weiter»
     const d=page.locator('dialog#officeLeitfaden[open]');
     await d.waitFor();
     assert.equal(await d.getAttribute('data-pflicht'),'1');
-    assert.equal((await d.locator('h2').textContent()).trim(),'Was darf auf den Desktop?');
+    assert.equal((await d.locator('h2').textContent()).trim(),'Was darf ins TBA Office?');
     for(const h of ['Grün: hochladen','Gelb: nur das Nötige, vorher prüfen','Rot: nicht hochladen'])
       assert.equal(await d.locator('h3',{hasText:h}).count(),1,h);
     assert.equal(await d.locator('[data-leitfaden-schliessen]').count(),0,'kein Schließen ohne Bestätigung');
@@ -57,7 +57,7 @@ test('Freigeschaltet und nicht bestätigt: einmal lesen, «Gelesen», «Weiter»
     await weiter.click();
     await page.locator('dialog#officeLeitfaden').waitFor({state:'detached'});
     const writes=await page.evaluate(()=>window.__writes.filter(w=>w.table==='office_leitfaden_bestaetigungen'));
-    assert.deepEqual(writes,[{table:'office_leitfaden_bestaetigungen',op:'insert',value:{user_id:'11111111-1111-4111-8111-111111111111',leitfaden:'desktop',version:'2026-11-25'}}]);
+    assert.deepEqual(writes,[{table:'office_leitfaden_bestaetigungen',op:'insert',value:{user_id:'11111111-1111-4111-8111-111111111111',leitfaden:'desktop',version:'2026-11-26'}}]);
     assert.equal(await page.evaluate(()=>window.TBA_OFFICE_LEITFADEN.verfuegbar()),true);
     // Zum Nachlesen (wie aus dem Desktop): mit «Schließen» und dem Tag der Bestätigung.
     await page.evaluate(()=>window.TBA_OFFICE_LEITFADEN.oeffnen());
@@ -73,7 +73,7 @@ test('Freigeschaltet und nicht bestätigt: einmal lesen, «Gelesen», «Weiter»
 
 for(const [fall,rows] of [
   ['schon bestätigt',{...aktiv,office_leitfaden_bestaetigungen:[{bestaetigt_am:'2026-11-26T08:00:00Z'}]}],
-  ['ausgeschaltet',{office_leitfaeden:[{version:'2026-11-25',aktiv:false}]}],
+  ['ausgeschaltet',{office_leitfaeden:[{version:'2026-11-26',aktiv:false}]}],
   ['unbekannter Stand',{office_leitfaeden:[{version:'2099-01-01',aktiv:true}]}],
   ['ohne Tabelle',{}]]){
   test(`Bleibt zu: ${fall}`,async()=>{

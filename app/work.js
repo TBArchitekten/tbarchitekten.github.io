@@ -746,7 +746,7 @@ async function renderDesktop(){
   const childFolders=folders.filter(x=>(x.parent_id||null)===(folderId||null)),trail=folderTrail(),body=$('#workBody');
   body.innerHTML=`<div class="work-desktop-toolbar"><div class="work-breadcrumb"><button data-work-project-root>${esc(project?.name||'Büro')}</button>${trail.map(f=>`<span>›</span><button data-work-crumb="${f.id}">${esc(f.name)}</button>`).join('')}</div><div class="work-toolbar-actions"><button data-work-dupes hidden>Duplikate</button><button data-work-new-folder>＋ Ordner</button><button data-work-upload>↑ Dateien</button></div></div>
     ${project?.id&&team.namen.length?`<p class="small work-desktop-team" data-work-team>Gemeinsamer Desktop des Projektteams: ${esc(team.namen.join(', '))}. Alle im Team sehen dieselben Ordner und Dateien.</p>`:''}
-    ${window.TBA_OFFICE_LEITFADEN?.verfuegbar?.()?'<p class="work-desktop-leitfaden"><button type="button" data-work-leitfaden>Was darf auf den Desktop?</button></p>':''}
+    ${window.TBA_OFFICE_LEITFADEN?.verfuegbar?.()?'<p class="work-desktop-leitfaden"><button type="button" data-work-leitfaden>Was darf ins TBA Office?</button></p>':''}
     <div class="work-drop-hint">Dateien, PDFs, Word, Excel, Bilder oder E-Mails hierher ziehen</div>
     <div class="work-files">
       ${folderId?`<button class="work-file work-folder work-up" data-work-up><span class="work-file-icon">${workTileIcon('back')}</span><strong>Zurück</strong><small>Ordner</small></button>`:''}
