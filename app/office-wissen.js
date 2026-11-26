@@ -326,6 +326,7 @@ async function render(ctx,{behalten=false}={}){
   if(!body)return;
   if(!ctx.sb||!project?.id){body.innerHTML='<div class="work-empty">Kein Projekt gewählt.</div>';return}
   if(zustand.projekt!==project.id){zustand={projekt:project.id,ansicht:null,seite:null,suche:''}}
+  const vorgemerkt=zustand.seiteTitel;zustand.seiteTitel=null;
   if(!behalten)body.innerHTML='<div class="work-empty">Lade das Projektwissen …</div>';
   try{daten=await laden(ctx)}
   catch(e){
@@ -339,6 +340,7 @@ async function render(ctx,{behalten=false}={}){
       '<p>Sie gehören nicht zum Team von «'+esc(project.name)+'». Die Projektleitung kann Sie unter Projekte ins Team aufnehmen.</p></div></div>';
     return;
   }
+  if(vorgemerkt){const s=daten.seiten.find(x=>norm(x.title)===norm(vorgemerkt));if(s){zustand.ansicht='seite';zustand.seite=s.id}}
   if(!zustand.ansicht||(zustand.ansicht==='seite'&&!daten.seiten.some(s=>s.id===zustand.seite))){
     zustand.ansicht=daten.seiten.length?'seite':(daten.protokoll.length||daten.beitraege.length?'neu':'leer');
     zustand.seite=daten.seiten[0]?.id||null;
@@ -353,7 +355,51 @@ async function render(ctx,{behalten=false}={}){
   await zeichne(ctx);
 }
 
-const api={render,renderMarkdown,verweise,datum,zeit};
+// Panorama: die Karte «Neu im Projektwissen» (Gari, 26.11.2026). Nur für das Projektteam; zählt, was auf die Projektleitung
+// oder die KI wartet, und zeigt die letzten Änderungen. Liest nur.
+async function panorama({sb,project}){
+  if(!sb||!project?.id)return {data:null,error:null};
+  const uid=(await sb.auth.getSession())?.data?.session?.user?.id||null;
+  const keins=Promise.resolve({data:null,error:null,count:0});
+  const zahl=q=>q.select('id',{count:'exact',head:true}).eq('project_id',project.id);
+  const [team,seiten,offen,beitr,prot]=await Promise.all([
+    uid?sb.from('office_project_members').select('user_id').eq('project_id',project.id).eq('user_id',uid).maybeSingle():keins,
+    zahl(sb.from('minds_work_memory')).eq('memory_type','document_state').eq('metadata->>kind','wissensseite').eq('status','confirmed'),
+    zahl(sb.from('minds_work_memory')).eq('memory_type','decision').eq('status','proposed'),
+    zahl(sb.from('office_wissen_beitraege')).is('eingearbeitet_am',null),
+    sb.from('office_wissen_protokoll').select('art,titel,created_at').eq('project_id',project.id).order('created_at',{ascending:false}).limit(3)
+  ]);
+  const fehler=[team,seiten,offen,beitr,prot].find(r=>r?.error);
+  if(fehler)return {data:null,error:fehler.error};
+  return {data:{imTeam:!!team.data,seiten:seiten.count||0,offen:offen.count||0,beitraege:beitr.count||0,neu:prot.data||[]},error:null};
+}
+function panoramaHtml(w,heute=new Date()){
+  if(!w||!w.imTeam)return '';
+  const tag=iso=>{const d=new Date(iso);if(isNaN(d))return '';
+    const t=x=>x.toLocaleDateString('de-DE',{timeZone:'Europe/Berlin'});
+    const gestern=new Date(heute.getTime()-864e5);
+    return t(d)===t(heute)?'heute':t(d)===t(gestern)?'gestern':d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',timeZone:'Europe/Berlin'})};
+  const KURZ={beitrag:'geteilt',seite_neu:'Seite neu',seite_geaendert:'fortgeschrieben',seite_zusammengefuehrt:'zusammengeführt',
+    entscheidung_vorgeschlagen:'vorgeschlagen',entscheidung_beschlossen:'beschlossen',entscheidung_verworfen:'verworfen',entscheidung_ersetzt:'ersetzt'};
+  const zeile=(ziel,titel,text,klein)=>'<button type="button" class="cockpit-file" data-work-wissen="'+esc(ziel)+'"'+(titel?' data-wissen-titel="'+esc(titel)+'"':'')+
+    '><span>'+esc(text)+'</span>'+(klein?'<small>'+esc(klein)+'</small>':'')+'</button>';
+  const zeilen=[];
+  if(w.offen)zeilen.push(zeile('entscheidungen','',w.offen+(w.offen===1?' Entscheidung':' Entscheidungen')+' zur Bestätigung',''));
+  if(w.beitraege)zeilen.push(zeile('neu','',w.beitraege+(w.beitraege===1?' Beitrag wartet':' Beiträge warten')+' auf die KI',''));
+  for(const x of w.neu){
+    const seite=x.art==='seite_neu'||x.art==='seite_geaendert';
+    zeilen.push(zeile(seite?'seite':'neu',seite?x.titel:'',x.titel,[KURZ[x.art]||'',tag(x.created_at)].filter(Boolean).join(' · ')));
+  }
+  return '<section class="cockpit-panel" aria-labelledby="cockpitWissen"><div class="cockpit-head"><h2 id="cockpitWissen">Neu im Projektwissen</h2>'+
+    '<button type="button" class="cockpit-link" data-work-wissen="">Öffnen</button></div>'+
+    (w.seiten||zeilen.length?'<p class="cockpit-empty">'+w.seiten+(w.seiten===1?' Seite':' Seiten')+'</p>'+zeilen.join(''):
+      '<p class="cockpit-empty">Noch kein Projektwissen. In einem Chat mit Claude «Ins Office übernehmen» sagen.</p>')+'</section>';
+}
+function vormerken(projektId,ziel){
+  const ansicht=['seite','neu','entscheidungen'].includes(ziel?.ansicht)?ziel.ansicht:null;
+  zustand={projekt:projektId,ansicht:ansicht==='seite'?null:ansicht,seite:null,suche:'',seiteTitel:ansicht==='seite'&&ziel?.seite?String(ziel.seite):null};
+}
+const api={render,renderMarkdown,verweise,datum,zeit,panorama,panoramaHtml,vormerken};
 if(typeof module==='object'&&module.exports)module.exports=api;
 else root.TBA_OFFICE_WISSEN=api;
 })(typeof window!=='undefined'?window:globalThis);

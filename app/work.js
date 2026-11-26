@@ -410,7 +410,9 @@ function officeTerminplaene(m){
     return '<a class="cockpit-file" href="../terminplan.html?id='+encodeURIComponent(p.id)+'" data-work-open-tool="terminplan" data-work-tool-id="'+esc(p.id)+'"><span>'+esc(next?next.name:(p.state?.project?.name||'Terminplan'))+'</span><small>'+esc(sub)+'</small></a>';
   }).join('');
   return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitPlans"><div class="cockpit-head"><h2 id="cockpitPlans">Terminpläne</h2><button type="button" class="cockpit-link" data-office-new-plan="'+esc(project.id)+'">+ Terminplan</button></div>'+
-    (rows||'<p class="cockpit-empty">Noch kein Terminplan für dieses Projekt.</p>')+'</section></div>';
+    (rows||'<p class="cockpit-empty">Noch kein Terminplan für dieses Projekt.</p>')+'</section>'+
+    // «Neu im Projektwissen» (26.11.2026): nur für das Projektteam; ohne Team oder ohne Antwort keine Karte.
+    (window.TBA_OFFICE_WISSEN?.panoramaHtml?.(m.wissen)||'')+'</div>';
 }
 function officeNextMilestone(state,today){
   const list=Array.isArray(state?.tasks)?state.tasks:[];
@@ -431,7 +433,8 @@ async function renderOverview(){
   body.innerHTML='<div class="work-empty">Lade den Projektstand …</div>';
   const today=localIso(),horizon=cockpitAddDays(today,15);
   const none=Promise.resolve({data:[],error:null,count:0});
-  const [t,c,f,a,pf,th,ev,pl]=await Promise.allSettled([
+  const wissen=OFFICE?window.TBA_OFFICE_WISSEN:null;
+  const [t,c,f,a,pf,th,ev,pl,wi]=await Promise.allSettled([
     sb.from('isabella_tasks').select('id,title,due_date,start_date,assignee,work_status').eq('project_id',projectId).is('completed_at',null).is('archived_at',null).order('due_date',{ascending:true,nullsFirst:false}).limit(150),
     OFFICE?none:sb.from('minds_work_claims').select('id,claim_type,status').eq('project_id',projectId).in('status',['proposed','disputed']).limit(1000),
     OFFICE?none:sb.from('minds_work_files').select('id,name,source_kind,created_at,storage_path,metadata',{count:'exact'}).eq('project_id',projectId).order('created_at',{ascending:false}).limit(5),
@@ -439,11 +442,12 @@ async function renderOverview(){
     OFFICE?none:sb.from('isabella_preferences').select('value').eq('preference_key','akte_pflege').limit(1),
     OFFICE?none:sb.from('minds_work_threads').select('id,title,summary,metadata,last_activity_at,updated_at,conversation_id').eq('project_id',projectId).eq('status','active').order('updated_at',{ascending:false}).limit(12),
     sb.from('isabella_events').select('id,title,starts_at,all_day').eq('project_id',projectId).gte('starts_at',today).lte('starts_at',horizon).order('starts_at',{ascending:true}).limit(40),
-    OFFICE?sb.from('office_terminplan_instances').select('id,phase,state,updated_at').eq('project_id',projectId).eq('is_archived',false).order('updated_at',{ascending:false}):none
+    OFFICE?sb.from('office_terminplan_instances').select('id,phase,state,updated_at').eq('project_id',projectId).eq('is_archived',false).order('updated_at',{ascending:false}):none,
+    wissen?.panorama?wissen.panorama({sb,project:{id:projectId}}):none
   ]);
   if(view!=='overview'||project?.id!==projectId)return;
   const ok=r=>r.status==='fulfilled'&&!r.value?.error?r.value:null;
-  const taskQ=ok(t),claimQ=ok(c),fileQ=ok(f),memQ=ok(a),pflegeQ=ok(pf),threadQ=ok(th),eventQ=ok(ev),planQ=ok(pl);
+  const taskQ=ok(t),claimQ=ok(c),fileQ=ok(f),memQ=ok(a),pflegeQ=ok(pf),threadQ=ok(th),eventQ=ok(ev),planQ=ok(pl),wissenQ=ok(wi);
   const mem=memQ?.data||[],tasks=taskQ?.data||[],claims=claimQ?.data||[];
   const m={today,tasks,tasksError:!taskQ,claimsError:!claimQ,
     overdue:tasks.filter(x=>x.due_date&&String(x.due_date).slice(0,10)<today),
@@ -455,7 +459,7 @@ async function renderOverview(){
     confirmed:mem.filter(r=>(r.memory_type==='decision'||r.memory_type==='deadline')&&r.status==='confirmed'),
     threads:threadQ?.data||[],events:eventQ?.data||[],files:fileQ?.data||[],fileCount:fileQ?fileQ.count??null:null,
     claimsToReview:claims.length,claimDeadlines:claims.filter(x=>x.claim_type==='deadline').length,
-    pflege:pflegeQ?.data?.[0]?.value||null,plans:planQ?.data||[],partial:(OFFICE?[taskQ,eventQ,planQ]:[taskQ,claimQ,fileQ,memQ,threadQ]).some(x=>!x)};
+    pflege:pflegeQ?.data?.[0]?.value||null,plans:planQ?.data||[],wissen:wissenQ?.data||null,partial:(OFFICE?[taskQ,eventQ,planQ]:[taskQ,claimQ,fileQ,memQ,threadQ]).some(x=>!x)};
   body.innerHTML=cockpitMarkup(m);
   $$('[data-work-go]').forEach(button=>button.onclick=()=>document.querySelector('[data-work-view="'+button.dataset.workGo+'"]')?.click());
   $$('[data-office-new-plan]').forEach(button=>button.onclick=()=>void window.TBA_OFFICE_PROJECTS?.openNewPlan?.(button.dataset.officeNewPlan,{onCreated:id=>openToolTab('terminplan',id)}));
@@ -465,6 +469,7 @@ async function renderOverview(){
   $$('[data-akte-undo]').forEach(button=>button.onclick=()=>{button.disabled=true;void undoSteckbrief(button.dataset.akteUndo)});
   $$('[data-cockpit-done]').forEach(button=>button.onclick=()=>{button.disabled=true;void completeTaskFromPanorama(button.dataset.cockpitDone)});
   $$('[data-cockpit-more]').forEach(button=>button.onclick=()=>{paraTiExpanded=!paraTiExpanded;void renderOverview()});
+  $$('[data-work-wissen]').forEach(button=>button.onclick=()=>{window.TBA_OFFICE_WISSEN?.vormerken?.(projectId,{ansicht:button.dataset.workWissen,seite:button.dataset.wissenTitel});document.querySelector('[data-work-view="knowledge"]')?.click()});
   $$('[data-cockpit-thread]').forEach(button=>button.onclick=()=>{activeThreadId=button.dataset.cockpitThread;document.querySelector('[data-work-view="threads"]')?.click()});
   $$('[data-cockpit-file]').forEach(button=>button.onclick=async()=>{const file=m.files.find(x=>x.id===button.dataset.cockpitFile);if(!file)return;const r=await sb.storage.from('minds-work').createSignedUrl(file.storage_path,900);if(r.error||!r.data?.signedUrl){setStatus('Die Datei konnte nicht geöffnet werden.');return}window.open(r.data.signedUrl,'_blank','noopener')});
 }
