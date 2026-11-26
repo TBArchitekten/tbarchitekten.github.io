@@ -35,7 +35,7 @@ Fuera por diseño: los chats con Romy y sus memorias, y los Threads (son privado
 
 ## Pasar a un proyecto lo de un chat de Claude («pásalo al Office»)
 
-Basta con decirlo al final del chat. Claude abre el proyecto, comparte lo trabajado como aporte (`share_knowledge`), lo integra en las páginas del **Projektwissen** (`read_page`, `write_page`: crea, une, actualiza y enlaza páginas, y marca las contradicciones), anota las decisiones (`record_decision`) y resume en 3–5 líneas qué cambió. El equipo lo lee en Work → **Wissen**, deja notas o correcciones, y la dirección del proyecto confirma las decisiones. Concepto, modelo y reglas: `PROJEKTWISSEN.md`.
+Basta con decirlo cuando haya un resultado, no solo al final: al cerrar una investigación, al decidir algo o antes de dejar el chat unos días, también varias veces en el mismo chat (desde la segunda vez pasa solo lo nuevo o cambiado). Claude abre el proyecto, comparte lo trabajado como aporte (`share_knowledge`), lo integra en las páginas del **Projektwissen** (`read_page`, `write_page`: crea, une, actualiza y enlaza páginas, y marca las contradicciones), anota las decisiones (`record_decision`) y resume en 3–5 líneas qué cambió. El equipo lo lee en Work → **Wissen**, deja notas o correcciones, y la dirección del proyecto confirma las decisiones. Concepto, modelo y reglas: `PROJEKTWISSEN.md`.
 
 Historia: el 26.11.2026 (#180) el conector guardaba lo de un chat como documentos en el Desktop del proyecto. Ese mismo día Gari decidió dejar el Desktop fuera (es el servidor de archivos de la oficina; cada uno deja ahí sus PDFs), y `close_session` y `file_document` se quitaron (#182) antes de que nadie los usara.
 
