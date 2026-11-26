@@ -67,6 +67,11 @@ Der volle Text steht in `office_wissen_regeln` und geht bei jedem Teilen an Clau
 - Gelöscht wird nichts: jede frühere Fassung bleibt; `minds_work_memory` hat ohnehin kein Löschrecht. Direkt in `minds_work_memory` gelten deren bisherige Regeln (eigene Zeilen); die Oberfläche und der Connector schreiben nur über die Funktionen.
 - Die Oberfläche zeigt Markdown sicher: erst escapen, dann wenige Formen (Überschriften, Listen, Tabellen, Zitate, Code, Links nur `https`/`mailto`).
 
+## Romy
+
+- **Im Chat mit Romy** (Windows Motor, `isabella-chat`) findet die Projektsuche `search_work` die Seiten und Entscheidungen schon, denn sie liest die Projektakte (`minds_work_memory`) mit Titel, Text und Status. Der Motor ist byte-gleich mit Window (`docs/sync-window-engine-manifest.json`); Änderungen daran gehen über Window.
+- **In den Threads** (Work → Threads, `office-assistant`) seit dem 26.11.2026 zwei lesende Werkzeuge: `search_project_knowledge` (Seiten mit Kurzfassung und Stand, Entscheidungen «beschlossen» oder «vorgeschlagen», mit Suchbegriff ein Auszug) und `read_project_knowledge_page` (eine Seite ganz, mit Verweisen und ihren Entscheidungen; eine zusammengeführte Seite führt zur neuen). Beide mit dem JWT der Person: nur das Projektteam sieht etwas. Romy schreibt nicht ins Projektwissen.
+
 ## Dateien
 
 - Datenbank: `supabase/migrations/20261126193119_office_projektwissen.sql`; Abnahme `tests/sql/office-projektwissen-acceptance.sql` (in CI gegen eine leere Supabase).
@@ -76,7 +81,6 @@ Der volle Text steht in `office_wissen_regeln` und geht bei jedem Teilen an Clau
 
 ## Nächste Schritte (offen)
 
-- Romy liest das Projektwissen: ein Werkzeug zum Suchen und Lesen der Seiten im Chat (heute liest Romy die Projektakte nicht).
 - Karte «Neu im Projektwissen» im Panorama.
 - Regelmäßige Pflege (nachts durch Romy oder als geplante Aufgabe in Claude): offene Beiträge einarbeiten, Doppeltes zusammenführen, Widersprüche melden.
 - Dasselbe für Window (Garis eigene Projekte).

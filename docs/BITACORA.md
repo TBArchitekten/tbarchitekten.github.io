@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Romy liest das Projektwissen (Threads) · Claude
+- Qué cambió y por qué: Gari wollte, dass Romy die Seiten in ihrem Chat suchen und lesen kann. Beim Prüfen: Der Chat mit Romy läuft im Office über Windows Motor (`isabella-chat`), und dessen `search_work` liest die Projektakte mit Titel, Text und Status, findet also Seiten und Entscheidungen schon; meine frühere Aussage (#183), Romy lese die Projektakte nicht, stimmte nur für die Threads (`office-assistant`). Dort jetzt zwei lesende Werkzeuge: `search_project_knowledge` (Seiten mit Kurzfassung und Stand, Entscheidungen als «beschlossen»/«vorgeschlagen», mit Suchbegriff ein Auszug; Filterzeichen neutralisiert) und `read_project_knowledge_page` (Seite ganz bis 60.000 Zeichen, Verweise, Entscheidungen der Seite; eine zusammengeführte Seite führt zur neuen; ohne Treffer die Liste der Seiten). Beide mit dem JWT der Person, also RLS: nur das Projektteam. Anweisung und Thread-Hinweis ergänzt. Den Motor selbst nicht angefasst: er ist byte-gleich mit Window (`docs/sync-window-engine-manifest.json`, Test `romy-engine-parity`); eine Kennzeichnung der Seiten in `search_work` ginge nur über Window.
+- Archivos: `supabase/functions/office-assistant/romy-tools.mjs`, `supabase/functions/office-assistant/index.ts`, `tests/office-romy-projektwissen.test.mjs` (neu), `docs/PROJEKTWISSEN.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: `office-assistant` über den Workflow nach dem Merge.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (517); `deno check` von `office-assistant` mit denselben 100 alten Typfehlern wie auf `main` (keiner neu; die Funktion war so schon deployt).
+- Quedó pendiente o sin probar: ein echter Thread mit einer Frage zum Projektwissen.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #186
+
+---
+
 ### 2026-11-26 · Projektwissen: schärfere Regel für Entscheidungen · Claude
 - Qué cambió y por qué: Erster echter Einsatz am Abend des 26.11.2026 (drei Beiträge, 8 Seiten, 17 Entscheidungen). Das Register füllte sich mit Arbeitsregeln des Teams (wie mit Herstellern gearbeitet und formuliert wird), und eine Empfehlung an die Bauherrschaft stand als «beschlossen», obwohl ihr eigener Text sagt, dass die Bauherrschaft sie erst noch bestätigt. Mit Garis OK: Regel geschärft (nur, was das Projekt bindet; «beschlossen» nur, wenn entschieden hat, wer es zu entscheiden hat; Empfehlungen bleiben vorgeschlagen; Arbeitsregeln auf die Seite) und die drei Einträge korrigiert.
 - Archivos: `supabase/migrations/20261126215655_office_projektwissen_entscheidungen.sql`, `supabase/functions/office-mcp/index.ts` (Anweisungen, `record_decision`), `app/office-wissen.js` (`office2`: «Ersetzt durch …», «Keine Projektentscheidung, sondern Arbeitsweise des Teams: steht auf der Seite …», Korrekturvermerk), `app/index.html`, `tests/office-projektwissen.test.mjs`, `tests/browser/office-wissen.chromium.mjs`, `docs/PROJEKTWISSEN.md`, `docs/OFFICE-CONNECTOR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.

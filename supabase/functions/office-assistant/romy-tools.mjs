@@ -30,6 +30,8 @@ const ALL_ROMY_TOOLS=[
  {type:"function",name:"list_tasks",description:"Read office tasks visible to this employee. Project tasks are shared; personal tasks are owner-only. For 'what is pending today' use range:'today': open tasks due today or earlier (overdue ones carry overdue:true) plus multi-day tasks already started (in_progress:true). range:'week' does the same for the next 7 days. For another day, such as tomorrow, use day:'YYYY-MM-DD' (Europe/Berlin): open tasks due that day or earlier, so tasks still open from before are included (overdue:true), plus multi-day tasks running that day. Never say nothing is pending without checking overdue tasks; never use due_from/due_to for such questions. due_from/due_to filter by exact due dates; project_id by project UUID. mine:true marks tasks this employee created or is assigned to; responsable names who carries a task in the team (absent = nobody assigned).",strict:false,parameters:{type:"object",properties:{range:{type:"string",enum:["today","week"]},day:{type:"string",description:"YYYY-MM-DD, for 'what is pending on <day>' (e.g. tomorrow)"},project_id:{type:"string"},due_from:{type:"string"},due_to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_calendar",description:"Read the employee's own calendar appointments overlapping an inclusive date range in Europe/Berlin. Do not assume colleagues' availability.",strict:false,parameters:{type:"object",properties:{from:{type:"string"},to:{type:"string"}},additionalProperties:false}},
  {type:"function",name:"list_files",description:"List filenames and metadata in the shared Office or project Desktop. project_id can be omitted for the shared Büro root.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},search:{type:"string"},scope:{type:"string",enum:["office","project","all"]}},additionalProperties:false}},
+ {type:"function",name:"search_project_knowledge",description:"Search a project's Projektwissen: the project team's shared knowledge pool, kept by the AI from the team's contributions. Returns pages (title, one-line summary, Stand, an excerpt when a query is given) and the decision register (beschlossen or vorgeschlagen). Without query: all pages and the open and confirmed decisions. Only the project team sees it.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},query:{type:"string"}},required:["project_id"],additionalProperties:false}},
+ {type:"function",name:"read_project_knowledge_page",description:"Read one Projektwissen page in full by its title (as search_project_knowledge lists it): its text, Stand, linked pages and the decisions that belong to it. A merged page leads to the page it went into.",strict:false,parameters:{type:"object",properties:{project_id:{type:"string"},title:{type:"string"}},required:["project_id","title"],additionalProperties:false}},
  {type:"function",name:"read_text_file",description:"Read text/markdown/CSV/JSON source material from a shared Desktop file by exact file UUID. Other formats may require an attachment; do not pretend to read them.",strict:false,parameters:{type:"object",properties:{file_id:{type:"string"}},required:["file_id"],additionalProperties:false}},
  {type:"function",name:"create_document",
  description:"Produce an actual downloadable DOCX, PDF or TXT document from drafted content, using the original Window artifact makers. The document is privately stored for this employee; it is not automatically project truth or shared with Office Desktop.",
@@ -90,6 +92,15 @@ export function shapeTaskRows(rows,{day,range,userId,assigned=new Set(),today=da
   in_progress:!t.completed_at&&!!t.start_date&&t.start_date<=day&&(!t.due_date||t.due_date>day)||undefined,
   mine:user_id===userId||assignee_person_id===userId||assigned.has(t.id)||undefined}));
 }
+// Projektwissen: a short excerpt around the first hit, and decisions in the office's words.
+export function knowledgeExcerpt(text,query){
+ const t=String(text||""),q=String(query||"").trim().toLowerCase();
+ const at=q?t.toLowerCase().indexOf(q):-1;
+ const from=Math.max(0,at<0?0:at-160);
+ return (from>0?"…":"")+t.slice(from,from+480).replace(/\s+/g," ").trim()+(from+480<t.length?"…":"");
+}
+const knowledgeDecision=x=>({title:x.title,status:x.status==="confirmed"?"beschlossen":"vorgeschlagen",
+ datum:x.occurred_at?String(x.occurred_at).slice(0,10):null,details:String(x.body||"").slice(0,600)||null,seite:x.metadata?.seite||null});
 async function registerProposal({admin,requestId,userId,conversationId,kind,payload}){
  const {data,error}=await admin.from("office_romy_proposals").insert({
    request_id:requestId,user_id:userId,conversation_id:conversationId,kind,payload,
@@ -213,6 +224,52 @@ export async function executeRomyTool(name,args,{userDb,admin,userId,conversatio
   if(a.search)q=q.ilike("name","%"+normalized(a.search,100).replace(/[\\%_]/g,m=>"\\"+m)+"%");
   const rows=await checkedQuery(q.order("name").limit(200));
   return {files:safeArray(rows,200),scope:a.scope==="all"?"all_office_projects":a.project_id||"Büro",content_read:false,has_more_possible:rows.length===200};
+ }
+ // Projektwissen (Gari, 26.11.2026): read only, with the employee's JWT, so only the project team sees it.
+ if(name==="search_project_knowledge"){
+  if(!validId(a.project_id))return err("invalid_project_id");
+  const query=normalized(a.query,160);
+  const like=query?"%"+query.replace(/[\\%_,()"]/g," ").trim()+"%":null;
+  let pages=userDb.from("minds_work_memory").select("id,title,body,updated_at,metadata")
+    .eq("project_id",a.project_id).eq("memory_type","document_state").eq("metadata->>kind","wissensseite").eq("status","confirmed");
+  let decisions=userDb.from("minds_work_memory").select("id,title,body,status,occurred_at,metadata")
+    .eq("project_id",a.project_id).eq("memory_type","decision").in("status",["proposed","confirmed"]);
+  if(like){pages=pages.or("title.ilike."+like+",body.ilike."+like);decisions=decisions.or("title.ilike."+like+",body.ilike."+like);}
+  const [p,d]=await Promise.all([checkedQuery(pages.order("updated_at",{ascending:false}).limit(60)),
+    checkedQuery(decisions.order("occurred_at",{ascending:false,nullsFirst:false}).limit(60))]);
+  return {project_id:a.project_id,query:query||null,
+    pages:p.map(x=>({title:x.title,kurz:x.metadata?.kurz||null,stand:x.updated_at,...(query?{auszug:knowledgeExcerpt(x.body,query)}:{})})),
+    decisions:d.map(knowledgeDecision),
+    scope:"project team only (RLS)",
+    note:p.length||d.length?"Pages are the team's current state; cite title and Stand. vorgeschlagen is not decided yet.":
+      "Nothing visible: the project has no Projektwissen yet, nothing matches, or this employee is not in the project team."};
+ }
+ if(name==="read_project_knowledge_page"){
+  if(!validId(a.project_id))return err("invalid_project_id");
+  const title=normalized(a.title,200);
+  if(!title)return err("missing_title");
+  const exact=title.replace(/[\\%_]/g,m=>"\\"+m);
+  const pageQuery=status=>userDb.from("minds_work_memory").select("id,title,body,status,updated_at,metadata")
+    .eq("project_id",a.project_id).eq("memory_type","document_state").eq("metadata->>kind","wissensseite").eq("status",status);
+  let page=(await checkedQuery(pageQuery("confirmed").ilike("title",exact).limit(1)))[0];
+  let redirected=null;
+  if(!page){
+   const old=(await checkedQuery(pageQuery("superseded").ilike("title",exact).order("updated_at",{ascending:false}).limit(1)))[0];
+   const into=old?.metadata?.zusammengefuehrt_in;
+   if(into){page=(await checkedQuery(pageQuery("confirmed").ilike("title",String(into).replace(/[\\%_]/g,m=>"\\"+m)).limit(1)))[0];redirected=old.title;}
+  }
+  if(!page){
+   const titles=await checkedQuery(userDb.from("minds_work_memory").select("title").eq("project_id",a.project_id)
+     .eq("memory_type","document_state").eq("metadata->>kind","wissensseite").eq("status","confirmed").order("updated_at",{ascending:false}).limit(80));
+   return {found:false,title,pages:titles.map(x=>x.title)};
+  }
+  const linked=await checkedQuery(userDb.from("minds_work_memory").select("id,title,body,status,occurred_at,metadata")
+    .eq("project_id",a.project_id).eq("memory_type","decision").in("status",["proposed","confirmed"]).eq("metadata->>seite",page.title).limit(40));
+  const body=String(page.body||"");
+  return {found:true,title:page.title,redirected_from:redirected,stand:page.updated_at,kurz:page.metadata?.kurz||null,
+    text:body.slice(0,60000),truncated:body.length>60000,
+    links:[...new Set((body.match(/\[\[([^\]\n]{1,200})\]\]/g)||[]).map(m=>m.slice(2,-2).trim()).filter(Boolean))].slice(0,40),
+    decisions:linked.map(knowledgeDecision),scope:"project team only (RLS)"};
  }
  if(name==="read_text_file"){
   if(!validId(a.file_id))return err("invalid_file_id");
