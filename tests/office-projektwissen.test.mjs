@@ -309,8 +309,8 @@ test('Oberfläche: Reiter «Wissen» neben Panorama, geladen vor work.js, liest 
   assert.match(work,/\['overview','planner','knowledge'\]\.includes\(b\.dataset\.workView\)/);
   assert.match(work,/:view==='knowledge'\?\(OFFICE\?renderWissen\(\):renderKnowledge\(\)\)/);
   assert.match(work,/isCurrent:\(\)=>current===workRenderVersion&&view==='knowledge'&&project\?\.id===id/);
-  assert.ok(index.indexOf('<script src="./office-wissen.js?v=office2"></script>')>0);
-  assert.ok(index.indexOf('./office-wissen.js?v=office2')<index.indexOf('./work.js?v=office60'),'vor work.js');
+  assert.ok(index.indexOf('<script src="./office-wissen.js?v=office3"></script>')>0);
+  assert.ok(index.indexOf('./office-wissen.js?v=office3')<index.indexOf('./work.js?v=office61'),'vor work.js');
   assert.match(index,/<link rel="stylesheet" href="\.\/office-wissen\.css\?v=office1">/);
   // Keine direkten Schreibzugriffe; nur die zwei Funktionen für das Team.
   assert.doesNotMatch(js,/\.(insert|update|upsert|delete)\(/);
@@ -318,6 +318,34 @@ test('Oberfläche: Reiter «Wissen» neben Panorama, geladen vor work.js, liest 
   // Wer nicht im Team ist, bekommt eine Erklärung; Sie-Form.
   assert.match(js,/Sie gehören nicht zum Team von «/);
   assert.doesNotMatch(js.replace(/\/\/[^\n]*/g,''),/\b(du|dein|deine|dich|dir)\b/i);
+});
+
+test('Panorama: Karte «Neu im Projektwissen» nur fürs Team, kurz, liest nur; öffnet das Wissen an der richtigen Stelle',()=>{
+  const heute=new Date('2026-11-26T22:30:00Z');
+  assert.equal(ui.panoramaHtml(null),'');
+  assert.equal(ui.panoramaHtml({imTeam:false,seiten:3,offen:1,beitraege:0,neu:[]}),'','außerhalb des Teams keine Karte');
+  const html=ui.panoramaHtml({imTeam:true,seiten:8,offen:5,beitraege:1,neu:[
+    {art:'seite_geaendert',titel:'Lichtkonzept',created_at:'2026-11-26T22:08:18Z'},
+    {art:'entscheidung_ersetzt',titel:'Regel <b>',created_at:'2026-11-25T20:00:00Z'},
+    {art:'seite_neu',titel:'Bäder',created_at:'2026-11-20T10:00:00Z'}]},heute);
+  assert.match(html,/<h2 id="cockpitWissen">Neu im Projektwissen<\/h2><button type="button" class="cockpit-link" data-work-wissen="">Öffnen<\/button>/);
+  assert.match(html,/<p class="cockpit-empty">8 Seiten<\/p><button type="button" class="cockpit-file" data-work-wissen="entscheidungen"><span>5 Entscheidungen zur Bestätigung<\/span><\/button>/);
+  assert.match(html,/data-work-wissen="neu"><span>1 Beitrag wartet auf die KI<\/span>/);
+  assert.match(html,/data-work-wissen="seite" data-wissen-titel="Lichtkonzept"><span>Lichtkonzept<\/span><small>fortgeschrieben · heute<\/small>/);
+  assert.match(html,/data-work-wissen="neu"><span>Regel &lt;b&gt;<\/span><small>ersetzt · gestern<\/small>/);
+  assert.match(html,/data-wissen-titel="Bäder"><span>Bäder<\/span><small>Seite neu · 20\.11\.<\/small>/);
+  assert.match(ui.panoramaHtml({imTeam:true,seiten:0,offen:0,beitraege:0,neu:[]}),/Noch kein Projektwissen\. In einem Chat mit Claude «Ins Office übernehmen» sagen\./);
+  // Daten: nur lesen, gezählt; Team über office_project_members.
+  const js=read('app/office-wissen.js');
+  const teil=js.slice(js.indexOf('async function panorama('),js.indexOf('function panoramaHtml('));
+  assert.doesNotMatch(teil,/\.(insert|update|upsert|delete|rpc)\(/);
+  assert.match(teil,/office_project_members/);
+  assert.match(teil,/select\('id',\{count:'exact',head:true\}\)/);
+  // work.js: in derselben Spalte wie die Terminpläne; Klick merkt Ansicht oder Seite vor und öffnet den Reiter.
+  const work=read('app/work.js');
+  assert.match(work,/wissen\?\.panorama\?wissen\.panorama\(\{sb,project:\{id:projectId\}\}\):none/);
+  assert.match(work,/\(window\.TBA_OFFICE_WISSEN\?\.panoramaHtml\?\.\(m\.wissen\)\|\|''\)\+'<\/div>';/);
+  assert.match(work,/window\.TBA_OFFICE_WISSEN\?\.vormerken\?\.\(projectId,\{ansicht:button\.dataset\.workWissen,seite:button\.dataset\.wissenTitel\}\);document\.querySelector\('\[data-work-view="knowledge"\]'\)\?\.click\(\)/);
 });
 
 test('Oberfläche: Farben nur aus den Tokens',()=>{

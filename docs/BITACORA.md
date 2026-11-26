@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Panorama-Karte «Neu im Projektwissen» · Claude
+- Qué cambió y por qué: Gari wollte eine Karte «Neu im Projektwissen» im Panorama. Sie steht in der rechten Spalte unter den Terminplänen und zeigt nur dem Projektteam (Mitgliedschaft über `office_project_members`; sonst keine Karte): die Zahl der Seiten, die Entscheidungen zur Bestätigung, die Beiträge, die auf die KI warten, und die letzten drei Änderungen mit Titel, Art und Tag (heute, gestern oder Datum). Ohne Projektwissen ein Satz, wie es entsteht. Ein Klick merkt die Ansicht oder die Seite vor (`TBA_OFFICE_WISSEN.vormerken`) und öffnet den Reiter «Wissen» dort. Die erste Fassung schnitt in der schmalen Spalte die Zeilen ab; nach dem Bildschirmfoto: Titel zuerst, Art und Tag klein, «Öffnen» statt «Wissen öffnen».
+- Archivos: `app/office-wissen.js` (`panorama`, `panoramaHtml`, `vormerken`; `office3`), `app/work.js` (`office61`), `app/index.html`, `tests/office-projektwissen.test.mjs`, `tests/browser/office-wissen.chromium.mjs` (Panorama mit Team, ohne Team, leer), Versionsstände in den Tests, `docs/PROJEKTWISSEN.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün (518); Chromium `office-wissen` (9) und die Work-Tests (21) grün; Bildschirmfotos angesehen.
+- Quedó pendiente o sin probar: nichts Bekanntes.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #187
+
+---
+
 ### 2026-11-26 · Romy liest das Projektwissen (Threads) · Claude
 - Qué cambió y por qué: Gari wollte, dass Romy die Seiten in ihrem Chat suchen und lesen kann. Beim Prüfen: Der Chat mit Romy läuft im Office über Windows Motor (`isabella-chat`), und dessen `search_work` liest die Projektakte mit Titel, Text und Status, findet also Seiten und Entscheidungen schon; meine frühere Aussage (#183), Romy lese die Projektakte nicht, stimmte nur für die Threads (`office-assistant`). Dort jetzt zwei lesende Werkzeuge: `search_project_knowledge` (Seiten mit Kurzfassung und Stand, Entscheidungen als «beschlossen»/«vorgeschlagen», mit Suchbegriff ein Auszug; Filterzeichen neutralisiert) und `read_project_knowledge_page` (Seite ganz bis 60.000 Zeichen, Verweise, Entscheidungen der Seite; eine zusammengeführte Seite führt zur neuen; ohne Treffer die Liste der Seiten). Beide mit dem JWT der Person, also RLS: nur das Projektteam. Anweisung und Thread-Hinweis ergänzt. Den Motor selbst nicht angefasst: er ist byte-gleich mit Window (`docs/sync-window-engine-manifest.json`, Test `romy-engine-parity`); eine Kennzeichnung der Seiten in `search_work` ginge nur über Window.
 - Archivos: `supabase/functions/office-assistant/romy-tools.mjs`, `supabase/functions/office-assistant/index.ts`, `tests/office-romy-projektwissen.test.mjs` (neu), `docs/PROJEKTWISSEN.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.

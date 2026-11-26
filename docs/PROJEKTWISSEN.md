@@ -23,6 +23,7 @@ Auf Wunsch («Wissen pflegen») liest Claude alle Seiten, führt Doppeltes zusam
 - «Hinweis geben» auf einer Seite und «Notiz teilen» oben: das Team schreibt nicht in die Seiten, sondern gibt der KI Beiträge, die sie beim nächsten Mal einarbeitet. So bleibt jede Seite ein Text aus einem Guss, und nichts geht verloren.
 - Vorgeschlagene Entscheidungen bestätigt oder verwirft die Projektleitung (oder ein Admin im Team).
 - Die Suche findet Seiten und Beiträge.
+- **Im Panorama** die Karte «Neu im Projektwissen» (seit dem 26.11.2026, nur für das Projektteam): Zahl der Seiten, Entscheidungen zur Bestätigung, Beiträge, die auf die KI warten, und die letzten drei Änderungen; ein Klick öffnet das Wissen an dieser Stelle.
 
 ## Vorbilder (Recherche vom 26.11.2026)
 
@@ -81,6 +82,5 @@ Der volle Text steht in `office_wissen_regeln` und geht bei jedem Teilen an Clau
 
 ## Nächste Schritte (offen)
 
-- Karte «Neu im Projektwissen» im Panorama.
 - Regelmäßige Pflege (nachts durch Romy oder als geplante Aufgabe in Claude): offene Beiträge einarbeiten, Doppeltes zusammenführen, Widersprüche melden.
 - Dasselbe für Window (Garis eigene Projekte).

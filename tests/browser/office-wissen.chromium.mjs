@@ -68,14 +68,14 @@ const leer=()=>{const f=voll();return {...f,minds_work_memory:[],office_wissen_b
 
 // «<» als \u003c, sonst beendet das </script> aus der Testseite das Skript der Attrappe.
 const json=v=>JSON.stringify(v).replace(/</g,'\\u003c');
-const harness=(uid,fix)=>`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${pageCss}</head>
+const harness=(uid,fix,ansicht='knowledge')=>`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${pageCss}</head>
 <body data-section="work" class="office-app"><div class="app" id="app"><main id="swipeArea" class="swipe-area"><section id="workScreen" class="screen work-screen active" data-screen="work"><div class="work-shell">
 <div class="work-head"><div><h1 id="workProjectTitle">Work</h1></div><div class="work-project-switch"></div></div>
 ${tabs}
 <div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div><div id="workToolHost" class="work-tool-host" hidden></div></div></section></main></div>
 <div id="modalRoot" hidden></div>
 <script>
-localStorage.setItem('minds-work-project','p1');localStorage.setItem('minds-work-view','knowledge');
+localStorage.setItem('minds-work-project','p1');localStorage.setItem('minds-work-view',${JSON.stringify(ansicht)});
 window.TBA_OFFICE_CONFIG={};window.__writes=[];window.__rpc=[];
 const UID=${json(uid)},FIX=${json(fix)};
 const wert=(r,c)=>{if(c.includes('->>')){const [a,f]=c.split('->>');return r[a]?.[f]}return r[c]};
@@ -120,7 +120,8 @@ window.ISABELLA_APP={getState:()=>({}),openModal:(title,html)=>{const e=document
 <script src="./task-team.js"></script><script src="./task-detail.js"></script><script src="./planner-terminplan-sync.js"></script>
 <script src="./office-wissen.js"></script><script src="./work.js"></script></body></html>`;
 
-const pages=new Map([['gari',harness('pa',voll())],['ana',harness('pb',voll())],['carla',harness('pc',voll())],['leer',harness('pa',leer())]]);
+const pages=new Map([['gari',harness('pa',voll())],['ana',harness('pb',voll())],['carla',harness('pc',voll())],['leer',harness('pa',leer())],
+  ['panorama',harness('pa',voll(),'overview')],['panoramacarla',harness('pc',voll(),'overview')],['panoramaleer',harness('pa',leer(),'overview')]]);
 const server=http.createServer((req,res)=>{
  const pathname=decodeURIComponent((req.url||'').split('?')[0]);
  const m=pathname.match(/^\/app\/__wissen_([a-z]+)__\.html$/);
@@ -133,11 +134,11 @@ const server=http.createServer((req,res)=>{
 const browser=await chromium.launch({headless:true});
 test.after(async()=>{await browser.close();server.close()});
 
-async function oeffnen(wer,viewport={width:1280,height:900}){
+async function oeffnen(wer,viewport={width:1280,height:900},warten='.wissen, .wissen-leer'){
   const page=await browser.newPage({viewport});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://localhost:${server.address().port}/app/__wissen_${wer}__.html#section=work`);
-  await page.locator('.wissen, .wissen-leer').first().waitFor();
+  await page.locator(warten).first().waitFor();
   return {page,errors};
 }
 const text=(page,sel)=>page.locator(sel).first().innerText();
@@ -308,4 +309,39 @@ test('iPhone: Liste über der Seite, nichts ragt über den Rand',async()=>{
     assert.deepEqual(m,{gestapelt:true,breit:true,seite:true,tabelle:true});
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
+});
+
+test('Panorama: Karte «Neu im Projektwissen» zählt, was wartet, und öffnet das Wissen an der richtigen Stelle',async()=>{
+  const {page,errors}=await oeffnen('panorama',{width:1280,height:900},'.work-cockpit');
+  try{
+    await page.locator('#cockpitWissen').waitFor();
+    const karte=await page.locator('section[aria-labelledby="cockpitWissen"]').innerText();
+    assert.match(karte,/Neu im Projektwissen[\s\S]*Öffnen[\s\S]*2 Seiten[\s\S]*1 Entscheidung zur Bestätigung[\s\S]*1 Beitrag wartet auf die KI[\s\S]*Feinsteinzeug 60 × 60 in den Fluren\s*vorgeschlagen · (gestern|25\.11\.)[\s\S]*Bodenbelag Flure\s*Seite neu · (gestern|25\.11\.)/);
+    // Neben den Terminplänen, in derselben Spalte.
+    assert.equal(await page.evaluate(()=>document.querySelector('#cockpitWissen').closest('.cockpit-stack')===document.querySelector('#cockpitPlans').closest('.cockpit-stack')),true);
+    await page.locator('[data-work-wissen="entscheidungen"]').click();
+    await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Entscheidungen');
+    assert.equal(await page.evaluate(()=>document.querySelector('[data-work-view="knowledge"]').classList.contains('active')),true);
+    await page.locator('[data-work-view="overview"]').click();
+    await page.locator('#cockpitWissen').waitFor();
+    await page.locator('[data-work-wissen="seite"][data-wissen-titel="Bodenbelag Flure"]').click();
+    await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Bodenbelag Flure');
+    assert.deepEqual(await page.evaluate(()=>window.__writes),[],'die Karte liest nur');
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
+
+test('Panorama: ohne Team keine Karte; ohne Projektwissen ein Hinweis, wie es entsteht',async()=>{
+  const fremd=await oeffnen('panoramacarla',{width:1280,height:900},'.work-cockpit');
+  try{
+    await fremd.page.locator('#cockpitPlans').waitFor();
+    assert.equal(await fremd.page.locator('#cockpitWissen').count(),0);
+    assert.deepEqual(fremd.errors,[]);
+  }finally{await fremd.page.close()}
+  const leer=await oeffnen('panoramaleer',{width:1280,height:900},'.work-cockpit');
+  try{
+    await leer.page.locator('#cockpitWissen').waitFor();
+    assert.match(await leer.page.locator('section[aria-labelledby="cockpitWissen"]').innerText(),/Noch kein Projektwissen\. In einem Chat mit Claude «Ins Office übernehmen» sagen\./);
+    assert.deepEqual(leer.errors,[]);
+  }finally{await leer.page.close()}
 });
