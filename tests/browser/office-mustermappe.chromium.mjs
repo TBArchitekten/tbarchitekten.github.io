@@ -550,3 +550,189 @@ test('Bearbeiten nach dem Erzeugen: Texte für diese Mappe, Bild ersetzen, zusch
   await foto(page,'mappe-bearbeiten');
   assert.deepEqual(fehler,[]);
 });
+
+// Etappe 2 (Gari, 26.11.2026): Rahmen Feld für Feld verschieben und in der Größe ändern (am Griff, an den Anfassern,
+// ein Foto an sich selbst, mit den Pfeiltasten), Rückgängig und Wiederholen, Zuschneiden mit Doppelklick auf der Seite,
+// Fotos aus der Bibliothek und vom Schreibtisch auf die Seite ziehen. Das Layout gilt auch im PDF.
+test('Etappe 2: Rahmen auf dem Raster, Rückgängig, Zuschneiden auf der Seite, Fotos auf die Seite ziehen',async()=>{
+  const {page,fehler}=await oeffne();
+  const PID='22222222-2222-4222-8222-222222222222';
+  let mappe=(await zeilen(page,'entscheidungsvorlagen')).find(v=>v.daten.form==='mustermappe');
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&vorlage='+mappe.id));
+  await page.locator('h1',{hasText:'Mustermappe Bodenbeläge'}).waitFor();
+  await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');
+  let e=(await zeilen(page,'entscheidungsliste'))[0];
+  const seiteId=await page.locator('.mm-buehne .mm-blatt').getAttribute('data-seite');
+  const layout=async()=>{await gespeichert(page);mappe=(await zeilen(page,'entscheidungsvorlagen')).find(v=>v.id===mappe.id);return mappe.daten.seiten.find(x=>x.id===seiteId)?.layout};
+  const proMm=()=>page.evaluate(()=>document.querySelector('.mm-buehne .mm-seite').getBoundingClientRect().width/420);
+  const feld=32*await proMm();
+  const foto1=page.locator('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-1"]');
+  const geo=l=>l.getAttribute('data-mmr-g');
+  assert.equal(await geo(foto1),'1,2,6,4','Vorlage: zwei Varianten, Foto 6 × 4');
+  const knopf=page.locator('[data-act="mm-zurueck"]');
+  assert.equal(await knopf.isDisabled(),true,'noch nichts rückgängig zu machen');
+  // Unter dem Zeiger: Umriss und Griff mit dem Namen des Rahmens.
+  await page.locator('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"]').hover();
+  await page.locator('.mm-ebene .mm-rw-hover .mm-rw-griff',{hasText:'Kopf'}).waitFor();
+  // Anklicken wählt: acht Anfasser, in der Leiste Name und Größe, rechts die Karte «Layout».
+  await foto1.click({position:{x:20,y:20}});
+  await page.locator('.mm-ebene .mm-rw-wahl .mm-rw-h').first().waitFor();
+  assert.equal(await page.locator('.mm-ebene .mm-rw-wahl .mm-rw-h').count(),8);
+  assert.equal(await page.locator('[data-mm-kontext]').innerText(),'Foto A · 6 × 4 Felder · 188 × 124 mm · 3:2');
+  assert.match(await page.locator('.mm-layout-karte').innerText(),/Foto A · 6 × 4 Felder\s+188 × 124 mm · 3:2\s+Spalte 1–6, Zeile 2–5 · wie die Vorlage/);
+  // Am unteren Anfasser eine Zeile tiefer ziehen: 6 × 5 Felder; die Felder erscheinen beim Ziehen.
+  const s=await page.locator('.mm-ebene .mm-rw-wahl .mm-rw-h[data-h="s"]').boundingBox();
+  await page.mouse.move(s.x+s.width/2,s.y+s.height/2);await page.mouse.down();
+  await page.mouse.move(s.x+s.width/2,s.y+s.height/2+feld*0.6,{steps:4});
+  assert.ok(await page.locator('.mm-buehne.zieht').count(),'beim Ziehen sind die Felder zu sehen');
+  assert.match(await page.locator('.mm-ebene .mm-rw-mass').innerText(),/6 × 5 Felder · 188 × 156 mm/);
+  await page.mouse.move(s.x+s.width/2,s.y+s.height/2+feld*1.1,{steps:3});await page.mouse.up();
+  assert.deepEqual(await layout(),{'vergleich-2':{'foto-1':{c:1,r:2,w:6,h:5}}});
+  assert.equal(await geo(foto1),'1,2,6,5');
+  assert.match(await page.locator('.mm-layout-karte').innerText(),/angepasst \(Vorlage: 6 × 4 Felder\)[\s\S]*Überlappt Text A; Text liegt über Fotos\./);
+  assert.match(await knopf.getAttribute('title'),/^Rückgängig: Rahmen «Foto A» in der Größe geändert \(Strg\+Z\)$/);
+  // Das Foto selbst ziehen: eine Spalte nach rechts (rastet am nächsten Feld ein).
+  const b=await foto1.boundingBox();
+  await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();
+  await page.mouse.move(b.x+b.width/2+feld*0.8,b.y+b.height/2+feld*0.2,{steps:5});await page.mouse.up();
+  assert.deepEqual((await layout())['vergleich-2']['foto-1'],{c:2,r:2,w:6,h:5});
+  // Pfeiltasten: ein Feld weiter, mit Umschalt kleiner; mehrere Tasten kurz hintereinander sind ein Schritt.
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-1"]')?.dataset.mmrG==='1,2,6,5');
+  await page.keyboard.press('Shift+ArrowLeft');await page.keyboard.press('Shift+ArrowLeft');
+  await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-1"]')?.dataset.mmrG==='1,2,4,5');
+  assert.deepEqual((await layout())['vergleich-2']['foto-1'],{c:1,r:2,w:4,h:5});
+  // Im PDF steht das Foto, wo es auf der Seite steht.
+  assert.match(await page.locator('.mm-druck .mm-blatt[data-seite="'+seiteId+'"] .mm-r-foto').first().getAttribute('style'),/grid-column:1 \/ span 4;grid-row:2 \/ span 5/);
+  // Rückgängig (Strg+Z): die beiden Größen-Schritte als einer, dann die Taste, das Ziehen, der Anfasser; Wiederholen (Strg+Y).
+  await page.keyboard.press('Control+z');
+  await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-1"]')?.dataset.mmrG==='1,2,6,5');
+  await page.locator('.pd-meldung',{hasText:'Rückgängig: Rahmen «Foto A» in der Größe geändert.'}).waitFor();
+  await page.keyboard.press('Control+z');await page.keyboard.press('Control+z');
+  await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-1"]')?.dataset.mmrG==='1,2,6,5');
+  await knopf.click();
+  await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-1"]')?.dataset.mmrG==='1,2,6,4');
+  assert.equal(await layout(),undefined,'wieder wie die Vorlage: kein Layout gespeichert');
+  assert.equal(await knopf.isDisabled(),true);
+  await page.keyboard.press('Control+y');
+  await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-1"]')?.dataset.mmrG==='1,2,6,5');
+  assert.deepEqual(await layout(),{'vergleich-2':{'foto-1':{c:1,r:2,w:6,h:5}}});
+  // Am Griff verschieben: der Kopf eine Zeile tiefer, dann «Wie die Vorlage» und rückgängig.
+  await page.locator('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"]').hover();
+  const g=await page.locator('.mm-ebene .mm-rw-hover .mm-rw-griff').boundingBox();
+  await page.mouse.move(g.x+10,g.y+g.height/2);await page.mouse.down();
+  await page.mouse.move(g.x+10,g.y+g.height/2+feld,{steps:4});await page.mouse.up();
+  assert.deepEqual((await layout())['vergleich-2'].kopf,{c:1,r:2,w:6,h:1});
+  await page.locator('.mm-layout-karte button[data-act="mm-rahmen-vorlage"]').click();
+  await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"]')?.dataset.mmrG==='1,1,6,1');
+  assert.equal((await layout())['vergleich-2'].kopf,undefined);
+  // Ausblenden und wieder einblenden (rechts unter «Layout»).
+  await page.locator('.mm-buehne .mm-satz>.mm-r[data-mmr="zonen"]').click();
+  await page.locator('.mm-layout-karte button[data-act="mm-rahmen-aus"]').click();
+  await page.locator('.mm-layout-karte button',{hasText:'Zonen einblenden'}).waitFor();
+  assert.equal(await page.locator('.mm-buehne [data-mmr="zonen"]').count(),0);
+  assert.deepEqual((await layout())['vergleich-2'].zonen,{aus:true});
+  assert.doesNotMatch(await page.locator('.mm-druck .mm-blatt[data-seite="'+seiteId+'"]').innerHTML(),/Ausstellung 537/,'ausgeblendet auch im PDF');
+  await page.locator('.mm-layout-karte button',{hasText:'Zonen einblenden'}).click();
+  await page.locator('.mm-buehne [data-mmr="zonen"]').waitFor();
+  // Ein Text ist nach dem Verlassen ein Schritt im Verlauf.
+  const frage=page.locator('#mm-'+e.id+'-frage'),vorherFrage=await frage.innerText();
+  await frage.fill('Welcher Belag oben?');
+  // Beim Schreiben: Umriss und Griff, keine Anfasser (am Rand beginnt der Text); Esc verlässt den Text, der Rahmen bleibt.
+  await page.locator('.mm-ebene .mm-rw-wahl .mm-rw-griff',{hasText:'Kopf'}).waitFor();
+  assert.equal(await page.locator('.mm-ebene .mm-rw-wahl .mm-rw-h').count(),0);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>document.querySelectorAll('.mm-ebene .mm-rw-wahl .mm-rw-h').length===8);
+  assert.notEqual(await page.evaluate(()=>document.activeElement?.id),'mm-'+e.id+'-frage');
+  await page.locator('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-2"]').click();
+  await gespeichert(page);
+  assert.equal((await zeilen(page,'entscheidungsliste'))[0].daten.frage,'Welcher Belag oben?');
+  assert.match(await knopf.getAttribute('title'),/Rückgängig: Text in «Kopf»/);
+  await page.keyboard.press('Control+z');
+  await page.waitForFunction(([id,t])=>document.getElementById('mm-'+id+'-frage')?.innerText===t,[e.id,vorherFrage]);
+  await gespeichert(page);
+  assert.equal((await zeilen(page,'entscheidungsliste'))[0].daten.frage,vorherFrage);
+  await foto(page,'mappe-etappe2-rahmen');
+  // Zuschneiden: Doppelklick auf das Foto; ringsum das ganze Bild hell, in der Leiste die Regler.
+  e=(await zeilen(page,'entscheidungsliste'))[0];
+  const fotosVorher=e.daten.optionen[0].muster_fotos;
+  const platz=page.locator('.mm-buehne [data-bildplatz="'+e.id+'|A|0"]');
+  const vorDoppel=await platz.boundingBox();
+  await platz.locator('img').dblclick();
+  await page.locator('[data-mm-zs] .mm-zs-leiste').waitFor();
+  assert.deepEqual(await platz.boundingBox(),vorDoppel,'die Seite bleibt beim Zuschneiden, wo sie ist (die Leiste schwebt)');
+  await page.waitForFunction(()=>{const g=document.querySelector('.mm-ebene .mm-zs-geist');return g&&parseFloat(g.style.width)>0});
+  await page.locator('[data-act="mm-zs-zoom"]').evaluate(r=>{r.value='2';r.dispatchEvent(new Event('input',{bubbles:true}))});
+  assert.match(await platz.locator('img').getAttribute('style'),/scale\(2\)/);
+  const pb=await platz.boundingBox();
+  await page.mouse.move(pb.x+pb.width/2,pb.y+pb.height/2);await page.mouse.down();
+  await page.mouse.move(pb.x+pb.width/2+pb.width/8,pb.y+pb.height/2,{steps:4});await page.mouse.up();
+  await foto(page,'mappe-etappe2-zuschneiden');
+  await page.keyboard.press('Enter');
+  await page.locator('.pd-meldung',{hasText:'Ausschnitt übernommen'}).waitFor();
+  await gespeichert(page);
+  e=(await zeilen(page,'entscheidungsliste'))[0];
+  const a=e.daten.optionen[0].muster_fotos[0].ausschnitt;
+  assert.equal(a.z,2);assert.ok(a.x<50&&a.x>0,'nach rechts gezogen: der Punkt rückt nach links ('+a.x+')');assert.equal(a.y,50);
+  assert.equal(await page.locator('[data-mm-zs] .mm-zs-leiste').count(),0,'die Leiste zum Zuschneiden ist wieder weg');
+  // Esc bricht ab: nichts geändert.
+  await platz.locator('img').dblclick();
+  await page.locator('[data-mm-zs] .mm-zs-leiste').waitFor();
+  await page.mouse.move(pb.x+pb.width/2,pb.y+pb.height/2);await page.mouse.down();
+  await page.mouse.move(pb.x+pb.width/2-pb.width/6,pb.y+pb.height/2,{steps:3});await page.mouse.up();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>!document.querySelector('[data-mm-zs] .mm-zs-leiste'));
+  await gespeichert(page);
+  assert.deepEqual((await zeilen(page,'entscheidungsliste'))[0].daten.optionen[0].muster_fotos[0].ausschnitt,a);
+  // Rückgängig nimmt den Ausschnitt zurück.
+  await page.keyboard.press('Control+z');
+  await gespeichert(page);
+  assert.deepEqual((await zeilen(page,'entscheidungsliste'))[0].daten.optionen[0].muster_fotos,fotosVorher);
+  // Materialseite: ein eigenes Bild vom Schreibtisch auf das große Foto, dann ein Foto der Bibliothek auf den Platz für
+  // Bild 2 (erscheint beim Ziehen). Die Bibliothek bleibt, wie sie ist.
+  const produktVorher=JSON.stringify((await db(page)).office_produkte);
+  await page.locator('button[data-act="mm-material"][data-o="A"]').click();
+  await page.locator('.mm-seitenliste .active',{hasText:'Material'}).waitFor();
+  const datei=async(sel,name)=>page.evaluate(async([sel,name,b64])=>{
+    const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)),dt=new DataTransfer();
+    dt.items.add(new File([bytes],name,{type:'image/png'}));
+    const el=document.querySelector(sel);
+    el.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt}));
+    el.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));
+  },[sel,name,PNG.toString('base64')]);
+  await datei('.mm-buehne [data-bildplatz="'+e.id+'|A|0"]','Probe Eiche.png');
+  await page.locator('.pd-meldung',{hasText:'Das Bild steht auf der Seite; es bleibt in dieser Mappe.'}).waitFor();
+  await gespeichert(page);
+  e=(await zeilen(page,'entscheidungsliste'))[0];
+  assert.deepEqual(e.daten.optionen[0].muster_fotos.map(f=>(f.quelle||'bibliothek')+':'+(f.name||'')),['mappe:Probe Eiche.png']);
+  const ziel='.mm-buehne [data-bildplatz="'+e.id+'|A|1"]';
+  assert.equal(await page.locator(ziel).isVisible(),false,'der Platz für Bild 2 nur beim Ziehen');
+  await page.evaluate(([zid,ziel])=>{
+    const t=document.querySelector('.mm-thumb[data-act="mm-foto"][data-z="'+zid+'"][data-o="A"]'),dt=new DataTransfer();
+    t.dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer:dt}));
+    window.__sichtbar=getComputedStyle(document.querySelector(ziel).closest('.mm-r')).display;
+    const el=document.querySelector(ziel);
+    el.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt}));
+    el.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));
+    t.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer:dt}));
+  },[e.id,ziel]);
+  assert.equal(await page.evaluate(()=>window.__sichtbar),'block','beim Ziehen ist der Platz für Bild 2 zu sehen');
+  await page.locator('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-2"] img').waitFor();
+  await gespeichert(page);
+  e=(await zeilen(page,'entscheidungsliste'))[0];
+  assert.deepEqual(e.daten.optionen[0].muster_fotos.map(f=>f.quelle||f.pfad.split('/').pop()),['mappe','eiche.jpg']);
+  assert.equal(await page.locator('.mm-buehne .mm-ablage-ziel').count(),0,'nach dem Ablegen keine Markierung mehr');
+  await foto(page,'mappe-etappe2-material');
+  // Rückgängig und Wiederholen auch hier.
+  await page.keyboard.press('Control+z');
+  await page.waitForFunction(()=>!document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-2"]'));
+  await page.keyboard.press('Control+Shift+z');
+  await page.locator('.mm-buehne .mm-satz>.mm-r[data-mmr="foto-2"] img').waitFor();
+  await gespeichert(page);
+  assert.equal((await zeilen(page,'entscheidungsliste'))[0].daten.optionen[0].muster_fotos.length,2);
+  // Eine Datei neben die Fotos: nichts passiert, der Browser öffnet sie nicht.
+  await datei('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"]','daneben.png');
+  await page.locator('.pd-meldung',{hasText:'Zum Ablegen auf ein Foto der Seite ziehen'}).waitFor();
+  assert.equal(JSON.stringify((await db(page)).office_produkte),produktVorher,'die Produktbibliothek bleibt, wie sie ist');
+  assert.deepEqual(fehler,[]);
+});
