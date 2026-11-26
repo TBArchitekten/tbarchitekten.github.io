@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Office-Connector: Ablage im Desktop wieder entfernt · Claude
+- Qué cambió y por qué: Gari (26.11.2026): Das Wissen aus seinen Claude-Chats soll gemeinsames Wissen des Projektteams werden, aber nicht im Desktop: der Desktop bleibt wie der Server eines Büros, auf dem alle sehen, was drin ist; PDFs legt jede Person selbst ab. Stattdessen ein Wissenspool je Projekt, den die KI schreibt und pflegt (das Team liest, fragt und korrigiert). Bis der Pool steht, sind `close_session` und `file_document` (#180) aus dem Connector entfernt; benutzt wurden sie nicht (der Desktop von Bernried hat keine Dateien von Claude).
+- Archivos: `supabase/functions/office-mcp/index.ts` (Stand vor #180), `supabase/functions/office-mcp/office-ablage.mjs` und `tests/office-mcp-ablage.test.mjs` entfernt; `docs/OFFICE-CONNECTOR.md`, `docs/BITACORA.md`, `docs/ESTADO.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: `office-mcp` über den Workflow nach dem Merge.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün; `deno check supabase/functions/office-mcp/index.ts` grün.
+- Quedó pendiente o sin probar: das Projektwissen (nächster Schritt).
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #182
+
+---
+
 ### 2026-11-26 · Office-Connector verbunden: OAuth-Server an · Claude
 - Qué cambió y por qué: Gari hat im Supabase-Dashboard des Office (Authentication → OAuth Server) den OAuth-Server eingeschaltet, den Authorization Path `/oauth-consent.html` gesetzt und «Allow Dynamic OAuth Apps» erlaubt; danach in Claude den benutzerdefinierten Connector «TBA Office» hinzugefügt (vom Handy). Damit gilt «pásalo al Office» aus seinen Claude-Chats (#180).
 - Archivos: `docs/OFFICE-CONNECTOR.md` (Stand der Einrichtung), `docs/ESTADO.md`, `docs/BITACORA.md`.
