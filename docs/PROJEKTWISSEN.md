@@ -16,6 +16,8 @@ Was es nicht ist: Der **Desktop** bleibt der Dateiserver des Büros (PDFs und Pl
 
 Auf Wunsch («Wissen pflegen») liest Claude alle Seiten, führt Doppeltes zusammen, ersetzt Überholtes und arbeitet offene Hinweise ein.
 
+**Nachts von selbst** (seit dem 26.11.2026, geplante Aufgabe in Claude): Montag bis Freitag gegen 23 Uhr arbeitet Claude die offenen Beiträge und Hinweise des Teams in die Seiten ein; im Verlauf steht als Grund «Nächtliche Pflege: …». Freitags kommen alle Seiten dazu: ein vergangener Termin ohne bekanntes Ergebnis wird zur offenen Frage, eindeutig Doppeltes wird zusammengeführt, Widersprüche zwischen Seiten werden benannt. Die nächtliche Pflege schlägt Entscheidungen nur vor; bestätigen tut die Projektleitung. Sie läuft über den Connector mit Garis Konto, also nur in Projekten, in deren Team er ist, und meldet ihm, was sich geändert hat.
+
 **Im Office:** Work → Reiter **Wissen** (gleich neben Panorama).
 
 - Links die Seiten (die zuletzt geänderte oben), dazu «Neu» (was auf die KI wartet und was sich zuletzt geändert hat) und «Entscheidungen».
@@ -82,5 +84,5 @@ Der volle Text steht in `office_wissen_regeln` und geht bei jedem Teilen an Clau
 
 ## Nächste Schritte (offen)
 
-- Regelmäßige Pflege (nachts durch Romy oder als geplante Aufgabe in Claude): offene Beiträge einarbeiten, Doppeltes zusammenführen, Widersprüche melden.
+- Nächtliche Pflege auch für Projekte, in deren Team Gari nicht ist (heute läuft sie mit seinem Konto), zum Beispiel durch Romy im Office selbst.
 - Dasselbe für Window (Garis eigene Projekte).

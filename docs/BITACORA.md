@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Geplante Aufgaben: Office-Prüfung, Projektwissen-Pflege, Projektübersicht, Quellen-Wächter · Claude
+- Qué cambió y por qué: Gari wählte vier geplante Aufgaben in Claude, zusätzlich zum Baupreisindex. **Office-Prüfung** (diaria 06:23): Heartbeat, Akte-Pflege, Cron-Jobs, `pg_net`, Edge Functions mit 5xx, Sicherheitshinweise gegen eine Liste der bekannten, Workflows auf `main`, Seite erreichbar; nur lesen, bei einem Fehler einmal neu prüfen, sonst still (Anlass: der Heartbeat fiel vom 14. bis 23.11.2026 aus, ohne dass es jemand merkte). **Projektwissen pflegen** (Mo–Fr 22:54): offene Beiträge einarbeiten, freitags alle Seiten (vergangene Termine, Doppeltes, Widersprüche); Entscheidungen nur «vorgeschlagen». **Projektübersicht** (Mo 07:21): Woche, nächste Woche (Fristen), Überfälliges, was auf Gari wartet, Widersprüche. **Quellen-Wächter** (am 3. jedes Monats 08:50): HOAI, BayBO, DIN 276, Graphisoft-Richtlinie gegen einen Stand, den die Aufgabe selbst fortschreibt.
+- Archivos: `docs/PROJEKTWISSEN.md` (nächtliche Pflege; nächster Schritt: Projekte ohne Gari im Team), `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: die Abfragen der Office-Prüfung von Hand gelaufen (Heartbeat 96/0 in 24 h, alle sechs aktiven Cron-Jobs alle 1, 5 oder 15 Minuten ohne Fehler, Workflows auf `main` grün, Seite 200, GitHub-API auch ohne Anmeldung erreichbar); Werkzeuge und Felder des Connectors im Code geprüft (`write_page` mit `grund`; ein vorgeschlagener Ersatz löst eine Entscheidung erst ab, wenn er bestätigt ist).
+- Quedó pendiente o sin probar: der erste echte Lauf jeder Aufgabe (Office-Prüfung 27.11. früh, Pflege 27.11. abends, Übersicht 30.11., Quellen 03.12.).
+- Riesgos o decisiones que necesitan a Gari: die Pflege schreibt mit seinem Konto (Verlauf zeigt ihn als Autor, Grund «Nächtliche Pflege»).
+- PR: #188
+
+---
+
 ### 2026-11-26 · Panorama-Karte «Neu im Projektwissen» · Claude
 - Qué cambió y por qué: Gari wollte eine Karte «Neu im Projektwissen» im Panorama. Sie steht in der rechten Spalte unter den Terminplänen und zeigt nur dem Projektteam (Mitgliedschaft über `office_project_members`; sonst keine Karte): die Zahl der Seiten, die Entscheidungen zur Bestätigung, die Beiträge, die auf die KI warten, und die letzten drei Änderungen mit Titel, Art und Tag (heute, gestern oder Datum). Ohne Projektwissen ein Satz, wie es entsteht. Ein Klick merkt die Ansicht oder die Seite vor (`TBA_OFFICE_WISSEN.vormerken`) und öffnet den Reiter «Wissen» dort. Die erste Fassung schnitt in der schmalen Spalte die Zeilen ab; nach dem Bildschirmfoto: Titel zuerst, Art und Tag klein, «Öffnen» statt «Wissen öffnen».
 - Archivos: `app/office-wissen.js` (`panorama`, `panoramaHtml`, `vormerken`; `office3`), `app/work.js` (`office61`), `app/index.html`, `tests/office-projektwissen.test.mjs`, `tests/browser/office-wissen.chromium.mjs` (Panorama mit Team, ohne Team, leer), Versionsstände in den Tests, `docs/PROJEKTWISSEN.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
