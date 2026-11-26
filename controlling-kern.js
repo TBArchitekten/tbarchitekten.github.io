@@ -254,7 +254,17 @@ function lage(k){
     restBudget:r2(zahl(k.budget)-zahl(k.stunden)),restNoetig:k.prognoseStunden!=null?r2(k.prognoseStunden-zahl(k.stunden)):null};
 }
 
-const api={MWST_PROZENT,STATUS,LAGE_GRENZE,leseZahl,ausBrutto,honorarAnteil,rechnung,kennzahlen,ordnung,annahmen,jahresstundenPerson,
+// Der Gewinn als Stufe für das ganze Team (Gari, 26.11.2026): ob ein Paket nach Gehältern und Bürokosten Geld
+// verdient, ohne den Betrag (der bleibt beim vollen Zugang, weil sich in kleinen Teams sonst Gehälter ausrechnen
+// ließen). Über +5 % des Honorars im Plus, unter −5 % im Minus, dazwischen knapp. Dieselben Grenzen rechnet die
+// Datenbank für das Team (office_controlling_gewinn_stufen).
+const GEWINN_GRENZE=0.05;
+function gewinnStufe(gewinn,honorar){
+  const g=Number(gewinn),h=Number(honorar);
+  if(gewinn==null||gewinn===''||!Number.isFinite(g)||!(h>0))return null;
+  return g>GEWINN_GRENZE*h?'plus':g<-GEWINN_GRENZE*h?'minus':'knapp';
+}
+const api={MWST_PROZENT,STATUS,LAGE_GRENZE,GEWINN_GRENZE,gewinnStufe,leseZahl,ausBrutto,honorarAnteil,rechnung,kennzahlen,ordnung,annahmen,jahresstundenPerson,
   gehaltSatz,selbstkostenSatz,deckungBisGehalt,satzAm,gehaltAm,bewertung,lage,ostern,feiertage,werktage,jahresstundenAusKalender,r2};
 if(typeof module==='object'&&module.exports)module.exports=api;
 else root.TBA_CONTROLLING=api;

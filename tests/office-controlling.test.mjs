@@ -85,9 +85,9 @@ test('Übersicht nach Projektnummer (Gari, 25.11.2026): aufsteigend; im Projekt 
 
 test('Seite: Tokens zuerst, Kern vor der Seite, Marke im Rahmen, Anmeldung wie die anderen Werkzeuge',()=>{
   const html=read('controlling.html'),js=read('controlling.js');
-  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office6">/);
+  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office7">/);
   assert.match(html,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
-  assert.ok(html.indexOf('controlling-kern.js?v=office6')<html.indexOf('controlling.js?v=office7'));
+  assert.ok(html.indexOf('controlling-kern.js?v=office7')<html.indexOf('controlling.js?v=office8'));
   assert.ok(html.includes("<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>"));
   assert.match(js,/const IM_REITER=window\.self!==window\.top;/);
   assert.match(js,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
@@ -162,7 +162,7 @@ test('Tools und Work: Karte «Controlling», Reiter je Projekt nach der Kostenbe
 test('Keine Namen aus Projekten und Team, keine spanischen Wörter',()=>{
   for(const f of ['controlling.html','controlling.js','controlling-kern.js','controlling.css',MIGRATION,'tests/sql/office-controlling-acceptance.sql',
     'tests/browser/fixtures/fake-supabase-controlling.js','tests/browser/office-controlling.chromium.mjs',
-    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|controlling_annahmen|controlling_jahresstunden|controlling_urlaub|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
+    ...readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/_office_(controlling_zugang|controlling_nur_liste|controlling_annahmen|controlling_jahresstunden|controlling_urlaub|controlling_gewinn_stufen|project_abschnitte)\.sql$/.test(f)).map(f=>'supabase/migrations/'+f)]){
     const s=read(f);
     // Namen von Projekten, Bauherren und Kolleginnen nur als Prüfsumme (sha256, 16 Zeichen), damit sie selbst nicht im
     // öffentlichen Repo stehen.
@@ -383,4 +383,39 @@ test('Migration Urlaub: zwei leere Spalten an den Sätzen, Summen mit der Korrek
   assert.match(sql,/- sa\.urlaubstage \* coalesce\(sa\.wochenstunden, e\.vollzeit_wochenstunden\) \/ coalesce\(sa\.arbeitstage_woche, 5\)\)/);
   assert.match(sql,/returns table \(stand_id uuid, paket_id uuid, stichtag date, leistungsstand numeric,\n               stunden numeric, wert_kalkulation numeric, wert_gehalt numeric\)/);
   assert.match(read('tests/sql/office-controlling-acceptance.sql'),/A_urlaub=2; A_s1_urlaub=742\.02; /);
+});
+
+test('Gewinn als Stufe für das Team (Gari, 26.11.2026): über +5 % des Honorars im Plus, unter −5 % im Minus, dazwischen knapp',()=>{
+  assert.equal(K.GEWINN_GRENZE,0.05);
+  assert.deepEqual([5001,5000,0,-5000,-5001].map(g=>K.gewinnStufe(g,100000)),['plus','knapp','knapp','knapp','minus'],'die Grenzen zählen zu knapp');
+  assert.deepEqual([K.gewinnStufe(null,100000),K.gewinnStufe('',100000),K.gewinnStufe(1000,0),K.gewinnStufe(1000,null)],[null,null,null,null],'ohne Gewinn oder Honorar keine Stufe');
+  // Derselbe Fall wie in der Abnahme der Datenbank (B_stufe, B_knapp, B_minus): A 30 h in Teilzeit mit eigenem Urlaub,
+  // B 25 h mit 2.000, 4.000 oder 6.000 € Gehalt; Leistungsstand 60 %, Honorar 10.000 €.
+  const st=[{id:'s1',stichtag:'2026-11-01',leistungsstand:20},{id:'s2',stichtag:'2026-11-20',leistungsstand:50},{id:'s3',stichtag:'2026-11-25',leistungsstand:60}];
+  const h=[{stand_id:'s1',person_id:'a',stunden:11},{stand_id:'s2',person_id:'a',stunden:30},{stand_id:'s2',person_id:'b',stunden:20},{stand_id:'s3',person_id:'b',stunden:25}];
+  const e={arbeitgeberanteil_prozent:21,jahresstunden:1650,vollzeit_wochenstunden:40,gemeinkostenfaktor:2.5,urlaubstage:30,projektanteil_prozent:90};
+  const a={person_id:'a',monatsgehalt:4000,wochenstunden:20,urlaubstage:20,arbeitstage_woche:5};
+  const paket={honorar_netto:10000,nebenkosten_prozent:5,kalkulationssatz:85,status:'beauftragt'};
+  const fall=gehaltB=>{
+    const sa=[{...a,gueltig_ab:'2026-01-01',kalkulationssatz:100},{...a,gueltig_ab:'2026-11-15',kalkulationssatz:120}];
+    if(gehaltB)sa.push({person_id:'b',gueltig_ab:'2026-01-01',kalkulationssatz:85,monatsgehalt:gehaltB});
+    const k=K.kennzahlen(paket,st.map(s=>({stichtag:s.stichtag,leistungsstand:s.leistungsstand,stunden:0,wert_kalkulation:0})),[],K.bewertung(st,h,sa,e,85));
+    return [k.prognoseGewinn,K.gewinnStufe(k.prognoseGewinn,paket.honorar_netto)];
+  };
+  assert.deepEqual([fall(null),fall(2000),fall(4000),fall(6000)],[[null,null],[1516.2,'plus'],[1.05,'knapp'],[-1514.1,'minus']]);
+});
+
+test('Migration Gewinn-Stufen: nur Stufe und vorläufig, gelesen über das Projekt, dieselben Grenzen; nichts entfernt',()=>{
+  const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_controlling_gewinn_stufen\.sql$/.test(f));
+  assert.equal(datei.length,1);
+  const sql=read('supabase/migrations/'+datei[0]),ohne=sql.replace(/--.*$/gm,'');
+  assert.doesNotMatch(ohne,/\b(drop|truncate|delete\s+from|alter\s+table)\b/i,'nichts Destruktives, keine Tabelle geändert');
+  assert.match(sql,/create or replace function public\.office_controlling_gewinn_stufen\(p_project uuid\)\nreturns table \(paket_id uuid, stufe text, vorlaeufig boolean\)\nlanguage sql stable security definer set search_path = '' as \$\$/,'keine Beträge in der Antwort');
+  assert.match(sql,/select \(select private\.office_controlling_lesen\(p_project\)\) as lesen/);
+  assert.equal((ohne.match(/and \(select lesen from zugang\)/g)||[]).length,2,'Stände und Pakete nur mit Zugang');
+  assert.match(sql,/when g\.betrag > 0\.05 \* g\.honorar then 'plus'\n              when g\.betrag < -0\.05 \* g\.honorar then 'minus'\n              else 'knapp' end/);
+  assert.match(sql,/coalesce\(l\.wert_g, 0\) \* a\.faktor \/ \(1 \+ a\.ag \/ 100\) \* 100\n                     \/ \(case when k\.status = 'abgeschlossen' then 100 else l\.leistungsstand end\)/);
+  assert.match(sql,/revoke all on function public\.office_controlling_gewinn_stufen\(uuid\) from public, anon;\ngrant execute on function public\.office_controlling_gewinn_stufen\(uuid\) to authenticated;/);
+  assert.match(read('controlling.js'),/if\(!voll&&projektIds\.length\)\{\n    const gs=await Promise\.all\(projektIds\.map\(id=>sb\.rpc\('office_controlling_gewinn_stufen',\{p_project:id\}\)\)\);/,'die Seite fragt die Stufe nur ohne vollen Zugang ab');
+  assert.match(read('tests/sql/office-controlling-acceptance.sql'),/B_stufe_ohne_gehalt=null; B_stufen=1; B_stufe=plus\/false; B_knapp=knapp\/true; B_minus=minus; C_stufen=0; anon_stufen=verweigert; /);
 });

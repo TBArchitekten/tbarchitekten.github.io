@@ -13,7 +13,8 @@
 -- Seit der Migration office_controlling_annahmen (25.11.2026): Teilzeit rechnet mit dem Anteil an den Jahresstunden;
 -- die Annahmen (mit dem Gemeinkostenfaktor) ändert nur die Liste, der Faktor bleibt zwischen 1 und 5. Seit
 -- office_controlling_jahresstunden auch die Angaben der Herleitung (Urlaub höchstens 60 Tage); seit office_controlling_urlaub
--- eigene Urlaubstage je Person gegenüber denen des Büros.
+-- eigene Urlaubstage je Person gegenüber denen des Büros. Seit office_controlling_gewinn_stufen (26.11.2026) erfährt das
+-- Team den Gewinn je Paket als Stufe (plus, knapp, minus) ohne Betrag; wer das Projekt nicht sieht, erfährt nichts.
 begin;
 insert into auth.users(id,aud,role,email,instance_id) values
  ('a7000000-0000-4000-8000-00000000000a','authenticated','authenticated','ct-a@example.invalid','00000000-0000-0000-0000-000000000000'),
@@ -48,7 +49,8 @@ declare
     || 'A2_aendert_A=1; projekt_fest=verweigert; urheber_fest=verweigert; doppelt=verweigert; A_einstellungen=1; '
     || 'A_teilzeit=2; A_s1_teilzeit=774.40; A_faktor=1; faktor_grenze=verweigert; B_faktor=0; '
     || 'A_kalender=1; kalender_grenze=verweigert; B_kalender=0; '
-    || 'A_urlaub=2; A_s1_urlaub=742.02; ';
+    || 'A_urlaub=2; A_s1_urlaub=742.02; '
+    || 'B_stufe_ohne_gehalt=null; B_stufen=1; B_stufe=plus/false; B_knapp=knapp/true; B_minus=minus; C_stufen=0; anon_stufen=verweigert; ';
   ua constant text := '{"sub":"a7000000-0000-4000-8000-00000000000a","role":"authenticated"}';
   ua2 constant text := '{"sub":"a7000000-0000-4000-8000-0000000000a2","role":"authenticated"}';
   ub constant text := '{"sub":"b7000000-0000-4000-8000-00000000000b","role":"authenticated"}';
@@ -234,6 +236,53 @@ begin
   get diagnostics n = row_count; r := r || 'A_urlaub=' || n || '; ';
   select * into x from public.office_controlling_summen(p) where stand_id = s1;
   r := r || 'A_s1_urlaub=' || coalesce(x.wert_gehalt::text,'null') || '; ';
+  execute 'reset role';
+
+  -- Gewinn als Stufe (Migration office_controlling_gewinn_stufen): B (Team) erfährt nur plus, knapp oder minus und ob die
+  -- Annahmen vorläufig sind; solange B kein Gehalt hat, bleibt die Stufe leer. Selbstkosten: A 30 h × 4.000 × 12 × 2,5 ÷ 861 h,
+  -- B 25 h × Gehalt × 12 × 2,5 ÷ 1.650 h; Gewinn am Ende = 10.000 € − Selbstkosten ÷ 60 %. B mit 2.000 €: +1.516 € (über
+  -- +5 % des Honorars); mit 4.000 €: +1 € (knapp), dazu die Annahmen wieder offen; mit 6.000 €: −1.514 €. C nichts, anon abgewiesen.
+  perform set_config('request.jwt.claims', ub, true);
+  execute 'set local role authenticated';
+  select * into x from public.office_controlling_gewinn_stufen(p);
+  r := r || 'B_stufe_ohne_gehalt=' || coalesce(x.stufe,'null') || '; ';
+  execute 'reset role';
+  perform set_config('request.jwt.claims', ua, true);
+  execute 'set local role authenticated';
+  insert into public.office_controlling_saetze(person_id,gueltig_ab,kalkulationssatz,monatsgehalt) values (b,'2026-01-01',85,2000);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', ub, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.office_controlling_gewinn_stufen(p); r := r || 'B_stufen=' || n || '; ';
+  select * into x from public.office_controlling_gewinn_stufen(p);
+  r := r || 'B_stufe=' || coalesce(x.stufe,'null') || '/' || x.vorlaeufig || '; ';
+  execute 'reset role';
+  perform set_config('request.jwt.claims', ua, true);
+  execute 'set local role authenticated';
+  update public.office_controlling_saetze set monatsgehalt = 4000 where person_id = b;
+  update public.office_controlling_einstellungen set annahmen_bestaetigt = null;
+  execute 'reset role';
+  perform set_config('request.jwt.claims', ub, true);
+  execute 'set local role authenticated';
+  select * into x from public.office_controlling_gewinn_stufen(p);
+  r := r || 'B_knapp=' || coalesce(x.stufe,'null') || '/' || x.vorlaeufig || '; ';
+  execute 'reset role';
+  perform set_config('request.jwt.claims', ua, true);
+  execute 'set local role authenticated';
+  update public.office_controlling_saetze set monatsgehalt = 6000 where person_id = b;
+  execute 'reset role';
+  perform set_config('request.jwt.claims', ub, true);
+  execute 'set local role authenticated';
+  select * into x from public.office_controlling_gewinn_stufen(p);
+  r := r || 'B_minus=' || coalesce(x.stufe,'null') || '; ';
+  execute 'reset role';
+  perform set_config('request.jwt.claims', uc, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.office_controlling_gewinn_stufen(p); r := r || 'C_stufen=' || n || '; ';
+  execute 'reset role';
+  execute 'set local role anon';
+  begin perform 1 from public.office_controlling_gewinn_stufen(p) limit 1; r := r || 'anon_stufen=ERLAUBT(FEHLER); ';
+  exception when others then r := r || 'anon_stufen=verweigert; '; end;
   execute 'reset role';
 
   if r <> erwartet then raise exception 'Controlling weicht ab: % (erwartet: %)', r, erwartet; end if;

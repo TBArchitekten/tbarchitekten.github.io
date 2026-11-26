@@ -90,14 +90,21 @@ test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst'
     // Wert: 300 h × 80 € (eigener Satz fehlt) + 250 h × 90 € = 46.500 €; Prognose 100.000 − 46.500 ÷ 0,4 = −16.250 €.
     assert.equal(await text(k1.locator('[data-ergebnis]')),'− 16.250 €');
     assert.equal(await k1.locator('[data-ergebnis]').getAttribute('class'),'ct-minus');
-    assert.equal(await text(k1.locator('.ct-zahlen div').nth(1).locator('dd')),'73 €/h','40.000 € erarbeitet ÷ 550 h');
     assert.equal(await text(k1.locator('.ct-zahlen div').nth(2).locator('dd')),'20.000 €');
-    // Dieselben Begriffe wie im Projektblatt (Gari, 25.11.2026).
-    assert.deepEqual(await k1.locator('.ct-zahlen dt').allTextContents(),['Ergebnis am Ende netto','Honorar je Stunde netto','Erarbeitet, nicht bezahlt netto']);
+    // Unten zuerst der Gewinn (Gari, 26.11.2026), mit vollem Zugang der Betrag, vertraulich und vorläufig: 300 h × 60 €/h +
+    // 250 h × 72 €/h = 36.000 € Selbstkosten → am Ende 100.000 − 36.000 ÷ 40 % = + 10.000 €. Dann der Vergleich mit der
+    // Kalkulation (nicht mehr «Ergebnis»), dann offen; «Honorar je Stunde» steht im Projektblatt.
+    assert.deepEqual(await k1.locator('.ct-zahlen dt').allTextContents(),['Gewinn am Ende netto vertraulich','Gegenüber Kalkulation am Ende netto','Erarbeitet, nicht bezahlt netto']);
+    assert.equal(await text(k1.locator('[data-gewinn]')),'+ 10.000 €vorläufig');
+    assert.equal(await k1.locator('[data-gewinn]').getAttribute('class'),'ct-plus');
+    // Die Zahlen der drei Spalten stehen auf einer Höhe.
+    const oben=await k1.locator('.ct-zahlen dd').evaluateAll(l=>l.map(d=>Math.round(d.getBoundingClientRect().top)));
+    assert.ok(Math.max(...oben)-Math.min(...oben)<=1,'auf einer Höhe: '+oben);
     // Abgeschlossen: Leistungsstand 100 %, 400 h × 80 € = 32.000 € gegen 50.000 € → + 18.000 €; keine Zahlungen erfasst.
     const k2=karte(page,'Nachbarhaus');
     assert.equal(await text(k2.locator('[data-ergebnis]')),'+ 18.000 €');
-    assert.equal(await k2.locator('.ct-zahlen dt').first().textContent(),'Ergebnis netto');
+    assert.equal(await k2.locator('.ct-zahlen dt').first().textContent(),'Gewinn netto vertraulich');
+    assert.equal(await text(k2.locator('[data-gewinn]')),'Gehälter unvollständig','nur Team-Stunden: keine Zahl, der Grund');
     assert.equal(await text(k2.locator('.ct-lage-chip')),'im Budget');
     assert.equal(await fuellung(k2.locator('.ct-balken-block').first().locator('.ct-fuellung')),'rgb(47, 154, 99)','grün: im Budget (Gari, 25.11.2026)');
     // Übersicht als PDF: quer, alle Pakete, mit vollem Zugang auf Wunsch mit Gewinn.
@@ -109,8 +116,8 @@ test('Übersicht: Karten mit Stunden- und Honorarbalken, laufende Pakete zuerst'
     assert.match(ue.titel,/^Controlling – Übersicht – \d{4}-\d{2}-\d{2} – vertraulich$/);
     assert.equal(ue.quer,true);
     assert.match(ue.html,/Testhaus[\s\S]*Nachbarhaus/,'wie die Karten geordnet');
-    assert.match(ue.html,/Gewinn am Ende netto/);
-    assert.equal(await text(k2.locator('.ct-zahlen div').nth(1).locator('dd')),'125 €/h');
+    assert.match(ue.html,/Gegenüber Kalkulation am Ende netto[\s\S]*Gewinn am Ende netto/);
+    assert.equal(await text(k2.locator('.ct-zahlen div').nth(1).locator('dd')),'+ 18.000 €');
     assert.equal(await text(k2.locator('.ct-zahlen div').nth(2).locator('dd.ct-klein')),'keine Zahlungen erfasst');
     assert.match(await text(k2.locator('.ct-balken-block').nth(1).locator('.meta')),/^Zahlungen noch nicht erfasst · erarbeitet 50\.000 € netto$/);
     // Admin: Sätze und Gehälter, neues Paket, Projekte ohne Honorar.
@@ -134,10 +141,10 @@ test('Projektblatt als Admin: Kennzahlen, Stände mit Personen, Zahlungen; Stand
     assert.equal(await text(merkmal(page,'Vertrag','Stundenbudget')),'1.250 h');
     assert.equal(await text(merkmal(page,'Vertrag','Kalkulationssatz netto')),'80 €/h');
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Wert der Stunden netto')),'46.500 €');
-    assert.equal(await text(merkmal(page,'Stand 01.11.2026','Ergebnis bisher netto')),'− 6.500 €');
+    assert.equal(await text(merkmal(page,'Stand 01.11.2026','Gegenüber Kalkulation bisher netto')),'− 6.500 €');
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Honorar je Stunde netto')),'72,73 €/h');
     assert.equal(await text(merkmal(page,'Prognose am Ende','Stunden am Ende')),'1.375 h');
-    assert.equal(await text(merkmal(page,'Prognose am Ende','Ergebnis am Ende netto')),'− 16.250 €');
+    assert.equal(await text(merkmal(page,'Prognose am Ende','Gegenüber Kalkulation am Ende netto')),'− 16.250 €');
     assert.equal(await text(merkmal(page,'Zahlungen','Erarbeitet, nicht bezahlt netto')),'20.000 €');
     // Lage auf einen Blick (Gari, 25.11.2026): Stufe mit Zeichen und Wort, ein Satz, drei Balken auf einer Skala, Kacheln.
     const lage=page.locator('.ct-lage');
@@ -155,6 +162,10 @@ test('Projektblatt als Admin: Kennzahlen, Stände mit Personen, Zahlungen; Stand
     // Gewinn mit dem erfundenen Faktor 2: 300 h × 60 €/h + 250 h × 72 €/h = 36.000 € → am Ende 100.000 − 36.000 ÷ 40 %.
     assert.equal(await text(kachel(page,'gewinn').locator('strong')),'+ 10.000 €');
     assert.equal(await text(kachel(page,'gewinn').locator('.ct-kachel-unter')),'nach Gehältern und Bürokosten · Annahmen vorläufig');
+    // Der Gewinn zuerst, daneben der Vergleich mit der Kalkulation (Gari, 26.11.2026).
+    assert.deepEqual(await page.locator('.ct-kachel').evaluateAll(l=>l.map(x=>x.dataset.kachel)),['gewinn','ergebnis','rest','offen']);
+    assert.equal(await text(kachel(page,'ergebnis').locator('.ct-kachel-name')),'Gegenüber Kalkulation am Ende netto');
+    assert.equal(await text(kachel(page,'ergebnis').locator('.ct-kachel-unter')),'hochgerechnet, Stunden zum Kalkulationssatz');
     // Im Kopf des Pakets keine zweite Lage.
     assert.deepEqual(await page.locator('.ct-kopf-rechts .chip').allTextContents(),['beauftragt','vorläufig','Stand 01.11.2026']);
     // Klickbar heißt blau, auch «Paket bearbeiten» (Gari, 25.11.2026).
@@ -170,7 +181,8 @@ test('Projektblatt als Admin: Kennzahlen, Stände mit Personen, Zahlungen; Stand
     assert.equal(await text(zeile('Stundenbudget')),'100.000 € ÷ 80 €/h = 1.250 h');
     assert.equal(await text(zeile('Wert der Stunden netto')),'Summe je Person = 46.500 €','zwei Sätze: nicht als eine Multiplikation');
     assert.equal(await text(zeile('Erarbeitet netto')),'100.000 € × 40 % = 40.000 €');
-    assert.equal(await text(zeile('Ergebnis bisher netto')),'40.000 € − 46.500 € = − 6.500 €');
+    assert.equal(await text(zeile('Gegenüber Kalkulation bisher netto')),'40.000 € − 46.500 € = − 6.500 €');
+    assert.equal(await text(zeile('Gewinn')),'+ 10.000 €');
     assert.equal(await text(zeile('Prognose am Ende')),'550 h ÷ 40 % = 1.375 h · 100.000 € − 46.500 € ÷ 40 % = − 16.250 €');
     assert.equal(await text(zeile('Bezahlt netto')),'20.000 €');
     assert.equal(await rw.locator('li strong',{hasText:'Zum Gehalt (vertraulich)'}).count(),1);
@@ -285,7 +297,8 @@ test('Projektblatt als Admin: Kennzahlen, Stände mit Personen, Zahlungen; Stand
     const be=await gedruckt(page);
     assert.match(be.titel,/^T-01 – Testhaus – LPH 3 – Controlling – /);
     assert.match(be.html,/Controlling-Bericht[\s\S]*Lage und Kennzahlen[\s\S]*Stände und Stunden[\s\S]*Zahlungen/);
-    assert.doesNotMatch(be.html,/Personalkosten|Gewinn|Test Admin 350 h/,'ohne «vertraulich» keine Gehälter, kein Gewinn, keine Stunden je Person');
+    assert.doesNotMatch(be.html,/Personalkosten|Selbstkosten|Gewinn am Ende netto|vertraulich<\/span>|Test Admin 350 h/,'ohne «vertraulich» keine Gehälter, kein Betrag des Gewinns, keine Stunden je Person');
+    assert.match(be.html,/data-kachel="gewinn"[\s\S]*data-stufe="plus"/,'der Gewinn als Stufe wie für das Team');
     await page.locator('[data-pdf-bericht]').click();
     await page.locator('#ctDialog [name="vertraulich"]').check();
     await page.locator('#ctDialog [name="zahlungen"]').uncheck();
@@ -312,10 +325,17 @@ test('Als Mitglied: Honorar, Stunden, Zahlungen und Ergebnis ja; Personen, Sätz
   const {ctx,page,fehler}=await oeffne('controlling.html?projekt='+P1,{rolle:'member'});
   try{
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Stunden')),'550 h');
-    assert.equal(await text(merkmal(page,'Stand 01.11.2026','Ergebnis bisher netto')),'− 6.500 €');
-    // Die Lage sieht das ganze Team; Gewinn, Personal- und Selbstkosten nicht.
+    assert.equal(await text(merkmal(page,'Stand 01.11.2026','Gegenüber Kalkulation bisher netto')),'− 6.500 €');
+    // Die Lage sieht das ganze Team; Personal- und Selbstkosten und den Betrag des Gewinns nicht. Ob das Paket Geld
+    // verdient, schon (Gari, 26.11.2026): + 10.000 € auf 100.000 € Honorar sind 10 %, also im Plus; die Stufe rechnet
+    // die Datenbank, die Seite bekommt keine Beträge.
     assert.equal(await page.locator('.ct-lage').getAttribute('data-lage'),'kritisch');
-    assert.equal(await page.locator('[data-vertraulich],[data-kachel="gewinn"],.ct-nur-admin').count(),0);
+    assert.equal(await page.locator('[data-vertraulich],.ct-nur-admin').count(),0);
+    assert.deepEqual(await page.locator('.ct-kachel').evaluateAll(l=>l.map(x=>x.dataset.kachel)),['gewinn','ergebnis','rest','offen']);
+    assert.equal(await text(kachel(page,'gewinn').locator('.ct-kachel-name')),'Gewinn am Ende');
+    assert.equal(await text(kachel(page,'gewinn').locator('strong')),'im Plus');
+    assert.equal(await text(kachel(page,'gewinn').locator('.ct-kachel-unter')),'nach Gehältern und Bürokosten; der Betrag ist vertraulich · vorläufig');
+    assert.doesNotMatch(await kachel(page,'gewinn').textContent(),/€/);
     assert.equal(await page.locator('[data-je-person]').count(),0);
     assert.equal(await page.locator('[data-stand-neu],[data-stand],[data-paket-bearbeiten],[data-paket-neu]').count(),0);
     assert.match(await page.locator('.ct-tabelle thead').textContent(),/^(?!.*Gehalt)/);
@@ -323,7 +343,9 @@ test('Als Mitglied: Honorar, Stunden, Zahlungen und Ergebnis ja; Personen, Sätz
     await page.locator('[data-pdf-bericht]').click();
     assert.deepEqual(await page.locator('#ctDialog input[type="checkbox"]').evaluateAll(l=>l.map(i=>i.name)),['lage','staende','zahlungen'],'ohne «vertraulich»');
     await page.locator('#ctDialog button[value="drucken"]').click();
-    assert.doesNotMatch((await gedruckt(page)).html,/Personalkosten|Gewinn|vertraulich/);
+    const bm=(await gedruckt(page)).html;
+    assert.doesNotMatch(bm,/Personalkosten|Selbstkosten|Gewinn am Ende netto|Gewinn netto|ct-nur-admin/);
+    assert.match(bm,/data-stufe="plus"/);
     await page.locator('[data-reiter="zahlungen"]').click();
     assert.equal(await page.locator('.ct-tabelle tbody tr').count(),1);
     assert.equal(await page.locator('[data-zahlung-neu],[data-zahlung]').count(),0);
@@ -337,6 +359,14 @@ test('Als Mitglied: Honorar, Stunden, Zahlungen und Ergebnis ja; Personen, Sätz
     await page.goto(adresse('controlling.html'));
     await page.locator('.ct-karte').first().waitFor();
     assert.equal(await page.locator('a[href="./controlling.html?ansicht=saetze"],[data-paket-neu],.ct-ohne').count(),0);
+    // Auf der Karte: der Gewinn als Stufe (ohne Betrag), daneben der Vergleich mit der Kalkulation.
+    const km=karte(page,'Testhaus');
+    assert.deepEqual(await km.locator('.ct-zahlen dt').allTextContents(),['Gewinn am Ende','Gegenüber Kalkulation am Ende netto','Erarbeitet, nicht bezahlt netto']);
+    assert.equal(await text(km.locator('[data-gewinn-stufe="plus"]')),'im Plusvorläufig');
+    assert.equal(await text(km.locator('[data-ergebnis]')),'− 16.250 €');
+    assert.equal(await page.locator('[data-gewinn]').count(),0);
+    assert.equal(await text(karte(page,'Nachbarhaus').locator('[data-gewinn-stufe]')),'—','nur Team-Stunden: keine Stufe');
+    await foto(page,'uebersicht-mitglied');
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
@@ -370,7 +400,10 @@ test('Admin ohne Eintrag auf der Liste: keine Sätze, keine Gehälter, keine Stu
   const {ctx,page,fehler}=await oeffne('controlling.html?projekt='+P1,{rolle:'admin-ohne-liste'});
   try{
     assert.equal(await text(merkmal(page,'Stand 01.11.2026','Stunden')),'550 h');
-    assert.equal(await page.locator('[data-vertraulich],[data-kachel="gewinn"]').count(),0);
+    assert.equal(await page.locator('[data-vertraulich],.ct-nur-admin').count(),0);
+    // Wie das Team: der Gewinn nur als Stufe, ohne Betrag (Gari, 26.11.2026).
+    assert.equal(await text(kachel(page,'gewinn').locator('strong')),'im Plus');
+    assert.doesNotMatch(await kachel(page,'gewinn').textContent(),/€/);
     assert.equal(await page.locator('[data-je-person],[data-stand-neu],[data-paket-bearbeiten]').count(),0);
     const tabellen=await page.evaluate(()=>window.__fake.aufrufe.map(a=>a.table));
     for(const t of ['office_controlling_stunden','office_controlling_saetze','office_controlling_einstellungen'])assert.ok(!tabellen.includes(t),t);

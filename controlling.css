@@ -46,6 +46,14 @@
 .ct-zahlen dt{font-size:12px;color:var(--m-ink-soft)}
 .ct-zahlen dd{margin:0;font-size:16px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ct-zahlen dd.ct-klein{font-size:13px;font-weight:500;color:var(--m-ink-soft);white-space:normal}
+/* Gewinn zuerst (Gari, 26.11.2026): mit vollem Zugang der Betrag mit «vertraulich», im Team die Stufe als Zeichen und
+   Wort wie die Lage; darunter «vorläufig», solange die Annahmen nicht bestätigt sind. Name und Zahl je Spalte stehen
+   in zwei gemeinsamen Zeilen (subgrid): die Zahlen stehen auf einer Höhe, auch wenn ein Name umbricht. */
+.ct-zahlen>div{display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:2px;align-content:start}
+.ct-zahlen dt .ct-nur-admin{font-size:11px;padding:1px 6px;white-space:nowrap}
+.ct-zahlen dd .ct-vorlaeufig{display:block;margin-top:3px;font-size:11.5px;font-weight:500;color:var(--m-ink-soft);white-space:normal}
+.ct-zahlen dd .ct-lage-chip{font-size:13px}
+.ct-kachel-wert .ct-lage-chip{font-size:15px;padding:5px 12px}
 .ct-plus{color:var(--m-success)}
 .ct-minus{color:var(--m-error)}
 .ct-gruppen{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px 24px}
