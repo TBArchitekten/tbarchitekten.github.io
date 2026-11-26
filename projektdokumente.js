@@ -298,11 +298,24 @@ function render(){
 // Felder; die gelten nicht (zeichnet). Was im Feld mit dem Fokus steht, wandert als Text ins neue Feld (feste ids);
 // übernommen wird es erst beim Verlassen des Felds.
 let zeichnet=false;
+// Text direkt auf der Seite (contenteditable, 26.11.2026): Wert und Cursor bleiben beim Neuzeichnen, wie bei Feldern.
+function textPos(el){
+  const sel=window.getSelection();if(!sel||!sel.rangeCount)return null;
+  const r=sel.getRangeAt(0);if(!el.contains(r.startContainer)||!el.contains(r.endContainer))return null;
+  const vor=document.createRange();vor.selectNodeContents(el);vor.setEnd(r.startContainer,r.startOffset);const a=vor.toString().length;
+  vor.setEnd(r.endContainer,r.endOffset);return [a,vor.toString().length];
+}
+function setzeTextPos(el,pos){
+  if(!pos)return;
+  const stelle=n=>{const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let rest=n,t;while((t=w.nextNode())){if(rest<=t.length)return [t,rest];rest-=t.length}return [el,el.childNodes.length]};
+  try{const r=document.createRange(),[a,ao]=stelle(pos[0]),[b,bo]=stelle(pos[1]);r.setStart(a,ao);r.setEnd(b,bo);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r)}catch{}
+}
 function vorZeichnen(){
   const a=document.activeElement;
   if(!a||!root.contains(a))return null;
   const edit=a.matches('[data-edit]')?{z:a.dataset.z,k:a.dataset.k}:null;
   if(!edit&&!a.id)return null;
+  if(a.isContentEditable)return {id:a.id,edit:null,text:a.innerText,pos:textPos(a)};
   return {id:a.id,edit,wert:'value' in a&&a.tagName!=='SELECT'?a.value:null,pos:typeof a.selectionStart==='number'?[a.selectionStart,a.selectionEnd]:null};
 }
 function zeichne(html,fokus){
@@ -313,6 +326,10 @@ function zeichne(html,fokus){
   if(editor){n=editor;gleicheStelle=!!fokus?.edit&&fokus.edit.z===editor.dataset.z&&fokus.edit.k===editor.dataset.k}
   else if(fokus?.id){n=document.getElementById(fokus.id);gleicheStelle=!!n}
   if(!n)return;
+  if(gleicheStelle&&typeof fokus.text==='string'){
+    if(n.isContentEditable&&n.innerText!==fokus.text)n.textContent=fokus.text;
+    n.focus({preventScroll:true});setzeTextPos(n,fokus.pos);return;
+  }
   if(gleicheStelle&&fokus.wert!==null&&n.value!==fokus.wert)n.value=fokus.wert;
   n.focus({preventScroll:!!fokus});
   if(gleicheStelle&&fokus.pos&&n.setSelectionRange){try{n.setSelectionRange(fokus.pos[0],fokus.pos[1])}catch{}}
@@ -1154,7 +1171,17 @@ const M=window.TBA_MUSTERMAPPE;
 const PRODUKT_VOLL='id,name,hersteller,serie,familie,kategorie,beschreibung,merkmale,fehlend,status,updated_at';
 // pdf.js in der «legacy»-Fassung: läuft auch in etwas älteren Browsern (Safari, iPad) und im Chromium des CI.
 const PDFJS='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/legacy/build/';
-const mm={offen:'',seite:null,lesen:false,produkte:new Map(),fotos:new Map(),urls:new Map(),geladen:'',laedt:null,pdfjs:null};
+const mm={offen:'',seite:null,produkte:new Map(),fotos:new Map(),urls:new Map(),geladen:'',laedt:null,pdfjs:null,ansicht:mmAnsichtLesen()};
+// Arbeitsfläche der Mappe (Gari, 26.11.2026): Zoom «Einpassen» (die ganze Seite im Fenster), «Seitenbreite» oder in
+// Prozent (100 % = A3 in Originalgröße), Raster ein oder aus, Seitenliste und Eigenschaften ein- und ausblenden.
+// Gemerkt je Gerät; ohne Speicher (privates Fenster) gilt die Grundeinstellung.
+function mmAnsichtLesen(){
+  const grund={zoom:'fit',raster:false,seiten:true,rechts:true};
+  try{const x=JSON.parse(localStorage.getItem('tba-office.mustermappe.ansicht')||'null');
+    if(x&&typeof x==='object')return {zoom:x.zoom==='breite'||(typeof x.zoom==='number'&&x.zoom>=.2&&x.zoom<=4)?x.zoom:'fit',raster:!!x.raster,seiten:x.seiten!==false,rechts:x.rechts!==false}}catch{}
+  return grund;
+}
+function mmAnsichtMerken(){try{localStorage.setItem('tba-office.mustermappe.ansicht',JSON.stringify(mm.ansicht))}catch{}}
 const istMappe=v=>!!M&&M.istMappe(v);
 const mappen=()=>zeilen.entscheidungsvorlagen.filter(istMappe);
 function mappePunkte(v){return (v?.daten?.punkte||[]).map(id=>zeilen.entscheidungsliste.find(z=>z.id===id)).filter(Boolean)}
@@ -1193,7 +1220,6 @@ function mappeNachladen(v){
 }
 function seitenSetzen(v,liste){v.daten={...v.daten,seiten:liste};markiere(v)}
 function seitePatch(v,id,patch){seitenSetzen(v,M.seitenVon(v.daten).map(x=>x.id===id?{...x,...patch}:x))}
-function mmWachse(t){t.style.height='auto';t.style.height=t.scrollHeight+'px'}
 function mappeSeite(v){const l=M.seitenVon(v.daten);return l.find(x=>x.id===mm.seite)||l[0]||null}
 
 // Die Mappen eines Projekts (Werkzeug Mustermappe): je Themenpaket eine Karte mit Positionen, Seiten, Termin und Stand.
@@ -1239,17 +1265,83 @@ function renderMappe(){
       inh.punkte.map(p=>'<option value="vergleich|'+esc(p.id)+'">'+esc((p.code||p.nr)+' · Vergleich')+'</option>'+
         p.optionen.map(o=>'<option value="material|'+esc(p.id)+'|'+esc(o.id)+'">'+esc((p.code||p.nr)+' · '+o.id+' '+K.kurz(o.name,28)+' · Material')+'</option>').join('')).join('')+
     '</select></label><button type="button" class="btn" data-act="mm-position-neu">Position hinzufügen</button></nav>';
-  const mitte='<section class="mm-mitte" aria-label="Seite '+(i+1)+' von '+seiten.length+'"><div class="mm-werkzeug"><span class="meta">Seite '+(i+1)+' von '+seiten.length+' · A3 quer · gestrichelt: Text der Mappe</span>'+
-    '<button type="button" class="btn" data-act="mm-zoom" aria-pressed="'+(mm.lesen?'true':'false')+'">'+(mm.lesen?'Ganze Seite':'Lesegröße')+'</button></div>'+
-    '<div class="mm-buehne'+(mm.lesen?' lesen':'')+'">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:seiten.length,modus:'bearbeiten',bild:bildUrl}):'<p class="meta">Die Mappe hat keine Seite.</p>')+'</div>'+
-    '<div data-mm-hinweise>'+mappeHinweise(v,seite)+'</div></section>';
+  const a=mm.ansicht,schalter=(act,t,an,titel)=>'<button type="button" class="btn mm-schalter" data-act="'+act+'" aria-pressed="'+(an?'true':'false')+'" title="'+esc(titel)+'">'+t+'</button>';
+  const mitte='<section class="mm-mitte" aria-label="Seite '+(i+1)+' von '+seiten.length+'"><div class="mm-werkzeug">'+schalter('mm-links','Seiten',a.seiten,'Seitenliste ein- oder ausblenden')+
+    '<span class="meta mm-seiteninfo">Seite '+(i+1)+' von '+seiten.length+' · A3 quer · Text auf der Seite anklicken und schreiben</span>'+
+    '<span class="mm-zoom" role="group" aria-label="Zoom"><button type="button" class="btn" data-act="mm-zoom-minus" aria-label="Verkleinern">−</button>'+
+    '<select class="pd-in" data-act="mm-zoom" aria-label="Zoom">'+zoomOptionen()+'</select><button type="button" class="btn" data-act="mm-zoom-plus" aria-label="Vergrößern">+</button></span>'+
+    schalter('mm-raster','Raster',a.raster,'Raster der Seite zeigen: 12 × 8 Felder, Grundlinie 4 mm')+schalter('mm-rechts','Eigenschaften',a.rechts,'Eigenschaften ein- oder ausblenden')+'</div>'+
+    '<div class="mm-buehne'+(a.raster?' raster':'')+'">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:seiten.length,modus:'bearbeiten',bild:bildUrl}):'<p class="meta">Die Mappe hat keine Seite.</p>')+'</div></section>';
   const fokus=vorZeichnen();
   const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({werkzeug:'mustermappe',projekt:projekt.id}),'‹ Mustermappen'],
     kicker:'Mustermappe · '+projektName(),titel:inh.titel,meta,aktionen})+
-    '<div class="mm">'+nav+mitte+'<aside class="mm-rechts" aria-label="Einstellungen">'+mappeSeitenleiste(v,inh,seite)+'</aside></div>'+
+    '<div class="mm'+(a.seiten?'':' ohne-seiten')+(a.rechts?'':' ohne-rechts')+'">'+nav+mitte+'<aside class="mm-rechts" aria-label="Eigenschaften">'+
+      '<div data-mm-hinweise>'+mappeHinweise(v,seite)+'</div><div data-mm-uebersatz></div>'+mappeSeitenleiste(v,inh,seite)+'</aside></div>'+
     '<div class="pd-druck mm-druck" aria-hidden="true">'+M.mappeHtml(inh,{modus:'druck',bild:bildUrl})+'</div>'+(ui.detail?detailPanel('entscheidungsliste'):'')+'</div>';
   zeichne(html,fokus);
-  for(const t of root.querySelectorAll('textarea.mm-text'))mmWachse(t);
+  mmNachZeichnen();
+}
+// Zoom: Einpassen (ganze Seite in der Bühne), Seitenbreite oder Prozent von A3 in Originalgröße (420 mm = 1587 px).
+const MM_A3=1587,MM_STUFEN=[.25,.33,.5,.67,.75,1,1.25,1.5,2,3];
+function zoomOptionen(){
+  const z=mm.ansicht.zoom,zahl=typeof z==='number';
+  const stufen=zahl&&!MM_STUFEN.includes(z)?[...MM_STUFEN,z].sort((a,b)=>a-b):MM_STUFEN;
+  return '<option value="fit"'+(z==='fit'?' selected':'')+' data-mm-fit>Einpassen</option><option value="breite"'+(z==='breite'?' selected':'')+'>Seitenbreite</option>'+
+    stufen.map(x=>'<option value="'+x+'"'+(zahl&&x===z?' selected':'')+'>'+Math.round(x*100)+' %</option>').join('');
+}
+function mmBreite(b,art=mm.ansicht.zoom){
+  const cs=getComputedStyle(b),w=b.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),h=b.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  // Unter 1181 px wächst die Bühne mit der Seite: dann passt «Einpassen» die Breite ein.
+  const fit=window.matchMedia('(min-width:1181px)').matches&&h>100?Math.min(w,h*420/297):w;
+  return Math.max(160,Math.floor(art==='fit'?fit:art==='breite'?w:MM_A3*art));
+}
+function zoomAnwenden(){
+  const b=root.querySelector('.mm-buehne');if(!b)return;
+  const br=mmBreite(b);b.style.setProperty('--mm-breite',br+'px');
+  const fit=root.querySelector('[data-mm-fit]');if(fit)fit.textContent='Einpassen · '+Math.round(mmBreite(b,'fit')/MM_A3*100)+' %';
+}
+// Zoomen um einen Punkt der Bühne (Strg oder ⌘ und Mausrad, auf dem Trackpad mit zwei Fingern): der Punkt bleibt stehen.
+function zoomAuf(stufe,um=null){
+  const b=root.querySelector('.mm-buehne');if(!b)return;
+  const alt=mmBreite(b),neu=Math.min(4,Math.max(.2,Math.round(stufe*100)/100));
+  const r=b.getBoundingClientRect(),x=um?um.x-r.left:b.clientWidth/2,y=um?um.y-r.top:b.clientHeight/2;
+  const fx=(b.scrollLeft+x)/Math.max(1,b.scrollWidth),fy=(b.scrollTop+y)/Math.max(1,b.scrollHeight);
+  mm.ansicht.zoom=neu;mmAnsichtMerken();zoomAnwenden();
+  const w=root.querySelector('[data-act="mm-zoom"]');if(w)w.innerHTML=zoomOptionen();zoomAnwenden();
+  if(mmBreite(b)!==alt){b.scrollLeft=fx*b.scrollWidth-x;b.scrollTop=fy*b.scrollHeight-y}
+}
+function zoomSchritt(richtung){
+  const b=root.querySelector('.mm-buehne');if(!b)return;
+  const jetzt=mmBreite(b)/MM_A3;
+  const ziel=richtung>0?MM_STUFEN.find(x=>x>jetzt+.005)||MM_STUFEN.at(-1):[...MM_STUFEN].reverse().find(x=>x<jetzt-.005)||MM_STUFEN[0];
+  zoomAuf(ziel);
+}
+function mmNachZeichnen(){
+  const g=root.querySelector('.mm');if(!g)return;
+  g.style.setProperty('--mm-oben',Math.round(g.getBoundingClientRect().top+window.scrollY)+'px');
+  zoomAnwenden();
+  mm.beobachter?.disconnect();
+  const b=root.querySelector('.mm-buehne');
+  if(b&&'ResizeObserver' in window){mm.beobachter=new ResizeObserver(()=>{zoomAnwenden();uebersatzPruefen()});mm.beobachter.observe(b)}
+  uebersatzPruefen();
+}
+// Übersatz wie in InDesign: ein Rahmen, dessen Inhalt nicht hineinpasst, wird rot markiert und rechts genannt; im PDF
+// wird an der letzten ganzen Zeile abgeschnitten (alle Zeilen stehen auf der Grundlinie).
+function uebersatzPruefen(){
+  cancelAnimationFrame(mm.uebersatzRaf);
+  mm.uebersatzRaf=requestAnimationFrame(()=>{
+    const b=root.querySelector('.mm-buehne'),ziel=root.querySelector('[data-mm-uebersatz]');if(!b)return;
+    const namen=[];
+    for(const r of b.querySelectorAll('.mm-r[data-rahmen]')){
+      const ueber=r.scrollHeight>r.clientHeight+1;r.classList.toggle('mm-uebersatz',ueber);
+      if(!ueber)continue;
+      const tab=r.querySelector('.mm-kennwerte'),unten=r.getBoundingClientRect().bottom+.5;
+      const weg=tab?[...tab.rows].filter(tr=>tr.getBoundingClientRect().bottom>unten).length:0;
+      namen.push(r.dataset.rahmen+(weg?' ('+weg+(weg===1?' Kennwert':' Kennwerte')+' nicht auf der Seite)':''));
+    }
+    if(ziel)ziel.innerHTML=namen.length?'<div class="mm-intern mm-uebersatz-liste" role="status"><strong>Passt nicht ganz in den Rahmen</strong><span>'+esc(namen.join(' · '))+
+      '. Kürzen oder weniger zeigen; im PDF steht nur, was in den Rahmen passt.</span></div>':'';
+  });
 }
 // Was nur das Büro sieht: neuer Stand in der Bibliothek, Datenblatt, was im Datenblatt fehlt.
 function mappeHinweise(v,seite){
@@ -1278,7 +1370,7 @@ function mappeHinweise(v,seite){
 // Nach dem Tippen: nur die Hinweise unter der Seite neu, das Feld mit dem Fokus bleibt.
 function mappeHinweiseNeu(){
   clearTimeout(mm.hinweisTimer);
-  mm.hinweisTimer=setTimeout(()=>{const v=vorlageZeile(),h=root.querySelector('[data-mm-hinweise]');if(v&&h&&istMappe(v))h.innerHTML=mappeHinweise(v,mappeSeite(v))},250);
+  mm.hinweisTimer=setTimeout(()=>{const v=vorlageZeile(),h=root.querySelector('[data-mm-hinweise]');if(v&&h&&istMappe(v))h.innerHTML=mappeHinweise(v,mappeSeite(v));uebersatzPruefen()},250);
 }
 function mmFeld(z,k,l,{platz='',lang=false}={}){
   const w=z.daten.muster?.[k]||'',id='mf-'+z.id+'-'+k;
@@ -1324,12 +1416,14 @@ function mappeSeitenleiste(v,inh,seite){
     karte+='<label class="pd-feld"><span>Variante</span><select class="pd-in" data-act="mm-material-option">'+opts.map(o=>'<option value="'+esc(o.id)+'"'+(o.id===seite.option?' selected':'')+'>'+esc(o.id+' · '+K.kurz(o.text||o.produkt,48))+'</option>').join('')+'</select></label>'+
       '<p class="meta">Auf der Seite zeigen</p><div class="mm-wahl">'+zeige('kennwerte','Kennwerte')+zeige('kosten','Kosten')+zeige('empfehlung','Empfehlung')+'</div>'+
       opts.filter(o=>o.produkt_id&&o.id===seite.option).map(o=>fotoWahl({...o,_z:z.id})).join('');
-  }else if(seite?.typ==='frei'){
-    karte+='<p class="meta">Ein Bild oder ein PDF, etwa ein Plan aus Archicad oder eine Seite aus InDesign; vom PDF kommt eine Seite als Bild auf die Seite.</p>'+
+  }else if(seite?.typ==='frei'||seite?.typ==='deckblatt'){
+    // Bild der freien Seite oder Titelbild des Deckblatts (26.11.2026): ein Bild oder eine Seite aus einem PDF.
+    karte+='<p class="meta">'+(seite.typ==='frei'?'Ein Bild oder ein PDF, etwa ein Plan aus Archicad oder eine Seite aus InDesign; vom PDF kommt eine Seite als Bild auf die Seite.'
+        :'Titel, Projekt und Termin kommen aus den Angaben der Mappe. Darüber ein Titelbild (optional), etwa ein Rendering; ohne Bild bleibt die Fläche weiß.')+'</p>'+
       '<label class="pd-feld"><span>Seite im PDF</span><input class="pd-in" type="number" min="1" max="2000" data-act="mm-pdf-seite" value="'+esc(seite.pdf_seite||1)+'"></label>'+
-      '<label class="btn">'+(seite.bild?.pfad?'Anderes Bild oder PDF':'Bild oder PDF hochladen')+'<input type="file" class="pb-datei" hidden accept="image/jpeg,image/png,image/webp,application/pdf" data-act="mm-datei"></label>'+
+      '<label class="btn">'+(seite.bild?.pfad?'Anderes Bild oder PDF':seite.typ==='frei'?'Bild oder PDF hochladen':'Titelbild hochladen')+'<input type="file" class="pb-datei" hidden accept="image/jpeg,image/png,image/webp,application/pdf" data-act="mm-datei"></label>'+
       (seite.bild?.pfad?' <button type="button" class="btn" data-act="mm-bild-weg">Bild entfernen</button>':'');
-  }else karte+='<p class="meta">'+(seite?.typ==='uebersicht'?'Die Übersicht entsteht aus den Positionen; bei Strategie A und B getrennt.':'Titel, Projekt und Termin kommen aus den Angaben der Mappe.')+'</p>';
+  }else karte+='<p class="meta">Die Übersicht entsteht aus den Positionen; bei Strategie A und B getrennt.</p>';
   karte+='<div class="mm-knoepfe"><button type="button" class="btn" data-act="mm-hoch" aria-label="Seite nach oben">↑</button><button type="button" class="btn" data-act="mm-runter" aria-label="Seite nach unten">↓</button>'+
     '<button type="button" class="btn" data-act="mm-seite-weg">Seite entfernen</button></div></section>';
   let position='';
@@ -1362,7 +1456,11 @@ function mappeSeitenleiste(v,inh,seite){
   const ang=(k,l,ph='')=>'<label class="pd-feld"><span>'+esc(l)+'</span><input class="pd-in" id="m-'+k+'" data-vmeta="'+k+'" value="'+esc(k==='besprechung_am'?K.datumLang(v.daten[k]):v.daten[k])+'" placeholder="'+esc(ph)+'" autocomplete="off"></label>';
   const angaben='<section class="card"><h2>Angaben der Mappe</h2>'+ang('titel','Titel')+
     '<label class="pd-feld"><span>Themenpaket</span><select class="pd-in" id="m-themenpaket" data-vmeta="themenpaket">'+M.THEMEN.map(t=>'<option'+(t===v.daten.themenpaket?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'+
-    ang('besprechung_am','Bemusterungstermin','TT.MM.JJJJ')+ang('auftraggeber','Bauherr')+ang('strategie_a','Strategie A','kurz, z. B. Terrazzo und Eiche')+ang('strategie_b','Strategie B')+ang('verfasser','Verfasser')+'</section>';
+    ang('besprechung_am','Bemusterungstermin','TT.MM.JJJJ')+ang('auftraggeber','Bauherr')+ang('strategie_a','Strategie A','kurz, z. B. Terrazzo und Eiche')+ang('strategie_b','Strategie B')+ang('verfasser','Verfasser')+
+    // Kopfzeile wie im Archicad-Master (26.11.2026): «Projekt | Phase | Untertitel» auf jeder Seite.
+    '<h3>Kopfzeile</h3><p class="meta">Steht auf jeder Seite oben links, wie im Archicad-Master; leer gilt der graue Vorschlag.</p>'+
+    ang('kopf_projekt','Projekt',[projekt?.number,projekt?.name].filter(Boolean).join(' ')||'Projektadresse')+ang('kopf_phase','Phase','z. B. Entwurf')+
+    ang('kopf_untertitel','Untertitel',v.daten.titel||'Mustermappe')+'</section>';
   const termin=terminKarte(v);
   const staende=ui.staende===null?'<p class="meta">wird geladen …</p>':ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button><span>'+esc([K.datumLang(String(s.created_at).slice(0,10)),name(s.created_by)].filter(Boolean).join(' · '))+'</span></li>').join('')+'</ul>'
     :'<p class="meta">Noch kein Stand. Beim Vorlegen wird der Stand festgehalten und bleibt unverändert.</p>';
@@ -1494,8 +1592,8 @@ async function freiesBild(v,seiteId,datei){
   if(!datei)return;
   const seite=M.seitenVon(v.daten).find(x=>x.id===seiteId);if(!seite)return;
   const {pfad,name}=await bildHochladen(datei,Number(seite.pdf_seite)||1);
-  seitePatch(v,seiteId,{bild:{pfad,name},titel:seite.titel||String(name).replace(/\.(jpe?g|png|webp)$/i,'').slice(0,120)});
-  meldung('Das Bild steht auf der Seite.');render();
+  seitePatch(v,seiteId,{bild:{pfad,name},...(seite.typ==='frei'?{titel:seite.titel||String(name).replace(/\.(jpe?g|png|webp)$/i,'').slice(0,120)}:{})});
+  meldung(seite.typ==='deckblatt'?'Das Titelbild steht auf dem Deckblatt.':'Das Bild steht auf der Seite.');render();
 }
 
 // ---------- Mustermappe: Bild ändern (Gari, 26.11.2026) ----------
@@ -1540,10 +1638,7 @@ function rahmenImPdf(zid,oid,i){
   box.innerHTML=M.seiteHtml(seite,inh,{modus:'druck',bild:bildUrl});
   document.body.append(box);
   try{
-    let el=null;
-    if(seite.typ==='vergleich'){const k=M.kandidatenDerSeite(seite,p).findIndex(o=>o.id===oid);if(k>=0&&i===0)el=box.querySelectorAll('.mm-kand')[k]?.querySelector('.mm-foto')}
-    else if((p.optionen.find(o=>o.id===seite.option)||p.optionen[0])?.id===oid)el=i===0?box.querySelector('.mm-foto-gross'):box.querySelectorAll('.mm-foto-klein')[i-1];
-    const r=el?.getBoundingClientRect();
+    const r=box.querySelector('[data-mmfoto="'+CSS.escape(oid+'|'+i)+'"]')?.getBoundingClientRect();
     return r&&r.width>0&&r.height>0?r.width/r.height:0;
   }finally{box.remove()}
 }
@@ -1661,7 +1756,13 @@ function mappeKlick(act,el){
   const v=vorlageZeile();if(!v||!istMappe(v))return;
   const z=el.dataset.z?zeileVon(el.dataset.z):null;
   if(act==='mm-seite'){mm.seite=el.dataset.id;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
-  else if(act==='mm-zoom'){mm.lesen=!mm.lesen;render()}
+  else if(act==='mm-zoom-plus'||act==='mm-zoom-minus')zoomSchritt(act==='mm-zoom-plus'?1:-1);
+  else if(act==='mm-raster'){mm.ansicht.raster=!mm.ansicht.raster;mmAnsichtMerken();root.querySelector('.mm-buehne')?.classList.toggle('raster',mm.ansicht.raster);el.setAttribute('aria-pressed',String(mm.ansicht.raster))}
+  else if(act==='mm-links'||act==='mm-rechts'){
+    const k=act==='mm-links'?'seiten':'rechts';mm.ansicht[k]=!mm.ansicht[k];mmAnsichtMerken();
+    root.querySelector('.mm')?.classList.toggle(act==='mm-links'?'ohne-seiten':'ohne-rechts',!mm.ansicht[k]);el.setAttribute('aria-pressed',String(mm.ansicht[k]));zoomAnwenden();
+  }
+  else if(act==='mm-kw-neu')kennwertAnhaengen(el.dataset.z,el.dataset.o);
   else if(act==='mm-pdf')void sicher(()=>mappeDrucken(v));
   else if(act==='mm-praes')void sicher(async()=>{await alleSpeichern();praesOeffnen(v);void mappeLaden(v).then(()=>praesZeichnen()).catch(()=>{})});
   else if(act==='mm-alle-freigeben')void sicher(()=>alleFreigeben(v));
@@ -1701,6 +1802,7 @@ function mappeAenderung(el){
   const v=vorlageZeile();if(!v||!istMappe(v))return false;
   const act=el.dataset.act;
   if(act==='mm-neue-seite'){if(el.value)seiteNeu(v,el.value);return true}
+  if(act==='mm-zoom'){const w=el.value;if(w==='fit'||w==='breite'){mm.ansicht.zoom=w;mmAnsichtMerken();zoomAnwenden()}else if(Number(w)>0)zoomAuf(Number(w));return true}
   if(act==='mm-kandidat'){const z=zeileVon(el.dataset.z);if(z&&el.value){const id=el.value;el.disabled=true;void sicher(()=>kandidatHinzu(v,z,id))}return true}
   const seite=mappeSeite(v);
   if(act==='mm-zeige'&&seite){seitePatch(v,seite.id,{zeige:{...(seite.zeige||{}),[el.dataset.k]:el.checked}});spaeterRendern();return true}
@@ -1726,29 +1828,59 @@ function mappeAenderung(el){
   }
   return false;
 }
-// Tippen auf der Seite: gespeichert wird nach einer kurzen Pause, neu gezeichnet erst beim Verlassen des Felds.
+// Tippen auf der Seite (26.11.2026: direkt im Text der Seite, wie im PDF): gespeichert wird nach einer kurzen Pause,
+// neu gezeichnet erst beim Verlassen. Einzeilige Texte (Name, Hersteller, Kennwerte) ohne Zeilenumbruch.
+function mmText(el){
+  if(!el.isContentEditable)return el.value;
+  let t=el.innerText.replace(/\r/g,'');if(t.endsWith('\n'))t=t.slice(0,-1);
+  return el.hasAttribute('data-einzeilig')?t.replace(/\s*\n\s*/g,' '):t;
+}
+function kennwerteAusTabelle(tab){
+  return [...tab.tBodies[0].rows].map(tr=>({feld:mmText(tr.cells[0]).trim(),wert:mmText(tr.cells[1]).trim()}));
+}
 function mappeEingabe(el){
   const v=vorlageZeile();if(!v||!istMappe(v))return false;
-  if(el.matches('textarea[data-mmtext]')){const z=zeileVon(el.dataset.z);if(z){z.daten={...z.daten,[el.dataset.mmtext]:el.value};markiere(z)}}
-  else if(el.matches('textarea[data-mmopt],textarea[data-mmanp]')){
+  if(el.isContentEditable&&!el.textContent&&el.innerHTML)el.innerHTML='';
+  const wert=mmText(el);
+  if(el.matches('[data-mmtext]')){const z=zeileVon(el.dataset.z);if(z){z.daten={...z.daten,[el.dataset.mmtext]:wert};markiere(z)}}
+  else if(el.matches('[data-mmopt],[data-mmanp],[data-mmkw]')){
     // Texte der Variante für diese Mappe (26.11.2026): gleich wie die Bibliothek heißt nicht geändert.
-    const [zid,oid,feld='beschreibung']=(el.dataset.mmanp||el.dataset.mmopt).split('|'),z=zeileVon(zid);
+    const kw=el.matches('[data-mmkw]'),tab=kw?el.closest('table'):null;
+    const [zid,oid,feld=kw?'kennwerte':'beschreibung']=(el.dataset.mmanp||el.dataset.mmopt||el.dataset.mmkw).split('|'),z=zeileVon(zid);
     if(z){
       let neu=null;
-      z.daten={...z.daten,optionen:K.optionen(z.daten).map(o=>o.id===oid?(neu=M.anpassen(o,feld,el.value)):o)};markiere(z);
-      const g=!!neu&&M.geaendert(neu)[feld];
-      el.classList.toggle('mm-geaendert',g);
-      if(g)el.title='In dieser Mappe geändert';else el.removeAttribute('title');
+      z.daten={...z.daten,optionen:K.optionen(z.daten).map(o=>o.id===oid?(neu=M.anpassen(o,feld,kw?kennwerteAusTabelle(tab):wert)):o)};markiere(z);
+      const g=!!neu&&M.geaendert(neu)[feld],ziel=tab||el;
+      ziel.classList.toggle('mm-geaendert',g);
+      if(g)ziel.title='In dieser Mappe geändert';else ziel.removeAttribute('title');
       mappeHinweiseNeu();
     }
   }
-  else if(el.matches('textarea[data-mmseite]')){
+  else if(el.matches('[data-mmseite]')){
     const [sid,k]=el.dataset.mmseite.split('|');
-    v.daten={...v.daten,seiten:M.seitenVon(v.daten).map(x=>x.id===sid?{...x,[k]:el.value}:x)};markiere(v);
+    v.daten={...v.daten,seiten:M.seitenVon(v.daten).map(x=>x.id===sid?{...x,[k]:wert}:x)};markiere(v);
   }
-  else if(el.matches('textarea[data-mmvorlage]')){v.daten={...v.daten,[el.dataset.mmvorlage]:el.value};markiere(v)}
+  else if(el.matches('[data-mmvorlage]')){v.daten={...v.daten,[el.dataset.mmvorlage]:wert};markiere(v)}
   else return false;
-  mmWachse(el);return true;
+  uebersatzPruefen();return true;
+}
+// «+ Kennwert»: eine leere Zeile in der Tabelle; gespeichert wird, sobald etwas darin steht.
+function kennwertAnhaengen(zid,oid){
+  const tab=root.querySelector('.mm-buehne table[data-mmkwtab="'+CSS.escape(zid+'|'+oid)+'"]');if(!tab)return;
+  const body=tab.tBodies[0],n=body.rows.length,vorlage=body.rows[0];if(!vorlage)return;
+  const leer=[...body.rows].find(tr=>!mmText(tr.cells[0]).trim()&&!mmText(tr.cells[1]).trim());
+  if(leer){leer.cells[0].focus();return}
+  const tr=vorlage.cloneNode(true);
+  [...tr.cells].forEach((c,j)=>{c.textContent='';c.id='mm-'+zid+'-'+oid+'-kw'+n+(j?'w':'f')});
+  body.append(tr);tr.cells[0].focus();uebersatzPruefen();
+}
+// Enter in einer Kennwerte-Zelle: weiter zum Wert, dann zur nächsten Zeile (am Ende eine neue).
+function kennwertWeiter(el){
+  const tr=el.closest('tr'),tab=el.closest('table');
+  if(el.cellIndex===0){tr.cells[1].focus();return}
+  const naechste=tr.nextElementSibling;
+  if(naechste)naechste.cells[0].focus();
+  else{const [zid,oid]=tab.dataset.mmkwtab.split('|');kennwertAnhaengen(zid,oid)}
 }
 
 // ---------- Mustermappe: Präsentieren im Bemusterungstermin (Schritt 2, 24.11.2026) ----------
@@ -2157,13 +2289,29 @@ root.addEventListener('input',e=>{
   if(zeichnet)return;
   const el=e.target;
   if(el.matches('[data-act="suche"]')){ui.suche=el.value;clearTimeout(el._t);el._t=setTimeout(()=>{renderListe();const s=root.querySelector('[data-act="suche"]');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length)}},250);return}
-  if(ui.ansicht==='mappe'&&el.matches('textarea.mm-text')){mappeEingabe(el);return}
+  if(ui.ansicht==='mappe'&&el.matches('.mm-ed')){mappeEingabe(el);return}
   if(el.matches('textarea[data-vfeld]')){const z=zeileVon(el.dataset.z);if(z){z.daten={...z.daten,[el.dataset.vfeld]:el.value};if(Array.isArray(z.daten._romy))z.daten._romy=z.daten._romy.filter(k=>k!==el.dataset.vfeld);markiere(z)}wachse(el);return}
   if(el.matches('textarea.pd-in[data-edit]'))el.style.height=Math.max(el.scrollHeight,60)+'px';
 });
+root.addEventListener('paste',e=>{
+  const el=e.target.closest?.('.mm-ed');if(!el||ui.ansicht!=='mappe')return;
+  e.preventDefault();
+  let t=(e.clipboardData?.getData('text/plain')||'').replace(/\r/g,'');
+  if(el.hasAttribute('data-einzeilig'))t=t.replace(/\s*\n\s*/g,' ');
+  document.execCommand('insertText',false,t);
+});
+root.addEventListener('wheel',e=>{
+  if(!(e.ctrlKey||e.metaKey)||ui.ansicht!=='mappe'||!e.target.closest?.('.mm-buehne'))return;
+  e.preventDefault();
+  const b=root.querySelector('.mm-buehne');if(!b)return;
+  const jetzt=mmBreite(b)/MM_A3;
+  zoomAuf(jetzt*Math.exp(-Math.max(-60,Math.min(60,e.deltaY))/300),{x:e.clientX,y:e.clientY});
+},{passive:false});
 root.addEventListener('focusout',e=>{
   if(zeichnet)return;
   const el=e.target;
+  // Kennwerte: beim Verlassen des Rahmens neu zeichnen (leere Zeilen fallen weg); «+ Kennwert» liegt im Rahmen.
+  if(ui.ansicht==='mappe'&&el.matches('[data-mmkw]')){if(!el.closest('.mm-r')?.contains(e.relatedTarget))spaeterRendern();return}
   if(el.matches('[data-edit]')){
     // Der Wert gilt sofort, auch wenn ein Klick in eine andere Zelle folgt; dieser Klick zeichnet dann neu.
     if(!el.isConnected||!ui.edit||ui.edit.z!==el.dataset.z||ui.edit.k!==el.dataset.k)return;
@@ -2181,6 +2329,11 @@ root.addEventListener('focusout',e=>{
 });
 root.addEventListener('keydown',e=>{
   const el=e.target;
+  if(ui.ansicht==='mappe'&&el.matches?.('.mm-ed[data-einzeilig]')&&e.key==='Enter'){
+    e.preventDefault();
+    if(el.matches('[data-mmkw]'))kennwertWeiter(el);else el.blur();
+    return;
+  }
   if(el.matches('[data-edit]')){
     if(e.key==='Escape'){e.preventDefault();ui.edit=null;ui.meldung='';renderListe();return}
     if(e.key==='Tab'){e.preventDefault();bestaetige(el,{weiter:e.shiftKey?-1:1});return}

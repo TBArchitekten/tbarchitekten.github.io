@@ -25,8 +25,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .pd-head-text{flex:1 1 520px;min-width:0}
 .kicker{font-size:12px;letter-spacing:.14em;color:var(--pd-kicker);font-weight:700;margin:0;text-transform:uppercase}
 .pd h1{font-size:34px;letter-spacing:-.035em;line-height:1.15;margin:10px 0 8px;font-weight:700}
-.pd h2{font-size:19px;letter-spacing:-.01em;margin:0 0 6px}
-.pd h3{font-size:15px;margin:18px 0 8px}
+/* Überschriften der App, nicht auf dem Blatt der Mustermappe (das setzt seine Schrift selbst, in mm). */
+.pd h2:where(:not(.mm-seite *)){font-size:19px;letter-spacing:-.01em;margin:0 0 6px}
+.pd h3:where(:not(.mm-seite *)){font-size:15px;margin:18px 0 8px}
 .pd-intro{font-size:15px;color:var(--pd-muted);margin:0 0 6px;line-height:1.55;max-width:860px}
 .pd-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .meta{font-size:13px;color:var(--pd-meta);line-height:1.5;margin:0}
@@ -228,7 +229,7 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
   .pd-druck .dv-h2{font-size:11pt;break-after:avoid}
   .pd-druck .dv-umbruch{break-before:page}
   .pd-druck table{break-inside:avoid}
-  .pd-druck p{margin:0 0 6pt}
+  .pd-druck p:where(:not(.mm-seite *)){margin:0 0 6pt}
 }
 
 /* Romy: Vorschläge blau getönt (bis 24.11.2026 grün), mit Fundstelle; erst «Übernehmen» ändert etwas (24.11.2026, #146) */
@@ -279,10 +280,16 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 }
 .pd-quellen .chip,.pd-zwahl .chip{align-self:flex-start}
 
-/* Mustermappe (L3.MAP.1, 24.11.2026): Seiten A3 quer, Texte auf der Seite bearbeitet. Maße in cqw des Blatts
-   (1cqw = 4,2 mm auf A3), damit Bildschirm, PDF und Stand gleich aussehen. Entschieden wird im Termin: keine Unterschrift. */
-.mm{display:grid;grid-template-columns:230px minmax(0,1fr) 330px;gap:18px;align-items:start}
-.mm-nav{position:sticky;top:12px;padding:14px;display:grid;gap:10px}
+/* Mustermappe (L3.MAP.1, 24.11.2026): Seiten A3 quer, Texte auf der Seite bearbeitet. Entschieden wird im Termin.
+   Arbeitsfläche (Gari, 26.11.2026): volle Breite; ab 1181 px füllt sie das Fenster, Seitenliste, Bühne und Eigenschaften
+   scrollen je für sich; Seitenliste und Eigenschaften lassen sich ausblenden; die Seite wird eingepasst oder gezoomt. */
+.pd-mappe-wrap{max-width:none}
+.mm{display:grid;grid-template-columns:220px minmax(0,1fr) 340px;gap:16px;align-items:start}
+.mm.ohne-seiten{grid-template-columns:minmax(0,1fr) 340px}
+.mm.ohne-rechts{grid-template-columns:220px minmax(0,1fr)}
+.mm.ohne-seiten.ohne-rechts{grid-template-columns:minmax(0,1fr)}
+.mm.ohne-seiten>.mm-nav,.mm.ohne-rechts>.mm-rechts{display:none}
+.mm-nav{padding:14px;display:grid;gap:10px;align-content:start}
 .mm-nav h2{font-size:16px;margin:0 4px}
 .mm-seitenliste{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:14px}
 .mm-seitenliste button{display:flex;gap:8px;width:100%;min-height:40px;align-items:center;padding:6px 10px;border:0;border-radius:var(--m-radius-control);background:transparent;text-align:left;cursor:pointer;line-height:1.3}
@@ -290,16 +297,28 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-seitenliste .active button{background:var(--m-blue-soft);color:var(--m-blue-press);box-shadow:inset 0 0 0 1px var(--m-blue-line);font-weight:600}
 .mm-nr{color:var(--m-ink-faint);min-width:20px;font-variant-numeric:tabular-nums}
 .mm-seitenliste .active .mm-nr{color:var(--m-blue-press)}
-.mm-mitte{min-width:0;display:grid;gap:10px}
-.mm-werkzeug{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
-.mm-buehne{overflow:auto;padding:2px}
-.mm-buehne.lesen .mm-blatt{width:1587px}
+.mm-mitte{min-width:0;display:flex;flex-direction:column;gap:10px}
+.mm-werkzeug{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mm-werkzeug .mm-seiteninfo{flex:1;min-width:120px}
+.mm-schalter[aria-pressed="true"]{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue-press)}
+.mm-zoom{display:inline-flex;gap:4px;align-items:center}
+.mm-zoom .btn{min-width:40px;padding:9px 0;font-size:16px}
+.mm-zoom select{min-height:40px;width:auto;padding:8px 10px}
+.mm-buehne{overflow:auto;padding:16px;display:flex;background:var(--m-canvas);border-radius:var(--m-radius-card);box-shadow:inset 0 0 0 1px var(--m-border-soft)}
+.mm-buehne>.mm-blatt{flex:none;width:var(--mm-breite,100%);margin:auto}
 .mm-intern{background:var(--m-paper);border:1px solid var(--m-border);border-radius:var(--m-radius-card);padding:12px 14px;font-size:14px;display:grid;gap:8px}
 .mm-intern ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.mm-uebersatz-liste{border-color:var(--m-error);color:var(--m-error)}
 .mm-neu{background:var(--m-attention-soft);color:var(--m-attention);border-radius:var(--m-radius-card);padding:10px 12px;display:grid;gap:8px;font-size:14px}
-.mm-rechts{display:grid;gap:14px;min-width:0}
+.mm-rechts{display:grid;gap:14px;min-width:0;align-content:start}
 .mm-rechts .card{padding:16px}
 .mm-rechts h2{font-size:17px}
+@media (min-width:1181px){
+  .mm{height:calc(100vh - var(--mm-oben,200px) - 16px);min-height:480px;align-items:stretch}
+  .mm>.mm-nav,.mm>.mm-rechts{overflow:auto;min-height:0}
+  .mm-mitte{min-height:0}
+  .mm-buehne{flex:1;min-height:0}
+}
 .mm-wahl{display:grid;gap:8px;margin:4px 0 12px}
 .mm-wahl label{display:flex;gap:10px;align-items:center;font-size:14px;min-height:28px}
 .mm-wahl input{width:20px;height:20px;margin:0}
@@ -312,87 +331,92 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-thumb img{display:block;width:100%;height:100%;object-fit:cover}
 .mm-thumb b{position:absolute;top:2px;left:2px;min-width:16px;height:16px;border-radius:var(--m-radius-pill);background:var(--m-blue);color:var(--m-on-blue);font-size:11px;line-height:16px;text-align:center}
 .mm-stand .mm-blatt{margin:0 0 14px}
-/* Blatt */
+
+/* Blatt auf dem TBA-Raster (Gari, 26.11.2026): A3 quer 420 × 297 mm; --mm ist ein Millimeter des Blatts (aus seiner
+   Breite), so sehen Bildschirm, PDF und Stand gleich aus. Satzspiegel 380 × 252 mm ab 20/24 mm, 12 × 8 Felder von 28 mm,
+   Abstand 4 mm; alle Zeilen auf der Grundlinie 4 mm. Schrift Arial wie in Archicad. */
 .mm-blatt{container-type:inline-size;width:100%}
-.mm-seite{position:relative;aspect-ratio:420/297;background:var(--m-paper);color:var(--m-ink);box-shadow:0 1px 3px var(--m-hairline),0 0 0 1px var(--m-border);
-  padding:3.2cqw 3.8cqw 2.4cqw;display:flex;flex-direction:column;overflow:hidden;font-size:1cqw;line-height:1.4;box-sizing:border-box}
-.mm-innen{flex:1;min-height:0;display:flex;flex-direction:column;gap:1.1cqw}
-.mm-seite .mm-p,.mm-seite h2,.mm-seite h3,.mm-seite p{margin:0}
-.mm-fuss{display:flex;justify-content:space-between;gap:2cqw;font-size:.72cqw;color:var(--m-ink-soft);padding-top:.7cqw;margin-top:1cqw;border-top:1px solid var(--m-border)}
-.mm-kopf{display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw;padding-bottom:.7cqw;border-bottom:.18cqw solid var(--m-ink)}
-.mm-kopf-titel{display:flex;align-items:baseline;gap:1.1cqw;flex-wrap:wrap;min-width:0}
-.mm-code{font-size:2.7cqw;font-weight:700;letter-spacing:-.02em}
-.mm-bez{font-size:1.8cqw;font-weight:600}
-.mm-zusatz{font-size:1cqw;color:var(--m-ink-soft)}
-.mm-kopf-zonen{font-size:.85cqw;color:var(--m-ink-soft);text-align:right}
-.mm-seite .mm-titel{font-size:1.8cqw;font-weight:600}
-.mm-klein{font-size:.78cqw;color:var(--m-ink-soft)}
-.mm-leer{color:var(--m-ink-soft)}
-.mm-text{display:block;width:100%;box-sizing:border-box;border:1px dashed var(--m-field);border-radius:.4cqw;padding:.25cqw .45cqw;background:transparent;resize:none;font:inherit;font-size:1cqw;line-height:1.4;color:inherit;overflow:hidden;min-height:0}
-.mm-text:hover{border-color:var(--m-blue-line)}
-.mm-text:focus{outline:none;border:1px solid var(--m-focus);background:var(--m-paper)}
-.mm-text.mm-titel-feld{font-size:1.8cqw;font-weight:600}
-.mm-frage{font-size:1.15cqw}
-.mm-kandidaten{flex:1;min-height:0;display:grid;gap:.6cqw 1.8cqw;grid-auto-flow:column;grid-template-columns:repeat(var(--mm-n,2),minmax(0,1fr));grid-template-rows:minmax(12cqw,1fr) auto}
-.mm-n1{--mm-n:1}.mm-n2{--mm-n:2}.mm-n3{--mm-n:3}
-.mm-kand{display:contents}
-.mm-kand-text{display:flex;flex-direction:column;gap:.55cqw;min-height:0}
-.mm-foto{display:block;width:100%;object-fit:cover;background:var(--m-surface)}
-.mm-foto-kand{height:100%;min-height:0;align-self:stretch}
-.mm-n1{grid-template-rows:minmax(16cqw,1fr) auto}
-.mm-foto-leer{display:flex;align-items:center;justify-content:center;color:var(--m-ink-faint);font-size:.8cqw}
-.mm-kand-kopf{display:flex;justify-content:space-between;align-items:baseline;gap:1cqw}
-.mm-seite .mm-kand h3,.mm-seite .mm-material-name{font-size:1.3cqw;font-weight:600;letter-spacing:0}
-.mm-empf{display:inline-block;padding:.15cqw .6cqw;border-radius:var(--m-radius-pill);background:var(--m-success-soft);color:var(--m-success);font-size:.75cqw;font-weight:600;white-space:nowrap}
-.mm-kennwerte{width:100%;border-collapse:collapse;font-size:.85cqw}
-.mm-kennwerte th{width:38%;text-align:left;font-weight:400;color:var(--m-ink-soft);padding:.22cqw 0;border-bottom:1px solid var(--m-border-soft);vertical-align:top}
-.mm-kennwerte td{padding:.22cqw 0;border-bottom:1px solid var(--m-border-soft);vertical-align:top}
-.mm-kosten{display:grid;gap:.15cqw;padding:.6cqw .85cqw;background:var(--m-surface)}
-.mm-kosten strong{font-size:1.2cqw}
-.mm-unten{display:grid;grid-template-columns:1.4fr 1fr;gap:1.8cqw;align-items:start}
-.mm-unten-rechts{display:grid;gap:.8cqw}
-.mm-empfehlung{display:grid;gap:.4cqw}
-.mm-beachten{display:grid;gap:.3cqw;font-size:.85cqw}
-.mm-entschieden{padding:.55cqw .85cqw;background:var(--m-decision-soft);color:var(--m-decision);font-size:.95cqw;font-weight:600}
-.mm-deck{flex:1;display:flex;flex-direction:column;justify-content:space-between}
-.mm-deck-kicker{font-size:1.1cqw;letter-spacing:.14em;text-transform:uppercase;color:var(--m-ink-soft)}
-.mm-seite .mm-deck-titel{margin-top:.6cqw;font-size:5cqw;font-weight:700;letter-spacing:-.03em;line-height:1.05}
-.mm-seite .mm-deck-projekt{margin-top:1cqw;font-size:1.6cqw}
-.mm-deck-unten{display:grid;gap:.8cqw;border-top:.18cqw solid var(--m-ink);padding-top:1.1cqw}
-.mm-deck-termin{font-size:1.3cqw;font-weight:600}
-.mm-tabelle{width:100%;border-collapse:collapse;font-size:.9cqw}
-.mm-tabelle th{text-align:left;font-weight:600;padding:.4cqw .5cqw;border-bottom:.12cqw solid var(--m-ink)}
-.mm-tabelle td{padding:.4cqw .5cqw;border-bottom:1px solid var(--m-border);vertical-align:top}
-.mm-gruppe th{padding-top:1cqw;font-size:.95cqw;border-bottom:1px solid var(--m-border-strong)}
-.mm-code-klein{font-weight:700}
-.mm-material{flex:1;min-height:0;display:grid;grid-template-columns:1.25fr 1fr;gap:2cqw}
-.mm-material-bilder{display:flex;flex-direction:column;gap:1cqw;min-height:0}
-.mm-foto-gross{flex:1 1 auto;min-height:0;height:0}
-.mm-foto-reihe{display:grid;grid-template-columns:1fr 1fr;gap:1cqw}
-.mm-foto-klein{height:8.5cqw}
-.mm-material-text{display:flex;flex-direction:column;gap:.85cqw;min-height:0}
-.mm-empf-zeile{align-self:flex-start}
-.mm-frei-bild{flex:1;min-height:0;display:flex}
-.mm-foto-frei{width:100%;height:100%;object-fit:contain;background:var(--m-paper)}
-.mm-material-text .mm-feldhinweis,.mm-kand-text .mm-feldhinweis{margin-top:-.3cqw}
-/* Anpassen für diese Mappe (26.11.2026): Fotos im Rahmen mit Ausschnitt, beim Bearbeiten «Bild ändern» und «+ Bild»,
-   für diese Mappe geänderte Texte durchgezogen umrandet (gestrichelt = wie in der Bibliothek). */
+.mm-seite{--mm:calc(100cqw / 420);position:relative;aspect-ratio:420/297;background:var(--m-paper);color:var(--m-ink);overflow:hidden;
+  box-shadow:0 1px 3px var(--m-hairline),0 0 0 1px var(--m-border);font-family:Arial,"Helvetica Neue",Helvetica,"Liberation Sans",sans-serif;
+  font-size:calc(var(--mm) * 3.175);line-height:calc(var(--mm) * 4);font-weight:400;font-kerning:normal}
+/* Grundwerte ohne Gewicht (:where), damit die Schriftgrößen der Klassen gelten. */
+:where(.mm-seite h2,.mm-seite h3,.mm-seite p){margin:0;font-size:inherit;font-weight:inherit;line-height:inherit;letter-spacing:inherit}
+.mm-seite p,.mm-seite h2,.mm-seite th,.mm-seite td{white-space:pre-wrap;overflow-wrap:break-word}
+.mm-seite b,.mm-fett{font-weight:700}
+.mm-satz{position:absolute;left:calc(var(--mm) * 20);top:calc(var(--mm) * 24);width:calc(var(--mm) * 380);height:calc(var(--mm) * 252);
+  display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));gap:calc(var(--mm) * 4)}
+.mm-r{position:relative;min-width:0;min-height:0;overflow:hidden}
+/* Titel im Kopf: Versalhöhe auf der oberen Kante des Rahmens (wie die Fotos); Chrome und Safari, Firefox etwa 1 mm tiefer. */
+.mm-r-kopf{text-box:trim-start cap alphabetic}
+.mm-kopfzeile,.mm-fusszeile{position:absolute;left:calc(var(--mm) * 20);right:calc(var(--mm) * 20);display:flex;justify-content:space-between;gap:calc(var(--mm) * 8);
+  font-size:calc(var(--mm) * 2.822);line-height:calc(var(--mm) * 4);white-space:nowrap;text-box:trim-end cap alphabetic}
+.mm-kopfzeile{bottom:calc(var(--mm) * 281);text-transform:uppercase;letter-spacing:.02em}
+.mm-fusszeile{bottom:calc(var(--mm) * 13)}
+.mm-kopfzeile>span,.mm-fusszeile>*{overflow:hidden;text-overflow:ellipsis}
+.mm-kz-rechts{display:flex;gap:calc(var(--mm) * 12);flex:none}
+.mm-t-titel{font-size:calc(var(--mm) * 7.056);line-height:calc(var(--mm) * 8);font-weight:700;letter-spacing:-.01em}
+.mm-t-mittel{font-size:calc(var(--mm) * 4.939);line-height:calc(var(--mm) * 8);font-weight:700}
+.mm-t-gross{font-size:calc(var(--mm) * 14.111);line-height:calc(var(--mm) * 16);font-weight:700;letter-spacing:-.02em}
+.mm-t-klein,.mm-kicker{font-size:calc(var(--mm) * 2.646)}
+.mm-kicker{text-transform:uppercase;letter-spacing:.14em;color:var(--m-ink-soft)}
+.mm-leise,.mm-zusatz{color:var(--m-ink-soft)}
+.mm-zusatz{font-weight:400}
+.mm-abstand{margin-top:calc(var(--mm) * 4)!important}
+.mm-empf{padding:0 calc(var(--mm) * 1.5);border-radius:var(--m-radius-pill);background:var(--m-success-soft);color:var(--m-success);font-size:calc(var(--mm) * 2.646);font-weight:700;white-space:nowrap}
+.mm-entschieden{color:var(--m-decision);font-weight:700}
+.mm-kennwerte{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:calc(var(--mm) * 4);font-size:calc(var(--mm) * 2.646);line-height:calc(var(--mm) * 4)}
+.mm-r>.mm-kennwerte:first-child{margin-top:0}
+.mm-kennwerte col.mm-kw-feld{width:calc(var(--mm) * 32)}
+.mm-kennwerte th,.mm-kennwerte td{padding:0;text-align:left;vertical-align:top;font-weight:400;box-shadow:inset 0 calc(var(--mm) * -.2) 0 var(--m-border-soft)}
+.mm-kennwerte th{padding-right:calc(var(--mm) * 4);color:var(--m-ink-soft)}
+.mm-tabelle{width:100%;table-layout:fixed;border-collapse:collapse}
+.mm-tabelle th,.mm-tabelle td{padding:0 calc(var(--mm) * 4) 0 0;text-align:left;vertical-align:top;font-weight:400;box-shadow:inset 0 calc(var(--mm) * -.2) 0 var(--m-border)}
+.mm-tabelle th:last-child,.mm-tabelle td:last-child{padding-right:0}
+.mm-tabelle thead th{font-weight:700;box-shadow:inset 0 calc(var(--mm) * -.35) 0 var(--m-ink)}
+.mm-gruppe th{padding-top:calc(var(--mm) * 4);font-weight:700}
+.mm-foto{display:block;width:100%;height:100%;object-fit:cover;background:var(--m-surface)}
+.mm-foto-leer{position:relative;display:flex;align-items:center;justify-content:center;color:var(--m-ink-faint);font-size:calc(var(--mm) * 2.646);text-align:center}
+.mm-foto-frei{object-fit:contain;object-position:left top;background:transparent}
 .mm-rahmen{position:relative;overflow:hidden}
 .mm-rahmen>.mm-foto-bild{display:block;width:100%;height:100%;object-fit:cover}
-.mm-foto-leer{position:relative}
-.mm-bild-knoepfe{position:absolute;right:.6cqw;bottom:.6cqw;display:flex;gap:.4cqw;opacity:0;transition:opacity var(--m-motion-fast) var(--m-ease)}
+/* Bearbeiten: Text direkt auf der Seite; leer zeigt den Platzhalter, für diese Mappe geändert = blau umrandet.
+   Umrandungen als Schatten, damit sich nichts verschiebt. */
+.mm-ed{outline:none;border-radius:calc(var(--mm) * .6);cursor:text;transition:background-color var(--m-motion-fast) var(--m-ease)}
+.mm-ed:hover{background:var(--m-blue-wash)}
+/* Ringe innen, damit der Rahmen (overflow:hidden) sie nicht abschneidet. */
+.mm-ed:focus{background:var(--m-paper);box-shadow:inset 0 0 0 calc(var(--mm) * .45) var(--m-focus)}
+.mm-ed:empty::before{content:attr(data-leer);color:var(--m-ink-faint);font-weight:400}
+.mm-ed.mm-geaendert,.mm-kennwerte.mm-geaendert{box-shadow:inset 0 0 0 calc(var(--mm) * .35) var(--m-information)}
+.mm-ed.mm-geaendert:focus{box-shadow:inset 0 0 0 calc(var(--mm) * .45) var(--m-focus)}
+.mm-kennwerte .mm-ed:focus{box-shadow:inset 0 0 0 calc(var(--mm) * .35) var(--m-focus)}
+.mm-kw-plus{position:absolute;right:0;bottom:0;min-height:26px;padding:3px 10px;border:1px solid var(--m-blue-line);border-radius:var(--m-radius-pill);background:var(--m-paper);
+  color:var(--m-blue);font:inherit;font-family:var(--pd-font);font-size:12px;font-weight:600;line-height:1.2;cursor:pointer;opacity:0;transition:opacity var(--m-motion-fast) var(--m-ease)}
+.mm-r:hover .mm-kw-plus,.mm-kw-plus:focus-visible,.mm-r:focus-within .mm-kw-plus{opacity:1}
+@media (hover:none){.mm-kw-plus{opacity:1}}
+/* Übersatz wie in InDesign: was nicht in den Rahmen passt, ist rot markiert (nur beim Bearbeiten). */
+.mm-r.mm-uebersatz{box-shadow:inset 0 0 0 calc(var(--mm) * .35) var(--m-error)}
+.mm-r.mm-uebersatz::after{content:"+";position:absolute;right:0;bottom:0;width:calc(var(--mm) * 4);height:calc(var(--mm) * 4);background:var(--m-error-fill);color:var(--m-paper);
+  font-family:var(--pd-font);font-size:calc(var(--mm) * 3.5);line-height:calc(var(--mm) * 4);text-align:center;font-weight:700}
+/* Raster beim Bearbeiten (Schalter «Raster»): Felder orange wie in Archicad, die großen Felder (2 × 2) betont, dazu die
+   Grundlinien. Es liegt hinter den Rahmen und kommt nie ins PDF. */
+.mm-raster,.mm-raster-gross{position:absolute;left:calc(var(--mm) * 20);top:calc(var(--mm) * 24);width:calc(var(--mm) * 380);height:calc(var(--mm) * 252);
+  display:none;gap:calc(var(--mm) * 4);pointer-events:none}
+.mm-raster{grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr))}
+.mm-raster-gross{grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr))}
+.mm-raster i{background:color-mix(in srgb,var(--m-attention-fill) 11%,transparent)}
+.mm-raster-gross i{box-shadow:inset 0 0 0 calc(var(--mm) * .3) color-mix(in srgb,var(--m-attention-fill) 55%,transparent)}
+.mm-raster-linien{position:absolute;left:calc(var(--mm) * 20);right:calc(var(--mm) * 20);top:calc(var(--mm) * 16);bottom:calc(var(--mm) * 12.8);display:none;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,color-mix(in srgb,var(--m-information) 22%,transparent) 0 calc(var(--mm) * .2),transparent calc(var(--mm) * .2) calc(var(--mm) * 4))}
+.mm-buehne.raster .mm-raster,.mm-buehne.raster .mm-raster-gross{display:grid}
+.mm-buehne.raster .mm-raster-linien{display:block}
+.mm-buehne.raster .mm-r-foto{opacity:.85}
+/* Anpassen für diese Mappe (26.11.2026): «Bild ändern» und «+ Bild» auf den Fotos. */
+.mm-bild-knoepfe{position:absolute;right:calc(var(--mm) * 2);bottom:calc(var(--mm) * 2);display:flex;gap:6px;opacity:0;transition:opacity var(--m-motion-fast) var(--m-ease)}
 .mm-rahmen:hover .mm-bild-knoepfe,.mm-foto-leer .mm-bild-knoepfe,.mm-bild-knoepfe:focus-within{opacity:1}
 @media (hover:none){.mm-bild-knoepfe{opacity:1}}
 .mm-bild-knopf{min-height:28px;padding:4px 10px;border:1px solid var(--m-blue-line);border-radius:var(--m-radius-pill);background:var(--m-paper);
-  color:var(--m-blue);font:inherit;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;cursor:pointer}
+  color:var(--m-blue);font:inherit;font-family:var(--pd-font);font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;cursor:pointer}
 .mm-bild-knopf:hover{background:var(--m-blue-soft)}
-.mm-text.mm-geaendert{border-style:solid;border-color:var(--m-information)}
-.mm-kand-name{display:flex;align-items:baseline;gap:.3cqw;min-width:0;flex:1}
-.mm-kand-name>span{flex:none}
-.mm-text.mm-text-name{font-size:inherit;font-weight:inherit;line-height:1.25}
-.mm-text.mm-text-klein{font-size:.78cqw;color:var(--m-ink-soft)}
-.mm-text.mm-text-kennwerte{font-size:.85cqw;line-height:1.5}
-.mm-feldhinweis{font-size:.72cqw;color:var(--m-ink-soft)}
 .mm-geaendert-zeile{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between}
 /* Dialog «Bild ändern»: links der Ausschnitt im Seitenverhältnis des Rahmens im PDF, rechts ein anderes Bild. */
 .mm-bild-raster{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
@@ -408,12 +432,12 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-messen{position:fixed;left:-40000px;top:0;width:1587px;visibility:hidden;pointer-events:none}
 @media (max-width:760px){.mm-bild-raster{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:1180px){
-  .mm{grid-template-columns:200px minmax(0,1fr)}
+  .mm,.mm.ohne-seiten,.mm.ohne-rechts{grid-template-columns:200px minmax(0,1fr)}
+  .mm.ohne-seiten.ohne-rechts{grid-template-columns:minmax(0,1fr)}
   .mm-rechts{grid-column:1/-1;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));align-items:start}
 }
 @media (max-width:760px){
-  .mm{grid-template-columns:minmax(0,1fr)}
-  .mm-nav{position:static}
+  .mm,.mm.ohne-seiten,.mm.ohne-rechts{grid-template-columns:minmax(0,1fr)}
   .mm-rechts{grid-template-columns:minmax(0,1fr)}
 }
 @media print{
