@@ -139,7 +139,7 @@ function gehaltSatzRoh(monatsgehalt,einstellungen,wochenstunden,urlaub=null){
   return g*12*(1+annahmen(einstellungen).ag/100)/h;
 }
 // Selbstkosten je Stunde: Bruttogehalt × 12 × Gemeinkostenfaktor ÷ Jahresstunden der Person. Der Faktor gilt für das
-// Bruttogehalt allein (Gari, 25.11.2026); ob er den Arbeitgeberanteil schon enthält, steht unter «Zu klären».
+// Bruttogehalt allein (Gari, 25.11.2026; mit der Buchhaltung bestätigt am 26.11.2026).
 function selbstkostenSatzRoh(monatsgehalt,einstellungen,wochenstunden,urlaub=null){
   const g=Number(monatsgehalt),h=jahresstundenPerson(wochenstunden,einstellungen,urlaub),f=annahmen(einstellungen).faktor;
   if(monatsgehalt==null||!Number.isFinite(g)||g<=0||!(h>0)||f==null)return null;

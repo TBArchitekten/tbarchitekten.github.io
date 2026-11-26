@@ -77,6 +77,22 @@
 .ct-person input[name="name"]{flex:1 1 160px}
 .ct-person input[name="stunden"]{width:110px;flex:0 0 auto;text-align:right}
 .ct-vorschau{margin:0;font-size:13px;color:var(--m-ink-soft);font-variant-numeric:tabular-nums}
+/* Sätze: Korrektur oder neu ab einem Datum (Gari und die Buchhaltung, 26.11.2026); die gewählte Zeile ist markiert. */
+.ct-art{border:0;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
+.ct-art legend{font-size:13px;color:var(--m-ink-soft);margin-bottom:6px}
+.ct-art-wahl{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--m-border);
+  border-radius:var(--m-radius-control);cursor:pointer}
+.ct-art-wahl:has(input:checked){border-color:var(--m-blue);background:var(--m-blue-soft)}
+.ct-art-wahl input{margin:3px 0 0;accent-color:var(--m-blue)}
+.ct-art-wahl strong{display:block;font-size:14px}
+.ct-art-hilfe{display:block;margin-top:2px;font-size:13px;line-height:1.4;color:var(--m-ink-soft)}
+.ct-eintrag-knoepfe{text-align:right;min-width:96px}
+.ct-eintrag-knoepfe .btn{white-space:nowrap}
+.ct-tabelle tr.ct-gewaehlt td{background:var(--m-blue-soft)}
+/* Die Einträge im Dialog passen in seine Breite: Überschriften dürfen umbrechen (weiche Trennstriche). */
+.ct-eintraege table{min-width:0}
+.ct-eintraege th{white-space:normal}
+.pb-felder label[hidden]{display:none}
 /* «So wird gerechnet» (Gari und die Buchhaltung, 25.11.2026): blau, weil man es anklickt; der Dialog nennt je Wert seine
    Herkunft und, im Projektblatt, die Zahlen des Pakets. */
 .ct-info{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 4px;border:0;background:transparent;
@@ -184,7 +200,7 @@
 .ct-vertraulich .ct-klein{font-size:12.5px;font-weight:500;color:var(--m-ink-soft);white-space:normal}
 .ct-so{font-size:12.5px;line-height:1.5;color:var(--m-ink-soft);width:44%}
 .ct-so-teil{display:block}
-.ct-annahmen-hinweis{margin:0}
+.ct-annahmen-hinweis,.ct-neuere-saetze{margin:0}
 @media (max-width:720px){
   .ct-vertraulich-tabelle thead{display:none}
   .ct-vertraulich-tabelle tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--m-border-soft)}
