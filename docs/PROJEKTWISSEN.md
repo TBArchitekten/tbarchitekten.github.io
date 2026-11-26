@@ -6,7 +6,7 @@ Was es nicht ist: Der **Desktop** bleibt der Dateiserver des Büros (PDFs und Pl
 
 ## So wird es benutzt
 
-**Mit Claude** (Connector «TBA Office», siehe `OFFICE-CONNECTOR.md`): Am Ende eines Chats zu einem Projekt genügt «pásalo al Office» oder «Ins Office übernehmen». Claude
+**Mit Claude** (Connector «TBA Office», siehe `OFFICE-CONNECTOR.md`): In einem Chat zu einem Projekt genügt «pásalo al Office» oder «Ins Office übernehmen», nicht erst am Ende: immer dann, wenn ein Ergebnis da ist (eine Recherche oder ein Vergleich abgeschlossen, etwas entschieden, oder bevor der Chat ein paar Tage liegt), auch mehrmals im selben Chat. Beim zweiten Mal teilt Claude nur, was seitdem neu ist oder sich geändert hat. Claude
 
 1. öffnet das Projekt (`open_project`: Seiten, Entscheidungen, offene Beiträge, Neues),
 2. teilt das Wissen aus dem Chat als **Beitrag** (`share_knowledge`): vollständig, auf Deutsch, mit Herkunft; der Beitrag bleibt unverändert,

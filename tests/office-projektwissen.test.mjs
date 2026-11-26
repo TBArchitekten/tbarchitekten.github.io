@@ -250,6 +250,10 @@ test('Connector: open_project liefert das Projektwissen; die Werkzeuge und der A
   }
   assert.match(ts,/"pásalo al Office", "Ins Office übernehmen"/);
   assert.match(ts,/\(5\) tell the person in 3–5 lines/);
+  // Nicht nur am Ende eines Chats (Gari, 26.11.2026): beim zweiten Mal nur das Neue.
+  assert.match(ts,/or similar \(any time, also several times in one chat\): \(1\) open_project/);
+  assert.match(ts,/if this chat was already shared, share only what is new or changed since then \(title it as a continuation, same quelle\), never the whole chat again;/);
+  assert.match(ts,/Can be used several times in one chat: after the first time, share only what is new or changed since the last share\./);
   assert.match(ts,/Nothing is deleted: every earlier version of a page stays in its history/);
   // Der Desktop bleibt draußen: keine Ablage über den Connector.
   assert.doesNotMatch(ts,/close_session|file_document|office-ablage/);

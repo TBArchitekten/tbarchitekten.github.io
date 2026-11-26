@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Projektwissen: «pásalo al Office» auch mitten im Chat und mehrmals · Claude
+- Qué cambió y por qué: Gari (26.11.2026, nach #183): Er schreibt in seinen Chats weiter; «am Ende eines Chats» passt nicht. Jetzt ausdrücklich: jederzeit und mehrmals im selben Chat; ab dem zweiten Mal teilt Claude nur, was seitdem neu ist oder sich geändert hat (als Fortsetzung, dieselbe Herkunft), nie den ganzen Chat noch einmal. Bisher stand das nirgends; ein zweites Teilen hätte einen fast gleichen Beitrag erzeugt.
+- Archivos: `supabase/functions/office-mcp/index.ts` (Anweisungen, Beschreibung von `share_knowledge`), `tests/office-projektwissen.test.mjs`, `docs/PROJEKTWISSEN.md`, `docs/OFFICE-CONNECTOR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: `office-mcp` über den Workflow nach dem Merge.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün; `deno check supabase/functions/office-mcp/index.ts` grün.
+- Quedó pendiente o sin probar: der erste echte Durchgang mit einem Chat von Gari.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #184
+
+---
+
 ### 2026-11-26 · Projektwissen: gemeinsamer Wissenspool je Projekt (Reiter «Wissen», Connector) · Claude
 - Qué cambió y por qué: Gari (26.11.2026): Was er mit Claude zu einem Projekt erarbeitet, ist Wissen des Projekts und soll für das Team gemeinsam sein, ohne starre Struktur und ohne den Desktop. Nach einer Recherche (von einer KI gepflegtes Wiki, Garten statt Strom, Evergreen Notes, ISO 19650, Entscheidungsprotokolle) ein Pool je Projekt: Beiträge (unverändert, mit Herkunft) → Seiten, die die KI anlegt, zusammenführt, fortschreibt, verknüpft und bei Widersprüchen benennt → Entscheidungen (vorgeschlagen, bis die Projektleitung bestätigt). «Pásalo al Office» genügt; das Team liest, fragt und korrigiert (Notiz, Hinweis). Konzept: `docs/PROJEKTWISSEN.md`.
 - Archivos: `supabase/migrations/20261126193119_office_projektwissen.sql`, `tests/sql/office-projektwissen-acceptance.sql`, `.github/workflows/verify.yml` (Abnahme), `supabase/functions/office-mcp/office-wissen.mjs` (neu), `supabase/functions/office-mcp/index.ts` (Werkzeuge `share_knowledge`, `read_page`, `write_page`, `record_decision`, `search_knowledge`, `read_contribution`; `open_project` mit Projektwissen; Ablauf in den Anweisungen), `app/office-wissen.js` und `app/office-wissen.css` (neu), `app/work.js`, `app/shell.js`, `app/index.html`, `tests/office-projektwissen.test.mjs`, `tests/browser/office-wissen.chromium.mjs`, `.github/workflows/verify-romy-browser.yml`, angepasste Versionsstände in den Tests, `docs/PROJEKTWISSEN.md`, `docs/OFFICE-CONNECTOR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
