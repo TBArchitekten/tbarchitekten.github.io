@@ -6,9 +6,10 @@
 // der Eingang. Dieser Test hält jene Stellen auf Deutsch fest.
 //
 // Was NICHT geprüft wird: Code hinter Ansichten, die das Office-Profil nicht hat (Ideen, der
-// Vorschlags-Feed, Lecturas/Sofía, Thoughts, die Selbstprüfung von Window, die Wissen-Ansicht und
-// die in <div class="office-hidden-actions" hidden> geparkten Panels). Dort steht weiter Spanisch;
-// erreichbar ist es nicht.
+// Vorschlags-Feed, Lecturas/Sofía, Thoughts, die Selbstprüfung von Window, Windows Ansicht der
+// Aussagen aus Dokumenten (renderKnowledge; der Reiter «Wissen» zeigt im Office seit dem 26.11.2026 das
+// Projektwissen aus office-wissen.js) und die in <div class="office-hidden-actions" hidden> geparkten
+// Panels). Dort steht weiter Spanisch; erreichbar ist es nicht.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';

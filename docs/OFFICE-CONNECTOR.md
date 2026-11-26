@@ -23,14 +23,21 @@ Permite que Claude (claude.ai en web, escritorio y móvil) trabaje dentro de TBA
 | `list_tasks` | lectura | `today` / `week` / `open` / `done_recent`; `mine` deja solo las propias o asignadas |
 | `list_events` | lectura | Calendario propio entre dos fechas, como máximo 120 días |
 | `create_task`, `update_task` | escritura | Tareas reales. Con proyecto van al Planner del equipo; sin proyecto son personales |
-| `open_project`, `open_topic` | lectura | Projektakte del proyecto (solo con pertenencia al equipo) |
+| `open_project` | lectura | Projektakte y **Projektwissen** del proyecto: páginas, decisiones, aportes pendientes y lo nuevo (solo con pertenencia al equipo) |
+| `open_topic` | lectura | Un tema de la Projektakte (solo con pertenencia al equipo) |
+| `share_knowledge` | escritura | Comparte con el proyecto lo trabajado en el chat, como aporte sin cambios y con su origen |
+| `read_page`, `write_page` | lectura / escritura | Lee una página del Projektwissen; la escribe como estado actual (la versión anterior queda en el historial; con `basis` no pisa lo que otro escribió mientras tanto) |
+| `record_decision` | escritura | Decisión propuesta; «beschlossen» solo si la persona lo decidió y dirige el proyecto |
+| `search_knowledge`, `read_contribution` | lectura | Busca en páginas, decisiones y aportes; lee un aporte completo, paginado |
 | `search_akte`, `turn_diagnostics` | lectura | Fuentes de la Akte con página; diagnóstico propio sin contenido |
 
 Fuera por diseño: los chats con Romy y sus memorias, y los Threads (son privados).
 
-## Pasar a un proyecto lo de un chat de Claude
+## Pasar a un proyecto lo de un chat de Claude («pásalo al Office»)
 
-El 26.11.2026 (#180) el conector guardaba lo de un chat como documentos en el Desktop del proyecto. Ese mismo día Gari decidió dejar el Desktop fuera: el Desktop es el servidor de archivos de la oficina (cada uno deja ahí sus PDFs) y el conocimiento del proyecto va a un pool común que escribe y mantiene la IA (Projektwissen). Por eso `close_session` y `file_document` se quitaron antes de que nadie los usara; el pool llega en el cambio siguiente.
+Basta con decirlo al final del chat. Claude abre el proyecto, comparte lo trabajado como aporte (`share_knowledge`), lo integra en las páginas del **Projektwissen** (`read_page`, `write_page`: crea, une, actualiza y enlaza páginas, y marca las contradicciones), anota las decisiones (`record_decision`) y resume en 3–5 líneas qué cambió. El equipo lo lee en Work → **Wissen**, deja notas o correcciones, y la dirección del proyecto confirma las decisiones. Concepto, modelo y reglas: `PROJEKTWISSEN.md`.
+
+Historia: el 26.11.2026 (#180) el conector guardaba lo de un chat como documentos en el Desktop del proyecto. Ese mismo día Gari decidió dejar el Desktop fuera (es el servidor de archivos de la oficina; cada uno deja ahí sus PDFs), y `close_session` y `file_document` se quitaron (#182) antes de que nadie los usara.
 
 ## Configuración (una sola vez)
 

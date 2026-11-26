@@ -1,7 +1,8 @@
 (()=>{'use strict';
 // TBA Office: Window's Work (gari01234/minds apps/isabella/work.js) for shared office projects.
 // Projects are the office's (all of them, not "mine"); Panorama shows the next 14 days and the project's
-// Terminpläne; the Akte parts, Wissen and Threads stay off until the office has them.
+// Terminpläne; «Wissen» is the Projektwissen of the team (office-wissen.js, 26.11.2026); Threads are private
+// conversations with Romy; the Akte parts stay off until the office has them.
 const OFFICE=true;
 const OFFICE_ROOT='__office__';
 // Gari, 07.11.2026: the shared Büro Desktop stays hidden for now; Work shows the project Desktops.
@@ -10,7 +11,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sb=window.MINDS_SUPABASE;
 const DEFAULT_BUCKETS=['Projektorganisation','Entwurf','Genehmigung','Ausführungsplanung','Ausschreibung/Vergabe','Baustelle','Dokumentation'];
-let projectKey=localStorage.getItem('minds-work-project')||OFFICE_ROOT,view=(()=>{const v=localStorage.getItem('minds-work-view')||'overview';return OFFICE&&v==='knowledge'?'overview':v})(),folderId=null,project=null,folders=[],files=[],buckets=[],tasks=[],threads=[],activeThreadId=null,bound=false,pendingTaskFiles=[],editingAttachments=[],draggedWorkTaskId=null,draggedWorkBucketId=null;
+let projectKey=localStorage.getItem('minds-work-project')||OFFICE_ROOT,view=localStorage.getItem('minds-work-view')||'overview',folderId=null,project=null,folders=[],files=[],buckets=[],tasks=[],threads=[],activeThreadId=null,bound=false,pendingTaskFiles=[],editingAttachments=[],draggedWorkTaskId=null,draggedWorkBucketId=null;
 const workSignedCache=new Map();
 let team=[],reviewSettings=null,reviewReportLimit=20,workRenderVersion=0;
 /* Purely visual preferences and labels; no task statuses are rewritten. */
@@ -152,7 +153,7 @@ async function render(){
     if(project?.id&&!abschnitte.has(String(project.id)))await waitForWork(ladeAbschnitte(project.id),'sections');
     if(!latest())return;
     if(!abschnittAn(view)){view='overview';localStorage.setItem('minds-work-view',view)}
-    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner'].includes(b.dataset.workView)||isToolView(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT||!abschnittAn(b.dataset.workView)});
+    $$('[data-work-view]').forEach(b=>{if(b.dataset.workView==='desktop')b.hidden=false;else if(['overview','planner','knowledge'].includes(b.dataset.workView)||isToolView(b.dataset.workView))b.hidden=projectKey===OFFICE_ROOT||!abschnittAn(b.dataset.workView)});
     zeigeAbschnitte();
     paintChrome();
     const settings=project&&!OFFICE?await waitForWork(
@@ -170,7 +171,7 @@ async function render(){
       :view==='overview'&&reviewSettings?renderSelfReview()
       :view==='overview'?renderOverview()
       :view==='threads'?renderThreads()
-      :view==='knowledge'?renderKnowledge()
+      :view==='knowledge'?(OFFICE?renderWissen():renderKnowledge())
       :view==='planner'?renderPlanner()
       :isToolView(view)?renderTool(view):renderDesktop();
     await waitForWork(scene,'view');
@@ -472,6 +473,15 @@ const provenanceNames={user:'Angabe der Person',project_source:'Projektquelle',e
 function knowledgeFlags(c){
   const evidence=c.minds_work_evidence||[];
   return {contradiction:c.status==='disputed'||evidence.some(e=>e.stance==='contradicts'),expired:!!c.valid_to&&new Date(c.valid_to)<new Date(),unreviewed:c.status==='proposed',noEvidence:!evidence.length};
+}
+// Projektwissen (Gari, 26.11.2026): «Wissen» zeigt im Office den gemeinsamen Wissenspool des Projektteams
+// (app/office-wissen.js). Window's Ansicht der Aussagen aus Dokumenten (renderKnowledge) bleibt hier ungenutzt.
+function renderWissen(){
+  const body=$('#workBody'),current=workRenderVersion,id=project?.id;
+  const modul=window.TBA_OFFICE_WISSEN;
+  if(!modul){body.innerHTML='<div class="work-empty" role="status"><p>Das Projektwissen ist gerade nicht verfügbar.</p><button type="button" data-work-retry class="secondary">Erneut versuchen</button></div>';return}
+  return modul.render({sb,project,body,setStatus,openModal:(titel,html)=>window.ISABELLA_APP?.openModal?.(titel,html),
+    isCurrent:()=>current===workRenderVersion&&view==='knowledge'&&project?.id===id});
 }
 async function renderKnowledge(){
   const [q,fq,mq]=await Promise.all([

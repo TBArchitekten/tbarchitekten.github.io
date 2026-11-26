@@ -182,6 +182,7 @@ document.body.innerHTML = `
         </div>
         <div class="work-tabs" role="tablist">
           <button data-work-view="overview" class="active">Panorama</button>
+          <button data-work-view="knowledge" hidden>Wissen</button>
           <button data-work-view="desktop">Desktop</button>
           <button data-work-view="planner">Planner</button>
           <button data-work-view="terminplan" hidden>Terminplan</button>
@@ -190,7 +191,6 @@ document.body.innerHTML = `
           <button data-work-view="mustermappe" hidden>Mustermappe</button>
           <button data-work-view="produkte" hidden>Produkte</button>
           <button data-work-view="hersteller" hidden>Hersteller</button>
-          <button data-work-view="knowledge" hidden>Wissen</button>
           <button data-work-view="threads">Threads</button>
           <button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" title="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden>+</button>
         </div>

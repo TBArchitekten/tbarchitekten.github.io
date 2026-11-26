@@ -72,3 +72,7 @@ jobs:
         env:
           CI: 'true'
         run: node --test tests/browser/office-projektdokumente.chromium.mjs tests/browser/office-projektdokumente-zahlen.chromium.mjs tests/browser/office-mustermappe.chromium.mjs
+      - name: Exercise Projektwissen (pages with sources, versions and links, safe Markdown, notes and hints through the functions, decisions confirmed by the project lead, team only, iPhone width) with a synthetic Supabase
+        env:
+          CI: 'true'
+        run: node --test tests/browser/office-wissen.chromium.mjs

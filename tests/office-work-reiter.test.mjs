@@ -15,7 +15,8 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.doesNotMatch(shell+work,/data-work-tool="|openProjectTool|work-tool-menu/,'kein Menü mehr, das Work verlässt');
   assert.match(work,/:isToolView\(view\)\?renderTool\(view\)/);
   // Jedes Werkzeug von Work ist ein Reiter des Projekts (nicht im Büro).
-  assert.match(work,/\['overview','planner'\]\.includes\(b\.dataset\.workView\)\|\|isToolView\(b\.dataset\.workView\)\)b\.hidden=projectKey===OFFICE_ROOT/);
+  // Seit dem 26.11.2026 auch «Wissen» (das Projektwissen).
+  assert.match(work,/\['overview','planner','knowledge'\]\.includes\(b\.dataset\.workView\)\|\|isToolView\(b\.dataset\.workView\)\)b\.hidden=projectKey===OFFICE_ROOT/);
   // Die Seite läuft in einem Rahmen und bleibt beim Wechsel offen; Work leitet nicht um.
   assert.match(work,/frame=document\.createElement\('iframe'\)/);
   assert.doesNotMatch(work,/location\.assign\(page/);
@@ -32,7 +33,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office59','shell.js?v=office58','office-projects.js?v=office62','work-polish.css?v=7','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office60','shell.js?v=office59','office-projects.js?v=office62','work-polish.css?v=7','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 
