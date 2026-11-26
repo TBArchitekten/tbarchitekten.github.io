@@ -1242,7 +1242,7 @@ function renderMappe(){
   const mitte='<section class="mm-mitte" aria-label="Seite '+(i+1)+' von '+seiten.length+'"><div class="mm-werkzeug"><span class="meta">Seite '+(i+1)+' von '+seiten.length+' · A3 quer · gestrichelt: Text der Mappe</span>'+
     '<button type="button" class="btn" data-act="mm-zoom" aria-pressed="'+(mm.lesen?'true':'false')+'">'+(mm.lesen?'Ganze Seite':'Lesegröße')+'</button></div>'+
     '<div class="mm-buehne'+(mm.lesen?' lesen':'')+'">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:seiten.length,modus:'bearbeiten',bild:bildUrl}):'<p class="meta">Die Mappe hat keine Seite.</p>')+'</div>'+
-    mappeHinweise(v,seite)+'</section>';
+    '<div data-mm-hinweise>'+mappeHinweise(v,seite)+'</div></section>';
   const fokus=vorZeichnen();
   const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({werkzeug:'mustermappe',projekt:projekt.id}),'‹ Mustermappen'],
     kicker:'Mustermappe · '+projektName(),titel:inh.titel,meta,aktionen})+
@@ -1264,7 +1264,21 @@ function mappeHinweise(v,seite){
     if(fehlt.length)li.push('<li>'+esc(o.id)+': nicht im Datenblatt: '+esc(fehlt.join(' · '))+'</li>');
     if(!mm.produkte.has(o.produkt_id)&&mm.geladen===v.id)li.push('<li>'+esc(o.id)+': nicht mehr in der Produktbibliothek.</li>');
   }
+  // Für diese Mappe geänderte Texte (26.11.2026): je Text «zurücksetzen» auf den Stand der Bibliothek.
+  const alle=K.optionen(z.daten);
+  const aufSeite=seite.typ==='material'?[alle.find(o=>o.id===seite.option)||alle[0]].filter(Boolean)
+    :(Array.isArray(seite.optionen)?alle.filter(o=>seite.optionen.includes(o.id)):alle).slice(0,M.MAX_KANDIDATEN);
+  for(const o of aufSeite){
+    const g=M.geaenderteTexte(o,M.anpassbarAuf(seite));
+    if(g.length)li.push('<li class="mm-geaendert-zeile"><span><strong>'+esc(o.id)+': in dieser Mappe geändert.</strong> Die Produktbibliothek bleibt, wie sie ist.</span><span class="mm-knoepfe">'+
+      g.map(x=>'<button type="button" class="btn" data-act="mm-zuruecksetzen" data-z="'+z.id+'" data-o="'+esc(o.id)+'" data-feld="'+x.feld+'">'+esc(x.name)+' zurücksetzen</button>').join('')+'</span></li>');
+  }
   return li.length?'<div class="mm-intern"><strong>Nur im Büro sichtbar</strong><ul>'+li.join('')+'</ul></div>':'';
+}
+// Nach dem Tippen: nur die Hinweise unter der Seite neu, das Feld mit dem Fokus bleibt.
+function mappeHinweiseNeu(){
+  clearTimeout(mm.hinweisTimer);
+  mm.hinweisTimer=setTimeout(()=>{const v=vorlageZeile(),h=root.querySelector('[data-mm-hinweise]');if(v&&h&&istMappe(v))h.innerHTML=mappeHinweise(v,mappeSeite(v))},250);
 }
 function mmFeld(z,k,l,{platz='',lang=false}={}){
   const w=z.daten.muster?.[k]||'',id='mf-'+z.id+'-'+k;
@@ -1286,13 +1300,15 @@ function kandidatenWahl(v,z){
 }
 function fotoWahl(o){
   const liste=mm.fotos.get(o.produkt_id)||[];
-  if(!liste.length)return '<p class="meta">'+esc(o.id)+': kein Foto in der Bibliothek.</p>';
+  const aendern='<button type="button" class="pd-link" data-act="mm-bild" data-z="'+esc(o._z)+'" data-o="'+esc(o.id)+'" data-i="0">'+
+    (liste.length?'Eigenes Bild oder Ausschnitt …':'Eigenes Bild hochladen …')+'</button>';
+  if(!liste.length)return '<p class="meta">'+esc(o.id)+': kein Foto in der Bibliothek.</p>'+aendern;
   const gew=Array.isArray(o.muster_fotos)?o.muster_fotos:[];
   return '<div class="pd-feld"><span>Fotos '+esc(o.id)+(gew.length?'':' · automatisch das erste')+'</span><div class="mm-thumbs">'+liste.slice(0,8).map(d=>{
     const n=gew.findIndex(f=>f.id===d.id),url=bildUrl(d.storage_path);
     return '<button type="button" class="mm-thumb" data-act="mm-foto" data-z="'+esc(o._z)+'" data-o="'+esc(o.id)+'" data-d="'+esc(d.id)+'" aria-pressed="'+(n>=0?'true':'false')+'" aria-label="'+esc('Foto '+(d.name||'')+(n>=0?', Nummer '+(n+1):''))+'">'+
       (url?'<img src="'+esc(url)+'" alt="">':'')+(n>=0?'<b>'+(n+1)+'</b>':'')+'</button>';
-  }).join('')+'</div></div>';
+  }).join('')+'</div>'+aendern+'</div>';
 }
 function mappeSeitenleiste(v,inh,seite){
   const z=seite&&['vergleich','material'].includes(seite.typ)?zeilen.entscheidungsliste.find(x=>x.id===seite.punkt):null;
@@ -1456,14 +1472,14 @@ async function pdfAlsBild(datei,nr){
     return {blob,seite,seiten:doc.numPages};
   }finally{void aufgabe.destroy?.()}
 }
-async function freiesBild(v,seiteId,datei){
-  if(!datei)return;
-  const seite=M.seitenVon(v.daten).find(x=>x.id===seiteId);if(!seite)return;
+// Ein Bild (oder eine Seite aus einem PDF) in den Speicher der Mappe: Dokument, wer hochlädt, Datei. Für freie Seiten
+// und für eigene Bilder einer Variante; die Produktbibliothek ändert sich dabei nie.
+async function bildHochladen(datei,pdfSeite=1){
   let blob=datei,typ=datei.type||'',name=datei.name||'Bild';
   if(typ==='application/pdf'||/\.pdf$/i.test(name)){
     if(datei.size>40*1024*1024)throw new Error('Das PDF ist größer als 40 MB.');
     meldung('PDF wird gelesen …');
-    const r=await pdfAlsBild(datei,Number(seite.pdf_seite)||1);
+    const r=await pdfAlsBild(datei,Number(pdfSeite)||1);
     blob=r.blob;typ='image/jpeg';name=name.replace(/\.pdf$/i,'')+' · Seite '+r.seite+' von '+r.seiten;
   }
   const f=M.bildPruefen(typ,blob.size);if(f)throw new Error(f);
@@ -1471,8 +1487,154 @@ async function freiesBild(v,seiteId,datei){
   const pfad=M.dateiPfad(dok.id,nutzer.id,crypto.randomUUID(),typ);
   const {error}=await sb.storage.from(M.BUCKET).upload(pfad,blob,{contentType:typ,upsert:false});
   if(error)throw new Error('Das Bild wurde nicht hochgeladen: '+(error.message||'Fehler'));
-  seitePatch(v,seiteId,{bild:{pfad,name:String(name).slice(0,160)},titel:seite.titel||String(name).replace(/\.(jpe?g|png|webp)$/i,'').slice(0,120)});
-  await signiere(M.BUCKET,[pfad]);meldung('Das Bild steht auf der Seite.');render();
+  await signiere(M.BUCKET,[pfad]);
+  return {pfad,name:String(name).slice(0,160)};
+}
+async function freiesBild(v,seiteId,datei){
+  if(!datei)return;
+  const seite=M.seitenVon(v.daten).find(x=>x.id===seiteId);if(!seite)return;
+  const {pfad,name}=await bildHochladen(datei,Number(seite.pdf_seite)||1);
+  seitePatch(v,seiteId,{bild:{pfad,name},titel:seite.titel||String(name).replace(/\.(jpe?g|png|webp)$/i,'').slice(0,120)});
+  meldung('Das Bild steht auf der Seite.');render();
+}
+
+// ---------- Mustermappe: Bild ändern (Gari, 26.11.2026) ----------
+// Jedes Foto einer Variante lässt sich auf der Seite ersetzen: durch ein anderes aus der Produktbibliothek oder ein
+// eigenes Bild (bleibt in der Mappe), und zuschneiden: im Rahmen verschieben und vergrößern. Hat die Variante noch keine
+// Wahl, gilt das erste Foto der Bibliothek; eine Änderung hält es dann als gewählt fest.
+function fotosDerVariante(o){
+  const eigene=M.fotoListe(o?.muster_fotos);
+  if(eigene.length)return eigene;
+  const erstes=(mm.fotos.get(o?.produkt_id)||[])[0];
+  return erstes?[{id:erstes.id,pfad:erstes.storage_path}]:[];
+}
+function bildVariante(ziel=mm.bild){
+  const z=ziel?zeileVon(ziel.z):null,o=z?K.optionen(z.daten).find(x=>x.id===ziel.o):null;
+  return z&&o?{z,o}:null;
+}
+function bildDialog(z,oid,i){
+  mm.bild={z:z.id,o:oid,i:Math.max(0,Number(i)||0)};
+  bildDialogZeichnen();
+  if(!dialog.open)dialog.showModal();
+  dialog.addEventListener('close',()=>{mm.bild=null},{once:true});
+}
+// ziel: die Stelle, für die der Dialog offen war; ein Bild, das noch lädt, landet dort auch, wenn der Dialog schon zu ist.
+function bildAendern(f,{neuesBild=null,ziel=mm.bild}={}){
+  const x=bildVariante(ziel);if(!x)return [];
+  const neu=f(fotosDerVariante(x.o));
+  optionenPatch(x.z,x.o.id,o=>({...o,muster_fotos:neu}));
+  if(ziel===mm.bild){
+    if(neuesBild){const k=neu.findIndex(b=>b.pfad===neuesBild);if(k>=0)mm.bild.i=k}
+    mm.bild.i=Math.min(mm.bild.i,neu.length);
+  }
+  render();if(mm.bild)bildDialogZeichnen();
+  return neu;
+}
+// Seitenverhältnis des Rahmens, wie er im PDF steht: die Seite einmal unsichtbar wie im Druck setzen und messen. Beim
+// Bearbeiten sind die Felder etwas höher als der gedruckte Text, die Fotos dadurch flacher; der Ausschnitt gilt fürs PDF.
+function rahmenImPdf(zid,oid,i){
+  const v=vorlageZeile(),seite=v&&istMappe(v)?mappeSeite(v):null;
+  if(!seite||seite.punkt!==zid||(seite.typ!=='vergleich'&&seite.typ!=='material'))return 0;
+  const inh=mappeJetzt(v),p=inh.punkte.find(x=>x.id===zid);if(!p)return 0;
+  const box=document.createElement('div');box.className='mm-messen';box.setAttribute('aria-hidden','true');
+  box.innerHTML=M.seiteHtml(seite,inh,{modus:'druck',bild:bildUrl});
+  document.body.append(box);
+  try{
+    let el=null;
+    if(seite.typ==='vergleich'){const k=M.kandidatenDerSeite(seite,p).findIndex(o=>o.id===oid);if(k>=0&&i===0)el=box.querySelectorAll('.mm-kand')[k]?.querySelector('.mm-foto')}
+    else if((p.optionen.find(o=>o.id===seite.option)||p.optionen[0])?.id===oid)el=i===0?box.querySelector('.mm-foto-gross'):box.querySelectorAll('.mm-foto-klein')[i-1];
+    const r=el?.getBoundingClientRect();
+    return r&&r.width>0&&r.height>0?r.width/r.height:0;
+  }finally{box.remove()}
+}
+const ausschnittStil=(img,a)=>{
+  img.style.objectPosition=a.x+'% '+a.y+'%';img.style.transformOrigin=a.x+'% '+a.y+'%';img.style.transform=a.z>1?'scale('+a.z+')':'';
+};
+function bildDialogZeichnen(fokus=''){
+  const x=bildVariante();if(!x){if(dialog.open)dialog.close();return}
+  const {z,o}=x,liste=fotosDerVariante(o),i=Math.min(mm.bild.i,liste.length),f=liste[i]||null;
+  // Ohne gewähltes Foto zeigt die Seite das erste der Bibliothek; das lässt sich ersetzen, nicht entfernen.
+  const standard=!M.fotoListe(o.muster_fotos).length;
+  // Seitenverhältnis wie der Rahmen im PDF; sonst wie auf der Bühne, sonst 4:3.
+  const imPdf=f?rahmenImPdf(z.id,o.id,i):0;
+  if(imPdf)mm.bild.verhaeltnis=imPdf;
+  else{const r=root.querySelector('[data-bildplatz="'+CSS.escape(z.id+'|'+o.id+'|'+i)+'"]')?.getBoundingClientRect();if(r&&r.width>0&&r.height>0)mm.bild.verhaeltnis=r.width/r.height}
+  const verh=Math.min(4,Math.max(.5,mm.bild.verhaeltnis||4/3));
+  const a={x:50,y:50,z:1,...(f?.ausschnitt||{})};
+  const url=f?bildUrl(f.pfad,f.quelle==='mappe'?M.BUCKET:M.BUCKET_PRODUKTE):'';
+  const bib=mm.fotos.get(o.produkt_id)||[];
+  const stelle=i===0?'großes Bild':'Bild '+(i+1);
+  dialog.innerHTML='<div class="pd-dlg pd-dlg-breit mm-bild-dlg"><div class="pd-detail-kopf"><h2>Bild · Variante '+esc(o.id)+', '+stelle+'</h2>'+
+    '<button type="button" class="pd-x" data-bd="zu" aria-label="Schließen">×</button></div><div class="mm-bild-raster"><section>'+
+    (url?'<h3>Ausschnitt, wie im PDF</h3><div class="mm-ausschnitt" tabindex="0" role="group" aria-label="Ausschnitt: ziehen oder mit den Pfeiltasten verschieben, mit + und − vergrößern" style="--verh:'+verh.toFixed(3)+';aspect-ratio:'+verh.toFixed(3)+'">'+
+        '<img src="'+esc(url)+'" alt="" draggable="false"></div>'+
+        '<label class="pd-feld"><span>Vergrößern</span><input type="range" min="1" max="'+M.ZOOM_MAX+'" step="0.05" value="'+a.z+'" data-bd="zoom"></label>'+
+        '<div class="mm-knoepfe"><button type="button" class="btn" data-bd="mitte">Ausschnitt zurücksetzen</button>'+
+        (i>0?'<button type="button" class="btn" data-bd="gross">Als großes Bild</button>':'')+(standard?'':'<button type="button" class="btn" data-bd="weg">Bild entfernen</button>')+'</div>'+
+        '<p class="meta">'+(standard?'Das erste Foto aus der Produktbibliothek, solange kein anderes gewählt ist. ':'')+'Der Ausschnitt gilt für dieses Bild auf allen Seiten der Mappe.</p>'
+      :'<h3>Noch kein Bild</h3><p class="meta">Rechts eines aus der Produktbibliothek wählen oder ein eigenes hochladen.</p>')+
+    '</section><section><h3>'+(f?'Anderes Bild':'Bild wählen')+'</h3>'+
+    (bib.length?'<p class="meta">Aus der Produktbibliothek</p><div class="mm-thumbs">'+bib.slice(0,12).map(d=>{const u=bildUrl(d.storage_path);
+        return '<button type="button" class="mm-thumb" data-bd="bib" data-d="'+esc(d.id)+'" aria-pressed="'+(f?.pfad===d.storage_path?'true':'false')+'" aria-label="'+esc('Foto '+(d.name||''))+'">'+(u?'<img src="'+esc(u)+'" alt="">':'')+'</button>'}).join('')+'</div>'
+      :'<p class="meta">In der Produktbibliothek gibt es dazu kein Foto.</p>')+
+    '<label class="btn">Eigenes Bild hochladen<input type="file" class="pb-datei" hidden accept="image/jpeg,image/png,image/webp,application/pdf" data-bd="datei"></label>'+
+    '<label class="pd-feld"><span>Seite im PDF (bei einem PDF)</span><input class="pd-in" type="number" min="1" max="2000" value="'+esc(mm.bild.pdfSeite||1)+'" data-bd="pdfseite"></label>'+
+    '<p class="meta">JPG, PNG oder WebP bis 15 MB, oder eine Seite aus einem PDF. Das Bild bleibt in dieser Mappe; die Produktbibliothek ändert sich nicht.</p>'+
+    '</section></div><p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn btn-primary" data-bd="zu">Fertig</button></div></div>';
+  const box=dialog.querySelector('.mm-bild-dlg'),fehler=t=>{box.querySelector('[data-dlg-fehler]').textContent=t||''};
+  const los=f2=>{fehler('');Promise.resolve().then(f2).catch(e=>{console.error('Mustermappe · Bild',e);fehler(e?.message||'Das hat nicht geklappt.')})};
+  box.addEventListener('click',e=>{
+    const b=e.target.closest('[data-bd]');if(!b)return;
+    const was=b.dataset.bd;
+    if(was==='zu')dialog.close();
+    else if(was==='bib'){const d=bib.find(x=>x.id===b.dataset.d);if(d)los(()=>bildAendern(l=>M.fotoSetzen(l,i,{id:d.id,pfad:d.storage_path}),{neuesBild:d.storage_path}))}
+    else if(was==='mitte')los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,null)));
+    else if(was==='gross')los(()=>{mm.bild.i=0;bildAendern(l=>M.fotoNachVorn(l,i))});
+    else if(was==='weg')los(()=>{const rest=bildAendern(l=>M.fotoEntfernen(l,i));dialog.close();
+      meldung(!rest.length&&bib.length?'Bild entfernt. Die Seite zeigt wieder das erste Foto aus der Produktbibliothek.':'Bild entfernt.')});
+  });
+  box.addEventListener('change',e=>{
+    const el=e.target;
+    if(el.dataset.bd==='pdfseite')mm.bild.pdfSeite=Math.max(1,Math.floor(Number(el.value))||1);
+    else if(el.dataset.bd==='datei'){
+      const datei=el.files?.[0];if(!datei)return;
+      el.closest('label')?.classList.add('laedt');fehler('');
+      bildHochladenUndSetzen(datei,i).catch(err=>{console.error('Mustermappe · Bild',err);fehler(err?.message||'Das Bild wurde nicht hochgeladen.');el.closest('label')?.classList.remove('laedt')});
+    }
+    else if(el.dataset.bd==='zoom'&&f)los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,{...a})));
+  });
+  if(!url)return;
+  // Ausschnitt: ziehen, Pfeiltasten, + und −; gespeichert wird beim Loslassen.
+  const feld=box.querySelector('.mm-ausschnitt'),img=feld.querySelector('img'),zoom=box.querySelector('[data-bd="zoom"]');
+  ausschnittStil(img,a);
+  zoom.addEventListener('input',()=>{a.z=Number(zoom.value)||1;ausschnittStil(img,a)});
+  let zug=null;
+  feld.addEventListener('pointerdown',e=>{zug={px:e.clientX,py:e.clientY,x:a.x,y:a.y};feld.setPointerCapture?.(e.pointerId);feld.classList.add('zieht')});
+  feld.addEventListener('pointermove',e=>{
+    if(!zug)return;
+    const b=feld.getBoundingClientRect();
+    a.x=Math.min(100,Math.max(0,zug.x-(e.clientX-zug.px)/b.width*100/a.z));
+    a.y=Math.min(100,Math.max(0,zug.y-(e.clientY-zug.py)/b.height*100/a.z));
+    ausschnittStil(img,a);
+  });
+  const loslassen=()=>{if(!zug)return;zug=null;feld.classList.remove('zieht');los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,{...a})))};
+  feld.addEventListener('pointerup',loslassen);feld.addEventListener('pointercancel',loslassen);
+  feld.addEventListener('keydown',e=>{
+    const schritt=e.shiftKey?10:2,k=e.key;
+    if(k==='ArrowLeft')a.x=Math.max(0,a.x-schritt);else if(k==='ArrowRight')a.x=Math.min(100,a.x+schritt);
+    else if(k==='ArrowUp')a.y=Math.max(0,a.y-schritt);else if(k==='ArrowDown')a.y=Math.min(100,a.y+schritt);
+    else if(k==='+'||k==='=')a.z=Math.min(M.ZOOM_MAX,Math.round((a.z+.1)*100)/100);else if(k==='-')a.z=Math.max(1,Math.round((a.z-.1)*100)/100);
+    else return;
+    e.preventDefault();ausschnittStil(img,a);zoom.value=a.z;
+    clearTimeout(mm.bildTimer);mm.bildTimer=setTimeout(()=>los(()=>{bildAendern(l=>M.fotoAusschnitt(l,i,{...a}));dialog.querySelector('.mm-ausschnitt')?.focus()}),400);
+  });
+  if(fokus==='ausschnitt')feld.focus();
+}
+async function bildHochladenUndSetzen(datei,i){
+  const ziel=mm.bild;if(!ziel)return;
+  const {pfad,name}=await bildHochladen(datei,ziel.pdfSeite||1);
+  bildAendern(l=>M.fotoSetzen(l,i,{id:'m-'+crypto.randomUUID(),pfad,quelle:'mappe',name}),{neuesBild:pfad,ziel});
+  meldung('Das Bild steht auf der Seite; es bleibt in dieser Mappe.');
 }
 async function mappeDrucken(v){
   await alleSpeichern();
@@ -1529,6 +1691,11 @@ function mappeKlick(act,el){
     if(o&&d){optionenPatch(z,o.id,x=>({...x,muster_fotos:M.fotosUmschalten(x.muster_fotos,{id:d.id,pfad:d.storage_path})}));render()}
   }
   else if(act==='mm-bild-weg'){const s1=mappeSeite(v);if(s1){const d={...s1};delete d.bild;seitenSetzen(v,M.seitenVon(v.daten).map(x=>x.id===s1.id?d:x));render()}}
+  else if(act==='mm-bild'&&z)bildDialog(z,el.dataset.o,el.dataset.i);
+  else if(act==='mm-zuruecksetzen'&&z){
+    optionenPatch(z,el.dataset.o,o=>M.zuruecksetzen(o,el.dataset.feld));
+    meldung((M.ANPASSUNG_NAME[el.dataset.feld]||'Text')+' von '+el.dataset.o+' wieder wie in der Produktbibliothek.');render();
+  }
 }
 function mappeAenderung(el){
   const v=vorlageZeile();if(!v||!istMappe(v))return false;
@@ -1563,9 +1730,17 @@ function mappeAenderung(el){
 function mappeEingabe(el){
   const v=vorlageZeile();if(!v||!istMappe(v))return false;
   if(el.matches('textarea[data-mmtext]')){const z=zeileVon(el.dataset.z);if(z){z.daten={...z.daten,[el.dataset.mmtext]:el.value};markiere(z)}}
-  else if(el.matches('textarea[data-mmopt]')){
-    const [zid,oid]=el.dataset.mmopt.split('|'),z=zeileVon(zid);
-    if(z){z.daten={...z.daten,optionen:K.optionen(z.daten).map(o=>o.id===oid?{...o,muster_text:el.value}:o)};markiere(z)}
+  else if(el.matches('textarea[data-mmopt],textarea[data-mmanp]')){
+    // Texte der Variante für diese Mappe (26.11.2026): gleich wie die Bibliothek heißt nicht geändert.
+    const [zid,oid,feld='beschreibung']=(el.dataset.mmanp||el.dataset.mmopt).split('|'),z=zeileVon(zid);
+    if(z){
+      let neu=null;
+      z.daten={...z.daten,optionen:K.optionen(z.daten).map(o=>o.id===oid?(neu=M.anpassen(o,feld,el.value)):o)};markiere(z);
+      const g=!!neu&&M.geaendert(neu)[feld];
+      el.classList.toggle('mm-geaendert',g);
+      if(g)el.title='In dieser Mappe geändert';else el.removeAttribute('title');
+      mappeHinweiseNeu();
+    }
   }
   else if(el.matches('textarea[data-mmseite]')){
     const [sid,k]=el.dataset.mmseite.split('|');

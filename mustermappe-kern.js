@@ -7,7 +7,10 @@
    24.11.2026), aber: eine Seite zeigt einen neuen Stand der Bibliothek erst nach «Übernehmen», und aus dem Projekt heraus
    ändert sich die Bibliothek nie. Seitenvorlagen A3 quer: Deckblatt, Übersicht, Vergleich, Material, freie Seite.
    Im Dokument an den Auftraggeber steht je Zahl nur der Beleg, nie die Fundstelle mit anderen Projekten.
-   Entschieden wird im Bemusterungstermin, nicht auf dem Blatt (Gari, 24.11.2026): keine Unterschrift auf den Seiten. */
+   Entschieden wird im Bemusterungstermin, nicht auf dem Blatt (Gari, 24.11.2026): keine Unterschrift auf den Seiten.
+   Anpassen für diese Mappe (Gari, 26.11.2026): Name, Hersteller und Serie, Kennwerte und Beschreibung einer Variante
+   lassen sich auf der Seite ändern, nur für die Mappe, markiert und mit «Zurücksetzen»; jedes Foto lässt sich ersetzen
+   (aus der Bibliothek oder ein eigenes Bild, das in der Mappe bleibt) und zuschneiden. Die Seitenraster bleiben fest. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -24,7 +27,7 @@ const KATEGORIEN={'Bodenbeläge':['bodenbelag'],'Bäder':['sanitaer','wandbelag'
 const SEITEN={deckblatt:'Deckblatt',uebersicht:'Übersicht',vergleich:'Vergleich',material:'Material',frei:'Freie Seite'};
 const STRATEGIEN=[['','ohne Strategie'],['A','Strategie A'],['B','Strategie B'],['AB','A und B']];
 const MUSTER_FELDER=['code','bezeichnung','strategie','zonen','flaeche','anforderungen','hinweise','kosten','kosten_beleg'];
-const MAX_KANDIDATEN=3,MAX_FOTOS=3,MAX_MERKMALE=16;
+const MAX_KANDIDATEN=3,MAX_FOTOS=3,MAX_MERKMALE=16,ZOOM_MAX=3;
 const BILDTYPEN=['image/jpeg','image/png','image/webp'],BILD_MAX=15*1024*1024;
 
 const s=v=>v===null||v===undefined?'':String(v);
@@ -79,6 +82,90 @@ function fotosUmschalten(alt,foto){
   if(liste.some(f=>s(f.id)===s(foto.id)))return liste.filter(f=>s(f.id)!==s(foto.id));
   return [...liste,{id:s(foto.id),pfad:s(foto.pfad)}].slice(0,MAX_FOTOS);
 }
+// Ausschnitt eines Fotos: Punkt x, y in Prozent (der bleibt beim Zuschneiden stehen) und Vergrößerung z bis dreifach.
+// Mitte und ohne Vergrößerung = kein Ausschnitt.
+function ausschnittVon(a){
+  if(!a||typeof a!=='object')return null;
+  const zahl=(v,min,max,std)=>{const n=v===null||v===''?NaN:Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):std};
+  const x=Math.round(zahl(a.x,0,100,50)*10)/10,y=Math.round(zahl(a.y,0,100,50)*10)/10,z=Math.round(zahl(a.z,1,ZOOM_MAX,1)*100)/100;
+  return x===50&&y===50&&z===1?null:{x,y,z};
+}
+// Ein Foto der Variante: aus der Bibliothek (Bucket der Produkte) oder eigenes Bild der Mappe (quelle «mappe»).
+function fotoSauber(f){
+  if(!f||typeof f!=='object'||!s(f.pfad))return null;
+  const x={id:s(f.id),pfad:s(f.pfad)};
+  if(f.quelle==='mappe')x.quelle='mappe';
+  if(s(f.name))x.name=s(f.name).slice(0,160);
+  const a=ausschnittVon(f.ausschnitt);if(a)x.ausschnitt=a;
+  return x;
+}
+const fotoListe=l=>(Array.isArray(l)?l:[]).map(fotoSauber).filter(Boolean);
+// Ein Foto an Stelle i setzen (i = Länge: anhängen); dasselbe Bild steht nur einmal in der Variante.
+function fotoSetzen(liste,i,foto){
+  const neu=fotoSauber(foto);let l=fotoListe(liste);
+  if(!neu)return l.slice(0,MAX_FOTOS);
+  const k=Math.min(Math.max(0,Math.floor(Number(i))||0),l.length);
+  if(k<l.length)l[k]=neu;else l.push(neu);
+  l=l.filter((f,j)=>j===k||f.pfad!==neu.pfad);
+  return l.slice(0,MAX_FOTOS);
+}
+function fotoEntfernen(liste,i){return fotoListe(liste).filter((_,j)=>j!==Number(i))}
+function fotoNachVorn(liste,i){
+  const l=fotoListe(liste),k=Number(i);
+  if(!(k>0&&k<l.length))return l;
+  const [f]=l.splice(k,1);l.unshift(f);return l;
+}
+function fotoAusschnitt(liste,i,a){
+  return fotoListe(liste).map((f,j)=>{
+    if(j!==Number(i))return f;
+    const n={...f},x=ausschnittVon(a);
+    if(x)n.ausschnitt=x;else delete n.ausschnitt;
+    return n;
+  });
+}
+
+// ---------- Texte für diese Mappe anpassen (Gari, 26.11.2026) ----------
+// Was die Seite aus der Bibliothek zeigt (Name, Hersteller und Serie, Kennwerte) und die Beschreibung lassen sich für
+// diese Mappe ändern. Geändertes steht in der Variante (muster_name, muster_herkunft, muster_merkmale, muster_text); die
+// Bibliothek bleibt, wie sie ist. Gleich wie in der Bibliothek heißt: nicht geändert. «Übernehmen» lässt Geändertes stehen.
+const ANPASSUNG={name:'muster_name',herkunft:'muster_herkunft',kennwerte:'muster_merkmale',beschreibung:'muster_text'};
+const ANPASSUNG_NAME={name:'Name',herkunft:'Hersteller und Serie',kennwerte:'Kennwerte',beschreibung:'Beschreibung'};
+function herkunftVon(a){return [s(a?.hersteller).trim(),s(a?.serie).trim()].filter(Boolean).join(' · ')}
+function merkmaleSauber(liste){
+  return (Array.isArray(liste)?liste:[]).filter(m=>m&&(s(m.feld).trim()||s(m.wert).trim())).slice(0,MAX_MERKMALE)
+    .map(m=>({feld:s(m.feld).trim().slice(0,80),wert:s(m.wert).trim().slice(0,240)}));
+}
+// Kennwerte als Text: je Zeile «Feld: Wert» (ohne Doppelpunkt nur der Wert).
+function merkmaleText(liste){return merkmaleSauber(liste).map(m=>m.feld?m.feld+': '+m.wert:m.wert).join('\n')}
+function merkmaleAusText(text){
+  return merkmaleSauber(s(text).split(/\r?\n/).map(z=>z.trim()).filter(Boolean).map(z=>{
+    const i=z.indexOf(':');return i>0?{feld:z.slice(0,i),wert:z.slice(i+1)}:{feld:'',wert:z};
+  }));
+}
+function gleicheMerkmale(a,b){
+  const x=merkmaleSauber(a),y=merkmaleSauber(b);
+  return x.length===y.length&&x.every((m,i)=>m.feld===y[i].feld&&m.wert===y[i].wert);
+}
+function anpassen(o,feld,wert){
+  const a=o?.muster_produkt||{},n={...o};
+  if(feld==='name'){const w=s(wert).trim().slice(0,200);if(!w||w===(s(a.name)||s(o?.text)).trim())delete n.muster_name;else n.muster_name=w}
+  else if(feld==='herkunft'){const w=s(wert).trim().slice(0,240);if(w===herkunftVon(a))delete n.muster_herkunft;else n.muster_herkunft=w}
+  else if(feld==='kennwerte'){const l=merkmaleAusText(wert);if(gleicheMerkmale(l,a.merkmale))delete n.muster_merkmale;else n.muster_merkmale=l}
+  else if(feld==='beschreibung'){const w=s(wert);if(!w.trim()||w.trim()===s(a.beschreibung).trim())delete n.muster_text;else n.muster_text=w}
+  return n;
+}
+function zuruecksetzen(o,feld){const n={...o};if(ANPASSUNG[feld])delete n[ANPASSUNG[feld]];return n}
+function geaendert(o){
+  return {name:!!s(o?.muster_name).trim(),herkunft:typeof o?.muster_herkunft==='string',
+    kennwerte:Array.isArray(o?.muster_merkmale),beschreibung:!!s(o?.muster_text).trim()};
+}
+function geaenderteTexte(o,felder=Object.keys(ANPASSUNG)){const g=geaendert(o);return felder.filter(k=>g[k]).map(k=>({feld:k,name:ANPASSUNG_NAME[k]}))}
+// Welche anpassbaren Texte eine Seite zeigt, in der Reihenfolge der Seite: nur für die steht unter ihr «zurücksetzen».
+function anpassbarAuf(seite){
+  const t=seite?.typ;
+  if(t!=='vergleich'&&t!=='material')return [];
+  return ['name','herkunft',...(t==='material'?['beschreibung']:[]),...(zeigt(seite,'kennwerte')?['kennwerte']:[])];
+}
 // Pfad einer Datei der Mappe: Dokument, wer hochlädt, Datei. So prüft die Datenbank den Zugang (Migration 20261124).
 function dateiPfad(dokumentId,userId,uuid,typ){
   const endung={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[typ];
@@ -119,11 +206,13 @@ function belegVon(o){
   return [s(o?.kennwert_beleg).trim()&&'Kennwert: '+s(o.kennwert_beleg).trim(),s(o?.menge_beleg).trim()&&'Menge: '+s(o.menge_beleg).trim(),s(o?.quelle).trim()].filter(Boolean).join('; ');
 }
 function optionInhalt(o){
-  const a=o.muster_produkt||{};
-  return {id:s(o.id),name:s(a.name)||s(o.text),hersteller:s(a.hersteller),serie:s(a.serie),
-    beschreibung:s(o.muster_text)||s(a.beschreibung),eigenerText:!!s(o.muster_text),merkmale:Array.isArray(a.merkmale)?a.merkmale:[],
+  const a=o.muster_produkt||{},g=geaendert(o);
+  return {id:s(o.id),name:g.name?s(o.muster_name).trim():(s(a.name)||s(o.text)),hersteller:s(a.hersteller),serie:s(a.serie),
+    herkunft:g.herkunft?s(o.muster_herkunft):herkunftVon(a),
+    beschreibung:s(o.muster_text)||s(a.beschreibung),eigenerText:!!s(o.muster_text),
+    merkmale:g.kennwerte?merkmaleSauber(o.muster_merkmale):(Array.isArray(a.merkmale)?a.merkmale:[]),geaendert:g,
     kennwert:s(o.kennwert),beleg:belegVon(o),produktId:s(o.produkt_id),stand:s(a.stand),
-    fotos:(Array.isArray(o.muster_fotos)?o.muster_fotos:[]).filter(f=>f&&s(f.pfad)).map(f=>({id:s(f.id),pfad:s(f.pfad)})).slice(0,MAX_FOTOS)};
+    fotos:fotoListe(o.muster_fotos).slice(0,MAX_FOTOS)};
 }
 function punktInhalt(z,nummer){
   const d=z.daten||{},m=d.muster||{};
@@ -151,7 +240,7 @@ function mitStandardFotos(inhalt,fotosVon){
 }
 function allePfade(inhalt){
   const produkt=new Set(),mappe=new Set();
-  for(const p of inhalt.punkte||[])for(const o of p.optionen||[])for(const f of o.fotos||[])produkt.add(f.pfad);
+  for(const p of inhalt.punkte||[])for(const o of p.optionen||[])for(const f of o.fotos||[])(f.quelle==='mappe'?mappe:produkt).add(f.pfad);
   for(const x of inhalt.seiten||[])if(x.typ==='frei'&&s(x.bild?.pfad))mappe.add(x.bild.pfad);
   return {produkt:[...produkt],mappe:[...mappe]};
 }
@@ -190,10 +279,42 @@ function feld(modus,attr,wert,{zeilen=2,platz='',klasse='',titel=false,id=''}={}
   }
   return '<textarea'+(id?' id="'+esc(id)+'"':'')+' class="mm-text '+klasse+'" '+attr+' rows="'+zeilen+'" placeholder="'+esc(platz)+'" aria-label="'+esc(platz)+'">'+esc(wert)+'</textarea>';
 }
-function foto(f,bild,alt,klasse,bucket=BUCKET_PRODUKTE){
-  const url=f?.pfad?bild(f.pfad,bucket):'';
-  return url?'<img class="mm-foto '+klasse+'" src="'+esc(url)+'" data-pfad="'+esc(f.pfad)+'" alt="'+esc(alt)+'">'
-    :'<div class="mm-foto mm-foto-leer '+klasse+'" role="img" aria-label="'+esc(alt+': kein Foto')+'"><span>kein Foto</span></div>';
+// Fotos der Varianten stehen in einem Rahmen fester Größe; der Ausschnitt verschiebt und vergrößert das Bild darin.
+// platz (nur beim Bearbeiten): Position, Variante und Stelle des Fotos, dazu «Bild ändern» und, wenn noch Platz ist,
+// «+ Bild». Die freie Seite zeigt ihr Bild ganz (ein Plan wird nicht beschnitten).
+function bildStil(a){
+  const x=ausschnittVon(a);if(!x)return '';
+  return ' style="object-position:'+x.x+'% '+x.y+'%'+(x.z>1?';transform:scale('+x.z+');transform-origin:'+x.x+'% '+x.y+'%':'')+'"';
+}
+function foto(f,bild,alt,klasse,bucket=BUCKET_PRODUKTE,platz=null){
+  const b=f?.quelle==='mappe'?BUCKET:bucket;
+  const url=f?.pfad?bild(f.pfad,b):'';
+  const knopf=(i,t)=>'<button type="button" class="mm-bild-knopf" data-act="mm-bild" data-z="'+esc(platz.z)+'" data-o="'+esc(platz.o)+'" data-i="'+i+'">'+t+'</button>';
+  const knoepfe=platz?'<span class="mm-bild-knoepfe">'+knopf(platz.i,url?'Bild ändern':'Bild wählen')+
+    (url&&Number.isInteger(platz.plus)?knopf(platz.plus,'+ Bild'):'')+'</span>':'';
+  const ort=platz?' data-bildplatz="'+esc(platz.z+'|'+platz.o+'|'+platz.i)+'"':'';
+  if(!url)return '<div class="mm-foto mm-foto-leer '+klasse+'" role="img" aria-label="'+esc(alt+': kein Foto')+'"'+ort+'><span>kein Foto</span>'+knoepfe+'</div>';
+  if(bucket===BUCKET)return '<img class="mm-foto '+klasse+'" src="'+esc(url)+'" data-pfad="'+esc(f.pfad)+'" alt="'+esc(alt)+'">';
+  return '<span class="mm-foto mm-rahmen '+klasse+'"'+ort+'><img class="mm-foto-bild" src="'+esc(url)+'" data-pfad="'+esc(f.pfad)+'" alt="'+esc(alt)+'"'+
+    bildStil(f.ausschnitt)+'>'+knoepfe+'</span>';
+}
+// Texte der Variante aus der Bibliothek: im Druck wie bisher, beim Bearbeiten als Feld; geändert = durchgezogen umrandet.
+function anpassFeld(modus,p,o,feld,{wert,druck,klasse='',platz='',zeilen=1}){
+  if(modus!=='bearbeiten')return druck;
+  const g=!!o.geaendert?.[feld];
+  return '<textarea id="'+esc('mm-'+p.id+'-'+o.id+'-'+feld)+'" class="mm-text '+klasse+(g?' mm-geaendert':'')+'" data-mmanp="'+esc(p.id+'|'+o.id+'|'+feld)+
+    '" rows="'+zeilen+'" placeholder="'+esc(platz)+'" aria-label="'+esc(platz)+'"'+(g?' title="In dieser Mappe geändert"':'')+'>'+esc(wert)+'</textarea>';
+}
+function herkunftText(o){return typeof o.herkunft==='string'?o.herkunft:[o.hersteller,o.serie].filter(Boolean).join(' · ')}
+function herkunftZeile(modus,p,o){
+  const t=herkunftText(o);
+  return anpassFeld(modus,p,o,'herkunft',{wert:t,druck:t?'<p class="mm-klein">'+esc(t)+'</p>':'',klasse:'mm-text-klein',platz:'Hersteller · Serie'});
+}
+function kennwerteFeld(modus,p,o,n){
+  if(modus!=='bearbeiten')return kennwerte(o,n);
+  const t=merkmaleText(o.merkmale),zeilen=t?t.split('\n').length:0;
+  return anpassFeld(modus,p,o,'kennwerte',{wert:t,druck:'',klasse:'mm-text-kennwerte',platz:'Kennwerte, je Zeile «Feld: Wert»',zeilen:Math.max(2,Math.min(zeilen,MAX_MERKMALE))})+
+    (zeilen>n?'<p class="mm-feldhinweis">Auf dieser Seite stehen die ersten '+n+' Zeilen.</p>':'');
 }
 function fuss(inh,nr,gesamt){
   const projekt=[inh.projekt.nummer,inh.projekt.name].filter(Boolean).join(' ');
@@ -244,10 +365,13 @@ function seiteUebersicht(inh){
 function seiteVergleich(seite,inh,p,{modus,bild}){
   const kand=kandidatenDerSeite(seite,p);
   // Foto und Text je Kandidat in zwei Zeilen eines Rasters: die Fotos stehen gleich hoch, auch bei ungleich langen Texten.
-  const spalten=kand.length?kand.map(o=>'<div class="mm-kand">'+foto(o.fotos[0],bild,o.name,'mm-foto-kand')+
-    '<div class="mm-kand-text"><div class="mm-kand-kopf"><h3>'+esc(o.id+' · '+o.name)+'</h3>'+(p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'<span class="mm-empf">Empfehlung</span>':'')+'</div>'+
-    ((o.hersteller||o.serie)?'<p class="mm-klein">'+esc([o.hersteller,o.serie].filter(Boolean).join(' · '))+'</p>':'')+
-    (zeigt(seite,'kennwerte')?kennwerte(o,5):'')+(zeigt(seite,'kosten')?kostenKasten({},o):'')+'</div></div>').join('')
+  const ed=modus==='bearbeiten';
+  const name=o=>ed?'<h3 class="mm-kand-name"><span>'+esc(o.id+' · ')+'</span>'+anpassFeld(modus,p,o,'name',{wert:o.name,klasse:'mm-text-name',platz:'Name der Variante'})+'</h3>'
+    :'<h3>'+esc(o.id+' · '+o.name)+'</h3>';
+  const spalten=kand.length?kand.map(o=>'<div class="mm-kand">'+foto(o.fotos[0],bild,o.name,'mm-foto-kand',BUCKET_PRODUKTE,ed?{z:p.id,o:o.id,i:0}:null)+
+    '<div class="mm-kand-text"><div class="mm-kand-kopf">'+name(o)+(p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'<span class="mm-empf">Empfehlung</span>':'')+'</div>'+
+    herkunftZeile(modus,p,o)+
+    (zeigt(seite,'kennwerte')?kennwerteFeld(modus,p,o,5):'')+(zeigt(seite,'kosten')?kostenKasten({},o):'')+'</div></div>').join('')
     :modus==='bearbeiten'?'<p class="mm-p mm-leer">Noch kein Kandidat. Rechts einen aus der Bibliothek wählen.</p>':'';
   const empf=zeigt(seite,'empfehlung')?(modus==='bearbeiten'
     ?'<div class="mm-empfehlung"><strong>'+esc(p.empfehlung?'Empfehlung: Variante '+p.empfehlung+'.':'Empfehlung offen.')+'</strong>'+feld(modus,'data-mmtext="begruendung" data-z="'+esc(p.id)+'"',p.begruendung,{zeilen:2,platz:'Begründung der Empfehlung',id:'mm-'+p.id+'-begruendung'})+'</div>'
@@ -261,13 +385,18 @@ function seiteVergleich(seite,inh,p,{modus,bild}){
 function seiteMaterial(seite,inh,p,{modus,bild}){
   const o=p.optionen.find(x=>x.id===seite.option)||p.optionen[0];
   if(!o)return kopfPosition(p)+'<p class="mm-p mm-leer">Diese Variante gibt es nicht mehr.</p>';
-  const klein=o.fotos.slice(1,3);
-  return '<div class="mm-material"><div class="mm-material-bilder">'+foto(o.fotos[0],bild,o.name,'mm-foto-gross')+
-    (klein.length?'<div class="mm-foto-reihe">'+klein.map(f=>foto(f,bild,o.name,'mm-foto-klein')).join('')+'</div>':'')+'</div>'+
-    '<div class="mm-material-text">'+kopfPosition(p,'Variante '+o.id)+'<h3 class="mm-material-name">'+esc(o.name)+'</h3>'+
-    ((o.hersteller||o.serie)?'<p class="mm-klein">'+esc([o.hersteller,o.serie].filter(Boolean).join(' · '))+'</p>':'')+
-    feld(modus,'data-mmopt="'+esc(p.id+'|'+o.id)+'"',o.beschreibung,{zeilen:3,platz:'Beschreibung für den Bauherrn',id:'mm-'+p.id+'-'+o.id+'-text'})+
-    (zeigt(seite,'kennwerte')?kennwerte(o,10):'')+(zeigt(seite,'kosten')?kostenKasten(p,o):'')+zuBeachten(p)+
+  const klein=o.fotos.slice(1,3),ed=modus==='bearbeiten';
+  // Beim Bearbeiten: «+ Bild» auf dem großen Foto, solange die Variante weniger als drei hat; das Raster bleibt gleich.
+  const platz=i=>ed?{z:p.id,o:o.id,i,...(i===0&&o.fotos.length<MAX_FOTOS?{plus:o.fotos.length}:{})}:null;
+  const g=!!o.geaendert?.beschreibung;
+  return '<div class="mm-material"><div class="mm-material-bilder">'+foto(o.fotos[0],bild,o.name,'mm-foto-gross',BUCKET_PRODUKTE,platz(0))+
+    (klein.length?'<div class="mm-foto-reihe">'+klein.map((f,j)=>foto(f,bild,o.name,'mm-foto-klein',BUCKET_PRODUKTE,platz(j+1))).join('')+'</div>':'')+'</div>'+
+    '<div class="mm-material-text">'+kopfPosition(p,'Variante '+o.id)+
+    (ed?'<h3 class="mm-material-name">'+anpassFeld(modus,p,o,'name',{wert:o.name,klasse:'mm-text-name',platz:'Name der Variante'})+'</h3>'
+      :'<h3 class="mm-material-name">'+esc(o.name)+'</h3>')+
+    herkunftZeile(modus,p,o)+
+    feld(modus,'data-mmopt="'+esc(p.id+'|'+o.id)+'"',o.beschreibung,{zeilen:3,platz:'Beschreibung für den Bauherrn',klasse:g?'mm-geaendert':'',id:'mm-'+p.id+'-'+o.id+'-text'})+
+    (zeigt(seite,'kennwerte')?kennwerteFeld(modus,p,o,10):'')+(zeigt(seite,'kosten')?kostenKasten(p,o):'')+zuBeachten(p)+
     (p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'<p class="mm-empf mm-empf-zeile">Empfehlung des Büros</p>':'')+entschiedenZeile(p)+'</div></div>';
 }
 function seiteFrei(seite,{modus,bild}){
@@ -294,7 +423,9 @@ function mappeHtml(inh,{modus='druck',bild=()=>''}={}){
   return l.map((x,i)=>seiteHtml(x,inh,{nr:i+1,gesamt:l.length,modus,bild})).join('');
 }
 
-return Object.freeze({FORM,SCHEMA,BUCKET,BUCKET_PRODUKTE,THEMEN,KATEGORIEN,SEITEN,STRATEGIEN,MUSTER_FELDER,MAX_KANDIDATEN,MAX_FOTOS,BILDTYPEN,BILD_MAX,
+return Object.freeze({FORM,SCHEMA,BUCKET,BUCKET_PRODUKTE,THEMEN,KATEGORIEN,SEITEN,STRATEGIEN,MUSTER_FELDER,MAX_KANDIDATEN,MAX_FOTOS,BILDTYPEN,BILD_MAX,ZOOM_MAX,
   esc,datum,neueId,naechsteOptionId,istMappe,neueMappe,thema,neuePosition,produktAuszug,veraltet,kandidat,fotosUmschalten,dateiPfad,bildPruefen,
+  ausschnittVon,fotoSauber,fotoListe,fotoSetzen,fotoEntfernen,fotoNachVorn,fotoAusschnitt,
+  ANPASSUNG_NAME,merkmaleText,merkmaleAusText,anpassen,zuruecksetzen,geaendert,geaenderteTexte,anpassbarAuf,
   seitenVon,seiteVerschieben,seiteName,belegVon,mappeInhalt,mitStandardFotos,allePfade,kandidatenDerSeite,uebersichtGruppen,gewaehlt,seiteHtml,mappeHtml});
 });

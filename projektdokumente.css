@@ -374,6 +374,39 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-empf-zeile{align-self:flex-start}
 .mm-frei-bild{flex:1;min-height:0;display:flex}
 .mm-foto-frei{width:100%;height:100%;object-fit:contain;background:var(--m-paper)}
+.mm-material-text .mm-feldhinweis,.mm-kand-text .mm-feldhinweis{margin-top:-.3cqw}
+/* Anpassen für diese Mappe (26.11.2026): Fotos im Rahmen mit Ausschnitt, beim Bearbeiten «Bild ändern» und «+ Bild»,
+   für diese Mappe geänderte Texte durchgezogen umrandet (gestrichelt = wie in der Bibliothek). */
+.mm-rahmen{position:relative;overflow:hidden}
+.mm-rahmen>.mm-foto-bild{display:block;width:100%;height:100%;object-fit:cover}
+.mm-foto-leer{position:relative}
+.mm-bild-knoepfe{position:absolute;right:.6cqw;bottom:.6cqw;display:flex;gap:.4cqw;opacity:0;transition:opacity var(--m-motion-fast) var(--m-ease)}
+.mm-rahmen:hover .mm-bild-knoepfe,.mm-foto-leer .mm-bild-knoepfe,.mm-bild-knoepfe:focus-within{opacity:1}
+@media (hover:none){.mm-bild-knoepfe{opacity:1}}
+.mm-bild-knopf{min-height:28px;padding:4px 10px;border:1px solid var(--m-blue-line);border-radius:var(--m-radius-pill);background:var(--m-paper);
+  color:var(--m-blue);font:inherit;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;cursor:pointer}
+.mm-bild-knopf:hover{background:var(--m-blue-soft)}
+.mm-text.mm-geaendert{border-style:solid;border-color:var(--m-information)}
+.mm-kand-name{display:flex;align-items:baseline;gap:.3cqw;min-width:0;flex:1}
+.mm-kand-name>span{flex:none}
+.mm-text.mm-text-name{font-size:inherit;font-weight:inherit;line-height:1.25}
+.mm-text.mm-text-klein{font-size:.78cqw;color:var(--m-ink-soft)}
+.mm-text.mm-text-kennwerte{font-size:.85cqw;line-height:1.5}
+.mm-feldhinweis{font-size:.72cqw;color:var(--m-ink-soft)}
+.mm-geaendert-zeile{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between}
+/* Dialog «Bild ändern»: links der Ausschnitt im Seitenverhältnis des Rahmens im PDF, rechts ein anderes Bild. */
+.mm-bild-raster{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
+.mm-bild-raster section{display:grid;gap:10px;min-width:0}
+.mm-bild-raster h3{margin:0;font-size:15px}
+.mm-ausschnitt{position:relative;overflow:hidden;width:min(100%,calc(52vh * var(--verh,1.333)));border-radius:var(--m-radius-control);background:var(--m-surface);
+  box-shadow:0 0 0 1px var(--m-border);cursor:grab;touch-action:none;user-select:none}
+.mm-ausschnitt.zieht{cursor:grabbing}
+.mm-ausschnitt:focus-visible{outline:2px solid var(--m-focus);outline-offset:2px}
+.mm-ausschnitt img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.mm-bild-dlg label.btn.laedt{opacity:.6;pointer-events:none}
+/* Nur zum Messen: eine Seite unsichtbar wie im Druck gesetzt (Seitenverhältnis der Fotos im PDF). */
+.mm-messen{position:fixed;left:-40000px;top:0;width:1587px;visibility:hidden;pointer-events:none}
+@media (max-width:760px){.mm-bild-raster{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:1180px){
   .mm{grid-template-columns:200px minmax(0,1fr)}
   .mm-rechts{grid-column:1/-1;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));align-items:start}
