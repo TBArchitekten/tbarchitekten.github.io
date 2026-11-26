@@ -13,7 +13,9 @@
    (aus der Bibliothek oder ein eigenes Bild, das in der Mappe bleibt) und zuschneiden.
    TBA-Raster (Gari, 26.11.2026): alle Seiten stehen auf einem Raster A3 quer aus 12 × 8 quadratischen Feldern mit
    Grundlinie 4 mm, Kopf- und Fußzeile wie im Archicad-Master, Schrift Arial; beim Bearbeiten sieht die Seite aus wie
-   im PDF, die Texte werden direkt auf ihr geschrieben. */
+   im PDF, die Texte werden direkt auf ihr geschrieben.
+   Etappe 2 (Gari, 26.11.2026): die Rahmen einer Seite lassen sich verschieben und in der Größe ändern, Feld für Feld
+   auf dem Raster; die Vorlagen sind das Layout zum Anfangen (seite.layout, siehe «Layout der Seite»). */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -287,11 +289,78 @@ const BUERO=Object.freeze(['Titus Bernhard','Architekten','BDA']);
 function rasterMass(n){return n*(RASTER.feld+RASTER.abstand)-RASTER.abstand}
 const RASTER_HTML='<div class="mm-raster" aria-hidden="true">'+'<i></i>'.repeat(RASTER.spalten*RASTER.zeilen)+'</div>'+
   '<div class="mm-raster-gross" aria-hidden="true">'+'<i></i>'.repeat(RASTER.spalten*RASTER.zeilen/4)+'</div><div class="mm-raster-linien" aria-hidden="true"></div>';
-// Ein Rahmen ab Spalte c und Zeile r, w Felder breit und h hoch. name nennt ihn beim Bearbeiten (Hinweis, wenn der
-// Inhalt nicht hineinpasst; im PDF wird an der letzten ganzen Zeile abgeschnitten).
-function rahmen(c,r,w,h,innen,{klasse='',name='',modus='druck'}={}){
-  return '<div class="mm-r'+(klasse?' '+klasse:'')+'" style="grid-column:'+c+' / span '+w+';grid-row:'+r+' / span '+h+'"'+
-    (modus==='bearbeiten'&&name?' data-rahmen="'+esc(name)+'"':'')+'>'+innen+'</div>';
+
+// ---------- Layout der Seite (Etappe 2, Gari, 26.11.2026) ----------
+// Jeder Rahmen einer Vorlage hat einen Schlüssel (kopf, foto-1, beschreibung …) und steht zuerst, wo die Vorlage ihn
+// setzt. Verschoben oder in der Größe geändert springt er von Feld zu Feld des Rasters; was von der Vorlage abweicht,
+// steht in seite.layout, getrennt nach der Form der Seite (layoutBasis: ein Vergleich mit zwei Varianten hat ein
+// anderes Layout als einer mit drei). So bleibt die Vorlage für eine andere Zahl Varianten sauber, und das Angepasste
+// kommt wieder, wenn die Zahl zurückgeht. {aus:true} blendet einen Rahmen aus. Rahmen dürfen sich überlappen; Texte
+// liegen dann über Fotos. Im PDF, beim Präsentieren und in den Ständen gilt dasselbe Layout.
+const SCHLUESSEL=/^[a-z]+(-\d)?$/;
+function geoSauber(g){
+  if(!g||typeof g!=='object')return null;
+  if(g.aus===true)return {aus:true};
+  const n=k=>{const x=Number(g[k]);return Number.isInteger(x)?x:NaN};
+  const c=n('c'),r=n('r'),w=n('w'),h=n('h');
+  if(!(c>=1&&r>=1&&w>=1&&h>=1&&c+w-1<=RASTER.spalten&&r+h-1<=RASTER.zeilen))return null;
+  return {c,r,w,h};
+}
+function layoutSauber(l){
+  if(!l||typeof l!=='object'||Array.isArray(l))return null;
+  const out={};
+  for(const [b,teile] of Object.entries(l)){
+    if(!SCHLUESSEL.test(b)||!teile||typeof teile!=='object'||Array.isArray(teile))continue;
+    const x={};
+    for(const [k,g] of Object.entries(teile)){if(!SCHLUESSEL.test(k))continue;const v=geoSauber(g);if(v)x[k]=v}
+    if(Object.keys(x).length)out[b]=x;
+  }
+  return Object.keys(out).length?out:null;
+}
+function layoutBasis(seite,inh){
+  if(seite?.typ!=='vergleich')return s(seite?.typ);
+  const p=(inh?.punkte||[]).find(x=>x.id===seite.punkt);
+  return 'vergleich-'+(p?kandidatenDerSeite(seite,p).length:0);
+}
+// Einen Rahmen setzen (geo {c,r,w,h} oder {aus:true}), null = wie die Vorlage. Ohne Abweichung bleibt kein Layout (null).
+function layoutSetzen(layout,basis,key,geo){
+  if(!SCHLUESSEL.test(s(basis))||!SCHLUESSEL.test(s(key)))return layoutSauber(layout);
+  const l=layoutSauber(layout)||{},teile={...(l[basis]||{})},g=geo===null?null:geoSauber(geo);
+  if(g)teile[key]=g;else delete teile[key];
+  if(Object.keys(teile).length)l[basis]=teile;else delete l[basis];
+  return layoutSauber(l);
+}
+// Die ganze Seite wie die Vorlage (nur die Form, die sie gerade hat; ein Layout für eine andere Zahl Varianten bleibt).
+function layoutVorlage(layout,basis){const l=layoutSauber(layout)||{};delete l[basis];return layoutSauber(l)}
+// Größe eines Rahmens: Felder, Millimeter und Seitenverhältnis (bekannte Formate auf 2,5 % genau).
+const FORMATE=[[1,'1:1','1:1'],[5/4,'5:4','4:5'],[4/3,'4:3','3:4'],[Math.SQRT2,'A-Format','A-Format hoch'],[3/2,'3:2','2:3'],[16/9,'16:9','9:16'],[2,'2:1','1:2'],[3,'3:1','1:3']];
+function rahmenMass(g){
+  const w=Math.max(1,Math.floor(Number(g?.w))||1),h=Math.max(1,Math.floor(Number(g?.h))||1);
+  const breite=rasterMass(w),hoehe=rasterMass(h),q=breite/hoehe,quer=q>=1,x=quer?q:1/q;
+  const f=FORMATE.find(([v])=>Math.abs(x/v-1)<=.025);
+  const zahl=n=>n.toFixed(2).replace('.',',');
+  return {breite,hoehe,felder:w+' × '+h+(w*h===1?' Feld':' Felder'),mm:breite+' × '+hoehe+' mm',
+    verhaeltnis:f?(quer?f[1]:f[2]):quer?zahl(x)+':1':'1:'+zahl(x)};
+}
+// Während seiteHtml: Layout der Seite und die Liste ihrer Rahmen (für die Eigenschaften beim Bearbeiten).
+let SATZ=null;
+// Ein Rahmen ab Spalte c und Zeile r, w Felder breit und h hoch (so setzt ihn die Vorlage). name nennt ihn beim
+// Bearbeiten (Hinweis, wenn der Inhalt nicht hineinpasst; im PDF wird an der letzten ganzen Zeile abgeschnitten).
+// key: Schlüssel im Layout der Seite, titel: sein Name in den Eigenschaften. ablage: Platz für ein weiteres Foto, nur
+// beim Ziehen eines Fotos sichtbar (steht nicht in der Liste der Rahmen).
+function rahmen(c,r,w,h,innen,{klasse='',name='',modus='druck',key='',titel='',ablage=false}={}){
+  const std={c,r,w,h},ed=(SATZ?SATZ.modus:modus)==='bearbeiten';
+  let g=std,eigen=false;
+  if(key&&SATZ){
+    const x=SATZ.layout?.[key],t=titel||name||key;
+    if(x?.aus){if(!ablage)SATZ.liste.push({key,titel:t,std,aus:true});return ''}
+    if(x){g=x;eigen=true}
+    if(!ablage)SATZ.liste.push({key,titel:t,std,geo:g,eigen});
+  }
+  return '<div class="mm-r'+(klasse?' '+klasse:'')+'" style="grid-column:'+g.c+' / span '+g.w+';grid-row:'+g.r+' / span '+g.h+'"'+
+    (ed&&name?' data-rahmen="'+esc(name)+'"':'')+
+    (ed&&key&&!ablage?' data-mmr="'+esc(key)+'" data-mmr-name="'+esc(titel||name||key)+'" data-mmr-g="'+[g.c,g.r,g.w,g.h].join(',')+'" data-mmr-std="'+[c,r,w,h].join(',')+'"'+(eigen?' data-mmr-eigen':''):'')+
+    '>'+innen+'</div>';
 }
 // Text auf der Seite: im Druck als Text, beim Bearbeiten dasselbe Element zum Hineinschreiben (gleiche Schrift, gleiche
 // Stelle; die Seite sieht beim Bearbeiten aus wie im PDF). Leer: im Druck nichts, beim Bearbeiten der Platzhalter.
@@ -390,25 +459,26 @@ function seiteDeckblatt(seite,inh,{modus,bild}){
   const projekt=[inh.projekt.nummer,inh.projekt.name].filter(Boolean).join(' · ');
   const stand=inh.status==='vorgelegt'&&inh.vorgelegtAm?'vorgelegt am '+datum(inh.vorgelegtAm):'Stand '+(datum(inh.stand)||'')+' · Entwurf';
   // Titelbild (optional) über die ganze Breite; ohne Bild bleibt die Fläche weiß (Titel unten links, wie ein Plakat).
-  const titelbild=b?rahmen(1,1,12,5,foto(b,bild,'Titelbild','mm-foto-deck',{bucket:BUCKET}),{klasse:'mm-r-foto'})
-    :ed?rahmen(1,1,12,5,'<div class="mm-foto mm-foto-leer"><span>Titelbild (optional): rechts ein Bild oder ein PDF hochladen.</span></div>',{klasse:'mm-r-foto'}):'';
-  return titelbild+rahmen(1,6,8,2,'<p class="mm-kicker">Mustermappe</p><h2 class="mm-t-gross">'+esc(titel)+'</h2>'+(projekt?'<p class="mm-t-mittel">'+esc(projekt)+'</p>':''),{klasse:'mm-r-kopf',name:'Titel',modus})+
+  const titelbild=b?rahmen(1,1,12,5,foto(b,bild,'Titelbild','mm-foto-deck',{bucket:BUCKET}),{klasse:'mm-r-foto',key:'bild',titel:'Titelbild'})
+    :ed?rahmen(1,1,12,5,'<div class="mm-foto mm-foto-leer"><span>Titelbild (optional): rechts ein Bild oder ein PDF hochladen.</span></div>',{klasse:'mm-r-foto',key:'bild',titel:'Titelbild'}):'';
+  return titelbild+rahmen(1,6,8,2,'<p class="mm-kicker">Mustermappe</p><h2 class="mm-t-gross">'+esc(titel)+'</h2>'+(projekt?'<p class="mm-t-mittel">'+esc(projekt)+'</p>':''),{klasse:'mm-r-kopf',name:'Titel',modus,key:'titel'})+
     rahmen(9,6,4,3,'<p><b>Vorlage zur Bemusterung'+(datum(inh.termin)?' am '+esc(datum(inh.termin)):'')+'</b></p>'+
       text(modus,'p','mm-deck-text',inh.deckblatt,{attr:'data-mmvorlage="deckblatt_text"',leer:'Text für das Deckblatt (optional)',id:'mm-deckblatt'})+
-      '<p class="mm-t-klein mm-leise mm-abstand">'+esc(stand)+(inh.verfasser?' · '+esc(inh.verfasser):'')+'</p>',{klasse:'mm-r-kopf',name:'Deckblatt-Text',modus});
+      '<p class="mm-t-klein mm-leise mm-abstand">'+esc(stand)+(inh.verfasser?' · '+esc(inh.verfasser):'')+'</p>',{klasse:'mm-r-kopf',name:'Deckblatt-Text',modus,key:'text'});
 }
-// Übersicht: Spalten der Tabelle auf dem Raster (1, 2, 3, 3, 1 und 2 Felder, je mit dem Abstand).
+// Übersicht: Spalten der Tabelle auf dem Raster (1, 2, 3, 3, 1 und 2 Felder, je mit dem Abstand), in Anteilen der
+// Breite: in einem schmaleren Rahmen (Etappe 2) bleiben die Verhältnisse.
 const UEBERSICHT_SPALTEN=[['Code',32],['Position',64],['Zonen und Fläche',96],['Kandidaten',96],['Empfehlung',32],['Stand',60]];
 function seiteUebersicht(inh,{modus}){
   const strat=['A','B'].filter(k=>s(inh.strategien?.[k]).trim()).map(k=>strategieText(inh,k)).join('\n');
-  const kopf=rahmen(1,1,12,1,'<h2 class="mm-t-titel">Übersicht</h2>'+(strat?'<p>'+esc(strat)+'</p>':''),{klasse:'mm-r-kopf',name:'Kopf',modus});
-  if(!inh.punkte.length)return kopf+rahmen(1,2,12,1,'<p class="mm-leise">Noch keine Position.</p>');
+  const kopf=rahmen(1,1,12,1,'<h2 class="mm-t-titel">Übersicht</h2>'+(strat?'<p>'+esc(strat)+'</p>':''),{klasse:'mm-r-kopf',name:'Kopf',modus,key:'kopf'});
+  if(!inh.punkte.length)return kopf+rahmen(1,2,12,1,'<p class="mm-leise">Noch keine Position.</p>',{key:'tabelle',titel:'Tabelle'});
   const n=UEBERSICHT_SPALTEN.length;
-  return kopf+rahmen(1,2,12,7,'<table class="mm-tabelle"><colgroup>'+UEBERSICHT_SPALTEN.map(([,mm])=>'<col style="width:calc(var(--mm) * '+mm+')">').join('')+'</colgroup>'+
+  return kopf+rahmen(1,2,12,7,'<table class="mm-tabelle"><colgroup>'+UEBERSICHT_SPALTEN.map(([,mm])=>'<col style="width:'+Math.round(mm/380*1e6)/1e4+'%">').join('')+'</colgroup>'+
     '<thead><tr>'+UEBERSICHT_SPALTEN.map(([t])=>'<th>'+esc(t)+'</th>').join('')+'</tr></thead><tbody>'+
     uebersichtGruppen(inh).map(g=>(g.titel?'<tr class="mm-gruppe"><th colspan="'+n+'">'+esc(g.titel)+'</th></tr>':'')+g.punkte.map(p=>'<tr><td><b>'+esc(p.code||p.nr)+'</b></td><td>'+esc(p.bezeichnung)+'</td><td>'+
       esc([p.zonen,p.flaeche].filter(x=>s(x).trim()).join(' · '))+'</td><td>'+esc(p.optionen.map(o=>o.id+' · '+o.name).join('\n')||'noch offen')+'</td><td>'+
-      esc(p.empfehlung?'Variante '+p.empfehlung:'–')+'</td><td>'+esc(p.status==='entschieden'?'entschieden: '+gewaehlt(p):'offen')+'</td></tr>').join('')).join('')+'</tbody></table>',{name:'Übersicht',modus});
+      esc(p.empfehlung?'Variante '+p.empfehlung:'–')+'</td><td>'+esc(p.status==='entschieden'?'entschieden: '+gewaehlt(p):'offen')+'</td></tr>').join('')).join('')+'</tbody></table>',{name:'Übersicht',modus,key:'tabelle',titel:'Tabelle'});
 }
 // Vergleich: je Variante Foto und Text in einer Spalte (2 × 6 oder 3 × 4 Felder, eine Variante 8 + 4); der Kopf darüber,
 // die Zonen rechts über der Spalte der letzten Variante (bei zwei ab Feld 7, sonst ab Feld 9); unten Empfehlung, Kosten
@@ -419,16 +489,19 @@ function seiteVergleich(seite,inh,p,{modus,bild}){
   const textVon=o=>nameZeile(modus,p,o,{empf:p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'Empfehlung':''})+herkunftZeile(modus,p,o)+
     (zeigt(seite,'kennwerte')?kennwerteTabelle(modus,p,o):'')+
     (zeigt(seite,'kosten')&&s(o.kennwert).trim()?'<p class="mm-t-klein mm-abstand">Kennwert netto <b>'+esc(o.kennwert)+'</b>'+(o.beleg?' · '+esc(o.beleg):'')+'</p>':'');
-  let h=rahmen(1,1,kw,1,titelKopf(p)+text(modus,'p','mm-frage',p.frage,{attr:'data-mmtext="frage" data-z="'+esc(p.id)+'"',leer:'Frage an den Bauherrn, z. B. Welcher Belag für diese Zonen?',id:'mm-'+p.id+'-frage'}),{klasse:'mm-r-kopf',name:'Kopf',modus})+
-    rahmen(1+kw,1,12-kw,1,zonenText(p),{klasse:'mm-r-kopf mm-t-klein',name:'Zonen',modus});
-  if(n===1)h+=rahmen(1,2,8,6,fotoVon(kand[0]),{klasse:'mm-r-foto'})+rahmen(9,2,4,6,textVon(kand[0]),{name:kand[0].id,modus});
-  else if(n>1){const w=12/n,fh=n===3?3:4;kand.forEach((o,i)=>{const c=1+i*w;h+=rahmen(c,2,w,fh,fotoVon(o),{klasse:'mm-r-foto'})+rahmen(c,2+fh,w,6-fh,textVon(o),{name:o.id,modus})})}
+  let h=rahmen(1,1,kw,1,titelKopf(p)+text(modus,'p','mm-frage',p.frage,{attr:'data-mmtext="frage" data-z="'+esc(p.id)+'"',leer:'Frage an den Bauherrn, z. B. Welcher Belag für diese Zonen?',id:'mm-'+p.id+'-frage'}),{klasse:'mm-r-kopf',name:'Kopf',modus,key:'kopf'})+
+    rahmen(1+kw,1,12-kw,1,zonenText(p),{klasse:'mm-r-kopf mm-t-klein',name:'Zonen',modus,key:'zonen'});
+  // Schlüssel je Spalte der Seite (foto-1, text-1 …), nicht je Variante: das Layout gehört zur Seite.
+  const spalte=(o,i,[c,r,w,fh,th])=>rahmen(c,r,w,fh,fotoVon(o),{klasse:'mm-r-foto',key:'foto-'+(i+1),titel:'Foto '+o.id})+
+    rahmen(c,r+fh,w,th,textVon(o),{name:o.id,modus,key:'text-'+(i+1),titel:'Text '+o.id});
+  if(n===1)h+=rahmen(1,2,8,6,fotoVon(kand[0]),{klasse:'mm-r-foto',key:'foto-1',titel:'Foto '+kand[0].id})+rahmen(9,2,4,6,textVon(kand[0]),{name:kand[0].id,modus,key:'text-1',titel:'Text '+kand[0].id});
+  else if(n>1){const w=12/n,fh=n===3?3:4;kand.forEach((o,i)=>{h+=spalte(o,i,[1+i*w,2,w,fh,6-fh])})}
   else if(ed)h+=rahmen(1,2,12,1,'<p class="mm-leise">Noch kein Kandidat. Rechts einen aus der Bibliothek wählen.</p>');
   // Eine Position ohne Produkt (etwa geschliffener Estrich) zeigt Kopf, Frage, Kosten und Hinweise gleich unter dem Kopf.
   const r=n?8:2,[we,wk]=n===3?[4,4]:[6,2],wb=12-we-wk;
   const kostenPos=zeigt(seite,'kosten')&&!kand.some(o=>s(o.kennwert).trim())?kostenRahmen(p,null):'';
-  return h+rahmen(1,r,we,1,empfehlungText(seite,p,modus),{name:'Empfehlung',modus})+rahmen(1+we,r,wk,1,kostenPos,{name:'Kosten',modus})+
-    rahmen(1+we+wk,r,wb,1,zuBeachten(p),{klasse:'mm-t-klein',name:'Zu beachten',modus});
+  return h+rahmen(1,r,we,1,empfehlungText(seite,p,modus),{name:'Empfehlung',modus,key:'empfehlung'})+rahmen(1+we,r,wk,1,kostenPos,{name:'Kosten',modus,key:'kosten'})+
+    rahmen(1+we+wk,r,wb,1,zuBeachten(p),{klasse:'mm-t-klein',name:'Zu beachten',modus,key:'beachten'});
 }
 // Material: großes Foto links (6 × 8 Felder), rechts Kopf, zwei kleine Fotos (3 × 2), Beschreibung, Kennwerte, Kosten.
 function seiteMaterial(seite,inh,p,{modus,bild}){
@@ -437,38 +510,56 @@ function seiteMaterial(seite,inh,p,{modus,bild}){
   const klein=o.fotos.slice(1,MAX_FOTOS);
   // Beim Bearbeiten: «+ Bild» auf dem großen Foto, solange die Variante weniger als drei hat; das Raster bleibt gleich.
   const ort=i=>({z:p.id,o:o.id,i,...(i===0&&o.fotos.length<MAX_FOTOS?{plus:o.fotos.length}:{})});
-  let h=rahmen(1,1,6,8,foto(o.fotos[0],bild,o.name,'mm-foto-gross',{ort:ort(0),edit:ed}),{klasse:'mm-r-foto'})+
+  let h=rahmen(1,1,6,8,foto(o.fotos[0],bild,o.name,'mm-foto-gross',{ort:ort(0),edit:ed}),{klasse:'mm-r-foto',key:'foto',titel:'Foto'})+
     rahmen(7,1,6,1,titelKopf(p,'Variante '+o.id)+nameZeile(modus,p,o,{mitId:false,empf:p.empfehlung===o.id&&zeigt(seite,'empfehlung')?'Empfehlung des Büros':''})+
-      herkunftZeile(modus,p,o)+entschiedenZeile(p),{klasse:'mm-r-kopf',name:'Kopf',modus});
-  klein.forEach((f,j)=>{h+=rahmen(7+3*j,2,3,2,foto(f,bild,o.name,'mm-foto-klein',{ort:ort(j+1),edit:ed}),{klasse:'mm-r-foto'})});
+      herkunftZeile(modus,p,o)+entschiedenZeile(p),{klasse:'mm-r-kopf',name:'Kopf',modus,key:'kopf'});
+  klein.forEach((f,j)=>{h+=rahmen(7+3*j,2,3,2,foto(f,bild,o.name,'mm-foto-klein',{ort:ort(j+1),edit:ed}),{klasse:'mm-r-foto',key:'foto-'+(j+2),titel:'Bild '+(j+2)})});
+  // Beim Ziehen eines Fotos auf die Seite: der Platz für das nächste (Bild 2 oder 3), dort, wo es stehen wird.
+  if(ed&&o.fotos.length&&o.fotos.length<MAX_FOTOS){
+    const j=o.fotos.length-1;
+    h+=rahmen(7+3*j,2,3,2,'<div class="mm-ablage" data-bildplatz="'+esc(p.id+'|'+o.id+'|'+o.fotos.length)+'"><span>Bild '+(j+2)+'</span></div>',{klasse:'mm-r-foto mm-r-ablage',key:'foto-'+(j+2),ablage:true});
+  }
   const tz=klein.length?4:2;
   return h+rahmen(7,tz,6,6-tz,text(modus,'p','mm-beschreibung',o.beschreibung,{attr:'data-mmopt="'+esc(p.id+'|'+o.id)+'"',leer:'Beschreibung für den Bauherrn',
-      id:'mm-'+p.id+'-'+o.id+'-text',geaendert:!!o.geaendert?.beschreibung}),{name:'Beschreibung',modus})+
-    rahmen(7,6,6,2,zeigt(seite,'kennwerte')?kennwerteTabelle(modus,p,o):'',{name:'Kennwerte',modus})+
-    rahmen(7,8,2,1,zeigt(seite,'kosten')?kostenRahmen(p,o):'',{name:'Kosten',modus})+
-    rahmen(9,8,4,1,zuBeachten(p),{klasse:'mm-t-klein',name:'Zu beachten',modus});
+      id:'mm-'+p.id+'-'+o.id+'-text',geaendert:!!o.geaendert?.beschreibung}),{name:'Beschreibung',modus,key:'beschreibung'})+
+    rahmen(7,6,6,2,zeigt(seite,'kennwerte')?kennwerteTabelle(modus,p,o):'',{name:'Kennwerte',modus,key:'kennwerte'})+
+    rahmen(7,8,2,1,zeigt(seite,'kosten')?kostenRahmen(p,o):'',{name:'Kosten',modus,key:'kosten'})+
+    rahmen(9,8,4,1,zuBeachten(p),{klasse:'mm-t-klein',name:'Zu beachten',modus,key:'beachten'});
 }
 // Freie Seite: Bild oder PDF-Seite über 10 × 8 Felder (ganz gezeigt, oben links), rechts Titel und Text.
 function seiteFrei(seite,{modus,bild}){
   const b=seite.bild&&s(seite.bild.pfad)?seite.bild:null,ed=modus==='bearbeiten';
   return rahmen(1,1,10,8,b?foto(b,bild,s(seite.titel)||s(b.name)||'Bild','mm-foto-frei',{bucket:BUCKET})
-      :ed?'<div class="mm-foto mm-foto-leer"><span>Rechts ein Bild oder ein PDF hochladen.</span></div>':'',{klasse:'mm-r-foto'})+
+      :ed?'<div class="mm-foto mm-foto-leer"><span>Rechts ein Bild oder ein PDF hochladen.</span></div>':'',{klasse:'mm-r-foto',key:'bild',titel:'Bild'})+
     rahmen(11,1,2,8,text(modus,'h2','mm-t-mittel',seite.titel,{attr:'data-mmseite="'+esc(seite.id)+'|titel"',leer:'Titel der Seite',id:'mm-'+seite.id+'-titel'})+
-      text(modus,'p','mm-frei-text',seite.text,{attr:'data-mmseite="'+esc(seite.id)+'|text"',leer:'Text zur Seite (optional)',id:'mm-'+seite.id+'-text'}),{klasse:'mm-r-kopf',name:'Text',modus});
+      text(modus,'p','mm-frei-text',seite.text,{attr:'data-mmseite="'+esc(seite.id)+'|text"',leer:'Text zur Seite (optional)',id:'mm-'+seite.id+'-text'}),{klasse:'mm-r-kopf',name:'Text',modus,key:'text',titel:'Titel und Text'});
 }
-function seiteHtml(seite,inh,{nr=1,gesamt=1,modus='druck',bild=()=>''}={}){
+// liste: sammelt die Rahmen der Seite ({key,titel,std,geo,eigen} oder {key,titel,std,aus}); siehe rahmenDerSeite.
+function seiteHtml(seite,inh,{nr=1,gesamt=1,modus='druck',bild=()=>'',liste=null}={}){
   if(!seite)return '';
   const p=['vergleich','material'].includes(seite.typ)?inh.punkte.find(x=>x.id===seite.punkt):null;
   const o=p&&seite.typ==='material'?p.optionen.find(x=>x.id===seite.option)||p.optionen[0]:null;
+  const vorher=SATZ;
+  SATZ={modus,layout:layoutSauber(seite.layout)?.[layoutBasis(seite,inh)]||null,liste:liste||[]};
   let innen='';
-  if(seite.typ==='deckblatt')innen=seiteDeckblatt(seite,inh,{modus,bild});
-  else if(seite.typ==='uebersicht')innen=seiteUebersicht(inh,{modus});
-  else if(seite.typ==='vergleich')innen=p?seiteVergleich(seite,inh,p,{modus,bild}):'';
-  else if(seite.typ==='material')innen=p?seiteMaterial(seite,inh,p,{modus,bild}):'';
-  else if(seite.typ==='frei')innen=seiteFrei(seite,{modus,bild});
+  try{
+    if(seite.typ==='deckblatt')innen=seiteDeckblatt(seite,inh,{modus,bild});
+    else if(seite.typ==='uebersicht')innen=seiteUebersicht(inh,{modus});
+    else if(seite.typ==='vergleich')innen=p?seiteVergleich(seite,inh,p,{modus,bild}):'';
+    else if(seite.typ==='material')innen=p?seiteMaterial(seite,inh,p,{modus,bild}):'';
+    else if(seite.typ==='frei')innen=seiteFrei(seite,{modus,bild});
+  }finally{SATZ=vorher}
   const name=seite.typ==='frei'?(s(seite.titel).trim()||'Freie Seite'):seiteName(seite,p,o);
+  // Beim Bearbeiten über den Rahmen eine Ebene für Auswahl, Griff und Anfasser (füllt der Editor).
   return '<div class="mm-blatt" data-seite="'+esc(seite.id)+'"><article class="mm-seite mm-typ-'+esc(seite.typ)+'" aria-label="'+esc('Seite '+nr+' von '+gesamt)+'">'+
-    (modus==='bearbeiten'?RASTER_HTML:'')+kopfzeile(inh)+'<div class="mm-satz">'+innen+'</div>'+fusszeile(nr,gesamt,name)+'</article></div>';
+    (modus==='bearbeiten'?RASTER_HTML:'')+kopfzeile(inh)+'<div class="mm-satz">'+innen+'</div>'+(modus==='bearbeiten'?'<div class="mm-ebene"></div>':'')+
+    fusszeile(nr,gesamt,name)+'</article></div>';
+}
+// Die Rahmen einer Seite, wie sie gerade steht: Schlüssel, Name, Stelle in der Vorlage und auf der Seite, ausgeblendet.
+function rahmenDerSeite(seite,inh){
+  const liste=[];
+  if(seite)seiteHtml(seite,inh,{modus:'bearbeiten',liste});
+  return {basis:layoutBasis(seite,inh),rahmen:liste};
 }
 function mappeHtml(inh,{modus='druck',bild=()=>''}={}){
   const l=inh.seiten||[];
@@ -479,6 +570,6 @@ return Object.freeze({FORM,SCHEMA,BUCKET,BUCKET_PRODUKTE,THEMEN,KATEGORIEN,SEITE
   esc,datum,neueId,naechsteOptionId,istMappe,neueMappe,thema,neuePosition,produktAuszug,veraltet,kandidat,fotosUmschalten,dateiPfad,bildPruefen,
   ausschnittVon,fotoSauber,fotoListe,fotoSetzen,fotoEntfernen,fotoNachVorn,fotoAusschnitt,
   ANPASSUNG_NAME,merkmaleText,merkmaleAusText,anpassen,zuruecksetzen,geaendert,geaenderteTexte,anpassbarAuf,
-  RASTER,BUERO,rasterMass,
+  RASTER,BUERO,rasterMass,geoSauber,layoutSauber,layoutBasis,layoutSetzen,layoutVorlage,rahmenMass,rahmenDerSeite,
   seitenVon,seiteVerschieben,seiteName,belegVon,mappeInhalt,mitStandardFotos,allePfade,kandidatenDerSeite,uebersichtGruppen,gewaehlt,seiteHtml,mappeHtml});
 });

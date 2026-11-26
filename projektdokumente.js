@@ -174,7 +174,8 @@ async function auffrischen(){
     const {data:docs}=await sb.from('office_projektdokumente').select(DOK).eq('project_id',projekt.id);
     for(const d of docs||[])dokumente[d.art]=d;
     await ladeZeilen();
-    if(!ui.edit)render();
+    // Nicht mitten im Ziehen oder Zuschneiden einer Mustermappe neu zeichnen.
+    if(!ui.edit&&!mm.zug&&!mm.zuschnitt)render();
   }catch(e){console.warn('Auffrischen',e)}
 }
 
@@ -1266,17 +1267,23 @@ function renderMappe(){
         p.optionen.map(o=>'<option value="material|'+esc(p.id)+'|'+esc(o.id)+'">'+esc((p.code||p.nr)+' · '+o.id+' '+K.kurz(o.name,28)+' · Material')+'</option>').join('')).join('')+
     '</select></label><button type="button" class="btn" data-act="mm-position-neu">Position hinzufügen</button></nav>';
   const a=mm.ansicht,schalter=(act,t,an,titel)=>'<button type="button" class="btn mm-schalter" data-act="'+act+'" aria-pressed="'+(an?'true':'false')+'" title="'+esc(titel)+'">'+t+'</button>';
+  const info='Seite '+(i+1)+' von '+seiten.length+' · A3 quer';
   const mitte='<section class="mm-mitte" aria-label="Seite '+(i+1)+' von '+seiten.length+'"><div class="mm-werkzeug">'+schalter('mm-links','Seiten',a.seiten,'Seitenliste ein- oder ausblenden')+
-    '<span class="meta mm-seiteninfo">Seite '+(i+1)+' von '+seiten.length+' · A3 quer · Text auf der Seite anklicken und schreiben</span>'+
+    // Rückgängig und Wiederholen (Etappe 2): Knöpfe und Strg/⌘+Z, Strg+Y oder ⇧⌘Z außerhalb der Textfelder.
+    '<span class="mm-verlauf" role="group" aria-label="Verlauf"><button type="button" class="btn" data-act="mm-zurueck" aria-label="Rückgängig" disabled>'+MM_ICON.zurueck+'</button>'+
+    '<button type="button" class="btn" data-act="mm-vor" aria-label="Wiederholen" disabled>'+MM_ICON.vor+'</button></span>'+
+    '<span class="meta mm-seiteninfo" data-mm-kontext data-grund="'+esc(info)+'">'+esc(info)+'</span>'+
     '<span class="mm-zoom" role="group" aria-label="Zoom"><button type="button" class="btn" data-act="mm-zoom-minus" aria-label="Verkleinern">−</button>'+
     '<select class="pd-in" data-act="mm-zoom" aria-label="Zoom">'+zoomOptionen()+'</select><button type="button" class="btn" data-act="mm-zoom-plus" aria-label="Vergrößern">+</button></span>'+
     schalter('mm-raster','Raster',a.raster,'Raster der Seite zeigen: 12 × 8 Felder, Grundlinie 4 mm')+schalter('mm-rechts','Eigenschaften',a.rechts,'Eigenschaften ein- oder ausblenden')+'</div>'+
-    '<div class="mm-buehne'+(a.raster?' raster':'')+'">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:seiten.length,modus:'bearbeiten',bild:bildUrl}):'<p class="meta">Die Mappe hat keine Seite.</p>')+'</div></section>';
+    '<div class="mm-buehne'+(a.raster?' raster':'')+'">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:seiten.length,modus:'bearbeiten',bild:bildUrl}):'<p class="meta">Die Mappe hat keine Seite.</p>')+'</div>'+
+    // Beim Zuschneiden schwebt die Leiste unten über der Bühne: die Seite bleibt, wo sie ist.
+    '<div class="mm-zs-ort" data-mm-zs></div></section>';
   const fokus=vorZeichnen();
   const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({werkzeug:'mustermappe',projekt:projekt.id}),'‹ Mustermappen'],
     kicker:'Mustermappe · '+projektName(),titel:inh.titel,meta,aktionen})+
     '<div class="mm'+(a.seiten?'':' ohne-seiten')+(a.rechts?'':' ohne-rechts')+'">'+nav+mitte+'<aside class="mm-rechts" aria-label="Eigenschaften">'+
-      '<div data-mm-hinweise>'+mappeHinweise(v,seite)+'</div><div data-mm-uebersatz></div>'+mappeSeitenleiste(v,inh,seite)+'</aside></div>'+
+      '<div data-mm-hinweise>'+mappeHinweise(v,seite)+'</div><div data-mm-uebersatz></div><div data-mm-rahmen>'+layoutKarte()+'</div>'+mappeSeitenleiste(v,inh,seite)+'</aside></div>'+
     '<div class="pd-druck mm-druck" aria-hidden="true">'+M.mappeHtml(inh,{modus:'druck',bild:bildUrl})+'</div>'+(ui.detail?detailPanel('entscheidungsliste'):'')+'</div>';
   zeichne(html,fokus);
   mmNachZeichnen();
@@ -1322,8 +1329,10 @@ function mmNachZeichnen(){
   zoomAnwenden();
   mm.beobachter?.disconnect();
   const b=root.querySelector('.mm-buehne');
-  if(b&&'ResizeObserver' in window){mm.beobachter=new ResizeObserver(()=>{zoomAnwenden();uebersatzPruefen()});mm.beobachter.observe(b)}
+  if(b&&'ResizeObserver' in window){mm.beobachter=new ResizeObserver(()=>{zoomAnwenden();uebersatzPruefen();zuschnittGeist()});mm.beobachter.observe(b)}
   uebersatzPruefen();
+  // Etappe 2: Auswahl, laufendes Zuschneiden und Verlauf überstehen das Neuzeichnen.
+  ebeneZeichnen();zuschnittZeigen();verlaufKnoepfe();
 }
 // Übersatz wie in InDesign: ein Rahmen, dessen Inhalt nicht hineinpasst, wird rot markiert und rechts genannt; im PDF
 // wird an der letzten ganzen Zeile abgeschnitten (alle Zeilen stehen auf der Grundlinie).
@@ -1396,10 +1405,11 @@ function fotoWahl(o){
     (liste.length?'Eigenes Bild oder Ausschnitt …':'Eigenes Bild hochladen …')+'</button>';
   if(!liste.length)return '<p class="meta">'+esc(o.id)+': kein Foto in der Bibliothek.</p>'+aendern;
   const gew=Array.isArray(o.muster_fotos)?o.muster_fotos:[];
+  // Etappe 2: die Fotos lassen sich auch auf die Seite ziehen, auf ein Foto der Variante oder einen freien Platz.
   return '<div class="pd-feld"><span>Fotos '+esc(o.id)+(gew.length?'':' · automatisch das erste')+'</span><div class="mm-thumbs">'+liste.slice(0,8).map(d=>{
     const n=gew.findIndex(f=>f.id===d.id),url=bildUrl(d.storage_path);
-    return '<button type="button" class="mm-thumb" data-act="mm-foto" data-z="'+esc(o._z)+'" data-o="'+esc(o.id)+'" data-d="'+esc(d.id)+'" aria-pressed="'+(n>=0?'true':'false')+'" aria-label="'+esc('Foto '+(d.name||'')+(n>=0?', Nummer '+(n+1):''))+'">'+
-      (url?'<img src="'+esc(url)+'" alt="">':'')+(n>=0?'<b>'+(n+1)+'</b>':'')+'</button>';
+    return '<button type="button" class="mm-thumb" draggable="true" data-act="mm-foto" data-z="'+esc(o._z)+'" data-o="'+esc(o.id)+'" data-d="'+esc(d.id)+'" aria-pressed="'+(n>=0?'true':'false')+'" aria-label="'+esc('Foto '+(d.name||'')+(n>=0?', Nummer '+(n+1):''))+'" title="Klicken wählt, auf die Seite ziehen setzt es dort ein">'+
+      (url?'<img src="'+esc(url)+'" alt="" draggable="false">':'')+(n>=0?'<b>'+(n+1)+'</b>':'')+'</button>';
   }).join('')+'</div>'+aendern+'</div>';
 }
 function mappeSeitenleiste(v,inh,seite){
@@ -1503,7 +1513,8 @@ function positionDialog(v){
 async function positionAnlegen(v,{code,bezeichnung,strategie}){
   const z=await neueZeile('entscheidungsliste',M.neuePosition({code,bezeichnung,strategie,titel:v.daten.titel,vorlageId:v.id}));
   const seite={id:M.neueId(),typ:'vergleich',punkt:z.id};
-  v.daten={...v.daten,punkte:[...(v.daten.punkte||[]),z.id],seiten:[...M.seitenVon(v.daten),seite]};markiere(v);
+  const t=vorher('Position '+code+' angelegt',[v]);
+  v.daten={...v.daten,punkte:[...(v.daten.punkte||[]),z.id],seiten:[...M.seitenVon(v.daten),seite]};markiere(v);nachher(t);
   mm.seite=seite.id;meldung('Position '+code+' angelegt; sie steht auch in der Entscheidungsliste.');render();
 }
 function positionWeg(v,id){
@@ -1525,7 +1536,10 @@ async function kandidatHinzu(v,z,produktId){
   let ver=Z.verwendungIm(p.id,projekt.id,q.verwendungen);
   // Jeder Kandidat steht in der Musterliste des Projekts (Verwendung «vorgeschlagen»), wie «In die Musterliste».
   if(!ver)ver=await neueVerwendung(p,'vorgeschlagen','Kandidat für '+(z.daten.thema||K.nummer('entscheidungsliste',z.nr))+' in der Mustermappe');
+  // Rückgängig nimmt den Kandidaten wieder aus der Position; in der Musterliste bleibt er (wie bei «entfernen»).
+  const t=vorher('Kandidat '+p.name+' hinzugefügt',[z]);
   if(!setze('entscheidungsliste',z,'optionen',[...K.optionen(z.daten),M.kandidat(K.optionen(z.daten),p,{produkt:Z.produktText(p,ver)})]))return;
+  nachher(t);
   const {data:dk}=await sb.from('office_produkt_dokumente').select('id,produkt_id,art,name,storage_path,created_at').eq('produkt_id',p.id).eq('art','bild').order('created_at');
   mm.fotos.set(p.id,dk||[]);
   await signiere(M.BUCKET_PRODUKTE,(dk||[]).map(d=>d.storage_path));
@@ -1592,7 +1606,9 @@ async function freiesBild(v,seiteId,datei){
   if(!datei)return;
   const seite=M.seitenVon(v.daten).find(x=>x.id===seiteId);if(!seite)return;
   const {pfad,name}=await bildHochladen(datei,Number(seite.pdf_seite)||1);
+  const t=vorher(seite.typ==='deckblatt'?'Titelbild gesetzt':'Bild der Seite gesetzt',[v]);
   seitePatch(v,seiteId,{bild:{pfad,name},...(seite.typ==='frei'?{titel:seite.titel||String(name).replace(/\.(jpe?g|png|webp)$/i,'').slice(0,120)}:{})});
+  nachher(t);
   meldung(seite.typ==='deckblatt'?'Das Titelbild steht auf dem Deckblatt.':'Das Bild steht auf der Seite.');render();
 }
 
@@ -1617,10 +1633,11 @@ function bildDialog(z,oid,i){
   dialog.addEventListener('close',()=>{mm.bild=null},{once:true});
 }
 // ziel: die Stelle, für die der Dialog offen war; ein Bild, das noch lädt, landet dort auch, wenn der Dialog schon zu ist.
-function bildAendern(f,{neuesBild=null,ziel=mm.bild}={}){
+function bildAendern(f,{neuesBild=null,ziel=mm.bild,text='Bild geändert',gruppe=''}={}){
   const x=bildVariante(ziel);if(!x)return [];
   const neu=f(fotosDerVariante(x.o));
-  optionenPatch(x.z,x.o.id,o=>({...o,muster_fotos:neu}));
+  const t=vorher(text,[x.z],{gruppe});
+  optionenPatch(x.z,x.o.id,o=>({...o,muster_fotos:neu}));nachher(t);
   if(ziel===mm.bild){
     if(neuesBild){const k=neu.findIndex(b=>b.pfad===neuesBild);if(k>=0)mm.bild.i=k}
     mm.bild.i=Math.min(mm.bild.i,neu.length);
@@ -1682,10 +1699,10 @@ function bildDialogZeichnen(fokus=''){
     const b=e.target.closest('[data-bd]');if(!b)return;
     const was=b.dataset.bd;
     if(was==='zu')dialog.close();
-    else if(was==='bib'){const d=bib.find(x=>x.id===b.dataset.d);if(d)los(()=>bildAendern(l=>M.fotoSetzen(l,i,{id:d.id,pfad:d.storage_path}),{neuesBild:d.storage_path}))}
-    else if(was==='mitte')los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,null)));
-    else if(was==='gross')los(()=>{mm.bild.i=0;bildAendern(l=>M.fotoNachVorn(l,i))});
-    else if(was==='weg')los(()=>{const rest=bildAendern(l=>M.fotoEntfernen(l,i));dialog.close();
+    else if(was==='bib'){const d=bib.find(x=>x.id===b.dataset.d);if(d)los(()=>bildAendern(l=>M.fotoSetzen(l,i,{id:d.id,pfad:d.storage_path}),{neuesBild:d.storage_path,text:'Foto aus der Bibliothek gewählt'}))}
+    else if(was==='mitte')los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,null),{text:'Ausschnitt zurückgesetzt'}));
+    else if(was==='gross')los(()=>{mm.bild.i=0;bildAendern(l=>M.fotoNachVorn(l,i),{text:'Als großes Bild gesetzt'})});
+    else if(was==='weg')los(()=>{const rest=bildAendern(l=>M.fotoEntfernen(l,i),{text:'Bild entfernt'});dialog.close();
       meldung(!rest.length&&bib.length?'Bild entfernt. Die Seite zeigt wieder das erste Foto aus der Produktbibliothek.':'Bild entfernt.')});
   });
   box.addEventListener('change',e=>{
@@ -1696,7 +1713,7 @@ function bildDialogZeichnen(fokus=''){
       el.closest('label')?.classList.add('laedt');fehler('');
       bildHochladenUndSetzen(datei,i).catch(err=>{console.error('Mustermappe · Bild',err);fehler(err?.message||'Das Bild wurde nicht hochgeladen.');el.closest('label')?.classList.remove('laedt')});
     }
-    else if(el.dataset.bd==='zoom'&&f)los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,{...a})));
+    else if(el.dataset.bd==='zoom'&&f)los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,{...a}),{text:'Ausschnitt geändert',gruppe:'ausschnitt-'+i}));
   });
   if(!url)return;
   // Ausschnitt: ziehen, Pfeiltasten, + und −; gespeichert wird beim Loslassen.
@@ -1712,7 +1729,7 @@ function bildDialogZeichnen(fokus=''){
     a.y=Math.min(100,Math.max(0,zug.y-(e.clientY-zug.py)/b.height*100/a.z));
     ausschnittStil(img,a);
   });
-  const loslassen=()=>{if(!zug)return;zug=null;feld.classList.remove('zieht');los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,{...a})))};
+  const loslassen=()=>{if(!zug)return;zug=null;feld.classList.remove('zieht');los(()=>bildAendern(l=>M.fotoAusschnitt(l,i,{...a}),{text:'Ausschnitt geändert',gruppe:'ausschnitt-'+i}))};
   feld.addEventListener('pointerup',loslassen);feld.addEventListener('pointercancel',loslassen);
   feld.addEventListener('keydown',e=>{
     const schritt=e.shiftKey?10:2,k=e.key;
@@ -1721,16 +1738,377 @@ function bildDialogZeichnen(fokus=''){
     else if(k==='+'||k==='=')a.z=Math.min(M.ZOOM_MAX,Math.round((a.z+.1)*100)/100);else if(k==='-')a.z=Math.max(1,Math.round((a.z-.1)*100)/100);
     else return;
     e.preventDefault();ausschnittStil(img,a);zoom.value=a.z;
-    clearTimeout(mm.bildTimer);mm.bildTimer=setTimeout(()=>los(()=>{bildAendern(l=>M.fotoAusschnitt(l,i,{...a}));dialog.querySelector('.mm-ausschnitt')?.focus()}),400);
+    clearTimeout(mm.bildTimer);mm.bildTimer=setTimeout(()=>los(()=>{bildAendern(l=>M.fotoAusschnitt(l,i,{...a}),{text:'Ausschnitt geändert',gruppe:'ausschnitt-'+i});dialog.querySelector('.mm-ausschnitt')?.focus()}),400);
   });
   if(fokus==='ausschnitt')feld.focus();
 }
 async function bildHochladenUndSetzen(datei,i){
   const ziel=mm.bild;if(!ziel)return;
   const {pfad,name}=await bildHochladen(datei,ziel.pdfSeite||1);
-  bildAendern(l=>M.fotoSetzen(l,i,{id:'m-'+crypto.randomUUID(),pfad,quelle:'mappe',name}),{neuesBild:pfad,ziel});
+  bildAendern(l=>M.fotoSetzen(l,i,{id:'m-'+crypto.randomUUID(),pfad,quelle:'mappe',name}),{neuesBild:pfad,ziel,text:'Eigenes Bild hochgeladen'});
   meldung('Das Bild steht auf der Seite; es bleibt in dieser Mappe.');
 }
+// ---------- Mustermappe, Etappe 2 (Gari, 26.11.2026): Rahmen, Zuschneiden, Fotos ziehen, Rückgängig ----------
+// Gelernt von InDesign, Canva und Figma (Recherche vom 26.11.2026), aber auf dem TBA-Raster: ein Rahmen springt beim
+// Verschieben und beim Ändern der Größe von Feld zu Feld (12 × 8); die Vorlage bleibt das Layout zum Anfangen.
+// Texte bleiben mit einem Klick zu schreiben (Etappe 1); verschoben wird am Griff über dem Rahmen, ein Foto auch an
+// sich selbst. Doppelklick auf ein Foto schneidet es auf der Seite zu; Fotos kommen aus der Bibliothek (rechts) oder
+// vom Schreibtisch auf die Seite. Jede Änderung ist ein Schritt im Verlauf der Mappe.
+const MM_ICON={
+  zurueck:'<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M7.5 4 3.5 8l4 4M4 8h8a4.5 4.5 0 0 1 0 9H9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  vor:'<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="m12.5 4 4 4-4 4M16 8H8a4.5 4.5 0 0 0 0 9h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'};
+const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||'');
+const TASTE={zurueck:MAC?'⌘Z':'Strg+Z',vor:MAC?'⇧⌘Z':'Strg+Y'};
+
+// Verlauf je Mappe: ein Schritt hält die geänderten Felder der Zeilen (Mappe, Positionen) vorher und nachher; Seiten
+// und Varianten je id. Rückgängig setzt nur diese Felder zurück: was inzwischen anderswo geändert wurde, bleibt. Im
+// Textfeld gilt das Rückgängig des Browsers; nach dem Verlassen des Felds ist die ganze Eingabe ein Schritt.
+const VERLAUF_MAX=80;
+const klon=x=>x===undefined?undefined:JSON.parse(JSON.stringify(x));
+const MIT_ID={seiten:true,optionen:true};
+function verlauf(){
+  const v=vorlageZeile();if(!v||!istMappe(v))return null;
+  if(mm.verlauf?.mappe!==v.id)mm.verlauf={mappe:v.id,zurueck:[],vor:[]};
+  return mm.verlauf;
+}
+function vorher(text,liste,{gruppe=''}={}){
+  return {text,gruppe,seite:mm.seite,vor:[...new Set((liste||[]).filter(Boolean))].map(z=>({z,daten:klon(z.daten)||{}}))};
+}
+function unterschiede(a,b){
+  const out=[];
+  for(const k of new Set([...Object.keys(a||{}),...Object.keys(b||{})])){
+    const x=a?.[k],y=b?.[k];if(gleich(x,y))continue;
+    if(MIT_ID[k]&&Array.isArray(x)&&Array.isArray(y)&&gleich(x.map(e=>e?.id),y.map(e=>e?.id))){
+      x.forEach((e,i)=>{const f=y[i]||{};for(const kk of new Set([...Object.keys(e||{}),...Object.keys(f)]))
+        if(!gleich(e?.[kk],f[kk]))out.push({liste:k,id:e?.id,feld:kk,vor:klon(e?.[kk]),nach:klon(f[kk])})});
+    }else out.push({feld:k,vor:klon(x),nach:klon(y)});
+  }
+  return out;
+}
+function nachher(t){
+  const vl=verlauf();if(!t||!vl)return false;
+  const teile=t.vor.map(({z,daten})=>({id:z.id,teile:unterschiede(daten,z.daten)})).filter(x=>x.teile.length);
+  if(!teile.length)return false;
+  const oben=vl.zurueck.at(-1),jetzt=Date.now();
+  if(t.gruppe&&oben?.gruppe===t.gruppe&&jetzt-oben.um<1500){
+    // Mehrere Schritte derselben Art kurz hintereinander (Pfeiltasten, Ausschnitt) sind ein Schritt.
+    for(const x of teile){
+      const y=oben.teile.find(q=>q.id===x.id);if(!y){oben.teile.push(x);continue}
+      for(const p of x.teile){const q=y.teile.find(r=>r.liste===p.liste&&r.id===p.id&&r.feld===p.feld);if(q)q.nach=p.nach;else y.teile.push(p)}
+    }
+    oben.um=jetzt;
+  }else{vl.zurueck.push({text:t.text,gruppe:t.gruppe,seite:t.seite,um:jetzt,teile});if(vl.zurueck.length>VERLAUF_MAX)vl.zurueck.shift()}
+  vl.vor=[];verlaufKnoepfe();return true;
+}
+function teilSetzen(daten,p,wert){
+  const d={...daten};
+  if(p.liste){
+    const l=Array.isArray(d[p.liste])?d[p.liste]:null,i=l?l.findIndex(e=>e?.id===p.id):-1;if(i<0)return daten;
+    const e={...l[i]};if(wert===undefined)delete e[p.feld];else e[p.feld]=klon(wert);
+    d[p.liste]=l.map((x,j)=>j===i?e:x);
+  }else if(wert===undefined)delete d[p.feld];else d[p.feld]=klon(wert);
+  return d;
+}
+function verlaufSchritt(richtung){
+  const vl=verlauf();if(!vl)return;
+  const e=(richtung<0?vl.zurueck:vl.vor).pop();
+  if(!e){meldung(richtung<0?'Nichts zum Rückgängigmachen.':'Nichts zum Wiederholen.');return}
+  if(mm.zuschnitt)zuschnittEnde(false);
+  const aktiv=document.activeElement;if(aktiv?.isContentEditable)aktiv.blur();
+  for(const x of e.teile){
+    const z=zeileVon(x.id);if(!z)continue;
+    let d=z.daten;for(const p of (richtung<0?[...x.teile].reverse():x.teile))d=teilSetzen(d,p,richtung<0?p.vor:p.nach);
+    z.daten=d;markiere(z);
+  }
+  (richtung<0?vl.vor:vl.zurueck).push(e);
+  const v=vorlageZeile();
+  if(v&&e.seite&&e.seite!==mm.seite&&M.seitenVon(v.daten).some(x=>x.id===e.seite)){mm.seite=e.seite;mm.auswahl=null}
+  meldung((richtung<0?'Rückgängig: ':'Wiederholt: ')+e.text+'.');
+  render();
+}
+function verlaufKnoepfe(){
+  const vl=verlauf(),z=root.querySelector('[data-act="mm-zurueck"]'),w=root.querySelector('[data-act="mm-vor"]');
+  const a=vl?.zurueck.at(-1),b=vl?.vor.at(-1);
+  if(z){z.disabled=!a;z.title='Rückgängig'+(a?': '+a.text:'')+' ('+TASTE.zurueck+')'}
+  if(w){w.disabled=!b;w.title='Wiederholen'+(b?': '+b.text:'')+' ('+TASTE.vor+')'}
+}
+// Text auf der Seite: vom Fokus bis zum Verlassen ein Schritt (Mappe und Position der Seite).
+function textBeginn(el){
+  if(mm.textSchritt?.id===el.id&&el.id)return;
+  textEnde();
+  const v=vorlageZeile();if(!v||!istMappe(v))return;
+  const seite=mappeSeite(v),z=seite?.punkt?zeileVon(seite.punkt):null;
+  const name=el.closest('.mm-r[data-mmr]')?.dataset.mmrName;
+  mm.textSchritt={id:el.id,t:vorher(name?'Text in «'+name+'»':'Text geändert',[v,z])};
+}
+function textEnde(){const s=mm.textSchritt;mm.textSchritt=null;if(s)nachher(s.t)}
+
+// Auswahl und Ebene: über der gewählten Rahmen ein Kasten mit Griff (Name des Rahmens) und acht Anfassern, über dem
+// Rahmen unter dem Zeiger nur Umriss und Griff. Größen in Pixeln: bei jedem Zoom gleich gut zu greifen.
+const geoAus=t=>{const [c,r,w,h]=String(t||'').split(',').map(Number);return {c,r,w,h}};
+const geoText=g=>g.c+','+g.r+','+g.w+','+g.h;
+const gleicheGeo=(a,b)=>!!a&&!!b&&a.c===b.c&&a.r===b.r&&a.w===b.w&&a.h===b.h;
+const zwischen=(x,a,b)=>Math.min(b,Math.max(a,x));
+function rahmenEl(key){return key?root.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="'+CSS.escape(key)+'"]'):null}
+function geoSetzen(el,g){if(!el)return;el.style.gridColumn=g.c+' / span '+g.w;el.style.gridRow=g.r+' / span '+g.h;el.dataset.mmrG=geoText(g)}
+function waehle(key){
+  const v=vorlageZeile(),seite=v&&istMappe(v)?mappeSeite(v):null;
+  const neu=key&&seite?{seite:seite.id,key}:null;
+  if(gleich(neu,mm.auswahl))return;
+  mm.auswahl=neu;ebeneZeichnen();layoutKarteNeu();
+}
+function kastenHtml(el,art){
+  const key=el.dataset.mmr,g=geoAus(el.dataset.mmrG),zs=art==='wahl'&&mm.zuschnitt;
+  // Wer im Rahmen schreibt, bekommt keine Anfasser an den Kanten (dort beginnt der Text); Griff und Umriss bleiben.
+  // Esc im Text oder ein Klick auf den Griff zeigt sie.
+  const tippt=art==='wahl'&&!!document.activeElement?.isContentEditable&&el.contains(document.activeElement);
+  const griff=zs?'':'<span class="mm-rw-griff" data-griff="'+esc(key)+'" title="Ziehen: Rahmen verschieben"><span aria-hidden="true">⠿</span>'+esc(el.dataset.mmrName||key)+'</span>';
+  const anfasser=art==='wahl'&&!zs&&!tippt?['n','ne','e','se','s','sw','w','nw'].map(h=>'<i class="mm-rw-h" data-h="'+h+'"></i>').join(''):'';
+  return '<div class="mm-rw mm-rw-'+(zs?'zuschnitt':art)+'" data-rw="'+esc(key)+'" style="grid-column:'+g.c+' / span '+g.w+';grid-row:'+g.r+' / span '+g.h+'">'+griff+anfasser+'<span class="mm-rw-mass" hidden></span></div>';
+}
+function ebeneZeichnen(){
+  const eb=root.querySelector('.mm-buehne .mm-ebene');
+  root.querySelectorAll('.mm-buehne .mm-r.mm-gewaehlt').forEach(x=>x.classList.remove('mm-gewaehlt'));
+  if(!eb){kontextZeigen();return}
+  const v=vorlageZeile(),seite=v&&istMappe(v)?mappeSeite(v):null;
+  if(mm.auswahl&&mm.auswahl.seite!==seite?.id)mm.auswahl=null;
+  const wahl=rahmenEl(mm.auswahl?.key);
+  if(mm.auswahl&&!wahl)mm.auswahl=null;
+  const ueber=mm.hover&&mm.hover!==mm.auswahl?.key&&!mm.zuschnitt?rahmenEl(mm.hover):null;
+  eb.innerHTML=(ueber?kastenHtml(ueber,'hover'):'')+(wahl?kastenHtml(wahl,'wahl'):'');
+  wahl?.classList.add('mm-gewaehlt');
+  zuschnittGeist();kontextZeigen();
+}
+// Was gewählt ist, steht in der Werkzeugleiste: Name, Felder, Millimeter, Seitenverhältnis. Beim Zuschneiden schwebt
+// unten über der Bühne eine Leiste mit Regler, «Zurücksetzen», «Abbrechen» und «Fertig».
+function kontextZeigen(){
+  const el=root.querySelector('[data-mm-kontext]'),ort=root.querySelector('[data-mm-zs]');
+  if(mm.zuschnitt){
+    if(ort&&!ort.querySelector('[data-act="mm-zs-zoom"]'))ort.innerHTML='<div class="mm-zs-leiste" role="group" aria-label="Zuschneiden"><strong>Zuschneiden</strong>'+
+      '<label>Vergrößern <input type="range" min="1" max="'+M.ZOOM_MAX+'" step="0.05" data-act="mm-zs-zoom"></label>'+
+      '<button type="button" class="btn" data-act="mm-zs-mitte">Zurücksetzen</button><button type="button" class="btn" data-act="mm-zs-ab">Abbrechen</button>'+
+      '<button type="button" class="btn btn-primary" data-act="mm-zs-ok">Fertig</button></div>';
+    const r=ort?.querySelector('[data-act="mm-zs-zoom"]');if(r)r.value=mm.zuschnitt.a.z;
+    if(el)el.textContent='Zuschneiden · Enter übernimmt, Esc bricht ab';
+    return;
+  }
+  if(ort&&ort.firstChild)ort.innerHTML='';
+  if(!el)return;
+  const r=rahmenEl(mm.auswahl?.key);
+  if(!r){el.textContent=el.dataset.grund||'';return}
+  const m=M.rahmenMass(geoAus(r.dataset.mmrG));
+  el.textContent=(r.dataset.mmrName||'')+' · '+m.felder+' · '+m.mm+' · '+m.verhaeltnis;
+}
+// Rechts: der gewählte Rahmen (Größe, Stelle, Überlappung, wie die Vorlage, ausblenden), ausgeblendete Rahmen und
+// «Ganze Seite wie die Vorlage».
+function spanne(a,n){return n>1?a+'–'+(a+n-1):String(a)}
+function ueberlappt(a,b){return a.c<b.c+b.w&&b.c<a.c+a.w&&a.r<b.r+b.h&&b.r<a.r+a.h}
+function layoutKarte(){
+  const v=vorlageZeile(),seite=v&&istMappe(v)?mappeSeite(v):null;if(!seite)return '';
+  const liste=M.rahmenDerSeite(seite,mappeJetzt(v)).rahmen;if(!liste.length)return '';
+  const da=liste.filter(r=>!r.aus),aus=liste.filter(r=>r.aus),eigen=liste.filter(r=>r.eigen||r.aus);
+  const x=mm.auswahl&&mm.auswahl.seite===seite.id?da.find(r=>r.key===mm.auswahl.key):null;
+  let h='<section class="card mm-layout-karte"><h2>Layout</h2>';
+  if(x){
+    const m=M.rahmenMass(x.geo),ueber=da.filter(r=>r.key!==x.key&&ueberlappt(r.geo,x.geo)).map(r=>r.titel);
+    h+='<p class="mm-layout-name"><strong>'+esc(x.titel)+'</strong> · '+esc(m.felder)+'</p><p class="mm-layout-mass">'+esc(m.mm+' · '+m.verhaeltnis)+'</p>'+
+      '<p class="meta">Spalte '+spanne(x.geo.c,x.geo.w)+', Zeile '+spanne(x.geo.r,x.geo.h)+(x.eigen?' · angepasst (Vorlage: '+esc(M.rahmenMass(x.std).felder)+')':' · wie die Vorlage')+'</p>'+
+      (ueber.length?'<p class="meta mm-layout-ueber">Überlappt '+esc(ueber.join(', '))+'; Text liegt über Fotos.</p>':'')+
+      '<div class="mm-knoepfe">'+(x.eigen?'<button type="button" class="btn" data-act="mm-rahmen-vorlage" data-k="'+esc(x.key)+'">Wie die Vorlage</button>':'')+
+      '<button type="button" class="btn" data-act="mm-rahmen-aus" data-k="'+esc(x.key)+'">Ausblenden</button></div>';
+  }else h+='<p class="meta">Einen Rahmen anklicken: am Griff verschieben, an Ecken und Kanten die Größe ändern. Er rastet auf den Feldern des Rasters ein.</p>';
+  if(aus.length)h+='<p class="meta">Ausgeblendet</p><div class="mm-knoepfe">'+aus.map(r=>'<button type="button" class="btn" data-act="mm-rahmen-ein" data-k="'+esc(r.key)+'">'+esc(r.titel)+' einblenden</button>').join('')+'</div>';
+  if(eigen.length)h+='<p class="meta">'+(eigen.length===1?'Ein Rahmen weicht':eigen.length+' Rahmen weichen')+' von der Vorlage ab.</p>'+
+    '<div class="mm-knoepfe"><button type="button" class="btn" data-act="mm-layout-vorlage">Ganze Seite wie die Vorlage</button></div>';
+  return h+'<p class="meta mm-layout-hilfe">Pfeiltasten: ein Feld weiter, mit Umschalt größer oder kleiner. Doppelklick auf ein Foto: zuschneiden. '+
+    'Fotos von rechts auf die Seite ziehen, eigene Bilder vom Schreibtisch. Rückgängig: '+TASTE.zurueck+'.</p></section>';
+}
+function layoutKarteNeu(){const el=root.querySelector('[data-mm-rahmen]');if(el)el.innerHTML=layoutKarte()}
+// Einen Rahmen setzen (geo) oder wie die Vorlage (null); gleich wie die Vorlage heißt: keine Abweichung.
+function layoutAendern(key,geo,text,{gruppe='',ganz=false}={}){
+  const v=vorlageZeile(),seite=v&&istMappe(v)?mappeSeite(v):null;if(!seite)return;
+  const basis=M.layoutBasis(seite,mappeJetzt(v)),el=rahmenEl(key);
+  const std=el?geoAus(el.dataset.mmrStd):null,wert=geo&&!geo.aus&&gleicheGeo(geo,std)?null:geo;
+  const t=vorher(text,[v],{gruppe});
+  seitenSetzen(v,M.seitenVon(v.daten).map(x=>{
+    if(x.id!==seite.id)return x;
+    const n={...x},l=ganz?M.layoutVorlage(x.layout,basis):M.layoutSetzen(x.layout,basis,key,wert);
+    if(l)n.layout=l;else delete n.layout;return n;
+  }));
+  nachher(t);
+  if(geo?.aus&&mm.auswahl?.key===key)mm.auswahl=null;
+  render();
+}
+function rahmenKlick(act,key){
+  const titel=rahmenEl(key)?.dataset.mmrName||M.rahmenDerSeite(mappeSeite(vorlageZeile()),mappeJetzt(vorlageZeile())).rahmen.find(r=>r.key===key)?.titel||key;
+  if(act==='mm-rahmen-vorlage')layoutAendern(key,null,'Rahmen «'+titel+'» wie die Vorlage');
+  else if(act==='mm-rahmen-aus'){layoutAendern(key,{aus:true},'Rahmen «'+titel+'» ausgeblendet');meldung('«'+titel+'» ausgeblendet; rechts unter «Layout» wieder einblenden.')}
+  else if(act==='mm-rahmen-ein'){layoutAendern(key,null,'Rahmen «'+titel+'» eingeblendet');waehle(key)}
+  else if(act==='mm-layout-vorlage'){mm.auswahl=null;layoutAendern('',null,'Seite wie die Vorlage',{ganz:true})}
+}
+
+// Ziehen am Griff (verschieben), an einem Anfasser (Größe) oder an einem Foto (verschieben, erst ab 4 px: sonst ist es
+// ein Klick). Gerechnet in Millimetern des Blatts: ein Feld plus Abstand sind 32 mm; es rastet am nächsten Feld ein.
+const ANFASSER={n:[0,-1],ne:[1,-1],e:[1,0],se:[1,1],s:[0,1],sw:[-1,1],w:[-1,0],nw:[-1,-1]};
+function neueGeo(a,art,dx,dy){
+  const P=M.RASTER.feld+M.RASTER.abstand,S=M.RASTER.spalten,Z=M.RASTER.zeilen;
+  if(art==='griff'||art==='foto')return {c:zwischen(a.c+Math.round(dx/P),1,S-a.w+1),r:zwischen(a.r+Math.round(dy/P),1,Z-a.h+1),w:a.w,h:a.h};
+  const [sx,sy]=ANFASSER[art]||[0,0];let {c,r,w,h}=a;
+  if(sx>0)w=zwischen(Math.round(a.c+a.w-1+dx/P),a.c,S)-a.c+1;
+  if(sx<0){const s2=zwischen(Math.round(a.c+dx/P),1,a.c+a.w-1);w=a.c+a.w-s2;c=s2}
+  if(sy>0)h=zwischen(Math.round(a.r+a.h-1+dy/P),a.r,Z)-a.r+1;
+  if(sy<0){const s2=zwischen(Math.round(a.r+dy/P),1,a.r+a.h-1);h=a.r+a.h-s2;r=s2}
+  return {c,r,w,h};
+}
+function zugBeginn(e,key,art){
+  const el=rahmenEl(key),blatt=el?.closest('.mm-seite');if(!el||!blatt)return;
+  const breite=blatt.getBoundingClientRect().width;if(!(breite>0))return;
+  mm.zug={key,art,el,start:geoAus(el.dataset.mmrG),g:geoAus(el.dataset.mmrG),px:e.clientX,py:e.clientY,proMm:breite/M.RASTER.breite,id:e.pointerId,los:art!=='foto'};
+  if(mm.zug.los)zugLos(e);
+}
+function zugLos(e){
+  const b=root.querySelector('.mm-buehne');mm.zug.los=true;
+  b?.classList.add('zieht');try{b?.setPointerCapture(e.pointerId)}catch{}
+  mm.hover=null;waehle(mm.zug.key);ebeneZeichnen();
+}
+function zugBewegen(e){
+  const z=mm.zug;if(!z||e.pointerId!==z.id)return;
+  if(!z.los){if(Math.hypot(e.clientX-z.px,e.clientY-z.py)<4)return;zugLos(e)}
+  e.preventDefault();
+  const g=neueGeo(z.start,z.art,(e.clientX-z.px)/z.proMm,(e.clientY-z.py)/z.proMm);
+  if(gleicheGeo(g,z.g))return;
+  z.g=g;geoSetzen(z.el,g);
+  const box=root.querySelector('.mm-buehne .mm-rw-wahl');geoSetzen(box,g);
+  const m=M.rahmenMass(g),mass=box?.querySelector('.mm-rw-mass');
+  if(mass){mass.hidden=false;mass.textContent=m.felder+' · '+m.mm+' · '+m.verhaeltnis}
+  kontextZeigen();uebersatzPruefen();
+}
+function zugEnde(e,abbrechen=false){
+  const z=mm.zug;if(!z||(e&&e.pointerId!==z.id))return;
+  mm.zug=null;root.querySelector('.mm-buehne')?.classList.remove('zieht');
+  if(!z.los)return;
+  // Der Klick nach dem Loslassen wählt nichts ab.
+  mm.klickSperre=true;setTimeout(()=>{mm.klickSperre=false},0);
+  if(abbrechen||gleicheGeo(z.g,z.start)){geoSetzen(z.el,z.start);ebeneZeichnen();uebersatzPruefen();return}
+  const name=z.el.dataset.mmrName||z.key,groesse=z.g.w!==z.start.w||z.g.h!==z.start.h;
+  layoutAendern(z.key,z.g,'Rahmen «'+name+'» '+(groesse?'in der Größe geändert':'verschoben'));
+}
+
+// Zuschneiden auf der Seite (Doppelklick auf ein Foto einer Variante): ziehen verschiebt das Bild im Rahmen, das Rad
+// oder der Regler vergrößert (bis dreifach); hell daneben das ganze Bild. Enter oder «Fertig» übernimmt, Esc bricht ab,
+// ein Klick daneben übernimmt. Der Ausschnitt gehört zum Foto und gilt auf allen Seiten (wie im Dialog «Bild ändern»).
+function zuschnittPlatz(){const zs=mm.zuschnitt;return zs?root.querySelector('.mm-buehne [data-bildplatz="'+CSS.escape(zs.zid+'|'+zs.oid+'|'+zs.i)+'"]'):null}
+function zuschnittBeginn(platz){
+  const img=platz?.querySelector('img.mm-foto-bild');if(!img)return;
+  if(mm.zuschnitt)zuschnittEnde(true);
+  const [zid,oid,i]=platz.dataset.bildplatz.split('|'),z=zeileVon(zid),o=z?K.optionen(z.daten).find(x=>x.id===oid):null;
+  const f=o?fotosDerVariante(o)[Number(i)]:null;if(!f)return;
+  const a={x:50,y:50,z:1,...(f.ausschnitt||{})};
+  mm.zuschnitt={zid,oid,i:Number(i),a,start:{...a}};
+  const r=platz.closest('.mm-r[data-mmr]');
+  mm.hover=null;if(r)mm.auswahl={seite:mm.seite,key:r.dataset.mmr};
+  zuschnittZeigen();
+}
+function zuschnittZeigen(){
+  const zs=mm.zuschnitt;if(!zs)return;
+  const platz=zuschnittPlatz(),img=platz?.querySelector('img.mm-foto-bild');
+  if(!img){mm.zuschnitt=null;ebeneZeichnen();return}
+  platz.classList.add('mm-zuschnitt');ausschnittStil(img,zs.a);
+  if(!img.complete)img.addEventListener('load',zuschnittGeist,{once:true});
+  ebeneZeichnen();
+}
+// Das ganze Bild hell um den Rahmen: dieselbe Rechnung wie object-fit: cover, object-position und scale im Rahmen.
+function zuschnittMasse(){
+  const zs=mm.zuschnitt,platz=zuschnittPlatz(),img=platz?.querySelector('img.mm-foto-bild');
+  if(!zs||!img||!img.naturalWidth||!img.naturalHeight)return null;
+  const W=platz.clientWidth,H=platz.clientHeight,s0=Math.max(W/img.naturalWidth,H/img.naturalHeight);
+  return {W,H,DW:img.naturalWidth*s0,DH:img.naturalHeight*s0,src:img.currentSrc||img.src};
+}
+function zuschnittGeist(){
+  const box=root.querySelector('.mm-buehne .mm-rw-zuschnitt');if(!box)return;
+  box.querySelector('.mm-zs-geist')?.remove();
+  const m=zuschnittMasse(),a=mm.zuschnitt?.a;if(!m||!a)return;
+  const g=document.createElement('img');g.className='mm-zs-geist';g.alt='';g.src=m.src;g.draggable=false;
+  const x=a.x/100,y=a.y/100;
+  Object.assign(g.style,{left:x*(m.W-a.z*m.DW)+'px',top:y*(m.H-a.z*m.DH)+'px',width:a.z*m.DW+'px',height:a.z*m.DH+'px'});
+  box.prepend(g);
+}
+function zuschnittAnwenden(){
+  const zs=mm.zuschnitt,img=zuschnittPlatz()?.querySelector('img.mm-foto-bild');if(!zs||!img)return;
+  ausschnittStil(img,zs.a);zuschnittGeist();
+  const r=root.querySelector('[data-act="mm-zs-zoom"]');if(r&&Number(r.value)!==zs.a.z)r.value=zs.a.z;
+}
+function zuschnittZoom(z){const zs=mm.zuschnitt;if(!zs)return;zs.a.z=Math.round(zwischen(z,1,M.ZOOM_MAX)*100)/100;zuschnittAnwenden()}
+// Verschieben so, dass das Bild dem Zeiger folgt: der linke Rand steht bei x·(W − z·DW).
+function zuschnittSchieben(dx,dy){
+  const zs=mm.zuschnitt,m=zuschnittMasse();if(!zs||!zs.zug)return;
+  const sx=m?m.W-zs.a.z*m.DW:-(zuschnittPlatz()?.clientWidth||1),sy=m?m.H-zs.a.z*m.DH:-(zuschnittPlatz()?.clientHeight||1);
+  if(sx<-0.5)zs.a.x=Math.round(zwischen(zs.zug.x+dx*100/sx,0,100)*10)/10;
+  if(sy<-0.5)zs.a.y=Math.round(zwischen(zs.zug.y+dy*100/sy,0,100)*10)/10;
+  zuschnittAnwenden();
+}
+function zuschnittEnde(uebernehmen){
+  const zs=mm.zuschnitt;if(!zs)return;
+  const platz=zuschnittPlatz(),img=platz?.querySelector('img.mm-foto-bild');
+  mm.zuschnitt=null;platz?.classList.remove('mm-zuschnitt');
+  if(uebernehmen&&!gleich(M.ausschnittVon(zs.a),M.ausschnittVon(zs.start))){
+    fotoAendern(zs.zid,zs.oid,l=>M.fotoAusschnitt(l,zs.i,zs.a),'Foto zugeschnitten');
+    meldung('Ausschnitt übernommen; er gilt für dieses Foto auf allen Seiten der Mappe.');
+    return;
+  }
+  if(img)ausschnittStil(img,zs.start);
+  ebeneZeichnen();
+}
+// Fotos einer Variante ändern, als ein Schritt im Verlauf (Ziehen, Zuschneiden auf der Seite).
+function fotoAendern(zid,oid,f,text){
+  const z=zeileVon(zid),o=z?K.optionen(z.daten).find(x=>x.id===oid):null;if(!o)return null;
+  const neu=f(fotosDerVariante(o));
+  const t=vorher(text,[z]);
+  optionenPatch(z,oid,x=>({...x,muster_fotos:neu}));
+  nachher(t);render();return neu;
+}
+
+// Fotos auf die Seite ziehen: aus der Bibliothek (rechts, Fotos der Varianten dieser Seite) auf ein Foto derselben
+// Variante oder den freien Platz für Bild 2 und 3; eigene Bilder (oder ein PDF) vom Schreibtisch auf jedes Foto, auf
+// das Bild einer freien Seite oder das Titelbild. Eigene Bilder bleiben in der Mappe, die Bibliothek ändert sich nicht.
+function ablageZeigen(art){
+  const b=root.querySelector('.mm-buehne');if(!b)return;
+  b.classList.add('ablage');
+  const sel=art==='datei'?'[data-bildplatz]':'[data-bildplatz^="'+CSS.escape(art.z+'|'+art.o+'|')+'"]';
+  b.querySelectorAll('.mm-ablage-ziel').forEach(x=>x.classList.remove('mm-ablage-ziel'));
+  b.querySelectorAll(sel).forEach(x=>x.classList.add('mm-ablage-ziel'));
+  b.querySelectorAll('.mm-r-ablage').forEach(x=>x.classList.toggle('sichtbar',!!x.querySelector('.mm-ablage-ziel')));
+  if(art==='datei'){const v=vorlageZeile(),seite=v&&istMappe(v)?mappeSeite(v):null;
+    if(seite&&(seite.typ==='frei'||seite.typ==='deckblatt'))rahmenEl('bild')?.classList.add('mm-ablage-ziel')}
+}
+function ablageEnde(){
+  clearTimeout(mm.ablageTimer);mm.ziehtFoto=null;mm.ziehtDatei=false;
+  const b=root.querySelector('.mm-buehne');if(!b)return;
+  b.classList.remove('ablage');
+  b.querySelectorAll('.mm-ablage-ziel,.mm-ablage-hier').forEach(x=>x.classList.remove('mm-ablage-ziel','mm-ablage-hier'));
+  b.querySelectorAll('.mm-r-ablage.sichtbar').forEach(x=>x.classList.remove('sichtbar'));
+}
+function ablageZiel(t){return t?.closest?.('.mm-buehne .mm-ablage-ziel')||null}
+function fotoAblegen(ziel,foto){
+  const [zid,oid,i]=String(ziel.dataset.bildplatz||'').split('|');
+  if(zid!==foto.z||oid!==foto.o){meldung('Dieses Foto gehört zu Variante '+foto.o+'.','warn');return}
+  const z=zeileVon(zid),o=z?K.optionen(z.daten).find(x=>x.id===oid):null,d=(mm.fotos.get(o?.produkt_id)||[]).find(x=>x.id===foto.d);
+  if(!d)return;
+  fotoAendern(zid,oid,l=>M.fotoSetzen(l,Number(i),{id:d.id,pfad:d.storage_path}),'Foto auf die Seite gezogen');
+}
+async function dateiAblegen(ziel,datei,anzahl){
+  const mehr=anzahl>1?' Von mehreren Dateien gilt die erste.':'';
+  if(ziel.dataset.bildplatz){
+    const [zid,oid,i]=ziel.dataset.bildplatz.split('|');
+    meldung('Bild wird hochgeladen …');
+    const {pfad,name}=await bildHochladen(datei,1);
+    fotoAendern(zid,oid,l=>M.fotoSetzen(l,Number(i),{id:'m-'+crypto.randomUUID(),pfad,quelle:'mappe',name}),'Eigenes Bild auf die Seite gezogen');
+    meldung('Das Bild steht auf der Seite; es bleibt in dieser Mappe.'+mehr);return;
+  }
+  const v=vorlageZeile(),seite=v&&istMappe(v)?mappeSeite(v):null;
+  if(seite){meldung('Bild wird hochgeladen …');await freiesBild(v,seite.id,datei);if(mehr)meldung(ui.meldung+mehr)}
+}
+
 async function mappeDrucken(v){
   await alleSpeichern();
   try{await mappeLaden(v)}catch(e){console.warn('Mustermappe · Fotos',e)}
@@ -1752,10 +2130,22 @@ async function mappeStandZeigen(st){
   dialog.querySelector('[data-dlg="zu"]').onclick=()=>dialog.close();
   dialog.showModal();
 }
+// Etappe 2: was hier geändert wird, ist ein Schritt im Verlauf (Rückgängig); die Texte nennen ihn.
+const MM_SCHRITT={'mm-hoch':'Seite verschoben','mm-runter':'Seite verschoben','mm-seite-weg':'Seite entfernt','mm-material':'Materialseite angelegt',
+  'mm-foto':'Foto gewählt','mm-bild-weg':'Bild entfernt','mm-zuruecksetzen':'Text zurückgesetzt','mm-uebernehmen':'Neuer Stand übernommen',
+  'mm-position-weg':'Position aus der Mappe genommen','mm-kandidat-weg':'Kandidat entfernt'};
 function mappeKlick(act,el){
   const v=vorlageZeile();if(!v||!istMappe(v))return;
+  const t=MM_SCHRITT[act]?vorher(MM_SCHRITT[act],[v,...mappePunkte(v)]):null;
+  try{mappeKlickInnen(act,el,v)}finally{nachher(t)}
+}
+function mappeKlickInnen(act,el,v){
   const z=el.dataset.z?zeileVon(el.dataset.z):null;
-  if(act==='mm-seite'){mm.seite=el.dataset.id;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
+  if(act==='mm-zurueck'||act==='mm-vor'){verlaufSchritt(act==='mm-zurueck'?-1:1);return}
+  if(act.startsWith('mm-rahmen-')||act==='mm-layout-vorlage'){rahmenKlick(act,el.dataset.k);return}
+  if(act==='mm-zs-ok'||act==='mm-zs-ab'){zuschnittEnde(act==='mm-zs-ok');return}
+  if(act==='mm-zs-mitte'){if(mm.zuschnitt){mm.zuschnitt.a={x:50,y:50,z:1};zuschnittZeigen()}return}
+  if(act==='mm-seite'){mm.seite=el.dataset.id;mm.auswahl=null;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
   else if(act==='mm-zoom-plus'||act==='mm-zoom-minus')zoomSchritt(act==='mm-zoom-plus'?1:-1);
   else if(act==='mm-raster'){mm.ansicht.raster=!mm.ansicht.raster;mmAnsichtMerken();root.querySelector('.mm-buehne')?.classList.toggle('raster',mm.ansicht.raster);el.setAttribute('aria-pressed',String(mm.ansicht.raster))}
   else if(act==='mm-links'||act==='mm-rechts'){
@@ -1798,8 +2188,15 @@ function mappeKlick(act,el){
     meldung((M.ANPASSUNG_NAME[el.dataset.feld]||'Text')+' von '+el.dataset.o+' wieder wie in der Produktbibliothek.');render();
   }
 }
+const MM_AENDERUNG={'mm-neue-seite':'Seite hinzugefügt','mm-zeige':'Anzeige auf der Seite geändert','mm-seite-option':'Kandidaten der Seite geändert',
+  'mm-material-option':'Variante der Seite geändert'};
 function mappeAenderung(el){
   const v=vorlageZeile();if(!v||!istMappe(v))return false;
+  const text=el.matches('[data-mmfeld]')?'Angaben der Position geändert':MM_AENDERUNG[el.dataset.act];
+  const t=text?vorher(text,[v,...mappePunkte(v)]):null;
+  try{return mappeAenderungInnen(el,v)}finally{nachher(t)}
+}
+function mappeAenderungInnen(el,v){
   const act=el.dataset.act;
   if(act==='mm-neue-seite'){if(el.value)seiteNeu(v,el.value);return true}
   if(act==='mm-zoom'){const w=el.value;if(w==='fit'||w==='breite'){mm.ansicht.zoom=w;mmAnsichtMerken();zoomAnwenden()}else if(Number(w)>0)zoomAuf(Number(w));return true}
@@ -2199,6 +2596,7 @@ async function alleVorschlaege(art,ja){
 // ---------- Ereignisse ----------
 async function sicher(f){try{await f()}catch(e){console.error('Projektdokumente',e);meldung(e?.message||'Das hat nicht geklappt.','warn');render()}}
 root.addEventListener('click',e=>{
+  if(ui.ansicht==='mappe'&&e.target.closest?.('.mm-buehne'))blattKlick(e);
   const nav=e.target.closest('a[data-nav]');
   if(nav&&!e.metaKey&&!e.ctrlKey&&nav.getAttribute('href').startsWith('?')){e.preventDefault();ui.meldung='';history.pushState(null,'',nav.getAttribute('href'));void route();return}
   const el=e.target.closest('[data-act]');
@@ -2289,6 +2687,7 @@ root.addEventListener('input',e=>{
   if(zeichnet)return;
   const el=e.target;
   if(el.matches('[data-act="suche"]')){ui.suche=el.value;clearTimeout(el._t);el._t=setTimeout(()=>{renderListe();const s=root.querySelector('[data-act="suche"]');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length)}},250);return}
+  if(ui.ansicht==='mappe'&&el.matches('[data-act="mm-zs-zoom"]')){zuschnittZoom(Number(el.value)||1);return}
   if(ui.ansicht==='mappe'&&el.matches('.mm-ed')){mappeEingabe(el);return}
   if(el.matches('textarea[data-vfeld]')){const z=zeileVon(el.dataset.z);if(z){z.daten={...z.daten,[el.dataset.vfeld]:el.value};if(Array.isArray(z.daten._romy))z.daten._romy=z.daten._romy.filter(k=>k!==el.dataset.vfeld);markiere(z)}wachse(el);return}
   if(el.matches('textarea.pd-in[data-edit]'))el.style.height=Math.max(el.scrollHeight,60)+'px';
@@ -2310,6 +2709,8 @@ root.addEventListener('wheel',e=>{
 root.addEventListener('focusout',e=>{
   if(zeichnet)return;
   const el=e.target;
+  // Text auf der Seite: das Verlassen schließt den Schritt im Verlauf (Etappe 2).
+  if(ui.ansicht==='mappe'&&el.matches?.('.mm-ed')){textEnde();setTimeout(()=>{if(ui.ansicht==='mappe'&&!mm.zug)ebeneZeichnen()},0)}
   // Kennwerte: beim Verlassen des Rahmens neu zeichnen (leere Zeilen fallen weg); «+ Kennwert» liegt im Rahmen.
   if(ui.ansicht==='mappe'&&el.matches('[data-mmkw]')){if(!el.closest('.mm-r')?.contains(e.relatedTarget))spaeterRendern();return}
   if(el.matches('[data-edit]')){
@@ -2329,6 +2730,8 @@ root.addEventListener('focusout',e=>{
 });
 root.addEventListener('keydown',e=>{
   const el=e.target;
+  // Esc im Text der Seite: aus dem Text heraus, der Rahmen bleibt gewählt (mit Anfassern, Pfeiltasten verschieben).
+  if(ui.ansicht==='mappe'&&el.matches?.('.mm-buehne .mm-ed')&&e.key==='Escape'){e.preventDefault();el.blur();return}
   if(ui.ansicht==='mappe'&&el.matches?.('.mm-ed[data-einzeilig]')&&e.key==='Enter'){
     e.preventDefault();
     if(el.matches('[data-mmkw]'))kennwertWeiter(el);else el.blur();
@@ -2351,6 +2754,148 @@ root.addEventListener('keydown',e=>{
     return;
   }
   if(el.matches('td[data-k]')&&e.key==='Enter'){el.click()}
+});
+// ---------- Mustermappe, Etappe 2: Ereignisse auf der Seite ----------
+// Klick wählt einen Rahmen (ein Text bekommt dabei den Fokus wie bisher); daneben wählt ab.
+function blattKlick(e){
+  if(mm.klickSperre||mm.zuschnitt)return;
+  const r=e.target.closest('.mm-satz>.mm-r[data-mmr]');
+  if(r){waehle(r.dataset.mmr);return}
+  if(!e.target.closest('.mm-rw'))waehle(null);
+}
+root.addEventListener('focusin',e=>{
+  if(zeichnet||ui.ansicht!=='mappe'||!e.target.matches?.('.mm-buehne .mm-ed'))return;
+  textBeginn(e.target);
+  const r=e.target.closest('.mm-satz>.mm-r[data-mmr]');if(r)waehle(r.dataset.mmr);
+});
+root.addEventListener('pointerdown',e=>{
+  if(ui.ansicht!=='mappe'||e.button>0)return;
+  const t=e.target;
+  if(mm.zuschnitt){
+    const platz=zuschnittPlatz();
+    if(platz&&platz.contains(t)){
+      e.preventDefault();mm.zuschnitt.zug={px:e.clientX,py:e.clientY,x:mm.zuschnitt.a.x,y:mm.zuschnitt.a.y,id:e.pointerId};
+      try{platz.setPointerCapture(e.pointerId)}catch{}
+      platz.classList.add('zieht');return;
+    }
+    // Ein Klick daneben übernimmt den Ausschnitt (nicht in der Leiste mit den Reglern).
+    if(!t.closest?.('[data-mm-zs]'))zuschnittEnde(true);
+    return;
+  }
+  const anfasser=t.closest?.('.mm-ebene [data-h]'),griff=t.closest?.('.mm-ebene [data-griff]');
+  if(anfasser||griff){
+    e.preventDefault();
+    if(document.activeElement?.isContentEditable)document.activeElement.blur();
+    const key=griff?griff.dataset.griff:anfasser.closest('[data-rw]')?.dataset.rw;
+    if(key)zugBeginn(e,key,griff?'griff':anfasser.dataset.h);
+    return;
+  }
+  const foto=t.closest?.('.mm-buehne .mm-satz>.mm-r-foto[data-mmr]');
+  if(foto&&!t.closest('button,a,input,label,.mm-bild-knoepfe'))zugBeginn(e,foto.dataset.mmr,'foto');
+});
+root.addEventListener('pointermove',e=>{
+  if(ui.ansicht!=='mappe')return;
+  if(mm.zug){zugBewegen(e);return}
+  const zs=mm.zuschnitt;
+  if(zs?.zug){if(e.pointerId===zs.zug.id)zuschnittSchieben(e.clientX-zs.zug.px,e.clientY-zs.zug.py);return}
+  if(e.pointerType==='touch'||zs)return;
+  // Unter dem Zeiger: Umriss und Griff; kurz stehen lassen, damit der Griff über dem Rahmen zu erreichen ist.
+  const r=e.target.closest?.('.mm-buehne .mm-satz>.mm-r[data-mmr]'),key=r?.dataset.mmr||e.target.closest?.('.mm-buehne .mm-rw')?.dataset.rw||null;
+  clearTimeout(mm.hoverTimer);
+  if(key===mm.hover)return;
+  if(key){mm.hover=key;ebeneZeichnen()}
+  else mm.hoverTimer=setTimeout(()=>{mm.hover=null;ebeneZeichnen()},250);
+});
+function zugLoslassen(e){
+  if(mm.zug){zugEnde(e,e.type==='pointercancel');return}
+  const zs=mm.zuschnitt;
+  if(zs?.zug&&e.pointerId===zs.zug.id){zs.zug=null;zuschnittPlatz()?.classList.remove('zieht')}
+}
+root.addEventListener('pointerup',zugLoslassen);root.addEventListener('pointercancel',zugLoslassen);
+root.addEventListener('dblclick',e=>{
+  if(ui.ansicht!=='mappe')return;
+  const platz=e.target.closest?.('.mm-buehne [data-bildplatz]');
+  if(!platz||e.target.closest('button')||!platz.querySelector('img.mm-foto-bild'))return;
+  e.preventDefault();window.getSelection()?.removeAllRanges();zuschnittBeginn(platz);
+});
+root.addEventListener('wheel',e=>{
+  if(!mm.zuschnitt||ui.ansicht!=='mappe'||e.ctrlKey||e.metaKey)return;
+  const platz=zuschnittPlatz();if(!platz||!platz.contains(e.target))return;
+  e.preventDefault();zuschnittZoom(mm.zuschnitt.a.z*Math.exp(-Math.max(-60,Math.min(60,e.deltaY))/300));
+},{passive:false});
+// Tasten außerhalb der Textfelder: Rückgängig und Wiederholen; Pfeiltasten verschieben den gewählten Rahmen um ein
+// Feld, mit Umschalt ändern sie seine Größe; Esc wählt ab. Beim Zuschneiden: Pfeile, + und −, Enter und Esc.
+document.addEventListener('keydown',e=>{
+  if(ui.ansicht!=='mappe'||praesEl||dialog.open)return;
+  const t=e.target,imFeld=!!t.closest?.('input,textarea,select,[contenteditable]'),k=String(e.key||'').toLowerCase();
+  const mod=(e.metaKey||e.ctrlKey)&&!e.altKey;
+  if(mod&&(k==='z'||k==='y')){if(imFeld)return;e.preventDefault();verlaufSchritt(k==='y'||e.shiftKey?1:-1);return}
+  const zs=mm.zuschnitt;
+  if(zs){
+    if(e.key==='Escape'){e.preventDefault();zuschnittEnde(false);return}
+    if(imFeld||t.closest?.('button'))return;
+    const schritt=e.shiftKey?10:2;
+    if(e.key==='Enter'){e.preventDefault();zuschnittEnde(true)}
+    else if(e.key==='+'||e.key==='='){e.preventDefault();zuschnittZoom(zs.a.z+.1)}
+    else if(e.key==='-'){e.preventDefault();zuschnittZoom(zs.a.z-.1)}
+    else if(e.key.startsWith('Arrow')){
+      e.preventDefault();
+      if(e.key==='ArrowLeft')zs.a.x=zwischen(zs.a.x-schritt,0,100);else if(e.key==='ArrowRight')zs.a.x=zwischen(zs.a.x+schritt,0,100);
+      else if(e.key==='ArrowUp')zs.a.y=zwischen(zs.a.y-schritt,0,100);else if(e.key==='ArrowDown')zs.a.y=zwischen(zs.a.y+schritt,0,100);
+      zuschnittAnwenden();
+    }
+    return;
+  }
+  if(imFeld||!mm.auswahl)return;
+  if(e.key==='Escape'){waehle(null);return}
+  const pfeil={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+  if(!pfeil||mod||e.altKey)return;
+  const el=rahmenEl(mm.auswahl.key);if(!el)return;
+  e.preventDefault();
+  const g=geoAus(el.dataset.mmrG),S=M.RASTER.spalten,Z=M.RASTER.zeilen;
+  const n=e.shiftKey?{...g,w:zwischen(g.w+pfeil[0],1,S-g.c+1),h:zwischen(g.h+pfeil[1],1,Z-g.r+1)}
+    :{...g,c:zwischen(g.c+pfeil[0],1,S-g.w+1),r:zwischen(g.r+pfeil[1],1,Z-g.h+1)};
+  if(gleicheGeo(n,g))return;
+  layoutAendern(mm.auswahl.key,n,'Rahmen «'+(el.dataset.mmrName||mm.auswahl.key)+'» '+(e.shiftKey?'in der Größe geändert':'verschoben'),
+    {gruppe:'tasten-'+mm.auswahl.key+(e.shiftKey?'-groesse':'')});
+});
+// Ziehen und Ablegen: Fotos der Bibliothek (rechts) und Dateien vom Schreibtisch. Bilder auf der Seite selbst werden
+// nicht gezogen (das verschiebt den Rahmen). Eine Datei neben der Seite öffnet der Browser nicht.
+root.addEventListener('dragstart',e=>{
+  if(ui.ansicht!=='mappe')return;
+  const t=e.target.closest?.('.mm-thumb[data-act="mm-foto"]');
+  if(!t){if(e.target.closest?.('.mm-buehne'))e.preventDefault();return}
+  mm.ziehtFoto={z:t.dataset.z,o:t.dataset.o,d:t.dataset.d};
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed='copy';
+    try{e.dataTransfer.setData('text/plain',t.getAttribute('aria-label')||'Foto')}catch{}
+    const img=t.querySelector('img');if(img&&e.dataTransfer.setDragImage)e.dataTransfer.setDragImage(img,32,24);
+  }
+  ablageZeigen(mm.ziehtFoto);
+});
+root.addEventListener('dragend',()=>{if(mm.ziehtFoto)ablageEnde()});
+document.addEventListener('dragover',e=>{
+  if(ui.ansicht!=='mappe')return;
+  const dateien=[...(e.dataTransfer?.types||[])].includes('Files');
+  if(!dateien&&!mm.ziehtFoto)return;
+  e.preventDefault();
+  if(dateien&&!mm.ziehtDatei){mm.ziehtDatei=true;ablageZeigen('datei')}
+  const ziel=ablageZiel(e.target);
+  if(e.dataTransfer)e.dataTransfer.dropEffect=ziel?'copy':'none';
+  root.querySelectorAll('.mm-ablage-hier').forEach(x=>{if(x!==ziel)x.classList.remove('mm-ablage-hier')});
+  ziel?.classList.add('mm-ablage-hier');
+  // Eine Datei, die das Fenster wieder verlässt, meldet kein Ende: nach einer Sekunde ohne dragover aufräumen.
+  if(mm.ziehtDatei){clearTimeout(mm.ablageTimer);mm.ablageTimer=setTimeout(ablageEnde,1000)}
+});
+document.addEventListener('drop',e=>{
+  if(ui.ansicht!=='mappe')return;
+  const dateien=[...(e.dataTransfer?.files||[])],foto=mm.ziehtFoto;
+  if(!dateien.length&&!foto)return;
+  e.preventDefault();
+  const ziel=ablageZiel(e.target);ablageEnde();
+  if(!ziel){meldung(dateien.length?'Zum Ablegen auf ein Foto der Seite ziehen (oder auf das Bild einer freien Seite).':'Zum Ablegen auf ein Foto dieser Variante ziehen.');return}
+  if(dateien.length)void sicher(()=>dateiAblegen(ziel,dateien[0],dateien.length));
+  else fotoAblegen(ziel,foto);
 });
 function feldAusPanel(el){
   const z=zeileVon(el.dataset.z),art=artVon(z?.dokument_id);if(!z||!art)return false;

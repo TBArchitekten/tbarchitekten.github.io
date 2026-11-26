@@ -174,7 +174,7 @@ test('Werkzeug Mustermappe: Mappen je Projekt, nicht mehr im Projektstart; die M
   assert.match(js,/if\(neu\)history\.replaceState\(null,'',url\(\{werkzeug:ui\.werkzeug,projekt:pid\}\)\);/);
   assert.match(js,/if\(neu&&IM_REITER\)zeichne\('<div class="pd-wrap"><p class="meta">Neue Mustermappe …<\/p><\/div>',null\);else render\(\);/);
   const html=readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8');
-  assert.match(html,/projektdokumente\.css\?v=office10/);assert.match(html,/projektdokumente\.js\?v=office9/);
+  assert.match(html,/projektdokumente\.css\?v=office11/);assert.match(html,/projektdokumente\.js\?v=office10/);
 });
 
 // Gari, 26.11.2026: Layouts nach dem Erzeugen bearbeiten. Texte aus der Bibliothek nur für diese Mappe ändern (markiert,
@@ -271,7 +271,7 @@ test('Seite: Hinweise mit «zurücksetzen», Dialog «Bild ändern», eigene Bil
   const js=readFileSync(new URL('../projektdokumente.js',import.meta.url),'utf8');
   assert.match(js,/data-act="mm-zuruecksetzen" data-z="'\+z\.id\+'" data-o="'\+esc\(o\.id\)\+'" data-feld="'\+x\.feld\+'">'\+esc\(x\.name\)\+' zurücksetzen<\/button>/);
   // Seit 26.11.2026 rechts über den Eigenschaften (die Bühne füllt das Fenster).
-  assert.match(js,/'<div data-mm-hinweise>'\+mappeHinweise\(v,seite\)\+'<\/div><div data-mm-uebersatz><\/div>'\+mappeSeitenleiste\(v,inh,seite\)/);
+  assert.match(js,/'<div data-mm-hinweise>'\+mappeHinweise\(v,seite\)\+'<\/div><div data-mm-uebersatz><\/div><div data-mm-rahmen>'\+layoutKarte\(\)\+'<\/div>'\+mappeSeitenleiste\(v,inh,seite\)/);
   assert.match(js,/else if\(act==='mm-bild'&&z\)bildDialog\(z,el\.dataset\.o,el\.dataset\.i\);/);
   assert.match(js,/optionenPatch\(z,el\.dataset\.o,o=>M\.zuruecksetzen\(o,el\.dataset\.feld\)\);/);
   assert.match(js,/M\.fotoSetzen\(l,i,\{id:'m-'\+crypto\.randomUUID\(\),pfad,quelle:'mappe',name\}\)/);
@@ -282,7 +282,7 @@ test('Seite: Hinweise mit «zurücksetzen», Dialog «Bild ändern», eigene Bil
   assert.match(css,/\.mm-ed\.mm-geaendert,\.mm-kennwerte\.mm-geaendert\{box-shadow:inset 0 0 0 calc\(var\(--mm\) \* \.35\) var\(--m-information\)\}/);
   assert.match(css,/\.mm-rahmen\{position:relative;overflow:hidden\}/);
   const kern=readFileSync(new URL('../mustermappe-kern.js',import.meta.url),'utf8');
-  assert.match(readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8'),/mustermappe-kern\.js\?v=office4/);
+  assert.match(readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8'),/mustermappe-kern\.js\?v=office5/);
   assert.ok(kern.includes('Anpassen für diese Mappe (Gari, 26.11.2026)'));
 });
 
@@ -325,9 +325,12 @@ test('Seiten auf dem Raster: Rahmen je Vorlage, Kopf- und Fußzeile, Raster nur 
   // Material: Foto 6 × 8 links, rechts Kopf, Beschreibung, Kennwerte, Kosten, Zu beachten. Freie Seite: Bild 10 × 8.
   assert.deepEqual(r(M.seiteHtml(inh.seiten[3],inh,{})),['1,6,1,8','7,6,1,1','7,6,2,4','7,6,6,2','7,2,8,1','9,4,8,1']);
   assert.deepEqual(r(M.seiteHtml(inh.seiten[4],inh,{bild})),['1,10,1,8','11,2,1,8']);
-  // Übersicht: Spalten der Tabelle auf dem Raster (zusammen 380 mm).
+  // Übersicht: Spalten der Tabelle auf dem Raster (1, 2, 3, 3, 1 und 2 Felder von 380 mm), als Anteile der Breite: in
+  // einem schmaleren Rahmen (Etappe 2) bleiben die Verhältnisse.
   const ueb=M.seiteHtml(inh.seiten[1],inh,{});
-  assert.equal([...ueb.matchAll(/<col style="width:calc\(var\(--mm\) \* (\d+)\)">/g)].reduce((a,m)=>a+Number(m[1]),0),380);
+  const anteile=[...ueb.matchAll(/<col style="width:([\d.]+)%">/g)].map(m=>Number(m[1]));
+  assert.deepEqual(anteile.map(x=>Math.round(x*380/100)),[32,64,96,96,32,60]);
+  assert.ok(Math.abs(anteile.reduce((a,x)=>a+x,0)-100)<0.001);
   // Beim Bearbeiten: das Raster (96 Felder, 24 große) hinter den Rahmen; die Rahmen haben einen Namen für den Übersatz.
   const bearb=M.seiteHtml(inh.seiten[2],inh,{modus:'bearbeiten'});
   assert.equal((bearb.match(/<div class="mm-raster" aria-hidden="true">(.*?)<\/div>/)[1].match(/<i><\/i>/g)||[]).length,96);
@@ -386,4 +389,63 @@ test('Arbeitsfläche und Blatt: Zoom, Schalter, Übersatz, Raster in mm, Arial, 
   // Farben nur aus den Tokens.
   const blatt=css.slice(css.indexOf('/* Mustermappe (L3.MAP.1'),css.indexOf('/* Präsentieren im Bemusterungstermin'));
   assert.doesNotMatch(blatt,/#[0-9a-f]{3,8}\b|rgba?\(/i);
+});
+
+// Etappe 2 (Gari, 26.11.2026): Rahmen verschieben und in der Größe ändern, Feld für Feld. Das Layout gehört zur Seite,
+// getrennt nach ihrer Form (Vergleich mit 1, 2 oder 3 Varianten); im PDF gilt dasselbe.
+test('Layout der Seite: Rahmen auf dem Raster verschieben, Größe ändern, ausblenden, nach Form der Seite getrennt',()=>{
+  const {v,za,zb,zc}=beispiel();
+  const r=h=>[...h.matchAll(/class="mm-r[^"]*" style="grid-column:(\d+) \/ span (\d+);grid-row:(\d+) \/ span (\d+)"/g)].map(m=>m.slice(1).join(','));
+  // Bereinigen: nur bekannte Schlüssel, ganze Felder im Raster (12 × 8), mindestens ein Feld.
+  assert.deepEqual(M.layoutSauber({'vergleich-2':{'foto-1':{c:1,r:2,w:7,h:5},'text-1':{c:12,r:1,w:2,h:1},zonen:{aus:true},'x y':{c:1,r:1,w:1,h:1},kopf:{c:1.5,r:1,w:1,h:1}},'<b>':{kopf:{c:1,r:1,w:1,h:1}}}),
+    {'vergleich-2':{'foto-1':{c:1,r:2,w:7,h:5},zonen:{aus:true}}});
+  assert.equal(M.layoutSauber({}),null);assert.equal(M.layoutSauber([]),null);
+  let l=M.layoutSetzen(null,'vergleich-2','foto-1',{c:1,r:2,w:7,h:5});
+  assert.deepEqual(l,{'vergleich-2':{'foto-1':{c:1,r:2,w:7,h:5}}});
+  l=M.layoutSetzen(l,'vergleich-2','zonen',{aus:true});
+  assert.deepEqual(Object.keys(l['vergleich-2']),['foto-1','zonen']);
+  assert.equal(M.layoutSetzen(M.layoutSetzen(l,'vergleich-2','zonen',null),'vergleich-2','foto-1',null),null,'ohne Abweichung kein Layout');
+  assert.deepEqual(M.layoutVorlage({...l,'vergleich-3':{kopf:{c:1,r:1,w:12,h:1}}},'vergleich-2'),{'vergleich-3':{kopf:{c:1,r:1,w:12,h:1}}});
+  // Größe: Felder, Millimeter und Seitenverhältnis.
+  assert.deepEqual(M.rahmenMass({w:6,h:4}),{breite:188,hoehe:124,felder:'6 × 4 Felder',mm:'188 × 124 mm',verhaeltnis:'3:2'});
+  assert.equal(M.rahmenMass({w:7,h:5}).verhaeltnis,'A-Format');assert.equal(M.rahmenMass({w:7,h:4}).verhaeltnis,'16:9');
+  assert.equal(M.rahmenMass({w:6,h:8}).verhaeltnis,'3:4');assert.equal(M.rahmenMass({w:1,h:1}).felder,'1 × 1 Feld');
+  assert.equal(M.rahmenMass({w:12,h:5}).verhaeltnis,'2,44:1');
+  // Vergleich mit zwei Varianten: Foto A 7 × 5 statt 6 × 4, Zonen ausgeblendet; im PDF genauso.
+  v.daten.seiten[2]={...v.daten.seiten[2],layout:l};
+  let inh=M.mappeInhalt(v,[za,zb,zc]);
+  assert.equal(M.layoutBasis(inh.seiten[2],inh),'vergleich-2');
+  const druck=M.seiteHtml(inh.seiten[2],inh,{});
+  assert.deepEqual(r(druck),['1,6,1,1','1,7,2,5','1,6,6,2','7,6,2,4','7,6,6,2','1,6,8,1','7,2,8,1','9,4,8,1']);
+  assert.doesNotMatch(druck,/data-mmr|mm-ebene/,'im PDF keine Ebene und keine Schlüssel');
+  // Beim Bearbeiten: Schlüssel, Name, Stelle auf der Seite und in der Vorlage, angepasst; darüber die Ebene.
+  const bearb=M.seiteHtml(inh.seiten[2],inh,{modus:'bearbeiten'});
+  assert.match(bearb,/<div class="mm-r mm-r-foto" style="grid-column:1 \/ span 7;grid-row:2 \/ span 5" data-mmr="foto-1" data-mmr-name="Foto A" data-mmr-g="1,2,7,5" data-mmr-std="1,2,6,4" data-mmr-eigen>/);
+  assert.match(bearb,/data-rahmen="A" data-mmr="text-1" data-mmr-name="Text A" data-mmr-g="1,6,6,2" data-mmr-std="1,6,6,2">/);
+  assert.match(bearb,/<\/div><div class="mm-ebene"><\/div><footer/);
+  const liste=M.rahmenDerSeite(inh.seiten[2],inh);
+  assert.equal(liste.basis,'vergleich-2');
+  assert.deepEqual(liste.rahmen.map(x=>x.key+(x.aus?':aus':x.eigen?':eigen':'')),['kopf','zonen:aus','foto-1:eigen','text-1','foto-2','text-2','empfehlung','kosten','beachten']);
+  // Mit drei Varianten gilt wieder die Vorlage (eigene Form der Seite); das Layout für zwei bleibt gespeichert.
+  const z3={...za,daten:{...za.daten,optionen:[...za.daten.optionen,{...za.daten.optionen[1],id:'C'}]}};
+  inh=M.mappeInhalt(v,[z3,zb,zc]);
+  assert.equal(M.layoutBasis(inh.seiten[2],inh),'vergleich-3');
+  assert.deepEqual(r(M.seiteHtml(inh.seiten[2],inh,{})).slice(0,3),['1,8,1,1','9,4,1,1','1,4,2,3']);
+  // Ein ungültiger Eintrag (über den Rand) gilt nicht: die Vorlage.
+  v.daten.seiten[3]={...v.daten.seiten[3],layout:{material:{foto:{c:8,r:1,w:6,h:8},kopf:{c:7,r:2,w:6,h:1}}}};
+  inh=M.mappeInhalt(v,[za,zb,zc]);
+  assert.deepEqual(r(M.seiteHtml(inh.seiten[3],inh,{})).slice(0,2),['1,6,1,8','7,6,2,1']);
+  // Material: der Platz für das nächste Foto nur beim Bearbeiten (beim Ziehen sichtbar), dort, wo Bild 2 stehen wird.
+  za.daten.optionen[0].muster_fotos=[{id:'f1',pfad:'p/1.jpg'}];
+  v.daten.seiten[3]={...v.daten.seiten[3],layout:{material:{'foto-2':{c:10,r:6,w:3,h:2}}}};
+  inh=M.mappeInhalt(v,[za,zb,zc]);
+  const mat=M.seiteHtml(inh.seiten[3],inh,{modus:'bearbeiten',bild:p=>'https://bilder.invalid/'+p});
+  assert.match(mat,/<div class="mm-r mm-r-foto mm-r-ablage" style="grid-column:10 \/ span 3;grid-row:6 \/ span 2"><div class="mm-ablage" data-bildplatz="e1\|A\|1"><span>Bild 2<\/span><\/div><\/div>/);
+  assert.doesNotMatch(M.seiteHtml(inh.seiten[3],inh,{bild:p=>'https://bilder.invalid/'+p}),/mm-ablage/);
+  assert.ok(!M.rahmenDerSeite(inh.seiten[3],inh).rahmen.some(x=>x.key==='foto-2'),'der Platz ist kein Rahmen der Liste');
+  // Übersicht, Deckblatt und freie Seite haben ihre Schlüssel.
+  assert.deepEqual(M.rahmenDerSeite(inh.seiten[1],inh).rahmen.map(x=>x.key),['kopf','tabelle']);
+  assert.deepEqual(M.rahmenDerSeite(inh.seiten[0],inh).rahmen.map(x=>x.titel),['Titelbild','Titel','Deckblatt-Text']);
+  assert.deepEqual(M.rahmenDerSeite(inh.seiten[4],inh).rahmen.map(x=>x.key+':'+x.titel),['bild:Bild','text:Titel und Text']);
+  assert.equal(M.layoutBasis(inh.seiten[4],inh),'frei');
 });
