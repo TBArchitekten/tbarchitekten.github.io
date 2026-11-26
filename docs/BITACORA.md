@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-26 · Projektwissen: schärfere Regel für Entscheidungen · Claude
+- Qué cambió y por qué: Erster echter Einsatz am Abend des 26.11.2026 (drei Beiträge, 8 Seiten, 17 Entscheidungen). Das Register füllte sich mit Arbeitsregeln des Teams (wie mit Herstellern gearbeitet und formuliert wird), und eine Empfehlung an die Bauherrschaft stand als «beschlossen», obwohl ihr eigener Text sagt, dass die Bauherrschaft sie erst noch bestätigt. Mit Garis OK: Regel geschärft (nur, was das Projekt bindet; «beschlossen» nur, wenn entschieden hat, wer es zu entscheiden hat; Empfehlungen bleiben vorgeschlagen; Arbeitsregeln auf die Seite) und die drei Einträge korrigiert.
+- Archivos: `supabase/migrations/…_office_projektwissen_entscheidungen.sql`, `supabase/functions/office-mcp/index.ts` (Anweisungen, `record_decision`), `app/office-wissen.js` (`office2`: «Ersetzt durch …», «Keine Projektentscheidung, sondern Arbeitsweise des Teams: steht auf der Seite …», Korrekturvermerk), `app/index.html`, `tests/office-projektwissen.test.mjs`, `tests/browser/office-wissen.chromium.mjs`, `docs/PROJEKTWISSEN.md`, `docs/OFFICE-CONNECTOR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: migración `…_office_projektwissen_entscheidungen.sql` (ändert nur den Abschnitt «Entscheidungen» der Regeln und bricht ab, wenn der Text nicht mehr der ursprüngliche ist) — aplicada en Supabase: pendiente (nach grünem CI). Datenkorrektur in einem Projekt (nicht im Repo, mit Garis OK, per SQL, nichts gelöscht): eine Empfehlung von «beschlossen» auf «vorgeschlagen» (`confirmed_at` leer, Vermerk `korrektur`), zwei Arbeitsregeln auf «ersetzt» mit Verweis auf die Seite, auf der sie schon standen (`auf_seite`, `grund`); je ein Eintrag im Protokoll.
+- Deploy de funciones: `office-mcp` über den Workflow nach dem Merge.
+- Cómo se probó: `node --test tests/*.test.cjs tests/*.test.mjs` grün; `deno check` grün; Chromium `tests/browser/office-wissen.chromium.mjs` grün (alte Entscheidungen mit «Ersetzt durch» und Verweis auf die Seite, Link führt zur Seite); Migration in PGlite nach der ersten (neuer Text, zweiter Lauf bricht ab, Abnahme weiter grün).
+- Quedó pendiente o sin probar: Grenzfall im selben Projekt gelassen, wie er ist (Entscheidung zur Lichtabgabe mit eingebetteten Formulierungsregeln); ein Werkzeug, mit dem die KI bei der Pflege falsch eingeordnete Entscheidungen selbst umstellt, erst wenn es wieder vorkommt.
+- Riesgos o decisiones que necesitan a Gari: ninguno.
+- PR: #185
+
+---
+
 ### 2026-11-26 · Projektwissen: «pásalo al Office» auch mitten im Chat und mehrmals · Claude
 - Qué cambió y por qué: Gari (26.11.2026, nach #183): Er schreibt in seinen Chats weiter; «am Ende eines Chats» passt nicht. Jetzt ausdrücklich: jederzeit und mehrmals im selben Chat; ab dem zweiten Mal teilt Claude nur, was seitdem neu ist oder sich geändert hat (als Fortsetzung, dieselbe Herkunft), nie den ganzen Chat noch einmal. Bisher stand das nirgends; ein zweites Teilen hätte einen fast gleichen Beitrag erzeugt.
 - Archivos: `supabase/functions/office-mcp/index.ts` (Anweisungen, Beschreibung von `share_knowledge`), `tests/office-projektwissen.test.mjs`, `docs/PROJEKTWISSEN.md`, `docs/OFFICE-CONNECTOR.md`, `docs/ESTADO.md`, `docs/BITACORA.md`.

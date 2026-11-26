@@ -38,11 +38,16 @@ const voll=()=>({
     {...seite('s4','Projektsteckbrief','Kein Wissen, sondern der Steckbrief.','2026-11-22T10:00:00Z'),metadata:{kind:'projektsteckbrief'}},
     {id:'d1',project_id:'p1',memory_type:'decision',status:'proposed',title:'Feinsteinzeug 60 × 60 in den Fluren',body:'Hell grau, Fuge 2 mm.',
       occurred_at:'2026-11-25',confirmed_at:null,created_at:'2026-11-25T10:05:00Z',user_id:'pb',
-      metadata:{vorgeschlagen_von:'pb',quelle:'Claude-Chat «Bodenbeläge»',seite:'Bodenbelag Flure'}},
+      metadata:{vorgeschlagen_von:'pb',quelle:'Claude-Chat «Bodenbeläge»',seite:'Bodenbelag Flure',
+        korrektur:'Empfehlung an die Bauherrschaft; bleibt vorgeschlagen, bis sie zustimmt.'}},
     {id:'d2',project_id:'p1',memory_type:'decision',status:'confirmed',title:'Keine Teppiche in den Fluren',body:null,
       occurred_at:'2026-11-20',confirmed_at:'2026-11-20T12:00:00Z',created_at:'2026-11-20T11:00:00Z',user_id:'pa',metadata:{entschieden_von:'pa'}},
     {id:'d3',project_id:'p1',memory_type:'decision',status:'superseded',title:'Naturstein in den Fluren',body:null,
-      occurred_at:'2026-11-10',confirmed_at:'2026-11-10T12:00:00Z',created_at:'2026-11-10T11:00:00Z',user_id:'pa',metadata:{}}
+      occurred_at:'2026-11-10',confirmed_at:'2026-11-10T12:00:00Z',created_at:'2026-11-10T11:00:00Z',user_id:'pa',metadata:{ersetzt_durch:'d2'}},
+    // Eine Arbeitsregel des Teams, die zuerst als Entscheidung festgehalten wurde und jetzt auf ihrer Seite steht.
+    {id:'d4',project_id:'p1',memory_type:'decision',status:'superseded',title:'Fliesenmuster nur mit Rückgabedatum anfragen',body:null,
+      occurred_at:'2026-11-09',confirmed_at:'2026-11-09T12:00:00Z',created_at:'2026-11-09T11:00:00Z',user_id:'pa',
+      metadata:{auf_seite:'Bäder',grund:'Arbeitsweise des Teams, keine Projektentscheidung; steht auf der Seite.'}}
   ],
   office_wissen_beitraege:[
     {id:'b2',project_id:'p1',titel:'Hinweis zu «Bodenbelag Flure»',inhalt:'Im OG ist Linoleum im Gespräch.',art:'korrektur',quelle:null,
@@ -218,8 +223,13 @@ test('Hinweis und Notiz gehen über die Funktion; die Projektleitung bestätigt 
     await page.locator('[data-wissen-ansicht="entscheidungen"]').click();
     await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Entscheidungen');
     const vorher=await page.locator('.wissen-blatt .wissen-teil > h4, .wissen-blatt .wissen-teil > summary').allInnerTexts();
-    assert.deepEqual(vorher.map(t=>t.replace(/\s+/g,' ').toUpperCase()),['ZUR BESTÄTIGUNG 1','BESCHLOSSEN 1','ERSETZT ODER VERWORFEN (1)']);
-    assert.match(await text(page,'.wissen-entscheidung[data-status="proposed"]'),/vorgeschlagen von Ana Muster · Herkunft: Claude-Chat «Bodenbeläge» · Seite: Bodenbelag Flure/);
+    assert.deepEqual(vorher.map(t=>t.replace(/\s+/g,' ').toUpperCase()),['ZUR BESTÄTIGUNG 1','BESCHLOSSEN 1','ERSETZT ODER VERWORFEN (2)']);
+    assert.match(await text(page,'.wissen-entscheidung[data-status="proposed"]'),/vorgeschlagen von Ana Muster · Herkunft: Claude-Chat «Bodenbeläge» · Seite: Bodenbelag Flure\s*Empfehlung an die Bauherrschaft; bleibt vorgeschlagen, bis sie zustimmt\./);
+    // Was aus den alten wurde: ersetzt durch eine neuere, oder als Arbeitsweise auf die Seite gestellt (mit Link).
+    await page.locator('.wissen-alt summary').click();
+    const alt=await page.locator('.wissen-alt .wissen-entscheidung').allInnerTexts();
+    assert.match(alt[0],/Naturstein in den Fluren[\s\S]*Ersetzt durch «Keine Teppiche in den Fluren»/);
+    assert.match(alt[1],/Fliesenmuster nur mit Rückgabedatum anfragen[\s\S]*Keine Projektentscheidung, sondern Arbeitsweise des Teams: steht auf der Seite Bäder\./);
     await page.locator('[data-wissen-beschliessen="d1"]').click();
     await page.waitForFunction(()=>document.getElementById('workStatus').textContent==='Entscheidung bestätigt.');
     await page.waitForFunction(()=>!document.querySelector('[data-wissen-beschliessen]'));
@@ -227,6 +237,9 @@ test('Hinweis und Notiz gehen über die Funktion; die Projektleitung bestätigt 
     assert.deepEqual(calls.at(-1),{name:'office_wissen_entscheidung_pruefen',args:{p_id:'d1',p_beschliessen:true}});
     assert.match(await text(page,'.wissen-blatt .wissen-teil > h4'),/BESCHLOSSEN\s*2/i);
     assert.equal(await page.locator('[data-wissen-ansicht="entscheidungen"] .wissen-zahl').count(),0);
+    await page.locator('.wissen-alt summary').click();
+    await page.locator('.wissen-alt [data-wissen-seite="Bäder"]').click();
+    await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Bäder');
     assert.deepEqual(await page.evaluate(()=>window.__writes),[],'kein direktes Schreiben');
     assert.deepEqual(errors,[]);
   }finally{await page.close()}

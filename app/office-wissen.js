@@ -154,6 +154,11 @@ function entscheidungen(){
       x.metadata?.quelle?'Herkunft: '+x.metadata.quelle:'',
       x.metadata?.seite?'Seite: '+x.metadata.seite:''].filter(Boolean).map(esc).join(' · ')+'</p>'+
     (x.metadata?.ersetzt?'<p class="wissen-meta">Ersetzt: «'+esc(e.find(y=>y.id===x.metadata.ersetzt)?.title||'eine frühere Entscheidung')+'»</p>':'')+
+    // Was aus einer Entscheidung wurde: durch eine neuere ersetzt, oder als Arbeitsweise des Teams auf eine Seite gestellt.
+    (x.status==='superseded'&&x.metadata?.ersetzt_durch?'<p class="wissen-meta">Ersetzt durch «'+esc(e.find(y=>y.id===x.metadata.ersetzt_durch)?.title||'eine neuere Entscheidung')+'»</p>':'')+
+    (x.metadata?.auf_seite?'<p class="wissen-meta">Keine Projektentscheidung, sondern Arbeitsweise des Teams: steht auf der Seite '+
+      '<button type="button" class="wissen-verweis" data-wissen-seite="'+esc(x.metadata.auf_seite)+'">'+esc(x.metadata.auf_seite)+'</button>.</p>':'')+
+    (x.metadata?.korrektur?'<p class="wissen-meta">'+esc(x.metadata.korrektur)+'</p>':'')+
     (knoepfe||'')+'</article>';
   const offen=e.filter(x=>x.status==='proposed'),fest=e.filter(x=>x.status==='confirmed'),alt=e.filter(x=>['superseded','rejected'].includes(x.status));
   const pruefen=x=>daten.leitung?'<div class="wissen-knoepfe"><button type="button" class="wissen-primaer" data-wissen-beschliessen="'+esc(x.id)+'">Bestätigen</button>'+

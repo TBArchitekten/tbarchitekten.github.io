@@ -64,6 +64,35 @@ test('Migration: Funktionen als security definer mit Teamprüfung; bestätigen n
   assert.doesNotMatch(code,/(policy|grant|revoke)[^;]*minds_work_memory/i);
 });
 
+test('Migration: schärfere Regel für Entscheidungen, nur der Abschnitt, nur wenn der Text noch der ursprüngliche ist',()=>{
+  const namen=readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(f=>/^\d{14}_office_projektwissen_entscheidungen\.sql$/.test(f));
+  assert.equal(namen.length,1);
+  const sql=read('supabase/migrations/'+namen[0]);
+  const erste=read('supabase/migrations/'+migrationName[0]);
+  const regeln=t=>t.match(/\$regeln\$([\s\S]*?)\$regeln\$/)[1];
+  const alt=regeln(erste),neu=regeln(sql);
+  // Nur der Abschnitt «Entscheidungen» ändert sich; alles davor und danach bleibt gleich.
+  const teile=t=>[t.slice(0,t.indexOf('Entscheidungen\n')),t.slice(t.indexOf('\n\nWas nicht hineingehört'))];
+  assert.deepEqual(teile(neu),teile(alt));
+  assert.match(neu,/- Als Entscheidung gilt nur, was das Projekt bindet: was geplant oder gebaut wird, Umfang, Kosten, Termine, Vorgaben der Bauherrschaft\./);
+  assert.match(neu,/- Arbeitsregeln des Teams sind keine Entscheidungen, zum Beispiel wie wir mit Herstellern arbeiten oder wie wir E-Mails und Unterlagen formulieren\. Sie stehen auf der passenden Seite\./);
+  assert.match(neu,/Eine Empfehlung an die Bauherrschaft bleibt «vorgeschlagen», bis sie zustimmt;/);
+  // Schutz: nur der Text aus der ersten Migration wird ersetzt, sonst Abbruch.
+  assert.match(sql,/where id = 1 and md5\(text\) = 'efd6bd5454e0bb95408a256803ba2d51';\n  if not found then\n    raise exception/);
+  const code=sql.replace(/\$regeln\$[\s\S]*?\$regeln\$/,'').replace(/--[^\n]*/g,'');
+  assert.deepEqual([...code.matchAll(/\b(update|insert|delete|drop|truncate|alter|grant|revoke|create)\b/gi)].map(m=>m[1].toLowerCase()),['update']);
+  assert.match(code,/update public\.office_wissen_regeln set text = /);
+  // Der Connector sagt dasselbe.
+  const ts=read('supabase/functions/office-mcp/index.ts');
+  assert.match(ts,/\(4\) record_decision only for what binds the project \(what is planned or built, scope, costs, dates, the client's specifications\), never for the team's working rules/);
+  assert.match(ts,/a recommendation to the client stays proposed until the client agrees;/);
+  assert.match(ts,/Only what binds the project \(design, scope, costs, dates, the client's specifications\); team working rules go on the page instead\./);
+  // Die Oberfläche zeigt, was aus einer alten Entscheidung wurde.
+  const js=read('app/office-wissen.js');
+  assert.match(js,/Keine Projektentscheidung, sondern Arbeitsweise des Teams: steht auf der Seite /);
+  assert.match(js,/Ersetzt durch «/);
+});
+
 test('Abnahme in der isolierten Datenbank: erwartetes Ergebnis und Schritt in CI',()=>{
   const acc=read('tests/sql/office-projektwissen-acceptance.sql');
   for(const teil of ['B_neu=true','veraltet=40001','direkt=verweigert','A_direkt=0','C_beitraege=0','C_seiten=0','C_teilen=42501',
@@ -280,8 +309,8 @@ test('Oberfläche: Reiter «Wissen» neben Panorama, geladen vor work.js, liest 
   assert.match(work,/\['overview','planner','knowledge'\]\.includes\(b\.dataset\.workView\)/);
   assert.match(work,/:view==='knowledge'\?\(OFFICE\?renderWissen\(\):renderKnowledge\(\)\)/);
   assert.match(work,/isCurrent:\(\)=>current===workRenderVersion&&view==='knowledge'&&project\?\.id===id/);
-  assert.ok(index.indexOf('<script src="./office-wissen.js?v=office1"></script>')>0);
-  assert.ok(index.indexOf('./office-wissen.js?v=office1')<index.indexOf('./work.js?v=office60'),'vor work.js');
+  assert.ok(index.indexOf('<script src="./office-wissen.js?v=office2"></script>')>0);
+  assert.ok(index.indexOf('./office-wissen.js?v=office2')<index.indexOf('./work.js?v=office60'),'vor work.js');
   assert.match(index,/<link rel="stylesheet" href="\.\/office-wissen\.css\?v=office1">/);
   // Keine direkten Schreibzugriffe; nur die zwei Funktionen für das Team.
   assert.doesNotMatch(js,/\.(insert|update|upsert|delete)\(/);
