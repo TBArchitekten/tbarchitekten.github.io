@@ -45,7 +45,7 @@ Auf Wunsch («Wissen pflegen») liest Claude alle Seiten, führt Doppeltes zusam
 | Protokoll | `office_wissen_protokoll` | von selbst | Projektteam |
 | Regeln | `office_wissen_regeln` (eine Zeile) | Admins | alle Mitglieder |
 
-Je Projekt gilt eine Seite je Titel (Groß- und Kleinschreibung egal). Eine zusammengeführte Seite wird «ersetzt» und leitet auf die Seite weiter, in der sie aufging; wer später an sie schreibt, landet dort.
+Je Projekt gilt eine Seite je Titel (Groß- und Kleinschreibung egal). Eine zusammengeführte Seite wird «ersetzt» und leitet auf die Seite weiter, in der sie aufging; wer später an sie schreibt, landet dort. Eine ersetzte Entscheidung zeigt, wodurch sie ersetzt wurde; eine Arbeitsregel, die zuerst als Entscheidung festgehalten war, steht als «ersetzt» mit Verweis auf ihre Seite (`metadata.auf_seite`).
 
 ## Regeln für die KI (Kurzfassung)
 
@@ -55,7 +55,8 @@ Der volle Text steht in `office_wissen_regeln` und geht bei jedem Teilen an Clau
 - Aufbau: zuerst in zwei bis vier Sätzen, wo die Sache steht; dann die Einzelheiten; am Ende die offenen Fragen.
 - Nichts erfinden; Unsicheres kennzeichnen; Zahlen mit Einheit und Stand; Herkunft in Klammern.
 - Neues wird eingearbeitet, nicht angehängt. Ungeklärte Widersprüche werden mit beiden Herkünften benannt.
-- Entscheidungen «beschlossen» nur, wenn ausdrücklich entschieden und befugt; sonst «vorgeschlagen».
+- Als Entscheidung gilt nur, was das Projekt bindet (was geplant oder gebaut wird, Umfang, Kosten, Termine, Vorgaben der Bauherrschaft). Arbeitsregeln des Teams (wie wir mit Herstellern arbeiten, wie wir E-Mails und Unterlagen formulieren) stehen auf den Seiten.
+- «beschlossen» nur, wenn ausdrücklich entschieden hat, wer es zu entscheiden hat: die Bauherrschaft, was ihr zusteht; die Projektleitung, was die eigene Planung betrifft. Eine Empfehlung an die Bauherrschaft bleibt «vorgeschlagen», bis sie zustimmt (seit dem 26.11.2026 nach dem ersten Einsatz, Migration `20261126215655_office_projektwissen_entscheidungen.sql`).
 - Was nicht hineingehört, regelt der Leitfaden «Was darf ins TBA Office?» (keine Gehälter, Personal-, Ausweis-, Bank- oder Gesundheitsdaten, Passwörter, Normtexte; was die Bauherrschaft nur auf Papier will).
 
 ## Sicherheit

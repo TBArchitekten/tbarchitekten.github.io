@@ -27,7 +27,7 @@ Permite que Claude (claude.ai en web, escritorio y móvil) trabaje dentro de TBA
 | `open_topic` | lectura | Un tema de la Projektakte (solo con pertenencia al equipo) |
 | `share_knowledge` | escritura | Comparte con el proyecto lo trabajado en el chat, como aporte sin cambios y con su origen |
 | `read_page`, `write_page` | lectura / escritura | Lee una página del Projektwissen; la escribe como estado actual (la versión anterior queda en el historial; con `basis` no pisa lo que otro escribió mientras tanto) |
-| `record_decision` | escritura | Decisión propuesta; «beschlossen» solo si la persona lo decidió y dirige el proyecto |
+| `record_decision` | escritura | Solo lo que vincula al proyecto (diseño, alcance, costes, fechas, lo que fija el Bauherr); las reglas de trabajo del equipo van a la página. «beschlossen» solo si lo decidió quien tiene que decidirlo (una recomendación al Bauherr queda propuesta hasta que la acepta) y quien lo anota dirige el proyecto |
 | `search_knowledge`, `read_contribution` | lectura | Busca en páginas, decisiones y aportes; lee un aporte completo, paginado |
 | `search_akte`, `turn_diagnostics` | lectura | Fuentes de la Akte con página; diagnóstico propio sin contenido |
 
