@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün (532); die Browserprüfung läuft in CI.
 - Quedó pendiente o sin probar: dieselbe Kalenderänderung in Window (eigener PR im Window-Repo).
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (dieser)
+- PR: #190
 
 ---
 
