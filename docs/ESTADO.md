@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Navigation:** Die Startseite (`index.html`) dient nur noch Anmeldung, Passwort und Administration; «Work» und «Tools» führen in die App. Unter Tools heißt die Verwaltung der Projekte «Projekte verwalten»; die Werkzeuge stehen nebeneinander.
+
 **Stand 27.11.2026 · Claude · Aufräumen:** Die KI-Werkzeuge speichern keine Anfrage mit Person mehr (Verbrauch nur in `office_ki_verbrauch`, ohne Person); der Verlauf der Zeitpläne (`cron.job_run_details`) wird jede Nacht auf 7 Tage gekürzt. Mitteilungen aufs iPhone: am 27.11. von Gari bestätigt, der Text erscheint entschlüsselt.
 
 **Stand 27.11.2026 · Claude · Rückmeldungen:** Mustermappe: Eigenschaften zu Beginn aus (je Person einschaltbar). Terminplan: die Tabelle lässt sich bis 300 px schmal ziehen, Spalten fallen dabei weg; Doppelklick auf den Trenner zeigt nur PSP und Vorgang. Panorama: an einer vorgeschlagenen Entscheidung «Stimmt etwas nicht?» (Hinweis ans Wissen) und «Verwerfen …» mit Grund.

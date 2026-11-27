@@ -88,7 +88,7 @@ test('Desktop: Link «Was darf ins TBA Office?», nur wenn freigeschaltet; Versi
   assert.match(work,/window\.TBA_OFFICE_LEITFADEN\?\.verfuegbar\?\.\(\)\?'<p class="work-desktop-leitfaden"><button type="button" data-work-leitfaden>Was darf ins TBA Office\?<\/button><\/p>':''/);
   assert.match(work,/\$\('\[data-work-leitfaden\]'\)\?\.addEventListener\('click',\(\)=>window\.TBA_OFFICE_LEITFADEN\?\.oeffnen\(\)\);/);
   assert.match(appIndex,/work\.js\?v=office66/);
-  assert.match(appIndex,/office\.css\?v=office48/);
+  assert.match(appIndex,/office\.css\?v=office49/);
 });
 
 test('Gestaltung: nur Tokens, Grün, Gelb und Rot mit Wort, am Telefon über die ganze Fläche',()=>{
@@ -104,7 +104,7 @@ test('Gestaltung: nur Tokens, Grün, Gelb und Rot mit Wort, am Telefon über die
 test('Mitglieder: freischalten, ausschalten und wer wann bestätigt hat',()=>{
   assert.match(root,/<section id="leitfadenSection" class="section" hidden>/);
   assert.match(root,/<button type="button" id="leitfadenToggle"><\/button>/);
-  assert.match(root,/\.\/app\.js\?v=8/);assert.match(root,/\.\/style\.css\?v=office28/);
+  assert.match(root,/\.\/app\.js\?v=9/);assert.match(root,/\.\/style\.css\?v=office28/);
   assert.match(rootJs,/from\('office_leitfaeden'\)\.update\(\{aktiv:!l\.aktiv\}\)\.eq\('leitfaden','desktop'\)\.select\('aktiv'\)/,'nur «aktiv»');
   assert.match(rootJs,/'Leitfaden gelesen am '\+esc\(tagDe\(leitfaden\.gelesen\.get\(m\.user_id\)\)\)/);
   assert.match(rootJs,/'Leitfaden noch nicht bestätigt'/);

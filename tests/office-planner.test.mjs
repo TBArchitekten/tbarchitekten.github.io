@@ -80,7 +80,11 @@ test('The first Kalender and Planner are retired: the start page links into the 
   assert.doesNotMatch(index,/planner\.js|id="kalenderView"|data-project-tab=|id="taskDialog"|id="bucketDialog"/);
   for(const [section,label] of [['feed','Heute'],['calendar','Kalender']])
     assert.match(index,new RegExp(`<a class="lens-nav-item" href="\\./app/#section=${section}" aria-label="${label}">`));
-  assert.match(index,/data-view="work" aria-label="Work"/);
+  // Work und Tools führen in die App (27.11.2026); die alte Projektseite hier gibt es nicht mehr als Ansicht.
+  assert.match(index,/<a class="lens-nav-item" href="\.\/app\/#section=work" aria-label="Work">/);
+  assert.match(index,/<a class="lens-nav-item" href="\.\/app\/#section=tools" aria-label="Tools">/);
+  assert.doesNotMatch(index,/data-view="work"|data-view="tools"/);
+  assert.match(app,/if\(\['work','project','plans','tools'\]\.includes\(name\)\)\{zurApp\(name,id\);return\}/);
   assert.match(index,/href=".\/app\/#section=assistant" aria-label="Romy"/);
   assert.match(app,/if\(r\.view==='kalender'\)\{location\.replace\('\.\/app\/#section=calendar'\);return\}/);
   assert.match(app,/\$\('#projectWorkLink'\)\.href='\.\/app\/#section=work&project='\+encodeURIComponent\(p\.id\)/);

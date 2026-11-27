@@ -20,8 +20,10 @@
 
 /* Tools lives in Window's single shell; no navigation jump to another menu. */
 .office-app .office-tools-screen{background:#fafafa;min-height:0}
-.office-app .office-tools-scroll{height:100%;overflow:auto;padding:40px clamp(20px,5vw,70px)}
-.office-app .office-tools-head{margin:0 0 28px;position:relative}
+/* Werkzeuge nebeneinander, so viele Spalten wie Platz ist (Gari, 27.11.2026: nicht alle untereinander). */
+.office-app .office-tools-scroll{height:100%;overflow:auto;padding:40px clamp(20px,5vw,70px);display:grid;
+ grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:16px;align-content:start}
+.office-app .office-tools-head{margin:0 0 12px;position:relative;grid-column:1/-1}
 /* The "•••" menu in Tools too (the Window app hides the side navigation). */
 .office-app .office-tools-head .minds-menu-slot{position:absolute;right:0;top:-10px}
 .office-app .office-tools-head>p:first-of-type{font-size:12px;letter-spacing:.14em;color:#90939b;font-weight:700;margin:0 0 12px}
@@ -29,7 +31,7 @@
 .office-app .office-tools-head>p:last-child{font-size:16px;color:#686e77;line-height:1.55;max-width:600px;margin:0}
 .office-app .office-tools-card{
  width:100%;font:inherit;text-align:left;cursor:pointer;
- display:flex;align-items:center;gap:17px;padding:22px;max-width:620px;
+ display:flex;align-items:center;gap:17px;padding:22px;
  text-decoration:none;color:#191919;background:#fff;border:1px solid #e4e6e9;
  border-radius:18px;box-shadow:0 4px 12px rgba(0,0,0,.04)
 }
@@ -76,7 +78,7 @@
 .office-app .office-project-archive .office-project-card{background:#fcfcfc}
 @media(max-width:680px){.office-app .office-projects-head{align-items:flex-start;flex-direction:column}.office-app .office-projects-new{width:100%}}
 
-.office-app .office-tools-card + .office-tools-card{margin-top:16px}
+.office-app .office-tools-card + .office-tools-card{margin-top:0}
 .office-app .office-tools-projects .office-tools-symbol{background:#eef1f2;color:#596674}
 
 /* Native Office Work: same Window Work shell, Office-only database contracts. */

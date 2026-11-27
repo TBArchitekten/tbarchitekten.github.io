@@ -142,9 +142,9 @@ document.body.innerHTML = `
           <span><strong>Projektstart</strong><small>Die Bürovorlagen LPH 3 als Dokumente des Projekts: Klärungsliste, Entscheidungsliste und Entscheidungsvorlagen im Office bearbeiten und als Excel, Word oder PDF ausgeben. Dazu das Muster mit fünf Bürovorlagen für die LPH 3.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
-        <button type="button" class="office-tools-card office-tools-projects" id="officeToolsManage" aria-label="Projekte öffnen">
+        <button type="button" class="office-tools-card office-tools-projects" id="officeToolsManage" aria-label="Projekte verwalten">
           <span class="office-tools-symbol" aria-hidden="true">${NAV_ICONS.work}</span>
-          <span><strong>Projekte</strong><small>Projekte anlegen, Mitglieder gemeinsam verwalten und Terminpläne verknüpfen.</small></span>
+          <span><strong>Projekte verwalten</strong><small>Projekte anlegen, Mitglieder gemeinsam verwalten und Terminpläne verknüpfen.</small></span>
           <span class="office-tools-arrow" aria-hidden="true">›</span>
         </button>
       </div>
@@ -164,7 +164,7 @@ document.body.innerHTML = `
     <section id="projectsScreen" class="screen office-projects-screen" data-screen="projects" aria-label="Projekte">
       <div class="office-projects-scroll">
         <button type="button" id="officeProjectsBack" class="office-projects-back">‹ Werkzeuge</button>
-        <div class="office-projects-head"><div><p>OFFICE</p><h1>Projekte</h1><p>Projekte und zugehörige Terminpläne an einem Ort.</p></div>
+        <div class="office-projects-head"><div><p>OFFICE · VERWALTUNG</p><h1>Projekte verwalten</h1><p>Projekte anlegen, Mitglieder, Nummer und Name ändern, archivieren. Gearbeitet wird in Work.</p></div>
           <button type="button" id="officeProjectsNew" class="office-projects-new" hidden>+ Neues Projekt</button>
         </div>
         <div id="officeProjectsStatus" class="office-projects-status" role="status" aria-live="polite"></div>

@@ -17,6 +17,28 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Keine alte Projektseite mehr; Werkzeuge nebeneinander · Claude
+- Qué cambió y por qué: Gari: «algo se está colando, una página de Work vieja». Die Startseite des ersten Office (`index.html`, heute nur noch Anmeldung, Passwort und die Seiten der Administration: Mitglieder, KI-Nutzung, Systemstatus) hatte in ihrer Leiste noch «Work · Projekte verwalten» und «Tools» als eigene Ansichten; wer von KI-Nutzung oder Systemstatus aus auf «Work» klickte, sah die alte Projektseite. Jetzt führen «Work» und «Tools» in die App (`./app/#section=work`, `#section=tools`), alte Adressen (`#work`, `#project`, `#plans`, `#tools`) ebenso, und `switchView` leitet diese Ansichten immer in die App (`zurApp`). In der App heißt die Seite unter Tools jetzt «Projekte verwalten» («Projekte anlegen, Mitglieder, Nummer und Name ändern, archivieren. Gearbeitet wird in Work.»), damit sie nicht wie Work aussieht. Werkzeuge: die Karten stehen nebeneinander (so viele Spalten wie Platz ist, je mindestens 400 px), statt alle untereinander.
+- Archivos: `index.html` (`app.js?v=9`), `app.js`, `app/shell.js` (`?v=office62`), `app/office.css` (`?v=office49`), `app/index.html`; Tests: `tests/office-planner.test.mjs`, `tests/office-core.test.mjs`, `tests/office-35-integration.test.mjs`, Versionsangaben in neun Tests.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün (561); Werkzeuge bei 1500 px als Bildschirmfoto angesehen (drei Spalten).
+- Quedó pendiente o sin probar: keine.
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: (wird ergänzt)
+
+### 2026-11-27 · Terminplan Bernried: Bemusterung am 07.12. · Claude
+- Qué cambió y por qué: Auf Garis Wunsch (Termin mit den Bauherren, Jour fixe Mo 07.12.2026, 14:00) und nach seinen Antworten: «Bemusterungsunterlagen vorbereiten · Qualitäten, Materialien und Themenpläne» endet am Fr 04.12. statt 27.11.; der Meilenstein «Bemusterungsunterlagen an Bauherren übergeben» liegt auf dem 07.12. (Verknüpfung EA +1 AT statt +0); «Qualitätsfestlegungen und kostenrelevante Bemusterung abstimmen» läuft vom 08.12. bis 18.12. (wie bisher 9 AT, EA +1). M06 (28.01.2027) und alles danach bleiben, dort ist Puffer. Planner wie «Termine aus Terminplan», nur für die Aufgaben dieser drei Vorgänge, die noch auf dem alten Stand waren: sechs offene Aufgaben (Themenpakete und Konzept) fällig 04.12. statt 27.11., «Bemusterungsunterlagen zusammenstellen, prüfen und dem Auftraggeber übergeben» 07.12., «Bemusterung durchführen und Qualitätsentscheidungen dokumentieren (M06)» beginnt am 08.12.; erledigte bleiben. Der Stand des Plans (15.11.) bleibt, wie er war.
+- Archivos: ninguno (Daten in Supabase).
+- Base de datos: Datenänderung in einer Transaktion: vorher eine Sicherung in `office_terminplan_versions` («Vor Verschiebung … · Revision 16»), dann `office_terminplan_instances` (Revision 16 → 17, mit Prüfung der Revision) und acht Zeilen in `isabella_tasks` (Datum, `updated_at`).
+- Deploy de funciones: ninguno.
+- Cómo se probó: Abfrage vorher (welche Aufgaben sich ändern) und danach (Vorgänge, Sicherung, Aufgaben).
+- Quedó pendiente o sin probar: keine.
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: (wird ergänzt)
+
+---
+
 ### 2026-11-27 · Aufräumen mit Garis OK: KI-Anfragen ohne Person, Verlauf der Zeitpläne 7 Tage · Claude
 - Qué cambió y por qué: Gari hat beide Vorschläge bestätigt (27.11.2026). **KI-Anfragen ohne Person:** die vier Werkzeuge mit KI speicherten jede Anfrage mit der Person (`office_*_ai_requests`), für ein Tageslimit, das es seit dem 22.11. nicht mehr gibt; den Verbrauch zählt seit heute `office_ki_verbrauch` ohne Person. Die vier Funktionen `office_*_consume_request` prüfen weiter Anmeldung, Mitgliedschaft und Sichtbarkeit, speichern aber nichts mehr; die 8 gespeicherten Anfragen (alle Terminplan) sind gelöscht, die Tabellen bleiben leer stehen. **Verlauf der Zeitpläne:** `cron.job_run_details` hatte 114 693 Läufe seit dem 05.11. (115 MB, rund 5 MB am Tag, vor allem vier Läufe von Romy jede Minute). `private.office_cron_verlauf_aufraeumen()` löscht, was vor mehr als 7 Tagen begann; Cron `office_cron_verlauf_aufraeumen_v1` täglich 03:23 UTC, einmal sofort (danach 43 497 Läufe ab 20.11.). Der Platz wird wiederverwendet, die Datenbank wächst dadurch nicht weiter; der Systemstatus liest ohnehin nur 7 Tage.
 - Archivos: `supabase/migrations/20261127145319_office_ki_anfragen_ohne_person.sql`, `supabase/migrations/20261127145327_office_cron_verlauf_aufbewahrung.sql`, `tests/office-aufraeumen.test.mjs` (neu), Erwartungen in `tests/sql/office-kosten-ai-rls-acceptance.sql`, `tests/sql/office-produktbibliothek-acceptance.sql`, `tests/sql/office-terminplan-ai-ohne-limit-acceptance.sql` und `tests/office-kosten-assistent.test.mjs` (gespeichert: 0).
