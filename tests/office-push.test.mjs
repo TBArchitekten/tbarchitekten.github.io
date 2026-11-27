@@ -11,7 +11,7 @@ import * as core from '../supabase/functions/office-push/core.mjs';
 const crypto = globalThis.crypto || webcrypto;
 const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const fn = read('supabase/functions/office-push/index.ts');
-const sql = read('supabase/migrations/20261127080000_office_push.sql');
+const sql = read('supabase/migrations/20261127064446_office_push.sql');
 const ohneKommentar = s => s.replace(/--.*$/gm, '');
 const b64 = bytes => Buffer.from(bytes).toString('base64');
 const fromB64url = s => Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
