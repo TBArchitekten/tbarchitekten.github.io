@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün (580). Chromium mit dem Fake-Supabase: Romy nur Gespräch; KI-Nutzung, Systemstatus, Mitglieder als Seiten der App; `/#systemstatus` geht direkt auf `/app/#section=systemstatus`, `/` direkt auf `/app/`, ohne dass die Anmeldung erscheint; «Passwort ändern» als Dialog.
 - Quedó pendiente o sin probar: mit echter Anmeldung im Browser (Gari). Der «Arbeitsplan» des Schreibtischs (Woche mit der Last je Person) kam aus Window und war nur dort zu sehen; er fehlt jetzt im Office. Wenn er gebraucht wird, gehört er in den Kalender.
 - Riesgos o decisiones que necesitan a Gari: ob der Arbeitsplan im Kalender gebraucht wird.
-- PR: pendiente
+- PR: #214
 
 ### 2026-11-27 · Projektwissen: Stand der Quellen · Claude
 - Qué cambió y por qué: Gari (27.11.), zu Dokumenten aus dem Desktop im Wissen und dem Problem, dass ein altes Protokoll neueres Wissen überschreibt: «hazlo como propones … 1. manda la fecha del contenido; 2. si la fecha no se sabe, se pregunta. Si vemos que se pregunta mucho y no es eficiente, lo hablamos de nuevo.» Die Regeln des Projektwissens (`office_wissen_regeln`, gehen bei jedem Teilen an Claude und an die nächtliche Pflege) haben jetzt den Abschnitt «Stand der Quellen»: das Datum des Inhalts zählt (Protokoll, E-Mail, Angebot, Planindex mit Datum), nicht das des Hochladens; eine ältere Quelle überschreibt nie eine neuere (sie erscheint höchstens als früherer Stand); ein Widerspruch nur bei gleichem Alter oder unklarer Reihenfolge; ist das Datum nicht zu erkennen, steht die Aussage mit «Stand unklar» bei den offenen Fragen, und es wird nachgefragt.
