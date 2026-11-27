@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('KI-Anfragen: Zugang geprüft, nichts mit Person gespeichert, Bestand gelöscht',()=>{
-  const sql=read('supabase/migrations/20261127143000_office_ki_anfragen_ohne_person.sql');
+  const sql=read('supabase/migrations/20261127145319_office_ki_anfragen_ohne_person.sql');
   const fns=[['office_ai_consume_request(p_plan_id uuid)','office_terminplan_instances'],['office_kosten_ai_consume_request(p_instance_id uuid)','office_kosten_instances'],
     ['office_produkt_ai_consume_request()',null],['office_projektdokument_ai_consume_request()',null]];
   for(const [fn,sicht] of fns){
@@ -31,7 +31,7 @@ test('KI-Anfragen: Zugang geprüft, nichts mit Person gespeichert, Bestand gelö
 });
 
 test('Verlauf der Zeitpläne: 7 Tage, jede Nacht, nur die Datenbank selbst',()=>{
-  const sql=read('supabase/migrations/20261127143100_office_cron_verlauf_aufbewahrung.sql');
+  const sql=read('supabase/migrations/20261127145327_office_cron_verlauf_aufbewahrung.sql');
   assert.match(sql,/create or replace function private\.office_cron_verlauf_aufraeumen\(\)\s*returns integer\s*language plpgsql\s*security definer\s*set search_path = ''/);
   assert.match(sql,/delete from cron\.job_run_details where start_time < now\(\) - interval '7 days';/);
   assert.match(sql,/revoke all on function private\.office_cron_verlauf_aufraeumen\(\) from public, anon, authenticated, service_role;/);
