@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; SQL-Abnahmen in der flüchtigen Datenbank der CI.
 - Quedó pendiente o sin probar: keine.
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (wird ergänzt)
+- PR: #206
 
 ---
 
