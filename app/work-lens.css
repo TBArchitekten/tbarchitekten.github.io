@@ -1,0 +1,67 @@
+/* TBA Office · B2 (27.11.2026): Projekt und Abschnitte in der Seitenleiste, eine Leiste je Werkzeug.
+   Nur am Desktop (desk-enabled, ab 950 px). Auf dem iPhone bleiben die Reiter oben. Nur Farben aus den Tokens. */
+#lensWork{display:none}
+@media (min-width:950px){
+  body.desk-enabled[data-section="work"] #lensWork:not([hidden]){display:flex;flex-direction:column;gap:2px;margin:2px 0 10px}
+  /* Projektzeile und Reiter oben übernimmt die Seitenleiste. */
+  body.desk-enabled[data-section="work"].lens-work-an .work-head,
+  body.desk-enabled[data-section="work"].lens-work-an .work-tabs{display:none!important}
+  body.desk-enabled[data-section="work"].lens-work-an .work-shell{padding-top:6px}
+
+  .lens-work-projekt{
+    display:flex;align-items:center;gap:8px;width:100%;min-height:38px;padding:5px 8px;margin:0;
+    border:1px solid var(--m-hairline);border-radius:var(--m-radius-control);background:var(--m-surface);
+    color:var(--m-ink);font:inherit;font-size:12.5px;font-weight:600;text-align:left;cursor:pointer}
+  .lens-work-projekt:hover:not(:disabled){border-color:var(--m-border)}
+  .lens-work-projekt:disabled{cursor:default}
+  .lens-work-projekt:focus-visible,.lens-work-abschnitt:focus-visible,.lens-work-plus:focus-visible,.lens-work-menue button:focus-visible{
+    outline:2px solid var(--m-focus);outline-offset:1px}
+  .lens-work-chip{
+    flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:7px;
+    background:var(--m-blue-soft);color:var(--m-blue);font-size:10.5px;font-weight:700;letter-spacing:.02em}
+  .lens-work-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lens-work-pfeil{flex:none;display:grid;color:var(--m-ink-faint)}
+  .lens-work-pfeil svg{width:14px;height:14px}
+  .lens-work-liste{display:flex;flex-direction:column;gap:1px;margin:6px 0 0 17px;padding-left:7px;border-left:1px solid var(--m-hairline)}
+  .lens-work-abschnitt,.lens-work-plus{
+    display:flex;align-items:center;gap:9px;width:100%;min-height:31px;padding:5px 8px;margin:0;border:0;border-radius:8px;
+    background:transparent;color:var(--m-ink-soft);font:inherit;font-size:12.5px;font-weight:500;text-align:left;cursor:pointer}
+  .lens-work-abschnitt:hover,.lens-work-plus:hover{background:var(--m-fill);color:var(--m-ink)}
+  .lens-work-abschnitt.active{background:var(--m-blue-soft);color:var(--m-blue);font-weight:600}
+  .lens-work-plus{color:var(--m-ink-faint)}
+  .lens-work-icon{flex:none;display:grid;place-items:center;width:18px;height:18px}
+  .lens-work-icon svg{width:16px;height:16px}
+  .lens-work-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Auf Symbole reduziert: Projektkürzel und Symbole, die Namen stehen im Tooltip. */
+  body.desk-enabled.minds-nav-collapsed .lens-work-projekt{justify-content:center;padding:4px;border-color:transparent;background:transparent}
+  body.desk-enabled.minds-nav-collapsed .lens-work-name,
+  body.desk-enabled.minds-nav-collapsed .lens-work-pfeil,
+  body.desk-enabled.minds-nav-collapsed .lens-work-label{display:none}
+  body.desk-enabled.minds-nav-collapsed .lens-work-liste{align-items:center;margin:4px 0 0;padding:6px 0 0;border-left:0;border-top:1px solid var(--m-hairline)}
+  body.desk-enabled.minds-nav-collapsed .lens-work-abschnitt,
+  body.desk-enabled.minds-nav-collapsed .lens-work-plus{justify-content:center;width:40px;min-height:34px;padding:6px}
+
+  /* Projektwahl neben der Seitenleiste. */
+  .lens-work-menue{
+    position:fixed;z-index:1000;min-width:220px;max-width:320px;max-height:60vh;overflow:auto;padding:6px;
+    border:1px solid var(--m-border);border-radius:var(--m-radius-card);background:var(--m-surface-raised)}
+  .lens-work-menue button{
+    display:flex;align-items:center;gap:9px;width:100%;padding:7px 8px;border:0;border-radius:8px;background:transparent;
+    color:var(--m-ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+  .lens-work-menue button:hover{background:var(--m-fill)}
+  .lens-work-menue button[aria-checked="true"]{background:var(--m-blue-soft);color:var(--m-blue);font-weight:600}
+  .lens-work-menue p{margin:8px;color:var(--m-ink-soft);font-size:13px}
+}
+
+/* Planner: Titel, Filter und Knöpfe in einer Leiste (auch auf dem iPhone, dort umbrechend). */
+body[data-section="work"] .work-planner-toolbar{justify-content:flex-start!important;align-items:center;column-gap:16px}
+body[data-section="work"] .work-planner-toolbar>.work-planner-filter{display:flex;align-items:center;gap:8px 12px;margin:0}
+body[data-section="work"] .work-planner-toolbar>.work-planner-actions{margin-left:auto}
+body[data-section="work"] .work-planner-toolbar .work-filter-seg button{
+  min-height:0;border:0;border-radius:8px;padding:6px 11px;background:transparent;box-shadow:none}
+body[data-section="work"] .work-planner-toolbar .work-filter-seg button[aria-pressed="true"]{background:var(--m-surface-raised);color:var(--m-ink)}
+body[data-section="work"] .work-planner-toolbar .work-filter-field span{font-size:12px;color:var(--m-ink-soft)}
+body[data-section="work"] .work-planner-toolbar .work-planner-filter .work-filter-result{font-size:12px;color:var(--m-blue)}
+body[data-section="work"] .work-planner-toolbar .work-filter-reset{min-height:0;border:0;padding:4px 2px;background:transparent;box-shadow:none;color:var(--m-blue)}
+body[data-section="work"] .work-planner-toolbar .work-filter-field select{max-width:160px}

@@ -40,6 +40,10 @@ jobs:
         env:
           CI: 'true'
         run: node --test tests/browser/office-planner-board.chromium.mjs tests/browser/office-planner-karten.chromium.mjs
+      - name: Exercise Work with project and sections in the sidebar (B2), icons when collapsed, one Planner bar, iPhone unchanged, with a synthetic Supabase
+        env:
+          CI: 'true'
+        run: node --test tests/browser/office-work-seitenleiste.chromium.mjs
       - name: Exercise the Terminplan as a Work tab (frame, borrowed app bridge, no back link, revision for Work) with a synthetic Supabase
         env:
           CI: 'true'

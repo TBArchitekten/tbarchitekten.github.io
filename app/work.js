@@ -955,7 +955,7 @@ function schliesseAbschnittMenu(){
  document.removeEventListener('pointerdown',menuAussen,true);document.removeEventListener('keydown',menuTaste,true);
  window.removeEventListener('resize',schliesseAbschnittMenu);
 }
-function menuAussen(e){if(!e.target.closest?.('#workAbschnitteMenu,[data-work-abschnitte]'))schliesseAbschnittMenu()}
+function menuAussen(e){if(!e.target.closest?.('#workAbschnitteMenu,[data-work-abschnitte],[data-lens-plus]'))schliesseAbschnittMenu()}
 function menuTaste(e){if(e.key==='Escape'){schliesseAbschnittMenu();$('[data-work-abschnitte]')?.focus()}}
 function oeffneAbschnittMenu(knopf){
  if($('#workAbschnitteMenu')){schliesseAbschnittMenu();return}
@@ -970,8 +970,14 @@ function oeffneAbschnittMenu(knopf){
  document.body.append(menu);
  const r=knopf.getBoundingClientRect(),breite=Math.min(340,window.innerWidth-16);
  menu.style.width=breite+'px';
- menu.style.left=Math.max(8,Math.min(r.right-breite,window.innerWidth-breite-8))+'px';
- menu.style.top=(r.bottom+6)+'px';
+ // Aus der Seitenleiste (B2) öffnet das Menü rechts neben dem Knopf, sonst unter dem «+» der Reiter.
+ if(knopf.closest('#desktopLenses')){
+  menu.style.left=Math.min(r.right+8,window.innerWidth-breite-8)+'px';
+  menu.style.top=Math.max(8,Math.min(r.top,window.innerHeight-menu.offsetHeight-8))+'px';
+ }else{
+  menu.style.left=Math.max(8,Math.min(r.right-breite,window.innerWidth-breite-8))+'px';
+  menu.style.top=(r.bottom+6)+'px';
+ }
  knopf.setAttribute('aria-expanded','true');
  menu.addEventListener('click',async e=>{
   const an=e.target.closest('[data-abschnitt-an]'),aus=e.target.closest('[data-abschnitt-aus]');
@@ -989,6 +995,8 @@ function oeffneAbschnittMenu(knopf){
  document.addEventListener('pointerdown',menuAussen,true);document.addEventListener('keydown',menuTaste,true);window.addEventListener('resize',schliesseAbschnittMenu);
  menu.querySelector('button')?.focus();
 }
+// Die Seitenleiste (work-lens.js) öffnet dasselbe Menü an ihrem eigenen «+».
+window.TBA_WORK_ABSCHNITTE={oeffnen:knopf=>oeffneAbschnittMenu(knopf)};
 function isToolView(v){return Object.prototype.hasOwnProperty.call(WORK_TOOLS,v)}
 function toolPick(projectId,kind){
  try{return JSON.parse(localStorage.getItem(WORK_TOOL_PICK_KEY)||'{}')[projectId]?.[kind]||null}catch{return null}
@@ -1345,8 +1353,8 @@ async function renderPlanner(preview=false){
   rememberBoard(body);
   // Buckets side by side by default (scroll sideways on the phone); the list is opt-in.
   const mobileList=localStorage.getItem(WORK_MOBILE_LAYOUT_KEY)==='list';
-  body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div><span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Listenansicht</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':(tasks.some(t=>window.TBAPlannerTerminplanSync?.linkOf(t))?'<button type="button" data-work-terminplan-sync title="Termine der verknüpften Aufgaben aus dem Projekt-Terminplan übernehmen">Termine aus Terminplan</button>':'')+'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
-    ${preview?'':plannerFilterBar(plannerFilter())}
+  // Eine Leiste (B2, 27.11.2026): Titel, Filter und Knöpfe in einer Zeile; wird es zu eng, bricht sie um.
+  body.innerHTML=`<div class="work-planner-toolbar"><div><strong>Board</strong><span>${preview?'Muster · nur Ansicht · ':''}${tasks.filter(t=>!t.completed_at).length} ${preview?'Vorlagen-Aufgaben':'offen'} · ${buckets.length} Buckets</span></div>${preview?'':plannerFilterBar(plannerFilter())}<span class="work-planner-actions"><button type="button" class="work-mobile-layout" data-work-layout-toggle aria-pressed="${mobileList}" aria-label="Listenansicht auf dem iPhone">Listenansicht</button>${preview?'<a href="#section=plans" class="work-muster-return">‹ Terminpläne</a>':(tasks.some(t=>window.TBAPlannerTerminplanSync?.linkOf(t))?'<button type="button" data-work-terminplan-sync title="Termine der verknüpften Aufgaben aus dem Projekt-Terminplan übernehmen">Termine aus Terminplan</button>':'')+'<button type="button" data-work-team>Team · '+team.length+'</button><button data-work-add-bucket>＋ Bucket</button><button type="button" data-work-show-bucket-archive title="Archivierte Buckets und erledigte Aufgaben ansehen">Archiv</button>'}</span></div>
     <div class="work-board ${mobileList?'mobile-stack':''}" data-work-board-project="${esc(String(preview?'muster':boardKey()||''))}">${columns.map(b=>{const all=tasks.filter(t=>b.virtual?!t.work_bucket_id:t.work_bucket_id===b.id),open=all.filter(t=>!t.completed_at),done=all.filter(t=>t.completed_at),info=!!(b.description||b.terminplan_ref);return `<section class="work-bucket" data-work-bucket-drop="${b.virtual?'':b.id}">
       ${b.terminplan_ref?`<div class="work-bucket-pretitle">Abgabe / Planungspaket${preview?' · '+esc(b.id):''}</div>`:''}
       <header class="work-bucket-header">${b.virtual
