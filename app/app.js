@@ -3082,7 +3082,7 @@ function initVoice(){
     }
   };
   const browserFallback=()=>{
-    if(!R){phase='error';$('#focusStatus').textContent='Sprache nicht verfügbar';setText('Du kannst weitertippen.');primary.textContent='Schließen';secondary.textContent='Tippen';return}
+    if(!R){phase='error';$('#focusStatus').textContent='Sprache nicht verfügbar';setText('Sie können die Nachricht auch tippen.');primary.textContent='Schließen';secondary.textContent='Tippen';return}
     try{
       phase='recording';fallbackRec=new R();fallbackRec.lang='de-DE';fallbackRec.interimResults=true;let finalText='';
       fallbackRec.onresult=e=>{let interim='';for(let k=e.resultIndex;k<e.results.length;k++){const x=e.results[k][0].transcript;if(e.results[k].isFinal)finalText+=x;else interim+=x}setText((finalText+' '+interim).trim())};

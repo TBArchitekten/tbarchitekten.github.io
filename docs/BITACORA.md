@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Diktat in «Sie» · Claude
+- Qué cambió y por qué: Gari (27.11.) fragte nach der Sprachfunktion von Romy («Höre zu …», «Live sprechen», «Antwort anhören», «Hier erscheint deine Transkription»). Das Diktatfenster stammt aus Window und sprach «du»: «Hier erscheint die Transkription.», «Sie können die Nachricht auch tippen.»; der Status heißt beim Öffnen überall «Höre zu …». Die Seite «Live sprechen» (`app/live/`) und ihre Funktion `isabella-live-session` gehören zum Motor aus Window (Manifest) und bleiben unverändert; was dort fehlt, steht im Plan «Voz en tiempo real» (Projekt-Dokument `claude/isabella-plan-continuidad-voz.md`, Punkte 6e–6h: mit Kontext starten, ohne Knopf fragen, Gesprochenes in den Chat).
+- Archivos: `app/shell.js` (`?v=office64`), `app/app.js` (`?v=office60`), `app/index.html`; Tests: `tests/office-heute.test.mjs`, Versionsangaben.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün.
+- Quedó pendiente o sin probar: Live im Office (Motor in Window).
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: #212
+
 ### 2026-11-27 · Terminplan lesbar: Namen, Kärtchen, «Heute ± 4 Wochen», Lesemodus · Claude
 - Qué cambió y por qué: Gari (27.11.) gab die nächsten Schritte für die Lesbarkeit frei. (1) Passt ein Name nicht in seinen Balken, steht er rechts daneben (am Ende des Plans links davor); passt er, wandert er beim waagrechten Blättern mit, bis der Balken endet. (2) Beim Zeigen mit der Maus ein Kärtchen: Name, Zeitraum, Arbeitstage, Art, Fortschritt, Vorgänger mit Beziehung und Abstand, kritischer Weg; der Tooltip des Browsers entfällt. (3) «Heute ± 4 Wochen»: die Tage so breit, dass acht Wochen um heute ins Fenster passen; die Tageszeile zeigt bei schmalen Tagen nur die Zahl, bei sehr schmalen nur montags. (4) «Lesemodus»: auswählen ja, ziehen, Doppelklick und Kontextmenü nein, die Tabelle schmal auf PSP und Vorgang; beim Verlassen wieder so breit wie vorher (je Browser gemerkt). Dabei gefunden und behoben: der linke Griff jedes Balkens heißt «handle left» und bekam die Regel der Tabelle (`.left`): weiß und 430 px (seit #205 300 px) breit. Beim Zeigen auf einen Balken deckte dieser weiße Block den Namen zu, seit dem ersten Terminplan im Office. Die Regel gilt jetzt nur für `section.left`.
 - Archivos: `terminplan.html`; Tests: `tests/terminplan-lesehilfen.test.mjs` (neu), `tests/terminplan-link-view.test.cjs` (Lesemodus nach der Prüfung der Rechte).

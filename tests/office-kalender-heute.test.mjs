@@ -29,5 +29,5 @@ test('Reiter «+»: gezeichnetes Kreuz, Kreis ausdrücklich mittig',()=>{
   assert.match(css,/\.work-tab-plus svg\{display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round\}/);
   // Neue Fassungen werden geladen.
   const index=read('app/index.html');
-  for(const v of ['./work-polish.css?v=8','./shell.js?v=office63','./app.js?v=office59','./dashboard.js?v=office42'])assert.ok(index.includes(v),v);
+  for(const v of ['./work-polish.css?v=8','./shell.js?v=office64','./app.js?v=office60','./dashboard.js?v=office42'])assert.ok(index.includes(v),v);
 });
