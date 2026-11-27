@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Stand 27.11.2026 · Claude · Mustermappe:** Beim Übersatz vergrößert «Rahmen vergrößern» den Rahmen um die fehlenden Felder (rückgängig wie jeder Schritt).
+**Stand 27.11.2026 · Claude · Mustermappe:** Beim Übersatz nennt der Hinweis je Rahmen, wie viele Zeilen zu viel sind; «Rahmen vergrößern» vergrößert den Rahmen um die fehlenden Felder, «Mit Romy kürzen» schlägt einen Text in der passenden Länge vor (Dialog, nur «Übernehmen» ändert; beides rückgängig wie jeder Schritt).
 
 **Stand 27.11.2026 · Claude · Abläufe:** Im Projektstart (und im Panorama verlinkt) führt «Besprechung nachbereiten» vom Protokoll zu Vorschlägen in beiden Listen, Aufgaben im Planner, Fristen gegen den Terminplan und einer Notiz im Projektwissen.
 

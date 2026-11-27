@@ -1493,23 +1493,34 @@ function mmNachZeichnen(){
   ebeneZeichnen();zuschnittZeigen();verlaufKnoepfe();
 }
 // Übersatz wie in InDesign: ein Rahmen, dessen Inhalt nicht hineinpasst, wird rot markiert und rechts genannt; im PDF
-// wird an der letzten ganzen Zeile abgeschnitten (alle Zeilen stehen auf der Grundlinie).
+// wird an der letzten ganzen Zeile abgeschnitten (alle Zeilen stehen auf der Grundlinie). Wie im Entwurf B2 je Rahmen,
+// wie viel zu viel ist, «Rahmen vergrößern» (Rahmen, die sich verschieben lassen) und «Mit Romy kürzen» (ein längerer
+// Text, solange Romy erreichbar ist).
+const ZAHLWORT=['','eine','zwei','drei','vier','fünf','sechs','sieben','acht','neun','zehn','elf','zwölf'];
 function uebersatzPruefen(){
   cancelAnimationFrame(mm.uebersatzRaf);
   mm.uebersatzRaf=requestAnimationFrame(()=>{
     const b=root.querySelector('.mm-buehne'),ziel=root.querySelector('[data-mm-uebersatz]');if(!b)return;
-    const namen=[],knoepfe=[];
+    const namen=[],eintraege=[];
     for(const r of b.querySelectorAll('.mm-r[data-rahmen]')){
       const ueber=r.scrollHeight>r.clientHeight+1;r.classList.toggle('mm-uebersatz',ueber);
       if(!ueber)continue;
       const tab=r.querySelector('.mm-kennwerte'),unten=r.getBoundingClientRect().bottom+.5;
       const weg=tab?[...tab.rows].filter(tr=>tr.getBoundingClientRect().bottom>unten).length:0;
       namen.push(r.dataset.rahmen+(weg?' ('+weg+(weg===1?' Kennwert':' Kennwerte')+' nicht auf der Seite)':''));
-      // Wie im Entwurf: «Rahmen vergrößern» je Rahmen, der nicht passt (nur Rahmen, die sich verschieben lassen).
-      if(r.dataset.mmr)knoepfe.push('<button type="button" class="btn" data-act="mm-groesser" data-k="'+esc(r.dataset.mmr)+'">«'+esc(r.dataset.rahmen)+'» vergrößern</button>');
+      const el=weg?null:kuerzText(r),m=kuerzMass(r,el);
+      const was=weg?(weg===1?'Ein Kennwert steht':weg+' Kennwerte stehen')+' nicht auf der Seite.'
+        :'Der Text passt nicht: etwa '+(m.zuViel===1?'eine Zeile':(ZAHLWORT[m.zuViel]||m.zuViel)+' Zeilen')+' zu viel.';
+      const knoepfe=[];
+      if(r.dataset.mmr)knoepfe.push('<button type="button" class="btn" data-act="mm-groesser" data-k="'+esc(r.dataset.mmr)+'">Rahmen vergrößern</button>');
+      if(romy.bereit&&el?.id&&m.zeichen>=20&&m.zeichen<m.len)knoepfe.push(mm.kuerzt===el.id
+        ?'<button type="button" class="btn btn-romy" disabled>Romy kürzt …</button>'
+        :'<button type="button" class="btn btn-romy" data-act="mm-kuerzen" data-ed="'+esc(el.id)+'">Mit Romy kürzen</button>');
+      eintraege.push('<div class="mm-ue" role="group" aria-label="'+esc(r.dataset.rahmen)+'"><span><b>'+esc(r.dataset.rahmen)+'</b> · '+esc(was)+'</span>'+
+        (knoepfe.length?'<div class="mm-knoepfe">'+knoepfe.join('')+'</div>':'')+'</div>');
     }
-    if(ziel)ziel.innerHTML=namen.length?'<div class="mm-intern mm-uebersatz-liste" role="status"><strong>Passt nicht ganz in den Rahmen</strong><span>'+esc(namen.join(' · '))+
-      '. Kürzen oder weniger zeigen; im PDF steht nur, was in den Rahmen passt.</span>'+(knoepfe.length?'<div class="mm-knoepfe">'+knoepfe.join('')+'</div>':'')+'</div>':'';
+    if(ziel)ziel.innerHTML=namen.length?'<div class="mm-intern mm-uebersatz-liste" role="status"><strong>Passt nicht ganz in den Rahmen</strong>'+eintraege.join('')+
+      '<span class="mm-ue-pdf">Kürzen oder weniger zeigen; im PDF steht nur, was in den Rahmen passt.</span></div>':'';
     const pille=root.querySelector('[data-mm-pille]');
     if(pille){
       pille.hidden=!namen.length;
@@ -1517,6 +1528,66 @@ function uebersatzPruefen(){
       pille.title=namen.length?'Passt nicht ganz in den Rahmen: '+namen.join(' · '):'';
     }
   });
+}
+// Der Text eines Rahmens, den Romy kürzen kann: der längste mehrzeilige Text darin (keine Kennwerte), ab 40 Zeichen.
+function kuerzText(r){
+  let best=null,n=0;
+  for(const el of r.querySelectorAll('.mm-ed[aria-multiline="true"]')){
+    if(el.closest('table'))continue;
+    const l=mmText(el).trim().length;if(l>n){best=el;n=l}
+  }
+  return n>=40?best:null;
+}
+// Wie viele Zeilen zu viel sind und auf wie viele Zeichen der Text müsste (mit etwas Luft, weil Zeilen verschieden
+// umbrechen). Gemessen in der Seite selbst, ohne Zoom: Zeilenhöhe, Höhe des Texts, Überstand des Rahmens.
+function kuerzMass(r,el){
+  const fehlt=r.scrollHeight-r.clientHeight,cs=getComputedStyle(el||r);
+  let lh=parseFloat(cs.lineHeight);if(!(lh>0))lh=(parseFloat(cs.fontSize)||12)*1.25;
+  const zuViel=Math.max(1,Math.ceil((fehlt-1)/lh));
+  if(!el)return {zuViel,zeilen:0,zeichen:0,len:0};
+  const len=mmText(el).trim().length,jetzt=Math.max(1,Math.round(el.offsetHeight/lh)),zeilen=jetzt-zuViel;
+  return {zuViel,zeilen,zeichen:zeilen>0?Math.floor(len*zeilen/jetzt*.92):0,len};
+}
+// «Mit Romy kürzen» (Entwurf B2): Romy schlägt einen kürzeren Text vor, so lang, wie der Rahmen fasst. Im Dialog lässt
+// er sich noch ändern; «Übernehmen» setzt ihn wie getippt (ein Schritt im Verlauf). Ohne «Übernehmen» ändert sich nichts.
+async function mitRomyKuerzen(id){
+  const v=vorlageZeile(),el=id?document.getElementById(id):null,r=el?.closest('.mm-r[data-rahmen]');
+  if(!v||!istMappe(v)||!el||!r||mm.kuerzt)return;
+  const m=kuerzMass(r,el),alt=mmText(el).trim(),name=r.dataset.rahmen;
+  if(!(m.zeichen>=20&&m.zeichen<alt.length)){meldung('Der Rahmen «'+name+'» ist zu klein, um den Text sinnvoll zu kürzen: bitte vergrößern.','warn');return}
+  const seite=mappeSeite(v),pz=seite?.punkt?zeileVon(seite.punkt):null;
+  mm.kuerzt=id;uebersatzPruefen();
+  try{
+    await alleSpeichern();
+    const antwort=await romyAufruf({action:'kuerzen',dokument_id:v.dokument_id,zeile_id:v.id,text:alt,zeichen:m.zeichen,zeilen:m.zeilen,rahmen:name,
+      position:String(pz?.daten?.thema||seite?.titel||'')});
+    if(antwort.result.unveraendert){meldung('Romy hat «'+name+'» nicht kürzer bekommen.','warn');return}
+    kuerzDialog({id,name,alt,ziel:m.zeichen,...antwort.result});
+  }finally{mm.kuerzt=null;uebersatzPruefen()}
+}
+function kuerzDialog({id,name,alt,ziel,neu,begruendung='',hinweise=[],zu_lang=false}){
+  const warn=[...(zu_lang?['Noch etwas zu lang für den Rahmen.']:[]),...hinweise];
+  dialog.innerHTML='<form class="pd-dlg pd-kuerzen"><div class="pd-detail-kopf"><h2>Mit Romy kürzen · «'+esc(name)+'»</h2><button type="button" class="pd-x" data-dlg="zu" aria-label="Schließen">×</button></div>'+
+    '<p class="meta">In den Rahmen passen etwa '+ziel+' Zeichen, bisher sind es '+alt.length+'. Vor dem Übernehmen lesen und anpassen.</p>'+
+    (warn.length?'<ul class="pd-kuerzen-warn">'+warn.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul>':'')+
+    '<label class="pd-feld"><span>Gekürzt</span><textarea class="pd-in" name="neu" rows="8">'+esc(neu)+'</textarea></label>'+
+    '<p class="meta" data-kuerz-zahl aria-live="polite"></p>'+(begruendung?'<p class="meta">Romy: '+esc(begruendung)+'</p>':'')+
+    '<details class="pd-kuerzen-bisher"><summary>Bisher</summary><p>'+esc(alt)+'</p></details>'+
+    '<div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="verwerfen">Verwerfen</button><button type="submit" class="btn btn-primary">Übernehmen</button></div></form>';
+  const form=dialog.querySelector('form'),ta=form.elements.neu,zahl=form.querySelector('[data-kuerz-zahl]');
+  const zaehlen=()=>{const n=ta.value.trim().length;zahl.textContent=n+' Zeichen'+(n>ziel?' · etwa '+(n-ziel)+' zu viel':'')};
+  ta.oninput=zaehlen;zaehlen();
+  for(const k of form.querySelectorAll('[data-dlg="zu"],[data-dlg="verwerfen"]'))k.onclick=()=>dialog.close();
+  form.onsubmit=e=>{e.preventDefault();const t=ta.value.trim();dialog.close();if(t)kuerzUebernehmen(id,name,t)};
+  dialog.showModal();ta.focus();
+}
+function kuerzUebernehmen(id,name,t){
+  const v=vorlageZeile(),el=document.getElementById(id);
+  if(!v||!istMappe(v)||!el){meldung('Der Text ist nicht mehr auf der Seite; nichts geändert.','warn');return}
+  const schritt=vorher('Text «'+name+'» gekürzt',[v,...mappePunkte(v)]);
+  el.textContent=t;
+  if(!mappeEingabe(el))return;
+  nachher(schritt);render();meldung('«'+name+'» gekürzt.');
 }
 // «Rahmen vergrößern»: so viele Felder nach unten, wie der Text braucht (ein Feld und sein Abstand sind 32 mm), höchstens
 // bis zum Ende des Rasters. Ein Schritt im Verlauf; was danach überlappt, nennt die Karte «Layout».
@@ -2363,6 +2434,7 @@ function mappeKlickInnen(act,el,v){
   if(act==='mm-mehr'||act==='mm-plus'){const n=act.slice(3);menue(n,!!root.querySelector('.mm-'+n+'-menue')?.hidden);return}
   if(act==='mm-teil'){teilZeigen(el.dataset.teil);return}
   if(act==='mm-groesser'){rahmenGroesser(el.dataset.k);return}
+  if(act==='mm-kuerzen'){void sicher(()=>mitRomyKuerzen(el.dataset.ed));return}
   if(act==='mm-seite-neu'){menue('plus',false);seiteNeu(v,el.dataset.wert);return}
   if(act==='mm-uebersatz'){uebersatzZeigen();return}
   if(act==='mm-seite'){mm.seite=el.dataset.id;mm.auswahl=null;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
@@ -2636,6 +2708,7 @@ const ROMY_FEHLER={no_terminplan:'Für dieses Projekt gibt es keinen Terminplan 
   one_document_required:'Bitte nur eine Datei.',invalid_attachments:'Diese Datei kann Romy nicht lesen: PDF oder Bild bis 8 MB.',ai_not_configured:'Romy ist im Office noch nicht eingerichtet.',
   no_access:'Kein Zugriff auf dieses Dokument.',ai_timeout_or_network:'Romy hat nicht rechtzeitig geantwortet. Bitte noch einmal versuchen.',rows_required:'Bitte zuerst Zeilen auswählen.',
   instruction_required:'Bitte sagen, was Romy ändern soll.',question_required:'Bitte eine Frage eingeben.',invalid_task:'Das geht in dieser Liste nicht.',
+  text_required:'Kein Text zum Kürzen.',invalid_length:'Der Rahmen ist zu klein, um den Text sinnvoll zu kürzen: bitte vergrößern.',
   candidates_required:'Romy braucht Kandidaten: in der Produktbibliothek, im Datenpool oder in der Kostenberechnung ist nichts Passendes.',options_required:'Bitte zuerst die Varianten beschreiben.'};
 async function romyStatus(){
   try{const {data,error}=await sb.functions.invoke('office-dokumente-ai',{body:{action:'status'}});romy.bereit=!error&&data?.ready===true}catch{romy.bereit=false}

@@ -181,6 +181,12 @@
         optionen:[{id:'B',produkt:'',kennwert:ref(k.pool,/Naturstein/),menge:ref(k.kobe,/Parkett Wohnräume/),begruendung:'Gleiche Fläche wie A; Wert aus zwei alten Kostenberechnungen.'},
           {id:'A',produkt:'p999',kennwert:'erfunden',menge:'',begruendung:'nichts'}]});
     }
+    // «Mit Romy kürzen»: die ersten Wörter bis zur verlangten Länge, mit Punkt; ein Test kann window.__fake.ki ersetzen.
+    if(body.action==='kuerzen'){
+      let t='';for(const w of String(body.text||'').split(/\s+/)){if((t+' '+w).trim().length>body.zeichen-1)break;t=(t+' '+w).trim()}
+      t=t.replace(/[.,;:]$/,'')+'.';
+      return ok(body,{neu:t,begruendung:'Wiederholungen gestrichen.',hinweise:[],zeichen:t.length,zu_lang:false});
+    }
     if(body.action==='text'){
       const z=zeilen.find(x=>x.id===body.zeile_id),alt=String(z?.daten?.[body.feld]||'');
       return ok(body,{neu:(alt?alt+' ':'')+'Der Unterschied beträgt 5.004,30 € netto.',begruendung:'Betrag aus der Kostenberechnung eingesetzt.',hinweise:[],zeile_id:body.zeile_id,feld:body.feld});

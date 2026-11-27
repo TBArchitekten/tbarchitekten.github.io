@@ -349,6 +349,13 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-intern{background:var(--m-paper);border:1px solid var(--m-border);border-radius:var(--m-radius-card);padding:12px 14px;font-size:14px;display:grid;gap:8px}
 .mm-intern ul{margin:0;padding-left:18px;display:grid;gap:4px}
 .mm-uebersatz-liste{border-color:var(--m-error);color:var(--m-error)}
+.mm-ue{display:grid;gap:6px}
+.mm-ue+.mm-ue{padding-top:8px;border-top:1px solid var(--m-border-soft)}
+.mm-ue-pdf{color:var(--m-ink-soft);font-size:13px}
+/* «Mit Romy kürzen»: Vorschlag im Dialog, Hinweise von Romy darüber, der bisherige Text zum Vergleich darunter. */
+.pd-kuerzen textarea{min-height:9em;resize:vertical}
+.pd-kuerzen-warn{margin:0;padding:8px 12px 8px 28px;border-radius:8px;background:var(--m-attention-soft);color:var(--m-attention);font-size:14px}
+.pd-kuerzen-bisher p{margin:6px 0 0;white-space:pre-wrap;color:var(--m-ink-soft);font-size:14px}
 .mm-neu{background:var(--m-attention-soft);color:var(--m-attention);border-radius:var(--m-radius-card);padding:10px 12px;display:grid;gap:8px;font-size:14px}
 .mm-rechts{display:grid;gap:14px;min-width:0;align-content:start}
 /* Eigenschaften in Reitern (B2, 27.11.2026): Seite, Position, Mappe. */

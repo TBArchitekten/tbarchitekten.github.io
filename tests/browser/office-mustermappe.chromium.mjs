@@ -469,7 +469,7 @@ test('Reiter: eine Zeile, «•••» mit Raster, Übersatz als Hinweis in der
     await f.locator('.mm-rechts .mm-uebersatz-liste',{hasText:'Deckblatt-Text'}).waitFor();
     assert.match(await f.locator('[data-mm-kontext]').innerText(),/^Deckblatt-Text · /,'der Rahmen ist gewählt');
     // «Rahmen vergrößern»: der Deckblatt-Text steht schon am Ende des Rasters, also kein Platz darunter.
-    await f.locator('.mm-uebersatz-liste [data-act="mm-groesser"]',{hasText:'«Deckblatt-Text» vergrößern'}).click();
+    await f.locator('.mm-uebersatz-liste .mm-ue[aria-label="Deckblatt-Text"] [data-act="mm-groesser"]',{hasText:'Rahmen vergrößern'}).click();
     await f.locator('.pd-meldung',{hasText:'Unter «Deckblatt-Text» ist im Raster kein Platz mehr'}).waitFor();
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
@@ -496,13 +496,68 @@ test('Übersatz: «Rahmen vergrößern» um die fehlenden Felder, rückgängig w
     await kopf.locator('.mm-ed').first().click();
     for(let k=0;k<6;k++){await page.keyboard.type('Zeile '+k+' mit etwas mehr Text');await page.keyboard.press('Enter')}
     await page.locator('[data-mm-pille]').click();
-    await page.locator('.mm-uebersatz-liste [data-act="mm-groesser"]',{hasText:'«Kopf» vergrößern'}).click();
+    const eintrag=page.locator('.mm-uebersatz-liste .mm-ue[aria-label="Kopf"]');
+    assert.match(await eintrag.innerText(),/^Kopf · Der Text passt nicht: etwa (eine Zeile|\S+ Zeilen) zu viel\./);
+    await eintrag.locator('[data-act="mm-groesser"]',{hasText:'Rahmen vergrößern'}).click();
     await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"]')?.dataset.mmrG!=='1,1,8,1');
     const g=(await kopf.getAttribute('data-mmr-g')).split(',').map(Number);
     assert.deepEqual(g.slice(0,3),[1,1,8]);assert.ok(g[3]>1&&g[3]<=8,'höher: '+g[3]);
     await page.waitForFunction(()=>document.querySelector('[data-mm-pille]')?.hidden===true);
     await page.locator('[data-act="mm-zurueck"]').click();
     await page.waitForFunction(()=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"]')?.dataset.mmrG==='1,1,8,1');
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+// Wie im Entwurf: «Mit Romy kürzen» neben «Rahmen vergrößern». Der Client misst, wie viele Zeichen in den Rahmen
+// passen, Romy schlägt den kürzeren Text vor, der Dialog zeigt ihn zum Ändern; erst «Übernehmen» setzt ihn (ein Schritt
+// im Verlauf), danach passt der Rahmen. «Verwerfen» lässt alles, wie es war.
+test('Übersatz: «Mit Romy kürzen» schlägt vor, nur «Übernehmen» ändert, rückgängig wie jeder Schritt',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+  const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co/,r=>r.abort());
+  try{
+    await page.goto(adresse('projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&werkzeug=mustermappe&neu=1'));
+    await page.locator('#pdDialog select[name="paket"]').selectOption('Bäder');
+    await page.locator('#pdDialog button[type="submit"]').click();
+    await page.locator('h1',{hasText:'Mustermappe Bäder'}).waitFor();
+    await hinzufuegen(page,'Position hinzufügen');
+    await page.locator('#pdDialog input[name="code"]').fill('S1');await page.locator('#pdDialog input[name="bez"]').fill('Waschtisch');
+    await page.locator('#pdDialog button[type="submit"]').click();
+    await page.locator('.mm-seitenliste .active',{hasText:'S1 Waschtisch · Vergleich'}).waitFor();
+    const frage=page.locator('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"] .mm-ed.mm-frage');
+    await frage.click();
+    for(let k=0;k<6;k++){await page.keyboard.type('Welcher Waschtisch passt in Bad '+k+' zur Armatur und zum Spiegel?');await page.keyboard.press('Enter')}
+    await page.locator('[data-mm-pille]').click();
+    const eintrag=page.locator('.mm-uebersatz-liste .mm-ue[aria-label="Kopf"]');
+    const knopf=eintrag.locator('[data-act="mm-kuerzen"]',{hasText:'Mit Romy kürzen'});
+    await knopf.waitFor();
+    const lang=(await frage.innerText()).trim();
+    // Verwerfen: nichts ändert sich.
+    await knopf.click();
+    const dlg=page.locator('#pdDialog .pd-kuerzen');await dlg.waitFor();
+    assert.equal(await dlg.locator('h2').innerText(),'Mit Romy kürzen · «Kopf»');
+    const anfrage=(await page.evaluate(()=>window.__fake.anfragen)).filter(a=>a.body.action==='kuerzen').at(-1).body;
+    const mappe=(await zeilen(page,'entscheidungsvorlagen')).find(v=>v.daten.form==='mustermappe');
+    assert.equal(anfrage.zeile_id,mappe.id);assert.equal(anfrage.dokument_id,mappe.dokument_id);
+    assert.equal(anfrage.rahmen,'Kopf');assert.equal(anfrage.text,lang);
+    assert.ok(anfrage.zeichen>=20&&anfrage.zeichen<lang.length,'Ziel '+anfrage.zeichen+' von '+lang.length);
+    assert.ok(anfrage.zeilen>=1,'Zeilen '+anfrage.zeilen);
+    await dlg.locator('[data-dlg="verwerfen"]').click();
+    assert.equal((await frage.innerText()).trim(),lang,'Verwerfen ändert nichts');
+    // Übernehmen: der Vorschlag (im Dialog noch änderbar) steht im Text, der Rahmen passt, der Verlauf kennt den Schritt.
+    await knopf.click();await dlg.waitFor();
+    const ta=dlg.locator('textarea[name="neu"]'),vorschlag=await ta.inputValue();
+    assert.ok(vorschlag.length<=anfrage.zeichen&&vorschlag.endsWith('.'),'Vorschlag: '+vorschlag);
+    assert.match(await dlg.locator('[data-kuerz-zahl]').innerText(),/^\d+ Zeichen$/);
+    await dlg.locator('button[type="submit"]',{hasText:'Übernehmen'}).click();
+    await page.waitForFunction(()=>document.querySelector('[data-mm-pille]')?.hidden===true);
+    assert.equal((await frage.innerText()).trim(),vorschlag);
+    await page.waitForFunction(t=>{const z=window.__fake.db.office_projektdokument_zeilen.find(x=>x.daten?.frage===t);return !!z},vorschlag);
+    assert.match(await page.locator('[data-act="mm-zurueck"]').getAttribute('title'),/^Rückgängig: Text «Kopf» gekürzt/);
+    await page.locator('[data-act="mm-zurueck"]').click();
+    await page.waitForFunction(t=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"] .mm-frage')?.innerText.trim()===t,lang);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Mustermappe: «Mit Romy kürzen» beim Übersatz · Claude
+- Qué cambió y por qué: Letzter Teil des Übersatz-Hinweises aus dem Entwurf B2. Unter «Passt nicht ganz in den Rahmen» steht jetzt je Rahmen, wie viel zu viel ist («Kopf · Der Text passt nicht: etwa zwei Zeilen zu viel.», bei Kennwerten wie bisher, wie viele nicht auf der Seite stehen), darunter «Rahmen vergrößern» (statt ««Name» vergrößern») und, wenn Romy erreichbar ist und der Rahmen einen längeren Text hat (ab 40 Zeichen), «Mit Romy kürzen». Der Client misst am Rahmen Zeilenhöhe, Höhe des Texts und Überstand und rechnet, wie viele Zeichen passen (mit 8 % Luft); ist das weniger als 20, rät er zum Vergrößern. Romy (`office-dokumente-ai`, neue Aktion `kuerzen`) kürzt auf diese Länge, Inhalt, Zahlen, Maße und Namen bleiben; der Vorschlag erscheint in einem Dialog («Mit Romy kürzen · «Kopf»»: wie viele Zeichen passen, der Vorschlag zum Ändern mit Zähler, Romys Begründung, «Bisher» zum Vergleich), «Übernehmen» setzt ihn wie getippt (ein Schritt im Verlauf, «Text «Kopf» gekürzt»), «Verwerfen» lässt alles. Die Funktion liest dafür nur die eine Mappe (ohne Inhalt) unter RLS bei den Entscheidungsvorlagen, zählt die Anfrage wie jede andere und schreibt nur den Verbrauch (ohne Person); nur ein kürzerer Text zählt; steht im Vorschlag eine Zahl, die im bisherigen Text nicht steht, sagt es ein Hinweis im Dialog; länger als verlangt heißt «Noch etwas zu lang für den Rahmen».
+- Archivos: `supabase/functions/office-dokumente-ai/core.mjs` (`KUERZEN`, Anweisung `kuerzen`, `pruefeKuerzung`, Version `office-dokumente-ai-v3`), `supabase/functions/office-dokumente-ai/index.ts` (Aktion `kuerzen`), `projektdokumente.js` (`?v=office15`: `uebersatzPruefen`, `kuerzText`, `kuerzMass`, `mitRomyKuerzen`, `kuerzDialog`, `kuerzUebernehmen`, zwei Fehlermeldungen), `projektdokumente.css` (`?v=office15`), `projektdokumente.html`, `tests/office-dokumente-ai.test.mjs`, `tests/office-mustermappe.test.mjs`, `tests/browser/office-mustermappe.chromium.mjs` (neu: vorschlagen, verwerfen, übernehmen, rückgängig), `tests/browser/fixtures/fake-supabase-dokumente.js`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: `office-dokumente-ai` über den Workflow nach dem Merge.
+- Cómo se probó: `node --test` grün (558); Browserprüfungen Mustermappe lokal mit Chrome grün; Übersatz-Hinweis und Dialog als Bildschirmfoto angesehen.
+- Quedó pendiente o sin probar: mit dem echten Modell erst nach dem Deploy.
+- Riesgos o decisiones que necesitan a Gari: die neuen Texte (siehe oben).
+- PR: #203
+
+---
+
 ### 2026-11-27 · Mustermappe: «Rahmen vergrößern» beim Übersatz · Claude
 - Qué cambió y por qué: Wie im Entwurf (B2, Reiter «Seite»): Passt ein Text nicht in seinen Rahmen, steht unter «Passt nicht ganz in den Rahmen» je Rahmen ««Name» vergrößern». Der Rahmen wächst um so viele Felder nach unten, wie der Text braucht (ein Feld und sein Abstand sind 32 mm), höchstens bis zum Ende des Rasters; ein Schritt im Verlauf (Rückgängig). Ist darunter kein Platz, sagt eine Meldung, dass der Rahmen verschoben oder der Text gekürzt werden muss. «Mit Romy kürzen» aus dem Entwurf folgt später (braucht eine Aufgabe in der Funktion der Dokumente).
 - Archivos: `projektdokumente.js` (`?v=office14`), `projektdokumente.html`, `tests/office-mustermappe.test.mjs`, `tests/browser/office-mustermappe.chromium.mjs` (neu: vergrößern und rückgängig; im Reiter: kein Platz am Ende des Rasters).

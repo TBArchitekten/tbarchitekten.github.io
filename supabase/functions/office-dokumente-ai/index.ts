@@ -2,9 +2,10 @@
 // Wie office-produkt-ai: Anmeldung und Office-Mitgliedschaft prüfen, das Dokument unter RLS lesen (wer es nicht sehen
 // darf, bekommt nichts), jede Anfrage vor dem bezahlten Modellaufruf zählen, Antwort nach festem Schema prüfen.
 // Die Funktion schreibt nichts: Vorschläge speichert der Client als Vorschlag, gelten tun sie erst nach «Übernehmen».
+// «kuerzen» (27.11.2026): ein Text einer Mustermappe; die Mappe muss im Projekt stehen und lesbar sein.
 import {createClient} from "npm:@supabase/supabase-js@2.57.0";
-import {MODEL,VERSION,AUFGABEN,TEXTFELDER,GRENZE,schemaVorschlaege,SCHEMA_TEXT,SCHEMA_FELDTEXT,SCHEMA_ZAHLEN,anweisungen,
-  pruefeVorschlaege,pruefeText,pruefeFeldtext,pruefeZahlen,kandidatenPruefen,kurzZeilen,termineAusPlaenen} from "./core.mjs";
+import {MODEL,VERSION,AUFGABEN,TEXTFELDER,GRENZE,KUERZEN,schemaVorschlaege,SCHEMA_TEXT,SCHEMA_FELDTEXT,SCHEMA_ZAHLEN,anweisungen,
+  pruefeVorschlaege,pruefeText,pruefeFeldtext,pruefeKuerzung,pruefeZahlen,kandidatenPruefen,kurzZeilen,termineAusPlaenen} from "./core.mjs";
 import {normalizePlanAttachments} from "../office-terminplan-ai/attachments.mjs";
 import {dienstFuer,verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 
@@ -55,7 +56,7 @@ Deno.serve(async req=>{
     input=JSON.parse(raw);
   }catch{return respond(400,{error:"invalid_json"})}
   const action=input?.action;
-  if(!["status","vorschlaege","auswahl","text","zahlen"].includes(action))return respond(400,{error:"invalid_request"});
+  if(!["status","vorschlaege","auswahl","text","zahlen","kuerzen"].includes(action))return respond(400,{error:"invalid_request"});
   const {data:member,error:memberError}=await sb.from("office_members")
     .select("role,is_active").eq("user_id",auth.user.id).eq("is_active",true).maybeSingle();
   if(memberError||!member)return respond(403,{error:"not_an_office_member"});
@@ -70,12 +71,17 @@ Deno.serve(async req=>{
   if(dokError)return respond(503,{error:"documents_unavailable"});
   if(!dok)return respond(403,{error:"no_access"});
   const art=dok.art;
-  if(!["klaerungsliste","entscheidungsliste"].includes(art))return respond(400,{error:"invalid_document"});
+  // Mappen stehen bei den Entscheidungsvorlagen; zum Kürzen reicht die eine Zeile, ohne ihren Inhalt.
+  const kuerzen=action==="kuerzen",mappeId=kuerzen?String(input.zeile_id||""):"";
+  if(!(kuerzen?["entscheidungsvorlagen"]:["klaerungsliste","entscheidungsliste"]).includes(art))return respond(400,{error:"invalid_document"});
+  if(kuerzen&&!/^[0-9a-f-]{36}$/i.test(mappeId))return respond(400,{error:"rows_required"});
   const [{data:zeilen,error:zeilenError},{data:projekt}]=await Promise.all([
-    sb.from("office_projektdokument_zeilen").select("id,nr,daten").eq("dokument_id",dokumentId).order("nr").limit(GRENZE.zeilen),
+    kuerzen?sb.from("office_projektdokument_zeilen").select("id,nr,form:daten->>form").eq("dokument_id",dokumentId).eq("id",mappeId).limit(1)
+      :sb.from("office_projektdokument_zeilen").select("id,nr,daten").eq("dokument_id",dokumentId).order("nr").limit(GRENZE.zeilen),
     sb.from("office_projects").select("number,name").eq("id",dok.project_id).maybeSingle()]);
   if(zeilenError)return respond(503,{error:"documents_unavailable"});
-  const alle=zeilen||[];
+  // deno-lint-ignore no-explicit-any
+  const alle=(zeilen||[]) as any[];
   const kopf={heute:heute(),projekt:{nummer:projekt?.number||"",name:projekt?.name||""},liste:art};
 
   // deno-lint-ignore no-explicit-any
@@ -135,6 +141,18 @@ Deno.serve(async req=>{
     teile=[{type:"input_text",text:JSON.stringify({...kopf,kostenstand:text(input.kostenstand,10),entscheidung:{...kurzZeilen(art,[z])[0],optionen},kandidaten})}];
     // deno-lint-ignore no-explicit-any
     pruefe=a=>pruefeZahlen(a,{kandidaten,ids:optionen.map((o:any)=>o.id)});
+  }else if(kuerzen){
+    // «Mit Romy kürzen»: den Text schickt der Client (er kann aus der Produktbibliothek kommen und in der Mappe noch
+    // nicht stehen), dazu die Länge, die in den Rahmen passt.
+    if(alle[0]?.form!=="mustermappe")return respond(400,{error:"rows_required"});
+    const alt=text(input.text,KUERZEN.text).trim(),zeichen=Math.floor(Number(input.zeichen));
+    if(!alt)return respond(400,{error:"text_required"});
+    if(!(zeichen>=KUERZEN.min&&zeichen<alt.length))return respond(400,{error:"invalid_length"});
+    const zeilenZiel=Math.max(1,Math.min(KUERZEN.zeilen,Math.floor(Number(input.zeilen))||1));
+    aufgabe="kuerzen";schema=SCHEMA_FELDTEXT;quelle="Mustermappe";
+    teile=[{type:"input_text",text:JSON.stringify({heute:kopf.heute,projekt:kopf.projekt,position:text(input.position,200),rahmen:text(input.rahmen,120),
+      zeichen,zeilen:zeilenZiel,text:alt})}];
+    pruefe=a=>pruefeKuerzung(a,{alt,zeichen});
   }else{
     // Einen Abschnitt einer Entscheidungsvorlage neu formulieren.
     if(art!=="entscheidungsliste")return respond(400,{error:"invalid_document"});
