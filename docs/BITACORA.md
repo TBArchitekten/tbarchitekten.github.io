@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; SQL-Abnahme in der flüchtigen Datenbank der CI.
 - Quedó pendiente o sin probar: die Übersicht für Administratoren (Guthaben, Verbrauch je Tag, Funktion und Projekt) folgt im nächsten PR. Die vier Werkzeuge speichern außerdem seit ihrem Anfang jede Anfrage mit der Person (`office_*_ai_requests`, gedacht für ein Tageslimit, das es nicht mehr gibt); Vorschlag an Gari, das zu beenden.
 - Riesgos o decisiones que necesitan a Gari: ob die Zähler der Anfragen je Person (`office_*_ai_requests`) entfallen sollen (löscht Daten, braucht sein OK).
-- PR: siehe unten
+- PR: #194
 
 ---
 
