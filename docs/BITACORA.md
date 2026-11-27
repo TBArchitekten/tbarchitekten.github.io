@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; Browserprüfungen Projektstart (9), Wissen (10), Seitenleiste (6), Mustermappe (9) lokal mit Chrome grün; Bildschirmfotos von Karte, Dialog und Ablauf.
 - Quedó pendiente o sin probar: der zweite Ablauf «Phasenwechsel» (Schritte an Gari vorgeschlagen, wartet auf sein OK); mit einem echten Protokoll in Produktion noch nicht gelaufen.
 - Riesgos o decisiones que necesitan a Gari: die Schritte des Phasenwechsels.
-- PR: (pendiente)
+- PR: #201
 
 ---
 
