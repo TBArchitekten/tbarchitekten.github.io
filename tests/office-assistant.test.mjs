@@ -13,7 +13,7 @@ test('Assistant reuses Window chat rather than building another UI',()=>{
     assert.ok(shell.includes(needle),'Window shell missing '+needle);
   }
   assert.ok(!shell.includes('data-nav="assistant" aria-label="Assistent" hidden'));
-  for(const needle of ['office-assistant.js?v=office37','office-assistant.css?v=office8','app.js?v=office58']){
+  for(const needle of ['office-assistant.js?v=office37','office-assistant.css?v=office8','app.js?v=office59']){
     assert.ok(html.includes(needle),'asset cache not bumped '+needle);
   }
   for(const needle of ['office_assistant_conversations','office_assistant_messages','app()?.setOfficeMessages','window.TBA_OFFICE_ASSISTANT']){
@@ -103,5 +103,5 @@ test('Direkte Anlage: die Karte ist erledigt, nie eine zweite Kopie, in der Offi
   assert.match(app,/if\(committed\.length\)finalizeInlineReview\(directBatch\.filter\(p=>committed\.some\(c=>c\.request_id===p\.request_id\)\),'applied_direct'\);/);
   assert.match(app,/const createCategoryId=categoryId\|\|\(OFFICE\?'arbeit':'personal'\);/);
   assert.match(app,/sayEvent\(OFFICE\?'Eingetragen\.':'Agregado\.'\)/);
-  assert.match(read('app/index.html'),/app\.js\?v=office58/);
+  assert.match(read('app/index.html'),/app\.js\?v=office59/);
 });

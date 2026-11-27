@@ -88,6 +88,16 @@ function commitTaskOrderFromContainer(container,date,movedId=null){
   const ids=orderedPendingTaskElements(container,date).map(x=>x.dataset.id).filter(Boolean);
   return commitTaskOrderByIds(ids,date,movedId);
 }
+// Heute · Aufräumen (27.11.2026): eine überfällige Aufgabe auf einen anderen Tag legen, wie beim Ziehen im Kalender.
+// Aufgaben aus einem Terminplan bekommen ihr Datum nur vom Terminplan (Gari, 27.11.2026); hier werden sie nicht bewegt.
+function moveTaskToDate(id,date){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date)))return false;
+  const t=state.tasks.find(x=>x.id===id&&!x.archivedAt&&!x.done);
+  if(!t||t.date===date||t.metadata?.office_planner?.terminplan?.instance_id)return false;
+  const before=clone(t);t.date=date;
+  mutation('task','move_date',before,t,'manual');save();renderCalendar();
+  return true;
+}
 function reorderDeskTasks(date,requestedIds){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date))||!Array.isArray(requestedIds))return false;
   const current=state.tasks.filter(x=>x.date===date&&!x.archivedAt&&!x.done).sort(taskOrder);
@@ -543,6 +553,8 @@ function showSection(name,options={}){
   if(!WINDOW_SECTIONS.includes(name))name='assistant';
   // Ideas now live in the Bandeja, next to Isabella's other proposals.
   if(name==='ideas'){name='bandeja';options={...options,view:'ideas'}}
+  // Office (27.11.2026, Gari: «una sola bandeja… y una sola vista del día»): der Eingang steht in Heute unter «Braucht Sie».
+  if(OFFICE&&name==='bandeja'){name='feed';options={...options,inbox:true}}
   // The native Time controls may be temporarily docked inside Chat.
   // Return them to their original screen BEFORE that screen becomes active.
   window.dispatchEvent(new CustomEvent('isabella:before-screen-change',{detail:{next:name}}));
@@ -574,7 +586,7 @@ function showSection(name,options={}){
   if(name==='assistant'&&previous!=='assistant')void recoverReviewedTaskReceipts();
   // Ahora and the Bandeja read through modules that load after app.js (ai.js, ahora.js, bandeja.js).
   const whenLoaded=fn=>document.readyState==='complete'?fn():window.addEventListener('load',fn,{once:true});
-  if(name==='feed')whenLoaded(()=>{if(state.screen!=='feed')return;window.MINDS_AHORA?.render?.();renderFeed()});
+  if(name==='feed')whenLoaded(()=>{if(state.screen!=='feed')return;window.MINDS_AHORA?.render?.({inbox:!!options.inbox});renderFeed()});
   if(name==='bandeja')whenLoaded(()=>{if(state.screen==='bandeja')window.MINDS_BANDEJA?.show?.(options.view)});
   if(name==='work')setTimeout(()=>window.MINDS_WORK?.render?.(),0);
   if(name==='projects')whenLoaded(()=>{if(state.screen==='projects')window.TBA_OFFICE_PROJECTS?.render?.()});
@@ -1015,10 +1027,68 @@ function weatherNumbers(body){
   const now=text.match(/(-?\d+)\s*°C ahora/),range=text.match(/máx\.\s*(-?\d+)°\s*\/\s*mín\.\s*(-?\d+)°/);
   return {now:now?now[1]:null,max:range?range[1]:null,min:range?range[2]:null,label:text.split('·')[0].trim()};
 }
+// Office · Wetter in Augsburg (Gari, 27.11.2026: «agrega el clima… como lo tiene persönlich, pero para Augsburg»).
+// Das Office hat keinen Feed: die Werte kommen direkt von Open-Meteo (ohne Schlüssel), höchstens alle 30 Minuten neu,
+// und erscheinen in derselben Pille und Woche wie in Window. Ohne Netz bleibt die Pille weg.
+const OFFICE_WETTER={ort:'Augsburg',breite:48.3705,laenge:10.8978,speicher:'tba-office.wetter.augsburg',frisch:30*60000};
+let officeWetterDaten=null,officeWetterLaden=null;
+function wetterCode(code){
+  const c=Number(code);
+  if(c===0)return ['☀️','Klar'];
+  if(c===1)return ['☀️','Überwiegend klar'];
+  if(c===2)return ['⛅','Teilweise bewölkt'];
+  if(c===3)return ['☁️','Bedeckt'];
+  if(c===45||c===48)return ['🌫️','Nebel'];
+  if(c>=51&&c<=57)return ['🌧️','Nieselregen'];
+  if(c===61||c===80)return ['🌧️','Leichter Regen'];
+  if(c===63||c===81)return ['🌧️','Regen'];
+  if(c===65||c===82)return ['🌧️','Starker Regen'];
+  if(c===66||c===67)return ['🌧️','Gefrierender Regen'];
+  if(c===71||c===85)return ['❄️','Leichter Schneefall'];
+  if(c===73||c===75||c===77||c===86)return ['❄️','Schneefall'];
+  if(c===95||c===96||c===99)return ['⛈️','Gewitter'];
+  return ['🌡️','Wetter'];
+}
+function officeWetterHolen(){
+  if(officeWetterDaten&&Date.now()-officeWetterDaten.at<OFFICE_WETTER.frisch)return Promise.resolve(officeWetterDaten);
+  if(!officeWetterDaten)try{const x=JSON.parse(localStorage.getItem(OFFICE_WETTER.speicher)||'null');if(x&&x.at&&x.data)officeWetterDaten=x}catch{}
+  if(officeWetterDaten&&Date.now()-officeWetterDaten.at<OFFICE_WETTER.frisch)return Promise.resolve(officeWetterDaten);
+  if(officeWetterLaden)return officeWetterLaden;
+  const q=new URLSearchParams({latitude:String(OFFICE_WETTER.breite),longitude:String(OFFICE_WETTER.laenge),
+    current:'temperature_2m,weather_code',daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+    timezone:'Europe/Berlin',forecast_days:'7'});
+  officeWetterLaden=fetch('https://api.open-meteo.com/v1/forecast?'+q.toString()).then(r=>r.ok?r.json():Promise.reject(new Error('wetter_'+r.status)))
+    .then(data=>{officeWetterDaten={at:Date.now(),data};try{localStorage.setItem(OFFICE_WETTER.speicher,JSON.stringify(officeWetterDaten))}catch{};return officeWetterDaten})
+    .catch(()=>officeWetterDaten).finally(()=>{officeWetterLaden=null});
+  return officeWetterLaden;
+}
+function officeWetterTage(data){
+  const d=data&&data.daily||{},tage=Array.isArray(d.time)?d.time:[];
+  return tage.map((tag,i)=>({tag,code:d.weather_code?.[i],max:d.temperature_2m_max?.[i],min:d.temperature_2m_min?.[i],regen:d.precipitation_probability_max?.[i]}));
+}
+function renderOfficeWeather(){
+  const pill=$('#situationWeather'),week=$('#ahoraWeatherWeek');if(!pill||!week)return;
+  void officeWetterHolen().then(w=>{
+    const data=w&&w.data,jetzt=data&&data.current;
+    if(!jetzt||!Number.isFinite(Number(jetzt.temperature_2m))){pill.innerHTML='';week.innerHTML='';week.classList.add('hidden');return}
+    const tage=officeWetterTage(data),heute=tage[0]||{},[symbol,text]=wetterCode(jetzt.weather_code);
+    const grad=n=>Number.isFinite(Number(n))?Math.round(Number(n))+'°':'–';
+    const spanne=heute.max!=null&&heute.min!=null?grad(heute.max)+' / '+grad(heute.min):'';
+    const offen=!week.classList.contains('hidden');
+    pill.innerHTML='<button type="button" class="ahora-weather-pill" aria-expanded="'+String(offen)+'" aria-controls="ahoraWeatherWeek" aria-label="'+esc('Wetter in '+OFFICE_WETTER.ort+': '+Math.round(Number(jetzt.temperature_2m))+' Grad, '+text+'. Woche anzeigen')+'">'+weatherSymbolSvg(symbol)+
+      '<span><strong>'+esc(grad(jetzt.temperature_2m))+'</strong>'+(spanne?'<small>'+esc(spanne)+'</small>':'')+'</span></button>';
+    const tagName=(tag,i)=>i===0?'Heute':i===1?'Morgen':new Date(tag+'T12:00:00Z').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'UTC'}).replace(',','');
+    week.innerHTML='<div class="ahora-weather-place"><strong>'+esc(OFFICE_WETTER.ort)+'</strong><span>'+esc(text+' · '+grad(jetzt.temperature_2m)+' jetzt'+(spanne?' · max. '+grad(heute.max)+' / min. '+grad(heute.min):''))+'</span></div>'+
+      tage.slice(0,7).map((t,i)=>{const [sym,txt]=wetterCode(t.code),regen=Number.isFinite(Number(t.regen))&&Number(t.regen)>=20?' · Niederschlag '+Math.round(Number(t.regen))+' %':'';
+        return '<div class="weather-row"><span>'+esc(tagName(t.tag,i))+'</span><b><span class="weather-row-symbol" aria-hidden="true">'+weatherSymbolSvg(sym)+'</span>'+esc(txt+' · '+grad(t.max)+' / '+grad(t.min)+regen)+'</b></div>'}).join('')+
+      '<p class="ahora-weather-quelle">Wetterdaten: Open-Meteo.com</p>';
+    const button=pill.querySelector('.ahora-weather-pill');
+    button.onclick=()=>{const opening=week.classList.contains('hidden');week.classList.toggle('hidden',!opening);button.setAttribute('aria-expanded',String(opening))};
+  });
+}
 function renderAhoraWeather(weather){
   const pill=$('#situationWeather'),week=$('#ahoraWeatherWeek');if(!pill||!week)return;
-  // The office has no feed and therefore no weather yet: the pill stays away.
-  if(OFFICE){pill.innerHTML='';week.innerHTML='';week.classList.add('hidden');return}
+  if(OFFICE){renderOfficeWeather();return}
   if(!weather){
     pill.innerHTML='<button type="button" class="ahora-weather-pill is-empty" data-weather-settings aria-label="Wetter: kein Ort. Einstellen">'+weatherSymbolSvg('🌡️')+'<span><strong>Wetter</strong><small>Einstellen</small></span></button>';
     week.innerHTML='';week.classList.add('hidden');
@@ -1038,7 +1108,7 @@ function renderAhoraWeather(weather){
   week.querySelector('[data-weather-settings]').onclick=feedPreferencesPanel;
 }
 async function renderFeed(force=false){
-  if(OFFICE){renderAhoraWeather(null);return}
+  if(OFFICE){renderOfficeWeather();return}
   void window.MINDS_SITUATION?.render?.();
   if(!String(state.feedPreferences?.weatherLocation||'').trim()&&!$('#situationWeather')?.children.length)renderAhoraWeather(null);
   const box=$('#feedList'),status=$('#feedRefreshStatus');if(!box||feedBusy)return;feedBusy=true;
@@ -5160,6 +5230,7 @@ window.ISABELLA_APP={
   editTaskById:(id)=>editItem('task',id),
   editEventById:(id)=>editItem('event',id),
   toggleTaskById:(id)=>toggleTaskDone(id),
+  moveTaskToDate,
   planTaskSession,
   setTaskEstimatedMinutes,
   reorderDeskTasks,

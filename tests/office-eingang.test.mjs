@@ -1,55 +1,55 @@
-// Der Eingang ist keine Sackgasse mehr (15.11.2026, Gari: «corrígelo y porta la Bandeja»).
+// Der eine Eingang (Gari, 27.11.2026: «una sola bandeja para lo que necesita a una persona y una sola vista del día»).
 //
-// app.js, ahora.js und work.js rufen window.MINDS_BANDEJA. Die Datei, die das setzt, fehlte im
-// Office: bandeja.js wurde beim Port aus Window ausgelassen. Folge: der Bildschirm blieb auf
-// «Lese, was auf Bestätigung wartet …» stehen, und die Zeile «N zu bestätigen» in Heute erschien
-// nie, weil lastCount() undefined war statt einer Zahl.
-//
-// Geprüft wird, dass die Datei genau die Schnittstelle bedient, die die drei Aufrufer erwarten,
-// dass sie deutsch ist, und dass die beiden Ansichten, die das Office nicht hat, nicht mitkamen.
+// Vorher gab es drei Orte für dieselben Vorschläge: den Bildschirm «Eingang» (nur über eine Zeile in Heute erreichbar),
+// «Für dich» im Panorama und die Zeile «N zu bestätigen». Der Eingang bestätigte Entscheidungen direkt in der Tabelle,
+// das Panorama über die Funktion des Wissens (mit Protokoll und nur für die Projektleitung). Jetzt: bandeja.js hält nur
+// die Daten und die Zahl; Heute zeigt sie oben als «Braucht Sie» mit denselben Karten und Regeln wie das Panorama; wer
+// den alten Eingang öffnet, landet dort.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const bandeja=read('app/bandeja.js'),app=read('app/app.js'),ahora=read('app/ahora.js'),work=read('app/work.js');
+const bandeja=read('app/bandeja.js'),app=read('app/app.js'),ahora=read('app/ahora.js'),work=read('app/work.js'),shell=read('app/shell.js');
 
 test('bandeja.js bedient jedes Mitglied, das die Aufrufer erwarten',()=>{
-  // Was die drei Dateien tatsächlich aufrufen — nicht was Window exportiert.
   const calls=new Set();
   for(const src of [app,ahora,work])
     for(const m of src.matchAll(/MINDS_BANDEJA\?\.([A-Za-z]+)\?\./g)) calls.add(m[1]);
   assert.ok(calls.size>=4,'zu wenige Aufrufe gefunden: '+[...calls]);
-  // Als Eigenschaft (show:), als Methode (show()) oder als Kurzform (refreshCount,).
   for(const member of calls)
     assert.match(bandeja,new RegExp('^\\s*'+member+'\\s*[:(,]','m'),'bandeja.js setzt '+member+' nicht');
 });
 
-test('die Zahl in Heute bekommt eine Zahl, kein undefined',()=>{
-  assert.match(ahora,/const n=Number\(window\.MINDS_BANDEJA\?\.lastCount\?\.\(\)\);/);
-  assert.match(bandeja,/lastCount:\(\)=>count,/);
-  assert.match(bandeja,/let entries=null,loadError='',loading=null,count=null,/);
+test('der Eingang liest dieselbe Quelle wie das Wissen und die Pflege, nur was die Person entscheiden darf',()=>{
+  assert.match(bandeja,/from\('minds_work_memory'\)\.select\(SELECT\)\.eq\('status','proposed'\)/);
+  assert.match(bandeja,/\.in\('memory_type',\['deadline','decision','commitment','open_question'\]\)/);
+  // Projektleitung des Projekts oder Admin, wie im Wissen und im Panorama; die Datenbank prüft es noch einmal.
+  assert.match(bandeja,/return !!p&&\(admin\|\|p\.projektleiter_id===uid\)/);
+  assert.match(bandeja,/from\('office_projects'\)\.select\('id,number,name,projektleiter_id'\)/);
+  assert.doesNotMatch(bandeja,/innerHTML|bandejaConfirm|paintConfirm/,'der Eingang zeichnet nichts mehr selbst');
+});
+
+test('Heute zeigt den Eingang mit denselben Karten und Regeln wie das Panorama',()=>{
+  assert.match(shell,/<section id="ahoraInbox" class="ahora-section ahora-inbox hidden" aria-labelledby="ahoraInboxTitle"><\/section>/);
+  assert.doesNotMatch(shell,/ahoraBandejaLink/);
+  assert.match(ahora,/Braucht Sie/);
+  // Entscheidungen: die Karte des Panoramas (Wissen, Protokoll, «Stimmt etwas nicht?»), mit dem Projekt.
+  assert.match(ahora,/W\.fuerDich\.karte\(r,\{projekt\}\)/);
+  assert.match(ahora,/window\.MINDS_WORK\?\.fuerDich\?\.binden\?\.\(box,\{eintraege:items,projektVon:r=>r\.project_id,/);
+  assert.match(work,/fuerDich:\{karte:fuerDichKarte,binden:fuerDichBinden\}/);
+  assert.match(work,/fuerDichBinden\(body,\{eintraege:m\.pending,projektVon:\(\)=>projectId,meldung:setStatus,nachher:renderOverview\}\);/);
+  assert.match(work,/const cards=ents\.map\(r=>fuerDichKarte\(r\)\);/);
+  // Wer schreibt, verliert seinen Text nicht, wenn im Hintergrund neu gezeichnet wird.
+  assert.match(ahora,/if\(!force&&\(box\.querySelector\('\[data-cockpit-rueck-form\]:not\(\[hidden\]\)'\)/);
+});
+
+test('wer den alten Eingang öffnet, landet in Heute',()=>{
+  assert.match(app,/if\(OFFICE&&name==='bandeja'\)\{name='feed';options=\{\.\.\.options,inbox:true\}\}/);
+  assert.match(app,/window\.MINDS_AHORA\?\.render\?\.\(\{inbox:!!options\.inbox\}\)/);
+  assert.match(bandeja,/show:\(\)=>window\.ISABELLA_APP\?\.show\?\.\('feed',\{inbox:true\}\)/);
 });
 
 test('der Eingang spricht deutsch',()=>{
-  for(const line of ['Lese, was auf Bestätigung wartet …','Nichts zu bestätigen.','Ohne Projekt',
-    'Zum Aktualisieren nach unten ziehen.','Zu bestätigen · '])
-    assert.ok(bandeja.includes(line),'fehlt: '+line);
-  assert.ok(!/Por confirmar|Sin proyecto|Leyendo lo que|Nada por confirmar/.test(bandeja),'noch spanische Zeilen');
-});
-
-test('Vorschläge und Ideen kamen nicht mit',()=>{
-  // isabella-feed und isabella-ideas gibt es im Office nicht; die Tabs sind in shell.js verborgen.
-  for(const gone of ['renderSuggestions','renderIdeas','shown.suggest','shown.ideas'])
-    assert.ok(!bandeja.includes(gone),'aus Window mitgekommen: '+gone);
-  const shell=read('app/shell.js');
-  assert.match(shell,/data-bandeja-view="suggest" hidden>/);
-  assert.match(shell,/data-bandeja-view="ideas" hidden>/);
-});
-
-test('der Eingang liest dieselbe Quelle wie die Akte-Pflege schreibt',()=>{
-  assert.match(bandeja,/from\('minds_work_memory'\)\.select\(SELECT\)\.eq\('status','proposed'\)/);
-  assert.match(bandeja,/\.in\('memory_type',\['deadline','decision','commitment','open_question'\]\)/);
-  // Die Karten und die Ein-Tipp-Entscheidungen gehören work.js, nicht dieser Datei.
-  assert.match(bandeja,/function akte\(\)\{return window\.MINDS_WORK\?\.akte\|\|null\}/);
-  assert.match(work,/window\.MINDS_WORK=\{akte:\{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask\}/);
+  for(const src of [bandeja,ahora])assert.doesNotMatch(src,/Por confirmar|Sin proyecto|Leyendo lo que|Nada por confirmar/);
+  assert.match(bandeja,/Was auf Sie wartet, konnte gerade nicht gelesen werden\./);
 });
