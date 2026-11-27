@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Geplante Aufgaben: Codeprüfung, Radar, Office-Prüfung erweitert · Claude
+- Qué cambió y por qué: Gari wollte, dass Claude den Code täglich prüft (zuerst alles Bestehende, bevor Window weiter wächst) und zweimal pro Woche nach Neuem sucht, das Office und Window hilft. Neu in Claude: **Codeprüfung** (Mo–Fr 04:47): erster Durchgang über 20 Bereiche beider Repos, nach Risiko geordnet (Sicherheit zuerst), danach täglich die Änderungen der letzten 24 Stunden plus ein Bereich im Wechsel; liest die Fehler aus dem Browser (`office_client_fehler`); meldet nur Belegtes (Test, Reproduktion oder Spur mit Datei:Zeile); kleine Korrekturen als Entwurfs-PR nach den Regeln des Repos, nie mergen; Sicherheitsfunde nie öffentlich (beide Repos sind öffentlich), nur an Gari. **Radar** (Mo und Do 06:52): Neuigkeiten von Anthropic, OpenAI, Apple, Supabase, GitHub und ähnlichen Werkzeugen mit konkretem Nutzen, dazu Fristen und Abkündigungen der nächsten sechs Monate. **Office-Prüfung** (täglich) prüft zusätzlich Spitzen im KI-Verbrauch (`minds_ai_usage`, nur Summen je Funktion, nie wer) und Fehler aus dem Browser, die zwei oder mehr Personen treffen oder 20-mal auftreten; `office_client_fehler` steht in der Liste der akzeptierten Hinweise (Tabelle nur für den Dienst).
+- Archivos: `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: die neuen Abfragen der Office-Prüfung von Hand gelaufen (KI-Verbrauch je Funktion mit Median, Fehler aus dem Browser: noch leer).
+- Quedó pendiente o sin probar: der erste Lauf (Codeprüfung und Radar am 30.11.); die KI-Funktionen des Office (Kosten, Produkte, Terminplan, Dokumente, Assistent) schreiben noch nicht in `minds_ai_usage`, die Prüfung sieht nur Romys Motor.
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: (dieser)
+
+---
+
 ### 2026-11-27 · Fehler aus dem Browser für die Codeprüfung · Claude
 - Qué cambió y por qué: Gari wollte eine tägliche Codeprüfung durch Claude; damit sie mit echten Fehlern arbeitet statt mit Vermutungen, melden die Seiten des Office jetzt, was im Browser schiefgeht. `shared/fehler-melden.js` hört auf Skriptfehler und abgelehnte Versprechen und schickt sie an `office_client_fehler_melden`: Meldung, Ort im Code (mit Version), Seite ohne Parameter, Browser in Kurzform. Nicht gemeldet: Rauschen (fremde Skripte, Erweiterungen, ResizeObserver, abgebrochene Anfragen), Wiederholungen, mehr als acht je Seitenaufruf. E-Mail-Adressen, Tokens und Parameter in fremden Adressen entfernt schon das Skript, die Datenbank noch einmal. In der Datenbank: nur aktive Mitglieder, höchstens 50 verschiedene Fehler je Person und Tag, derselbe Fehler zählt hoch. Lesen kann über die App niemand (keine Policy); die geplanten Prüfungen fragen die Tabelle direkt ab.
 - Archivos: `supabase/migrations/20261127093042_office_client_fehler.sql` (Tabelle `office_client_fehler`, `private.office_fehler_saeubern`, `office_client_fehler_melden`), `shared/fehler-melden.js` (neu), eingebunden direkt nach dem Supabase-Client in `index.html`, `app/index.html`, `terminplan.html`, `kostenberechnung.html`, `controlling.html`, `projektdokumente.html`, `produktbibliothek.html`, `herstellerkatalog.html`; `tests/office-client-fehler.test.mjs`, `tests/sql/office-client-fehler-acceptance.sql`, Schritt in `.github/workflows/verify.yml`.

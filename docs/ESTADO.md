@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Geplante Aufgaben:** Neu in Claude: Codeprüfung (Mo–Fr, beide Repos, erst ein vollständiger Durchgang, dann täglich die Änderungen plus ein Bereich; Entwurfs-PRs, nie mergen; Sicherheitsfunde nur an Gari) und Radar (Mo und Do: Neuigkeiten und Fristen). Die Office-Prüfung achtet zusätzlich auf Spitzen im KI-Verbrauch und auf Fehler aus dem Browser, die das Team treffen.
+
 **Stand 27.11.2026 · Claude · Fehler aus dem Browser:** Jede Seite des Office meldet Skriptfehler und abgelehnte Versprechen über `shared/fehler-melden.js` an `office_client_fehler_melden` (nur Technisches, bereinigt, gedrosselt; Tabelle `office_client_fehler`, über die App nicht lesbar). Die tägliche Codeprüfung und die Office-Prüfung lesen sie direkt in der Datenbank.
 
 **Stand 27.11.2026 · Claude · Kalender und «+»:** Schreibtisch und Kalender beginnen bei jedem Start mit heute (der gewählte Tag gilt nur innerhalb der Sitzung; über Mitternacht offen rückt «heute» nach). Das «+» am Ende der Reiter ist ein gezeichnetes Kreuz mittig im blauen Kreis.
