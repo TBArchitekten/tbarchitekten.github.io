@@ -14,7 +14,7 @@ function seite(){
   const ctx={
     location:{origin:'https://office.example',pathname:'/app/'},
     navigator:{userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15'},
-    document:{scripts:[{getAttribute:()=>'../shared/supabase-client.js?v=office4'},{getAttribute:()=>'./app.js?v=office59'}]},
+    document:{scripts:[{getAttribute:()=>'../shared/supabase-client.js?v=office4'},{getAttribute:()=>'./app.js?v=office60'}]},
     MINDS_SUPABASE:{rpc:async(name,args)=>{calls.push({name,args});return {error:null}}},
     console
   };
@@ -35,7 +35,7 @@ test('bereinigt: Parameter fremder Adressen, E-Mail-Adressen und Tokens verschwi
 
 test('meldet einen Skriptfehler mit Ort im Code (Version bleibt) und Seite ohne Parameter',async()=>{
   const {handlers,calls}=seite();
-  handlers.error({message:'Cannot read properties of undefined (reading \'name\')',filename:'https://office.example/app/app.js?v=office59',lineno:120,colno:7,
+  handlers.error({message:'Cannot read properties of undefined (reading \'name\')',filename:'https://office.example/app/app.js?v=office60',lineno:120,colno:7,
     error:{stack:'TypeError: x\n    at render (https://office.example/app/work.js?v=office61:44:9)'}});
   await warten();
   assert.equal(calls.length,1);
@@ -43,10 +43,10 @@ test('meldet einen Skriptfehler mit Ort im Code (Version bleibt) und Seite ohne 
   assert.equal(a.name,'office_client_fehler_melden');
   assert.equal(a.args.p_seite,'/app/');
   assert.equal(a.args.p_art,'fehler');
-  assert.equal(a.args.p_ort,'/app/app.js?v=office59:120:7');
+  assert.equal(a.args.p_ort,'/app/app.js?v=office60:120:7');
   assert.match(a.args.p_stapel,/at render \(\/app\/work\.js\?v=office61:44:9\)/);
   assert.equal(a.args.p_browser,'Safari 18 · macOS');
-  assert.equal(a.args.p_version,'app.js?v=office59');
+  assert.equal(a.args.p_version,'app.js?v=office60');
 });
 
 test('Rauschen, Erweiterungen und abgebrochene Anfragen werden nicht gemeldet; jeder Fehler nur einmal, höchstens acht',async()=>{

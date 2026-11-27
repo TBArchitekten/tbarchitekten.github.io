@@ -56,3 +56,11 @@ test('neue Regeln nur mit Farben aus den Tokens',()=>{
   assert.ok(neu.length>200);
   assert.doesNotMatch(neu,/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
 });
+
+test('das Diktat spricht «Sie», wie das ganze Office',()=>{
+  const shell=read('app/shell.js');
+  assert.match(shell,/placeholder="Hier erscheint die Transkription\."/);
+  assert.match(app,/setText\('Sie können die Nachricht auch tippen\.'\)/);
+  const diktat=shell.slice(shell.indexOf('<div id="focusMode"'),shell.indexOf('<div id="modalBackdrop"'));
+  assert.doesNotMatch(diktat,/\b(du|dein|deine|dich|dir)\b/i);
+});
