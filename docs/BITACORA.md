@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; Browserprüfungen Wissen (9) und Seitenleiste (6) lokal mit Chrome grün; Bildschirmfotos mit offener und reduzierter Leiste.
 - Quedó pendiente o sin probar: Panorama vervollständigen (Für dich, Register, Themen, Neu im Desktop).
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (pendiente)
+- PR: #199
 
 ---
 
