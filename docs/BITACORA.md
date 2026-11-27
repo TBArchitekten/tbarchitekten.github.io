@@ -28,7 +28,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün (561); Browserprüfungen Mustermappe (12), Terminplan im Reiter (4), Wissen (11) lokal mit Chrome grün; Karte, Formular und schmale Tabelle als Bildschirmfoto angesehen.
 - Quedó pendiente o sin probar: Hinweise und Gründe arbeitet die KI beim nächsten Mal ein (Claude über den Konnektor oder auf «Wissen pflegen»); noch nicht automatisch über Nacht.
 - Riesgos o decisiones que necesitan a Gari: die neuen Texte.
-- PR: (wird ergänzt)
+- PR: #205
 
 ### 2026-11-27 · Projektwissen Bernried: Lichtplanungsmappe keine Projektentscheidung; zweite Testmitteilung · Claude
 - Qué cambió y por qué: Gari: «Lichtplanungsmappe LPH 3 als finale Lichtabgabe … Teil der Bemusterungsmappe» ist eine Arbeitsweise der Abgabe, keine Entscheidung des Projekts. Am 26.11. war nur die Formulierungsregel herausgenommen worden, die Entscheidung blieb. Jetzt wie die beiden Arbeitsweisen vom 26.11.: Status `superseded` mit Grund («Arbeitsweise der Abgabe …, keine Projektentscheidung; steht auf der Seite»), `auf_seite` «Lichtkonzept», Eintrag `entscheidung_ersetzt` im Protokoll des Wissens. Nichts gelöscht; die Seite «Lichtkonzept» nennt die Mappe weiter im Text. Außerdem eine zweite Testmitteilung an Garis iPhone (14:38, APNs 200), um zu sehen, ob der Text entschlüsselt erscheint.
@@ -38,7 +38,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: Abfrage danach: Status `superseded`, Grund gesetzt; Mitteilung `gesendet`.
 - Quedó pendiente o sin probar: Garis Rückmeldung, was die Mitteilung zeigt.
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (wird ergänzt)
+- PR: #205
 
 ---
 
