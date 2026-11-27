@@ -360,7 +360,7 @@ function pruefungHtml(p){
   const t=pruefungText(p),status=STATUS[p.status]?p.status:'unbekannt';
   const jobs=t.jobs?`<ul class="status-details">${t.jobs.map(j=>`<li><span class="pill status-${esc(STATUS[j.status]?j.status:'unbekannt')}">${esc(STATUS[j.status]||STATUS.unbekannt)}</span> ${esc(ZEITPLAENE[j.name]||j.name)}${j.zuletzt?' · zuletzt '+esc(datum(j.zuletzt))+', '+esc(zeit(j.zuletzt))+' Uhr':''}${j.fehler_24h?' · '+esc(ganz.format(j.fehler_24h))+' Fehler in 24 Stunden':''}</li>`).join('')}</ul>`:'';
   const fehler=t.fehler&&t.fehler.length?`<ul class="status-details">${t.fehler.map(f=>`<li><code>${esc(f.nachricht)}</code> <span class="muted">${esc(f.seite||'')}${f.ort?' · '+esc(f.ort):''} · ${esc(ganz.format(f.anzahl||0))}-mal${Number(f.personen)>1?' · '+esc(ganz.format(f.personen))+' Personen':''}</span></li>`).join('')}</ul>`:'';
-  const link=t.link?' <a href="#kinutzung">KI-Nutzung öffnen</a>':'';
+  const link=t.link?' <a href="#section=kinutzung">KI-Nutzung öffnen</a>':'';
   return `<div class="row status-row"><span class="pill status-${esc(status)}">${esc(STATUS[status])}</span><span class="status-inhalt"><span class="row-title">${esc(t.titel)}</span><span class="row-sub">${esc(t.text)}${link}</span>${jobs}${fehler}</span></div>`;
 }
 function systemstatusHtml(daten,nutzung,ist=null){

@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Eine Oberfläche:** Die Startseite (`index.html`, `app.js`) ist nur noch die Anmeldung und das erste eigene Passwort; wer angemeldet ist, landet sofort in der App, ohne dass die Anmeldung aufblitzt, und alte Adressen (`#members`, `#kinutzung`, `#systemstatus`, `#work`, `#project=…`, `#tools`, `#plans`, `#kalender`) führen auf die Seite der App. Mitglieder, KI-Nutzung und Systemstatus sind Seiten der App (`#section=mitglieder`, `kinutzung`, `systemstatus`; `app/office-verwaltung.js`, `app/office-verwaltung.css`), «Passwort ändern» ist ein Dialog der App. «Romy» zeigt nur das Gespräch über die ganze Fläche; Kalender, Heute und Arbeitsplan daneben (aus Window) gibt es im Office nicht mehr, Heute und Kalender haben eigene Ansichten.
+
 **Stand 27.11.2026 · Claude · Stand der Quellen:** Im Projektwissen zählt das Datum des Inhalts; eine ältere Quelle überschreibt nie eine neuere; ohne erkennbares Datum «Stand unklar» und nachfragen (Regeln `office_wissen_regeln`).
 
 **Stand 27.11.2026 · Claude · Terminplan lesbar:** Namen neben zu kurzen Balken und mitwandernd beim Blättern, Kärtchen beim Zeigen, «Heute ± 4 Wochen», «Lesemodus»; der linke Griff der Balken deckt den Namen nicht mehr zu.
@@ -10,7 +12,7 @@
 
 **Stand 27.11.2026 · Claude · Modelle:** Romy in den Threads: alltäglich `gpt-6.1-terra`, gründlich und beim Lesen von Dokumenten `gpt-6.2-sol`, Einordnen `gpt-6-luna`; Fähigkeiten und Aufträge `gpt-6.2-sol`; Werkzeuge `gpt-6.1-terra`. Romys Motor (Romy-Tab, Präsenz, Traum, Pflege) wechselt erst mit den Secrets `OPENAI_*_MODEL` (Bitácora 27.11.); bis dahin `gpt-5.6-luna` und `gpt-5.6-terra`.
 
-**Stand 27.11.2026 · Claude · Navigation:** Die Startseite (`index.html`) dient nur noch Anmeldung, Passwort und Administration; «Work» und «Tools» führen in die App. Unter Tools heißt die Verwaltung der Projekte «Projekte verwalten»; die Werkzeuge stehen nebeneinander.
+**Stand 27.11.2026 · Claude · Navigation:** «Work» und «Tools» führen in die App (seit dem Abend des 27.11. auch die Administration, siehe «Eine Oberfläche»). Unter Tools heißt die Verwaltung der Projekte «Projekte verwalten»; die Werkzeuge stehen nebeneinander.
 
 **Stand 27.11.2026 · Claude · Aufräumen:** Die KI-Werkzeuge speichern keine Anfrage mit Person mehr (Verbrauch nur in `office_ki_verbrauch`, ohne Person); der Verlauf der Zeitpläne (`cron.job_run_details`) wird jede Nacht auf 7 Tage gekürzt. Mitteilungen aufs iPhone: am 27.11. von Gari bestätigt, der Text erscheint entschlüsselt.
 
@@ -32,7 +34,7 @@
 
 **Stand 27.11.2026 · Claude · Work B2 (Schritt 1):** Am Desktop stehen Projektwahl und Abschnitte des Projekts unter «Work» in der Seitenleiste (`app/work-lens.js`, spiegelt `.work-tabs` und `.work-project-switch` aus `work.js`); Projekt- und Reiterzeile oben sind dort ausgeblendet; die Fassungen eines Werkzeugs (Terminpläne, Mappen) stehen unter dem Abschnitt. Reduziert zeigt die Leiste Projektkürzel und Symbole. Der Planner hat Titel, Filter und Knöpfe in einer Leiste. Unter 950 px bleiben die Reiter oben.
 
-**Stand 27.11.2026 · Claude · Administration: KI-Nutzung und Systemstatus:** Nur für Administratoren (Kontomenü, «Mehr» in der App): «KI-Nutzung» (`#kinutzung`) schätzt das OpenAI-Guthaben (abgelesener Betrag minus geschätzter Verbrauch seitdem, Stufe mit «warnen ab»), zeigt Kosten pro Tag, je Funktion und je Projekt, nie je Person; «Systemstatus» (`#systemstatus`) zeigt Heartbeat, nächtliche Pflege, Cron, `pg_net`, Push, Fehler im Browser, KI-Verbrauch und Guthaben. Daten nur über `office_ki_nutzung`, `office_ki_guthaben_eintragen`, `office_systemstatus` (prüfen `private.office_is_admin()`); Preise in `office-uebersicht.js` (Stand 27.11.2026). Window nutzt dasselbe OpenAI-Konto, das Office sieht nur den eigenen Verbrauch.
+**Stand 27.11.2026 · Claude · Administration: KI-Nutzung und Systemstatus:** Nur für Administratoren («Mehr» in der App): «KI-Nutzung» (`#section=kinutzung`) schätzt das OpenAI-Guthaben (abgelesener Betrag minus geschätzter Verbrauch seitdem, Stufe mit «warnen ab»), zeigt Kosten pro Tag, je Funktion und je Projekt, nie je Person; «Systemstatus» (`#section=systemstatus`) zeigt Heartbeat, nächtliche Pflege, Cron, `pg_net`, Push, Fehler im Browser, KI-Verbrauch und Guthaben. Daten nur über `office_ki_nutzung`, `office_ki_guthaben_eintragen`, `office_systemstatus` (prüfen `private.office_is_admin()`); Preise in `office-uebersicht.js` (Stand 27.11.2026). Window nutzt dasselbe OpenAI-Konto, das Office sieht nur den eigenen Verbrauch.
 
 **Stand 27.11.2026 · Claude · KI-Verbrauch:** Jeder Aufruf der Office-Funktionen an OpenAI (Kostenberechnung, Dokumente, Produkte, Terminplan, Romy in Threads und im Assistenten, Romys Fähigkeiten, Gedächtnis und Aufträge) schreibt seinen Verbrauch in `office_ki_verbrauch`: Funktion, Modell, Tokens, Projekt, nie die Person (keine Spalte dafür). Schreiben nur der Dienst über `supabase/functions/_office/ki-verbrauch.mjs`; lesen über die App niemand direkt. Romys Motor schreibt weiter in `minds_ai_usage`.
 
@@ -517,7 +519,8 @@ PR #35 fusionado a `main` en el commit `369dab63038cb49fabd7523ddc295472492e15e3
 
 | Parte | Archivos | Qué hace |
 |---|---|---|
-| Página de inicio | `index.html`, `app.js`, `office-core.js`, `office-config.js`, `style.css` | Inicio de sesión (correo y contraseña), `#password`, Projekte (`#work`, `#project=<id>`), Tools (`#tools`, `#plans` = Terminplan-Muster), Mitglieder (`#members`, solo admin). Sin `#` tras iniciar sesión, redirige a `./app/`. |
+| Página de inicio | `index.html`, `app.js`, `office-core.js`, `office-config.js`, `style.css` | Solo inicio de sesión (correo y contraseña) y la primera contraseña propia (`#password`). Con sesión redirige a `./app/` sin mostrar el login; las direcciones antiguas (`#members`, `#kinutzung`, `#systemstatus`, `#work`, `#project=<id>`, `#tools`, `#plans`, `#kalender`) van a su página en la app. |
+| Administración en la app | `app/office-verwaltung.js`, `app/office-verwaltung.css`, `office-uebersicht.js` | Mitglieder, KI-Nutzung y Systemstatus (`#section=mitglieder`, `kinutzung`, `systemstatus`, solo admin; la base de datos lo comprueba otra vez) y el diálogo «Passwort ändern». |
 | App de la oficina (copia de Window) | `app/` y `shared/` | Heute (`ahora.js`), Kalender (`app.js`), Work con Panorama y Planner (`work.js`, `work-team.js`), ficha de tarea (`task-detail.js`, `task-team.js`), planificar tiempo (`time-plan.js`), marco y menú (`shell.js`), sincronización (`sync.js`). |
 | Ajustes de oficina en la copia | `app/office-fristen.js`, `app/office.css`; `const OFFICE=true` en `app.js` y `work.js` | Fristen = hitos de los Terminpläne. Oculta lo que la oficina todavía no tiene. |
 | Editor de Terminplan | `terminplan.html`, `terminplan-engine.js`, `terminplan-dialogue.js`, `window-editor.css` | Gantt por proyecto y fase (LPH), a partir de los Muster. Historia en `docs/TERMINPLAN-ASSISTENT-v0.1…v0.6.md`. |

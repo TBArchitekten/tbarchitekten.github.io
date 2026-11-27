@@ -187,12 +187,11 @@ test('sign-in is per person with the office e-mail; no shared start password or 
   assert.match(app,/sb\.rpc\('office_password_changed'\)/);
 });
 
-test('every new Terminplan belongs to an Office project; only leads create projects',()=>{
-  const app=read('app.js');
-  assert.match(app,/insert\(\{\s*project_id:project\.id,/);
-  assert.match(app,/\(lead\?'<option value="__new">\+ Neues Projekt anlegen …<\/option>':''\)/);
-  assert.match(read('index.html'),/id="newProjectBtn" class="primary" data-lead-only hidden/);
-  assert.match(read('index.html'),/data-view="members" data-admin-only hidden/);
+test('every new Terminplan belongs to an Office project',()=>{
+  // Seit dem 27.11.2026 legt nur noch die App Terminpläne an (Werkzeuge und Work); die Startseite ist die Anmeldung.
+  const projects=read('app/office-projects.js');
+  assert.match(projects,/from\('office_terminplan_instances'\)\.insert\(\{\n\s*project_id:project\.id,/);
+  assert.doesNotMatch(read('app.js'),/office_terminplan_instances/);
 });
 
 test('the editor and the AI function share the edit rule: owner, admin or Projektleiter',()=>{
@@ -225,14 +224,15 @@ test('Window design: helpers for the account avatar, the next milestone and the 
   assert.equal(C.hashFor('tools'),'#tools');
 });
 
-test('Window design: sidebar of views, Mitglieder in the account menu, one id per element',()=>{
-  const index=read('index.html'),css=read('style.css'),app=read('app.js');
+test('Window design: the start page is the sign-in, Mitglieder in the app menu, one id per element',()=>{
+  const index=read('index.html'),css=read('style.css'),app=read('app.js'),shell=read('app/shell.js');
   const ids=[...index.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
   assert.deepEqual(ids.filter((x,i)=>ids.indexOf(x)!==i),[],'no duplicate ids');
-  // Seit dem 27.11.2026 führen Work und Tools in die App.
-  for(const view of ['work','tools'])assert.match(index,new RegExp(`class="lens-nav-item[^"]*" href="\\./app/#section=${view}"`));
-  assert.match(index,/<div id="accountMenu" class="account-menu" role="menu" hidden>[\s\S]*data-view="members" data-admin-only hidden[\s\S]*id="changePasswordBtn"[\s\S]*id="logoutBtn"/);
-  assert.match(index,/<section id="projectView"[\s\S]*id="projectNewPlanBtn" class="primary"/);
+  // Seit dem 27.11.2026 ist die Startseite nur die Anmeldung; Mitglieder, KI-Nutzung und Systemstatus stehen im Menü
+  // der App, nur für die Administration (die Datenbank prüft es noch einmal).
+  assert.doesNotMatch(index,/id="accountMenu"|id="projectView"|data-view=/);
+  for(const [name,label] of [['mitglieder','Mitglieder'],['kinutzung','KI-Nutzung'],['systemstatus','Systemstatus']])
+    assert.ok(shell.includes(`<a class="drawer-link" href="#section=${name}" data-office-verwaltung="${name}" data-office-admin hidden>${label}</a>`),name);
   // One blue for actions, Window tokens, cards with a hairline. Since 24.11.2026 the values live only in the shared
   // tokens file, which the page loads before style.css (Gari: one file so the pages cannot drift apart again).
   const tokens=read('shared/minds-design-tokens.css');
@@ -243,12 +243,7 @@ test('Window design: sidebar of views, Mitglieder in the account menu, one id pe
   assert.doesNotMatch(css,/--m-(blue|ink|paper|type)\s*:/,'style.css does not define its own colours or type');
   assert.match(css,/button\.primary\{[^}]*background:var\(--m-blue\)/);
   assert.doesNotMatch(css,/Arial,Helvetica,sans-serif\}/,'no Arial page font');
-  // Projects open their page; the dialog preselects the project.
-  assert.match(app,/card\.onclick=\(\)=>switchView\('project',\{id:p\.id\}\)/);
-  assert.match(app,/\$\('#projectNewPlanBtn'\)\.onclick=\(\)=>openCreate\('LPH3',currentProjectId\)/);
-  // Mitglieder, KI-Nutzung und Systemstatus nur für Administratoren (27.11.2026).
-  assert.match(app,/const ADMIN_VIEWS=\['members','kinutzung','systemstatus'\];/);
-  assert.match(app,/if\(ADMIN_VIEWS\.includes\(name\)&&member\?\.role!=='admin'\)name='work';/);
+  assert.doesNotMatch(app,/ADMIN_VIEWS|switchView/);
 });
 
 test('Window design: the editor uses the same chrome and returns to the Terminplan library',()=>{

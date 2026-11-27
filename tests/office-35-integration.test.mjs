@@ -30,7 +30,8 @@ test('Project manager is in Window shell; Terminplan is always Terra when availa
  assert.doesNotMatch(shell,/href="\.\.\/#work"/);
  assert.match(app,/name==='projects'/);
  assert.match(app,/OFFICE\?\$\('\.top-actions'\):null/); // one reachable mobile menu
- assert.match(root,/const section=r\.view==='tools'\|\|r\.view==='plans'\?r\.view:'work'/);
+ // Die Startseite ist nur noch die Anmeldung: Werkzeuge und Muster-Terminpläne öffnen in der App (27.11.2026).
+ assert.match(root,/if\(\['plans','tools','kinutzung','systemstatus'\]\.includes\(r\.view\)\)return '\.\/app\/#section='\+r\.view;/);
  assert.match(projects,/from\('office_projects'\)/);
  assert.match(projects,/projektleiter_id:null/);
  assert.match(projects,/office_project_members/);

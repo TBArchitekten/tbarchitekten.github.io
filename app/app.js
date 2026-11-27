@@ -511,7 +511,8 @@ function placeGlobalMenu(name){
 // In the office account the fifth tab is Tools (Projekte and Terminplan-Muster open there too).
 const WINDOW_TAB_FOR=OFFICE?{assistant:'chat',feed:'ahora',calendar:'tiempo',work:'work',tools:'tools',projects:'tools',plans:'tools'}
   :{assistant:'chat',feed:'ahora',calendar:'tiempo',work:'work',bandeja:'bandeja',ideas:'bandeja'};
-const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','tools','projects','plans','readings','thoughts'];
+// Administration (27.11.2026): KI-Nutzung, Systemstatus und Mitglieder sind Seiten der App (office-verwaltung.js).
+const WINDOW_SECTIONS=['assistant','feed','bandeja','ideas','work','calendar','tools','projects','plans','readings','thoughts','kinutzung','systemstatus','mitglieder'];
 let windowShell=false,windowShellTab='chat',windowShellCaps=[];
 function show(name,options={}){
   if(windowShell){
@@ -591,6 +592,7 @@ function showSection(name,options={}){
   if(name==='work')setTimeout(()=>window.MINDS_WORK?.render?.(),0);
   if(name==='projects')whenLoaded(()=>{if(state.screen==='projects')window.TBA_OFFICE_PROJECTS?.render?.()});
   if(name==='plans')whenLoaded(()=>{if(state.screen==='plans')window.TBA_OFFICE_PROJECTS?.render?.()});
+  if(['kinutzung','systemstatus','mitglieder'].includes(name))whenLoaded(()=>{if(state.screen===name)window.TBA_OFFICE_VERWALTUNG?.zeigen?.(name)});
   if(name==='readings')ensureReadings();
   if(name==='thoughts')mountThoughts();
 }

@@ -1,0 +1,139 @@
+/* TBA Office · Administration in der App (27.11.2026): KI-Nutzung, Systemstatus, Mitglieder und «Passwort ändern».
+   Dieselben Bausteine wie früher auf der Startseite (Kopf, Karten, Zeilen, Pillen), hier auf die Seiten der App
+   beschränkt und nur mit den Farben, Formen und Schriften aus shared/minds-design-tokens.css. */
+.office-app .office-verwaltung-screen{background:var(--m-surface);min-height:0}
+.office-app .office-verwaltung-scroll{height:100%;overflow:auto;padding:36px clamp(20px,5vw,70px) 90px}
+.office-verwaltung{max-width:1040px;color:var(--m-ink);font-family:var(--m-type)}
+.office-verwaltung.office-verwaltung-breit{max-width:1180px}
+@media(max-width:680px){.office-app .office-verwaltung-scroll{padding:22px 18px 70px}}
+
+/* Kopf, Abschnitte, Hinweise */
+.office-verwaltung .page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:26px}
+.office-verwaltung .page-head h1{margin:0;font-size:30px;line-height:1.08;font-weight:700;letter-spacing:-.024em}
+.office-verwaltung .page-head .lead{margin:8px 0 0;max-width:640px;font-size:14.5px}
+.office-verwaltung .page-actions{display:flex;gap:8px;flex-wrap:wrap}
+.office-verwaltung .eyebrow{margin:0 0 6px;font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--m-ink-faint)}
+.office-verwaltung :is(.muted,.lead){color:var(--m-ink-soft);line-height:1.5}
+.office-verwaltung .message{min-height:18px;margin:6px 0 0;font-size:13px;color:var(--m-error)}
+.office-verwaltung .section{margin-top:30px}
+.office-verwaltung .section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.office-verwaltung .section-title h2{margin:0;font-size:16px;font-weight:650;letter-spacing:-.01em}
+.office-verwaltung .section-title .count{font-size:12px;font-weight:600;color:var(--m-ink-faint)}
+.office-verwaltung .empty{padding:28px 22px;border:1px dashed var(--m-border-strong);border-radius:var(--m-radius-card);color:var(--m-ink-soft);font-size:14px;background:var(--m-paper)}
+.office-verwaltung .card{background:var(--m-paper);border:1px solid var(--m-border);border-radius:var(--m-radius-card)}
+.office-verwaltung .pill{display:inline-flex;align-items:center;white-space:nowrap;flex:none;min-height:22px;padding:2px 9px;border-radius:var(--m-radius-pill);background:var(--m-fill);color:var(--m-ink-soft);font-size:11.5px;font-weight:600}
+.office-verwaltung a{color:var(--m-link)}
+.office-verwaltung a:hover{color:var(--m-link-hover)}
+
+/* Knöpfe und Felder */
+.office-verwaltung button,.office-passwort button{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 14px;
+  border:1px solid var(--m-border);border-radius:var(--m-radius-button);background:var(--m-paper);color:var(--m-ink);
+  font:inherit;font-size:13.5px;font-weight:550;white-space:nowrap;cursor:pointer
+}
+.office-verwaltung button:hover,.office-passwort button:hover{background:var(--m-fill)}
+.office-verwaltung button.primary,.office-passwort button.primary{border-color:transparent;background:var(--m-blue);color:var(--m-on-blue);font-weight:600}
+.office-verwaltung button.primary:hover,.office-passwort button.primary:hover{background:var(--m-blue-hover)}
+.office-verwaltung button:disabled,.office-passwort button:disabled{cursor:default;opacity:.5}
+.office-verwaltung label,.office-passwort label{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:600;color:var(--m-ink-soft)}
+.office-verwaltung :is(input,select),.office-passwort input{
+  width:100%;min-width:0;min-height:38px;padding:8px 11px;border:1px solid var(--m-field);border-radius:var(--m-radius-control);
+  background:var(--m-paper);color:var(--m-ink);font:inherit;font-size:14px
+}
+.office-verwaltung :is(input,select):focus,.office-passwort input:focus{outline:none;border-color:var(--m-blue);box-shadow:0 0 0 3px var(--m-blue-ring)}
+
+/* Zeilen (Mitglieder, Systemstatus) */
+.office-verwaltung .row-list{overflow:hidden}
+.office-verwaltung .row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;width:100%;
+  min-height:62px;padding:12px 18px;border-bottom:1px solid var(--m-border-soft);background:var(--m-paper);color:var(--m-ink)
+}
+.office-verwaltung .row:last-child{border-bottom:0}
+.office-verwaltung .row-title{font-size:14.5px;font-weight:600;letter-spacing:-.006em}
+.office-verwaltung .row-sub{display:block;margin-top:3px;font-size:12.5px;color:var(--m-ink-soft)}
+
+/* Mitglieder */
+.office-verwaltung .member-form{display:grid;grid-template-columns:minmax(220px,1.4fr) minmax(160px,1fr) minmax(170px,1fr) auto;gap:12px;align-items:end;padding:18px}
+.office-verwaltung .member-row{grid-template-columns:minmax(0,1fr) 180px 150px auto auto}
+.office-verwaltung .member-row select{min-height:36px;padding:6px 10px;font-size:13px}
+.office-verwaltung .member-row.is-inactive{opacity:.55}
+.office-verwaltung .member-leitfaden{color:var(--m-ink-faint)}
+.office-verwaltung .start-password{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:14px;padding:16px 18px;border-color:var(--m-blue-line);background:var(--m-blue-wash)}
+.office-verwaltung .start-password .eyebrow{color:var(--m-blue)}
+.office-verwaltung .start-password p.muted{margin:0 0 8px;font-size:13px}
+.office-verwaltung .start-password code{font-size:22px;letter-spacing:.06em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.office-verwaltung .start-password-actions{display:flex;gap:8px;align-items:center}
+.office-verwaltung .leitfaden-card{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 16px}
+.office-verwaltung .leitfaden-card p{margin:0;font-size:13.5px}
+.office-verwaltung .leitfaden-card button{flex:none}
+@media(max-width:900px){
+  .office-verwaltung .member-form{grid-template-columns:1fr}
+  .office-verwaltung .member-row{grid-template-columns:minmax(0,1fr) auto;row-gap:8px}
+  .office-verwaltung .start-password{flex-direction:column;align-items:flex-start}
+}
+
+/* KI-Nutzung */
+.office-verwaltung .ki-oben{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;margin-bottom:26px}
+.office-verwaltung .ki-guthaben{padding:20px 22px}
+.office-verwaltung .ki-zahl{margin:2px 0 6px;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:-.02em;color:var(--m-ink)}
+.office-verwaltung .ki-zahl.ki-leer{color:var(--m-ink-faint)}
+.office-verwaltung .ki-sub{margin:0;font-size:13px;line-height:1.45;color:var(--m-ink-soft)}
+.office-verwaltung .ki-reicht{margin:10px 0 0;font-size:13px;color:var(--m-ink-soft)}
+.office-verwaltung .ki-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:16px}
+.office-verwaltung .ki-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--m-ink-soft)}
+.office-verwaltung .ki-form input{width:150px}
+.office-verwaltung .ki-form input[name="warnen"]{width:96px}
+.office-verwaltung .ki-hinweis{margin:8px 0 0;font-size:12px}
+.office-verwaltung .ki-von{font-size:15px;font-weight:500;letter-spacing:0;color:var(--m-ink-soft)}
+.office-verwaltung .ki-limit{position:relative;height:10px;margin:8px 0 10px;border-radius:var(--m-radius-pill);background:var(--m-fill)}
+.office-verwaltung .ki-limit-voll{position:absolute;left:0;top:0;bottom:0;max-width:100%;border-radius:var(--m-radius-pill);background:var(--m-success)}
+.office-verwaltung .ki-limit-voll.ki-limit-knapp{background:var(--m-attention)}
+.office-verwaltung .ki-limit-voll:is(.ki-limit-kritisch,.ki-limit-leer){background:var(--m-error)}
+.office-verwaltung .ki-limit-warnen{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--m-border-strong)}
+.office-verwaltung .ki-limit-hoch{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--m-ink)}
+.office-verwaltung .ki-kennzahlen{display:grid;gap:14px;align-content:start;padding:20px 22px}
+.office-verwaltung .ki-kennzahlen .eyebrow{margin:0}
+.office-verwaltung .ki-wert{margin:2px 0 0;font-size:22px;font-weight:650;letter-spacing:-.015em;font-variant-numeric:tabular-nums;color:var(--m-ink)}
+.office-verwaltung .ki-chart{position:relative;margin:0;padding:16px 16px 10px}
+.office-verwaltung .ki-svg{display:block;width:100%;height:auto}
+.office-verwaltung :is(.ki-gitter,.ki-basis){stroke:var(--m-border-soft);stroke-width:1}
+.office-verwaltung .ki-achse{fill:var(--m-ink-faint);font-size:11px;font-family:var(--m-type)}
+.office-verwaltung .ki-balken{fill:var(--m-blue)}
+.office-verwaltung .ki-treffer{fill:transparent}
+.office-verwaltung .ki-tag{outline:none}
+.office-verwaltung .ki-tag:is(:hover,:focus) .ki-balken{fill:var(--m-blue-hover)}
+.office-verwaltung .ki-tag:focus-visible .ki-treffer{stroke:var(--m-focus);stroke-width:2}
+.office-verwaltung .ki-tooltip{position:absolute;top:8px;display:flex;flex-direction:column;gap:1px;padding:6px 10px;border:1px solid var(--m-border);border-radius:var(--m-radius-control);background:var(--m-surface-raised);font-size:12px;pointer-events:none}
+.office-verwaltung .ki-tooltip strong{font-size:13px;font-variant-numeric:tabular-nums;color:var(--m-ink)}
+.office-verwaltung .ki-tooltip span{color:var(--m-ink-soft)}
+.office-verwaltung .ki-tabelle{margin-top:8px;font-size:13px}
+.office-verwaltung .ki-tabelle summary{cursor:pointer;color:var(--m-link)}
+.office-verwaltung :is(.ki-tabelle table,.ki-liste){width:100%;border-collapse:collapse;font-size:13px}
+.office-verwaltung :is(.ki-liste,.ki-tabelle) :is(th,td){padding:9px 14px;border-bottom:1px solid var(--m-border-soft);text-align:left}
+.office-verwaltung :is(.ki-liste,.ki-tabelle) th{font-size:11px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--m-ink-faint)}
+.office-verwaltung .ki-liste tr:last-child td{border-bottom:0}
+.office-verwaltung :is(.ki-liste,.ki-tabelle) .zahl{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.office-verwaltung .ki-tabellen{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px}
+.office-verwaltung .ki-leer-text{margin:0;padding:16px}
+.office-verwaltung .ki-fuss{max-width:760px;margin-top:8px;font-size:12px}
+.office-verwaltung .pill:is(.ki-stufe-ok,.status-ok){background:var(--m-success-soft);color:var(--m-success)}
+.office-verwaltung .pill:is(.ki-stufe-knapp,.status-warnung){background:var(--m-attention-soft);color:var(--m-attention)}
+.office-verwaltung .pill:is(.ki-stufe-kritisch,.ki-stufe-leer,.status-fehler){background:var(--m-error-soft);color:var(--m-error)}
+.office-verwaltung .pill:is(.status-unbekannt,.status-ausstehend){background:var(--m-fill);color:var(--m-ink-soft)}
+@media(max-width:900px){.office-verwaltung :is(.ki-oben,.ki-tabellen){grid-template-columns:1fr}}
+
+/* Systemstatus */
+.office-verwaltung .status-gesamt{display:flex;align-items:center;gap:10px;margin:-8px 0 16px;font-size:13px}
+.office-verwaltung .row.status-row{grid-template-columns:auto minmax(0,1fr);align-items:start}
+.office-verwaltung .status-row>.pill{justify-content:center;min-width:104px;margin-top:1px}
+.office-verwaltung .status-inhalt{display:flex;flex-direction:column;min-width:0}
+.office-verwaltung .status-details{display:flex;flex-direction:column;gap:6px;margin:8px 0 2px;padding:0;list-style:none;font-size:12.5px;color:var(--m-ink-soft)}
+.office-verwaltung .status-details code{font-size:12px;white-space:pre-wrap;word-break:break-word;color:var(--m-ink)}
+.office-verwaltung .status-details .pill{min-height:18px;padding:1px 7px;font-size:11px}
+
+/* Passwort ändern (Dialog) */
+.office-passwort{display:grid;gap:12px}
+.office-passwort p{margin:0;font-size:13.5px}
+.office-passwort .message{min-height:18px;font-size:13px;color:var(--m-error)}
+.office-passwort-knoepfe{display:flex;justify-content:flex-end;gap:8px}
+.office-passwort-ok{color:var(--m-ink)}

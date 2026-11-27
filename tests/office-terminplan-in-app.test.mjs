@@ -21,13 +21,13 @@ test('terminplan.html uses the bridged client and the app sign-in, and returns t
   assert.equal(html.match(/location\.href='\.\/'/g).length,2);
 });
 
-test('The start page (Mitglieder, Passwort ändern) borrows the app session too', ()=>{
+test('The start page (Anmeldung, Passwort) borrows the app session too', ()=>{
+  // Mitglieder und «Passwort ändern» sind seit dem 27.11.2026 in der App; hier bleiben Anmeldung und erstes Passwort.
   const index=read('index.html'),app=read('app.js');
   assert.ok(index.indexOf('./shared/supabase-client.js?v=office4')>index.indexOf('./office-config.js'));
-  assert.ok(index.includes('./app.js?v=9'));
+  assert.ok(index.includes('./app.js?v=10'));
   assert.match(app,/const sb=window\.MINDS_SUPABASE\|\|supabase\.createClient\(/);
   assert.match(app,/if\(!session&&inApp\)\{void window\.WINDOW_NATIVE\.call\('session\.signIn'\);location\.replace\('\.\/app\/'\);return\}/);
-  assert.match(app,/await sb\.auth\.signOut\(\);if\(inApp\)return;/);
 });
 
 function loadFacade(fetchImpl){

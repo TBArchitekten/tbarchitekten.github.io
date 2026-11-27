@@ -136,11 +136,20 @@ test('Schema fix: categories are unique per person',()=>{
 });
 
 test('Start page: an empty address opens the app, #password changes the own password',()=>{
-  const root=read('app.js');
-  assert.match(root,/if\(!location\.hash\|\|location\.hash==='#'\)\{location\.replace\('\.\/app\/'\);return\}/);
-  assert.match(root,/if\(location\.hash==='#password'\)\{openPassword\(true\);return\}/);
+  // Die Startseite ist nur noch die Anmeldung (27.11.2026): angemeldet geht es sofort in die App; alte Adressen
+  // (#members, #kinutzung, #work …) führen ohne Anmeldung dazwischen auf die Seite der App.
+  const root=read('app.js'),index=read('index.html');
+  assert.match(root,/const zurApp=\(\)=>location\.hash&&location\.hash!=='#'&&location\.hash!=='#password';\n  if\(zurApp\(\)\)\{location\.replace\(appZiel\(location\.hash\)\);return\}/);
+  assert.match(root,/if\(member\.must_change_password\)\{openPassword\(false\);return\}\n    if\(location\.hash==='#password'\)\{openPassword\(true\);return\}\n    location\.replace\('\.\/app\/'\);/);
+  assert.match(root,/if\(r\.view==='members'\)return '\.\/app\/#section=mitglieder';/);
+  // Nichts blitzt auf: die Anmeldung erscheint erst, wenn keine Sitzung da ist; die alte Oberfläche gibt es nicht mehr.
+  assert.match(index,/<div id="authView" class="auth-shell" hidden>/);
+  assert.match(index,/<div id="passwordView" class="auth-shell" hidden>/);
+  assert.doesNotMatch(index,/id="appView"|id="membersView"|id="kinutzungView"|id="systemstatusView"|class="lens-nav-item"/);
+  assert.doesNotMatch(root,/switchView|showOnly\('app'\)/);
   const shell=src('shell.js');
-  for(const href of ['#section=projects','../#members','../#password'])assert.ok(shell.includes(`href="${href}"`),href);
+  for(const href of ['#section=projects','#section=mitglieder','../#password'])assert.ok(shell.includes(`href="${href}"`),href);
+  assert.ok(shell.includes('href="../#password" data-office-verwaltung="passwort"'),'Passwort ändern als Dialog der App');
   assert.ok(shell.includes('id="officeToolsPlans"'));
   assert.ok(!shell.includes('href="../#plans"'));
 });
