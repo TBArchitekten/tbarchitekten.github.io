@@ -309,8 +309,8 @@ test('Oberfläche: Reiter «Wissen» neben Panorama, geladen vor work.js, liest 
   assert.match(work,/\['overview','planner','knowledge'\]\.includes\(b\.dataset\.workView\)/);
   assert.match(work,/:view==='knowledge'\?\(OFFICE\?renderWissen\(\):renderKnowledge\(\)\)/);
   assert.match(work,/isCurrent:\(\)=>current===workRenderVersion&&view==='knowledge'&&project\?\.id===id/);
-  assert.ok(index.indexOf('<script src="./office-wissen.js?v=office4"></script>')>0);
-  assert.ok(index.indexOf('./office-wissen.js?v=office4')<index.indexOf('./work.js?v=office62'),'vor work.js');
+  assert.ok(index.indexOf('<script src="./office-wissen.js?v=office5"></script>')>0);
+  assert.ok(index.indexOf('./office-wissen.js?v=office5')<index.indexOf('./work.js?v=office63'),'vor work.js');
   assert.match(index,/<link rel="stylesheet" href="\.\/office-wissen\.css\?v=office2">/);
   // Keine direkten Schreibzugriffe; nur die zwei Funktionen für das Team.
   assert.doesNotMatch(js,/\.(insert|update|upsert|delete)\(/);

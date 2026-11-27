@@ -121,7 +121,7 @@ window.ISABELLA_APP={getState:()=>({}),openModal:(title,html)=>{const e=document
 <script src="./office-wissen.js"></script><script src="./work.js"></script></body></html>`;
 
 const pages=new Map([['gari',harness('pa',voll())],['ana',harness('pb',voll())],['carla',harness('pc',voll())],['leer',harness('pa',leer())],
-  ['panorama',harness('pa',voll(),'overview')],['panoramacarla',harness('pc',voll(),'overview')],['panoramaleer',harness('pa',leer(),'overview')]]);
+  ['panorama',harness('pa',voll(),'overview')],['panoramaana',harness('pb',voll(),'overview')],['panoramacarla',harness('pc',voll(),'overview')],['panoramaleer',harness('pa',leer(),'overview')]]);
 const server=http.createServer((req,res)=>{
  const pathname=decodeURIComponent((req.url||'').split('?')[0]);
  const m=pathname.match(/^\/app\/__wissen_([a-z]+)__\.html$/);
@@ -332,7 +332,7 @@ test('Panorama: Karte «Neu im Projektwissen» zählt, was wartet, und öffnet d
     assert.match(karte,/Neu im Projektwissen[\s\S]*Öffnen[\s\S]*2 Seiten[\s\S]*1 Entscheidung zur Bestätigung[\s\S]*1 Beitrag wartet auf die KI[\s\S]*Feinsteinzeug 60 × 60 in den Fluren\s*vorgeschlagen · (gestern|25\.11\.)[\s\S]*Bodenbelag Flure\s*Seite neu · (gestern|25\.11\.)/);
     // Neben den Terminplänen, in derselben Spalte.
     assert.equal(await page.evaluate(()=>document.querySelector('#cockpitWissen').closest('.cockpit-stack')===document.querySelector('#cockpitPlans').closest('.cockpit-stack')),true);
-    await page.locator('[data-work-wissen="entscheidungen"]').click();
+    await page.locator('section[aria-labelledby="cockpitWissen"] [data-work-wissen="entscheidungen"]').click();
     await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Entscheidungen');
     assert.equal(await page.evaluate(()=>document.querySelector('[data-work-view="knowledge"]').classList.contains('active')),true);
     await page.locator('[data-work-view="overview"]').click();
@@ -357,4 +357,31 @@ test('Panorama: ohne Team keine Karte; ohne Projektwissen ein Hinweis, wie es en
     assert.match(await leer.page.locator('section[aria-labelledby="cockpitWissen"]').innerText(),/Noch kein Projektwissen\. In einem Chat mit Claude «Ins Office übernehmen» sagen\./);
     assert.deepEqual(leer.errors,[]);
   }finally{await leer.page.close()}
+});
+
+// Panorama vervollständigt (B2, 27.11.2026): «Für dich» zeigt der Projektleitung die Entscheidungen zur Bestätigung
+// (bestätigt wird über die Funktion des Wissens, nie direkt), dazu Themen, die beschlossenen Entscheidungen und «Neu im
+// Desktop». Ein Teammitglied ohne Projektleitung sieht keine Knöpfe zum Bestätigen.
+test('Panorama: «Für dich» mit Bestätigen für die Projektleitung, Themen, Entscheidungen, Neu im Desktop',async()=>{
+  const {page,errors}=await oeffnen('panorama',undefined,'#cockpitParaTi');
+  try{
+    const fuer=page.locator('section[aria-labelledby="cockpitParaTi"]');
+    assert.match(await fuer.innerText(),/Für dich[\s\S]*1 zur Bestätigung[\s\S]*Feinsteinzeug 60 × 60 in den Fluren/);
+    assert.match(await page.locator('section[aria-labelledby="cockpitRegister"]').innerText(),/Keine Teppiche in den Fluren/);
+    assert.doesNotMatch(await page.locator('section[aria-labelledby="cockpitRegister"]').innerText(),/Naturstein|Feinsteinzeug/,'nur beschlossene');
+    assert.match(await page.locator('section[aria-labelledby="cockpitTopics"]').innerText(),/Noch keine Themen\. Legen Sie eines unter Threads an\./);
+    assert.match(await page.locator('section[aria-labelledby="cockpitNew"]').innerText(),/Der Desktop ist leer\./);
+    await fuer.locator('[data-wissen-pruefen="d1"][data-ja="1"]').click();
+    await page.waitForFunction(()=>window.__rpc.some(c=>c.name==='office_wissen_entscheidung_pruefen'&&c.args.p_id==='d1'&&c.args.p_beschliessen===true));
+    await page.waitForFunction(()=>/Feinsteinzeug 60 × 60 in den Fluren/.test(document.querySelector('section[aria-labelledby="cockpitRegister"]')?.textContent||''));
+    assert.match(await page.locator('section[aria-labelledby="cockpitParaTi"]').innerText(),/Nichts offen/);
+    assert.deepEqual(await page.evaluate(()=>window.__writes),[],'kein direktes Schreiben');
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+  const ana=await oeffnen('panoramaana',undefined,'#cockpitParaTi');
+  try{
+    assert.equal(await ana.page.locator('[data-wissen-pruefen]').count(),0,'ohne Projektleitung keine Knöpfe');
+    assert.doesNotMatch(await ana.page.locator('section[aria-labelledby="cockpitParaTi"]').innerText(),/Feinsteinzeug/);
+    assert.deepEqual(ana.errors,[]);
+  }finally{await ana.page.close()}
 });

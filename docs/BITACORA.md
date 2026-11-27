@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Work B2, Schritt 5: Panorama mit «Für dich», Themen, Entscheidungen und «Neu im Desktop» · Claude
+- Qué cambió y por qué: Das Panorama im Office zeigte nur Kopf, die nächsten 14 Tage, Terminpläne und «Neu im Projektwissen». Jetzt, wie in Window, aber mit den Daten des Office und in «Sie»: «Für dich» (der Projektleitung die Entscheidungen des Wissens zur Bestätigung, mit «Warum», «Bestätigen» und «Verwerfen» über die Funktion des Wissens `office_wissen_entscheidung_pruefen`; dazu die überfälligen Aufgaben des Projekts mit «Aufgabe öffnen» und «Erledigt»), «Themen» (die Threads des Projekts mit Themenblatt, «In Claude fortsetzen»), «Entscheidungen» (die beschlossenen, mit Datum und Herkunft; «Alle im Wissen») und «Neu im Desktop» (die letzten fünf Dokumente des Projekts). Ein Teammitglied ohne Projektleitung sieht keine Knöpfe zum Bestätigen. `TBA_OFFICE_WISSEN.panorama` meldet dafür, ob die Person bestätigen darf; die Datenbank prüft es noch einmal.
+- Archivos: `app/work.js` (`?v=office63`), `app/office-wissen.js` (`?v=office5`, `entscheiden`), `app/index.html`, Versionsangaben in neun Tests, `tests/browser/office-wissen.chromium.mjs` (neu: Panorama «Für dich», mit und ohne Projektleitung).
+- Base de datos: ninguna migración (liest `minds_work_files`, `minds_work_memory` und `minds_work_threads` mit den bestehenden Regeln des Teams).
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün; Browserprüfungen Wissen (10) lokal mit Chrome grün; Bildschirmfoto des Panoramas mit Beispieldaten.
+- Quedó pendiente o sin probar: die Abläufe «Besprechung nachbereiten» und «Phasenwechsel».
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: #200
+
+---
+
 ### 2026-11-27 · Work B2, Schritt 4: Wissen mit Kontextspalte, die Seiten in der Leiste · Claude
 - Qué cambió y por qué: Wie im Entwurf (Variante B: «Text 680 · Kontext 300, die Seitenliste wandert in die Leiste links»). Oben eine Werkzeugzeile statt Überschrift und Einleitung: Suche, «zuletzt eingearbeitet heute, 07:12» (aus dem Verlauf), «Hinweis zu dieser Seite», «Notiz teilen» und «?» mit der Erklärung, die vorher über dem Wissen stand. Der Text der Seite bleibt höchstens 760 px breit; daneben (300 px) was zu ihr gehört: «Auf dieser Seite» (die Überschriften, ab zwei; Knöpfe statt Anker, die Adresse gehört der App), die Entscheidungen der Seite mit «Beschlossen» oder «Wartet auf Bestätigung», offene Hinweise, Herkunft, Verweise hierher, frühere Fassungen und «Hinweis geben». Reicht die Breite des Wissens nicht (gemessen am Wissen, nicht am Fenster), steht der Kontext unter dem Text. «Neu» zeigt die Zahl der Beiträge, die auf die KI warten. Am Desktop mit offener Leiste stehen Neu, Entscheidungen und die Seiten unter «Wissen» in der Seitenleiste (gespiegelt wie die Fassungen) und die Liste im Wissen entfällt; reduziert steht sie wieder im Wissen.
 - Archivos: `app/office-wissen.js` (`?v=office4`), `app/office-wissen.css` (`?v=office2`, Container-Abfrage), `app/work-lens.js` und `.css` (`?v=3`), `app/index.html`, `tests/office-projektwissen.test.mjs`, `tests/browser/office-wissen.chromium.mjs` (Kontext, Zeile, schmal und breit), `tests/browser/office-work-seitenleiste.chromium.mjs` (neu: Seiten in der Leiste, reduziert im Wissen).

@@ -310,8 +310,10 @@ async function teilen(ctx,form){
   await render(ctx,{behalten:true});
 }
 
+// Bestätigen oder verwerfen, auch aus dem Panorama («Für dich»): die Funktion der Datenbank prüft, wer es darf.
+function entscheiden(sb,id,ja){return sb.rpc('office_wissen_entscheidung_pruefen',{p_id:id,p_beschliessen:!!ja})}
 async function pruefen(ctx,id,ja){
-  const {data,error}=await ctx.sb.rpc('office_wissen_entscheidung_pruefen',{p_id:id,p_beschliessen:ja});
+  const {data,error}=await entscheiden(ctx.sb,id,ja);
   if(error){ctx.setStatus?.(error.message||'Das ging nicht.');return}
   ctx.setStatus?.(data==='confirmed'?'Entscheidung bestätigt.':data==='rejected'?'Entscheidung verworfen.':'');
   await render(ctx,{behalten:true});
@@ -403,16 +405,20 @@ async function panorama({sb,project}){
   const uid=(await sb.auth.getSession())?.data?.session?.user?.id||null;
   const keins=Promise.resolve({data:null,error:null,count:0});
   const zahl=q=>q.select('id',{count:'exact',head:true}).eq('project_id',project.id);
-  const [team,seiten,offen,beitr,prot]=await Promise.all([
+  const [team,seiten,offen,beitr,prot,proj,ich]=await Promise.all([
     uid?sb.from('office_project_members').select('user_id').eq('project_id',project.id).eq('user_id',uid).maybeSingle():keins,
     zahl(sb.from('minds_work_memory')).eq('memory_type','document_state').eq('metadata->>kind','wissensseite').eq('status','confirmed'),
     zahl(sb.from('minds_work_memory')).eq('memory_type','decision').eq('status','proposed'),
     zahl(sb.from('office_wissen_beitraege')).is('eingearbeitet_am',null),
-    sb.from('office_wissen_protokoll').select('art,titel,created_at').eq('project_id',project.id).order('created_at',{ascending:false}).limit(3)
+    sb.from('office_wissen_protokoll').select('art,titel,created_at').eq('project_id',project.id).order('created_at',{ascending:false}).limit(3),
+    // Wer bestätigen darf (Projektleitung oder Admin), für «Für dich» im Panorama; die Datenbank prüft es noch einmal.
+    sb.from('office_projects').select('projektleiter_id').eq('id',project.id).maybeSingle(),
+    uid?sb.from('office_members').select('role').eq('user_id',uid).maybeSingle():keins
   ]);
   const fehler=[team,seiten,offen,beitr,prot].find(r=>r?.error);
   if(fehler)return {data:null,error:fehler.error};
-  return {data:{imTeam:!!team.data,seiten:seiten.count||0,offen:offen.count||0,beitraege:beitr.count||0,neu:prot.data||[]},error:null};
+  return {data:{imTeam:!!team.data,seiten:seiten.count||0,offen:offen.count||0,beitraege:beitr.count||0,neu:prot.data||[],
+    leitung:!!uid&&(proj?.data?.projektleiter_id===uid||ich?.data?.role==='admin')},error:null};
 }
 function panoramaHtml(w,heute=new Date()){
   if(!w||!w.imTeam)return '';
@@ -440,7 +446,7 @@ function vormerken(projektId,ziel){
   const ansicht=['seite','neu','entscheidungen'].includes(ziel?.ansicht)?ziel.ansicht:null;
   zustand={projekt:projektId,ansicht:ansicht==='seite'?null:ansicht,seite:null,suche:'',seiteTitel:ansicht==='seite'&&ziel?.seite?String(ziel.seite):null};
 }
-const api={render,renderMarkdown,verweise,datum,zeit,panorama,panoramaHtml,vormerken};
+const api={render,renderMarkdown,verweise,datum,zeit,panorama,panoramaHtml,vormerken,entscheiden};
 if(typeof module==='object'&&module.exports)module.exports=api;
 else root.TBA_OFFICE_WISSEN=api;
 })(typeof window!=='undefined'?window:globalThis);
