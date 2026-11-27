@@ -20,7 +20,7 @@ test('Verschieben statt kopieren, später Eingefügtes wandert nach, nur Tokens'
   assert.match(js,/menue\.insertBefore\(el,nach\|\|null\)/);
   assert.match(js,/new MutationObserver\(verschiebe\)/);
   assert.doesNotMatch(css,/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
-  assert.match(css,/@media print\{\.wz-mehr,\.wz-menue\{display:none!important\}\}/);
+  assert.match(css,/@media print\{\.wz-mehr,\.wz-menue,\.wz-hilfe\{display:none!important\}\}/);
 });
 
 test('Terminplan: Kopfzeile im Reiter ausgeblendet, Leiste eingereiht',()=>{
@@ -30,5 +30,9 @@ test('Terminplan: Kopfzeile im Reiter ausgeblendet, Leiste eingereiht',()=>{
   assert.match(html,/<link rel="stylesheet" href="\.\/shared\/werkzeugleiste\.css\?v=\d+">/);
   assert.match(html,/<script src="\.\/shared\/werkzeugleiste\.js\?v=\d+"><\/script>\s*<script>\s*\/\/ Eine Werkzeugzeile/);
   for(const sel of ["'#exportCsvBtn'","'#printBtn'","'.tp-feature-actions'","'#addGroupBtn'"])assert.ok(html.includes(sel),sel);
-  assert.match(html,/status:\['#officeMode','#saveState'\]/);
+  assert.match(html,/status:\['#officeMode','#saveState'\],hilfe:'#tpHelp'/);
+  // Erklärungen hinter «?»: die Anleitung verlässt das Menü und steht vor «•••».
+  const js=read('shared/werkzeugleiste.js');
+  assert.match(js,/hilfe\.setAttribute\('aria-label',name\);hilfe\.title=name;hilfe\.textContent='\?';/);
+  assert.match(js,/leiste\.insertBefore\(hilfe,knopf\)/);
 });

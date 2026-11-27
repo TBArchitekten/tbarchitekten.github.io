@@ -2,7 +2,8 @@
 // (html.im-reiter) bleibt die Leiste einer Werkzeugseite eine Zeile: seltene Befehle kommen unter «•••», Stand und
 // Speichern rücken an das Ende der Leiste, die Statuszeile wird zur knappen Info in derselben Zeile. Die Elemente
 // werden verschoben, nicht kopiert: Ihre Funktion, ihre Kennungen und ihre Ereignisse bleiben dieselben. Was eine
-// Seite später einfügt (z. B. die Auswertung des Terminplans), wandert nach, sobald es auftaucht.
+// Seite später einfügt (z. B. die Auswertung des Terminplans), wandert nach, sobald es auftaucht. Die Anleitung
+// (Option «hilfe») steht als «?» am Ende der Zeile, wie in den anderen Werkzeugen: Erklärungen hinter «?».
 (function(){
   'use strict';
   const IM_REITER=document.documentElement.classList.contains('im-reiter');
@@ -26,6 +27,13 @@
     document.body.append(menue);
     // In der Reihenfolge der Liste, damit das Menü geordnet bleibt, auch wenn Teile später kommen.
     const verschiebe=()=>{
+      // Zuerst die Anleitung: aus ihrer Gruppe heraus vor «•••», als «?» mit ihrem Namen als Beschriftung.
+      const hilfe=o.hilfe?document.querySelector(o.hilfe):null;
+      if(hilfe&&!hilfe.classList.contains('wz-hilfe')){
+        const name=hilfe.textContent.trim()||'Anleitung';
+        hilfe.classList.add('wz-hilfe');hilfe.setAttribute('aria-label',name);hilfe.title=name;hilfe.textContent='?';
+      }
+      if(hilfe&&hilfe.nextElementSibling!==knopf)leiste.insertBefore(hilfe,knopf);
       selten.forEach((sel,i)=>document.querySelectorAll(sel).forEach(el=>{
         if(menue.contains(el)||el===knopf||el.contains(menue))return;
         el.dataset.wzRang=String(i);

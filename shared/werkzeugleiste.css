@@ -8,6 +8,10 @@ html.wz-eine-zeile .wz-mehr{
   flex:none;min-width:36px;height:34px;padding:0 9px;border:1px solid var(--m-border);border-radius:var(--m-radius-control);
   background:var(--m-surface);color:var(--m-ink);font:inherit;font-size:13px;letter-spacing:.08em;cursor:pointer}
 html.wz-eine-zeile .wz-mehr:hover{background:var(--m-fill)}
+html.wz-eine-zeile .wz-hilfe{
+  flex:none;display:grid;place-items:center;width:30px;height:30px;min-height:0;margin:0;padding:0;border:1px solid var(--m-border);
+  border-radius:50%;background:transparent;color:var(--m-ink-soft);font-size:13px;font-weight:650;text-decoration:none}
+html.wz-eine-zeile .wz-hilfe:hover{color:var(--m-link);border-color:var(--m-link);text-decoration:none}
 html.wz-eine-zeile .wz-mehr[aria-expanded="true"]{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue)}
 .wz-menue{
   position:fixed;z-index:1000;display:flex;flex-direction:column;gap:2px;width:max-content;min-width:230px;max-width:340px;
@@ -27,4 +31,4 @@ html.wz-eine-zeile .wz-mehr[aria-expanded="true"]{background:var(--m-blue-soft);
 .wz-menue .legend{flex-direction:row;flex-wrap:wrap;gap:8px 12px;padding:8px 10px;border-top:1px solid var(--m-hairline);
   font-size:12px;color:var(--m-ink-soft)}
 .wz-menue .legend span{display:inline-flex;align-items:center;gap:5px}
-@media print{.wz-mehr,.wz-menue{display:none!important}}
+@media print{.wz-mehr,.wz-menue,.wz-hilfe{display:none!important}}

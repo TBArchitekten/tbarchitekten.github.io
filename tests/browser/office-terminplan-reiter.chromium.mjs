@@ -114,8 +114,12 @@ test('Terminplan im Reiter: eine Werkzeugzeile, seltene Befehle unter «••�
     assert.equal(await f.locator('.wz-menue').isVisible(),true,'Schalter lässt das Menü offen');
     await f.locator('.wz-mehr').press('Escape');
     assert.equal(await f.locator('.wz-menue').isVisible(),false);
-    // Die Auswertung, die die Seite später einfügt, landet ebenfalls im Menü.
+    // Die Auswertung, die die Seite später einfügt, landet ebenfalls im Menü; die Anleitung steht als «?» vor «•••».
     await rahmen().waitForFunction(()=>!document.querySelector('.app>.toolbar .tp-feature-actions'));
+    await rahmen().waitForFunction(()=>document.querySelector('#tpHelp')?.nextElementSibling?.classList.contains('wz-mehr'));
+    assert.deepEqual(await rahmen().evaluate(()=>{const h=document.querySelector('#tpHelp');
+      return [h.parentElement.matches('.app>.toolbar'),h.textContent,h.getAttribute('aria-label'),h.getAttribute('href'),!!document.querySelector('.wz-menue #tpOpenAnalysis')]}),
+      [true,'?','Anleitung','./terminplan-hilfe.html',true]);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

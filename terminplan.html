@@ -494,7 +494,7 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
 <link rel="stylesheet" href="./assistant-surface.css?v=office39">
 <link rel="stylesheet" href="./window-editor.css?v=2">
 <link rel="stylesheet" href="./terminplan-planning.css?v=office1">
-<link rel="stylesheet" href="./shared/werkzeugleiste.css?v=1">
+<link rel="stylesheet" href="./shared/werkzeugleiste.css?v=2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>
 <!-- In the Window app (account Office) this client borrows the app's session; in the browser it is the usual office client. -->
@@ -2901,14 +2901,15 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
   loadRemoteData().catch(error=>{console.error(error);document.body.innerHTML='<div class="empty">Terminplan konnte nicht geladen werden.</div>'});
 })();
 </script>
-<script src="./shared/werkzeugleiste.js?v=1"></script>
+<script src="./shared/werkzeugleiste.js?v=2"></script>
 <script>
-// Eine Werkzeugzeile im Reiter von Work (B2, 27.11.2026): seltene Befehle unter «•••», die Statuszeile als knappe Info.
+// Eine Werkzeugzeile im Reiter von Work (B2, 27.11.2026): seltene Befehle unter «•••», die Statuszeile als knappe Info,
+// die Anleitung als «?» am Ende.
 window.TBA_WERKZEUGLEISTE?.einreihen({
   leiste:document.querySelector('.app>.toolbar'),
   selten:['#addGroupBtn','label:has(>#weekendToggle)','label.connection-mode:has(#linkMode)','.tp-feature-actions','#exportCsvBtn',
     '#exportJsonBtn','#importJsonBtn','#printBtn','label.connection-mode:has(#printConnectionMode)','#saveNowBtn','.app>.toolbar .legend'],
-  info:'.app>.statusbar',status:['#officeMode','#saveState']
+  info:'.app>.statusbar',status:['#officeMode','#saveState'],hilfe:'#tpHelp'
 });
 </script>
 </body>
