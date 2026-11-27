@@ -358,3 +358,13 @@ test('Oberfläche: Farben nur aus den Tokens',()=>{
   assert.ok(benutzt.length>20);
   assert.deepEqual(benutzt.filter(t=>!definiert.has(t)),[]);
 });
+
+test('Stand der Quellen: das Datum des Inhalts zählt, Älteres überschreibt nie Neueres, unklar wird gefragt',()=>{
+  const sql=readFileSync(new URL('../supabase/migrations/20261127161705_office_wissen_regeln_stand.sql',import.meta.url),'utf8');
+  assert.match(sql,/where id = 1 and position\('Stand der Quellen' in text\) = 0;/,'ein zweiter Lauf ändert nichts');
+  assert.match(sql,/replace\(text, E'\\n\\nEntscheidungen\\n', E'\\n\\nStand der Quellen\\n'/);
+  for(const satz of ['Es zählt das Datum des Inhalts, nicht das des Hochladens oder Teilens','Eine ältere Quelle überschreibt nie eine neuere',
+    'Ist das Datum einer Quelle nicht zu erkennen: nicht raten','«Stand unklar»','wird gefragt, von wann sie ist'])
+    assert.ok(sql.includes(satz),'fehlt: '+satz);
+  assert.doesNotMatch(sql,/\b(delete|drop|truncate)\b/i);
+});
