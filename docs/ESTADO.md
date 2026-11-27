@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Mustermappe:** Beim Übersatz vergrößert «Rahmen vergrößern» den Rahmen um die fehlenden Felder (rückgängig wie jeder Schritt).
+
 **Stand 27.11.2026 · Claude · Abläufe:** Im Projektstart (und im Panorama verlinkt) führt «Besprechung nachbereiten» vom Protokoll zu Vorschlägen in beiden Listen, Aufgaben im Planner, Fristen gegen den Terminplan und einer Notiz im Projektwissen.
 
 **Stand 27.11.2026 · Claude · Work B2 (Schritt 5):** Das Panorama zeigt «Für dich» (Entscheidungen zur Bestätigung für die Projektleitung, überfällige Aufgaben), Themen, die beschlossenen Entscheidungen und «Neu im Desktop».
