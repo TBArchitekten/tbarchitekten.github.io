@@ -200,7 +200,9 @@ function load(){try{
   x.feedThreads=x.feedThreads&&typeof x.feedThreads==='object'&&!Array.isArray(x.feedThreads)?x.feedThreads:{};
   x.feedSignals=Array.isArray(x.feedSignals)?x.feedSignals:[];
   x.memory=(Array.isArray(x.memory)?x.memory:[]).map((m,i)=>{if(typeof m!=='object')return {id:'memory-'+i,kind:'context',content:String(m),status:'active',confidence:1,source:'local'};return {...m,kind:normalizeMemoryKind(m.kind),status:m.status==='deleted'?'deleted':(m.status||'active')}});
-  x.messages=OFFICE?[]:normalizeMessages(x.messages);return x
+  x.messages=OFFICE?[]:normalizeMessages(x.messages);
+  // Der Kalender öffnet immer auf heute (Gari, 27.11.2026), nicht auf dem zuletzt angesehenen Tag; Ansicht bleibt.
+  x.date=today();return x
 }catch{return JSON.parse(JSON.stringify(base))}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(OFFICE?{...state,messages:[]}:state))}catch{} window.ISABELLA_STATE=state;try{window.dispatchEvent(new CustomEvent('isabella:state',{detail:JSON.parse(JSON.stringify(state))}))}catch{} renderToday();}
 function pretty(s,opt={weekday:'long',day:'numeric',month:'long'}){return fromIso(s).toLocaleDateString('de-DE',opt)}
@@ -329,8 +331,11 @@ function init(){
   });
   if(reviewId)setTimeout(()=>void handleReviewDeepLink(),0);
   void markPresenceSeen();
+  let calendarToday=today();
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='visible'){
+      // Über Mitternacht offen: stand der Kalender auf «heute», zeigt er beim nächsten Hinsehen den neuen Tag.
+      const now=today();if(now!==calendarToday){const wasToday=state.date===calendarToday;calendarToday=now;if(wasToday){state.date=now;save();if(state.screen==='calendar')renderCalendar()}}
       void markPresenceSeen();
       if(!OFFICE||window.APP_CHAT_RUNTIME!=='legacy'){void syncDurableChatJobs();void recoverReviewedTaskReceipts();}
       if(state.screen==='calendar')window.ISABELLA_SYNC_PULL_NOW?.();

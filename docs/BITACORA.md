@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Kalender öffnet auf heute, «+» der Reiter mittig · Claude
+- Qué cambió y por qué: Gari: der Kalender zeigte nach jedem Öffnen den zuletzt angesehenen Tag; er soll immer auf heute stehen. Und das «+» am Ende der Reiter saß nicht in der Mitte des blauen Kreises. Kalender: der Schreibtisch (`dashboard.js`) und der Kalender der App (`app.js`) bringen den gespeicherten Tag nicht mehr mit, jeder Start beginnt mit heute; innerhalb der Sitzung bleibt der gewählte Tag. Bleibt die Seite über Mitternacht offen und stand sie auf «heute», rückt sie beim nächsten Hinsehen auf den neuen Tag; ein bewusst gewählter anderer Tag bleibt. «+»: statt des Schriftzeichens (sitzt je nach Schrift tiefer) ein gezeichnetes Kreuz; der Kreis wird ausdrücklich mittig gesetzt (`inset:0;margin:auto`), statt sich auf die statische Lage im Grid zu verlassen.
+- Archivos: `app/dashboard.js`, `app/app.js`, `app/shell.js`, `app/work-polish.css`, `app/index.html` (Versionen), `tests/office-kalender-heute.test.mjs` (neu), `tests/office-work-reiter.test.mjs`, `tests/browser/office-planner-karten.chromium.mjs` (misst, dass Kreuz und Kreis dieselbe Mitte haben), Versionsangaben in vier weiteren Tests.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün (532); die Browserprüfung läuft in CI.
+- Quedó pendiente o sin probar: dieselbe Kalenderänderung in Window (eigener PR im Window-Repo).
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: (dieser)
+
+---
+
 ### 2026-11-27 · Romys Mitteilungen auf das iPhone (Push über APNs, verschlüsselt) · Claude
 - Qué cambió y por qué: Gari wollte, dass Romy ihm aufs iPhone schreiben kann, wenn sie ihm etwas zu sagen hat (in Window ging das über Web-Push der Web-App auf dem Home-Bildschirm; in der Window-App kann die Web-Ansicht kein Push empfangen, und im Office war Push im Motor bewusst aus). Umgesetzt wie am 25.11. entschieden: natives Push über APNs, und Apple sieht nur «Romy · Neue Mitteilung». Die Window-App erzeugt je iPhone einen Schlüssel (32 Byte) und meldet ihn mit dem APNs-Token an; der Versand verschlüsselt den Text mit AES-256-GCM, die Mitteilungserweiterung der App entschlüsselt ihn auf dem iPhone. In die Warteschlange kommt, was Romy von sich aus in den Chat schreibt (eigene Nachricht, nicht beim Öffnen der App) und dringende Hinweise (Route «interrupt»; Ruhezeiten und Budget wendet die Aufmerksamkeitssteuerung schon an), nur mit angemeldetem Gerät. Der Motor bleibt unverändert (byte-gleich mit Window).
 - Archivos: `supabase/migrations/20261127064446_office_push.sql` (Tabellen `office_push_geraete`, `office_push_nachrichten`, Funktionen `office_push_geraet_anmelden`, `_abmelden`, `office_push_test`, `office_push_holen` (nur Dienst), Auslöser auf `conversation_messages`, Geheimnis und Cron `office_push_v1`), `supabase/functions/office-push/` (`core.mjs`, `index.ts`), `supabase/config.toml`, `tests/office-push.test.mjs`, `tests/sql/office-push-acceptance.sql`, `.github/workflows/verify.yml`, `tests/office-romy-vorschlaege.test.mjs` (Begründung bei Web-Push angepasst), `docs/ESTADO.md`, `docs/BITACORA.md`.

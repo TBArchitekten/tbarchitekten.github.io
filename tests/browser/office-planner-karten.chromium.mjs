@@ -53,7 +53,7 @@ const fixtures={
 const harness=`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${pageCss}</head>
 <body data-section="work" class="office-app"><div class="app" id="app"><main id="swipeArea" class="swipe-area"><section id="workScreen" class="screen work-screen active" data-screen="work"><div class="work-shell">
 <div class="work-head"><div><h1 id="workProjectTitle">Work</h1></div><div class="work-project-switch"></div></div>
-<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button><button data-work-view="controlling" hidden>Controlling</button><button data-work-view="mustermappe" hidden>Mustermappe</button><button data-work-view="produkte" hidden>Produkte</button><button data-work-view="hersteller" hidden>Hersteller</button><button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden>+</button></div>
+<div class="work-tabs"><button data-work-view="overview">Panorama</button><button data-work-view="planner">Planner</button><button data-work-view="terminplan" hidden>Terminplan</button><button data-work-view="kosten" hidden>Kostenberechnung</button><button data-work-view="controlling" hidden>Controlling</button><button data-work-view="mustermappe" hidden>Mustermappe</button><button data-work-view="produkte" hidden>Produkte</button><button data-work-view="hersteller" hidden>Hersteller</button><button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 3v10M3 8h10"/></svg></button></div>
 <div id="workStatus" class="work-status"></div><div id="workBody" class="work-body"></div><div id="workToolHost" class="work-tool-host" hidden></div></div></section></main></div>
 <div id="modalRoot" hidden></div>
 <script>
@@ -402,6 +402,11 @@ test('Abschnitte je Projekt: «+» am Ende der Reiter, ausblenden und wieder auf
     const plus=page.locator('[data-work-abschnitte]');
     assert.equal(await plus.isVisible(),true);
     assert.equal(await page.evaluate(()=>{const t=document.querySelector('.work-tabs');return t.lastElementChild.matches('[data-work-abschnitte]')}),true,'am Ende der Reiter');
+    // Gari, 27.11.2026: Kreuz und blauer Kreis liegen in derselben Mitte (früher saß das «+» als Schriftzeichen tiefer).
+    const mitte=await page.evaluate(()=>{const b=document.querySelector('[data-work-abschnitte]'),r=b.getBoundingClientRect(),s=b.querySelector('svg').getBoundingClientRect(),c=getComputedStyle(b,'::before');
+      const left=parseFloat(c.left)+parseFloat(c.marginLeft),top=parseFloat(c.top)+parseFloat(c.marginTop);
+      return {kreisX:left+parseFloat(c.width)/2,kreisY:top+parseFloat(c.height)/2,kreuzX:s.left-r.left+s.width/2,kreuzY:s.top-r.top+s.height/2}});
+    assert.ok(Math.abs(mitte.kreisX-mitte.kreuzX)<=0.75&&Math.abs(mitte.kreisY-mitte.kreuzY)<=0.75,'Kreuz mittig im Kreis: '+JSON.stringify(mitte));
     await plus.click();
     const menu=page.locator('#workAbschnitteMenu');
     await menu.waitFor();
