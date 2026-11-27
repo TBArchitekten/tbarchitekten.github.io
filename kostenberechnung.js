@@ -377,6 +377,19 @@ function render(){
   if(ui.meldung)banner+='<div class="kb-banner info" role="status">'+esc(ui.meldung)+'</div>';
   const tabs='<nav class="tabs" role="tablist" aria-label="Ansichten">'+TABS.map(([k,t])=>'<button type="button" class="tab" role="tab" data-act="tab" data-tab="'+k+'" aria-selected="'+(ui.tab===k)+'">'+t+'</button>').join('')+'</nav>';
   const inhalt={uebersicht:tabUebersicht,positionen:tabPositionen,quellen:tabQuellen,vergleich:tabVergleich,bericht:tabBericht}[ui.tab]||tabUebersicht;
+  // Eine Werkzeugzeile im Reiter von Work (B2, 27.11.2026): keine Kopfzeile; Ansichten, knappe Angaben (voll im Tooltip),
+  // Speicherstand, «Mengen aus Archicad» und «?» für die Anleitung in einer Zeile. Den Bericht öffnet sein Reiter.
+  if(IM_REITER){
+    const angaben=[istArchiv?(st.archiv?.dokumentKurz||'Archiv'):doc.phase==='LPH3'?'LPH 3':doc.phase,st.norm||'DIN 276',
+      'Kostenstand '+(R.quartalText(st.kostenstand)||'offen')].filter(Boolean).join(' · ');
+    const voll=[doc.project_number!=='Muster'?doc.project_number:'',angaben,(st.norm||'DIN 276')+' bis zur 3. Ebene',
+      istMuster?'Version '+doc.version:'Stand '+datum(doc.updated_at)].filter(Boolean).join(' · ');
+    const zeile='<div class="kb-zeile">'+tabs+'<span class="kb-zeile-info" title="'+esc(voll)+'">'+esc(angaben)+'</span>'+
+      '<p class="kb-save meta" id="kbSave"></p>'+
+      (kannBearbeiten?'<button type="button" class="btn" data-act="import">'+ICON_IMPORT+'Mengen aus Archicad</button>':'')+
+      '<a class="kb-hilfe" href="./kostenberechnung-hilfe.html" target="_blank" rel="noopener noreferrer" title="Anleitung" aria-label="Anleitung">?</a></div>';
+    root.innerHTML='<div class="kb-wrap">'+banner+zeile+'<section id="kbBody">'+inhalt()+'</section></div>'+datalistKg()+datalistGw();
+  }else
   root.innerHTML='<div class="kb-wrap">'+kopf+banner+tabs+'<section id="kbBody">'+inhalt()+'</section></div>'+datalistKg()+datalistGw();
   root.classList.toggle('mit-inspektor',ui.tab==='positionen'&&!!root.querySelector('.inspektor'));
   if(ui.tab==='positionen')hoehenAnpassen();
