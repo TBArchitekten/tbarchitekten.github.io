@@ -373,13 +373,20 @@ window.__nachrichten=[];addEventListener('message',e=>{if(e.origin===location.or
     await f.locator('#pdDialog select[name="paket"]').waitFor();
     await f.locator('#pdDialog select[name="paket"]').selectOption('Bäder');
     await f.locator('#pdDialog button[type="submit"]').click();
-    await f.locator('h1',{hasText:'Mustermappe Bäder'}).waitFor();
+    await f.locator('.pd-mappe-wrap>.mm-zeile').waitFor();
     const url=new URL(rahmen().url());
     assert.equal(url.searchParams.get('projekt'),PID);assert.ok(url.searchParams.get('vorlage'),'die Mappe steht in der Adresse');
     assert.deepEqual(await page.evaluate(()=>window.__nachrichten),[{tbaOfficeTool:'abgebrochen'}],'Anlegen ist kein Abbruch');
-    // Kein Rücksprung und keine zweite Projektzeile; die Überschrift der Mappe bleibt.
-    assert.deepEqual(await f.locator('.pd-mappe-wrap').evaluate(w=>[getComputedStyle(w.querySelector(':scope>.pd-back')).display,
-      getComputedStyle(w.querySelector('.pd-head .kicker')).display,getComputedStyle(w.querySelector('.pd-head h1')).display]),['none','none','block']);
+    // Eine Werkzeugzeile (B2, 27.11.2026): kein Rücksprung, keine Überschrift, keine zweite Leiste; welche Mappe offen
+    // ist, zeigt Work. Am Ende der Zeile «gespeichert», «Präsentieren», «PDF», «Vorlegen» und «•••» mit dem Raster.
+    assert.equal(await f.locator('.pd-back, .pd-head, h1').count(),0);
+    assert.equal(await f.locator('.mm-mitte .mm-werkzeug').count(),0,'keine zweite Leiste über der Bühne');
+    assert.deepEqual(await f.locator('.mm-zeile .mm-aktionen button').allInnerTexts(),['Präsentieren','PDF','Vorlegen']);
+    assert.equal(await f.locator('.mm-zeile [data-speicher]').innerText(),'gespeichert');
+    assert.match(await f.locator('.mm-zeile-stand').getAttribute('title'),/^Vorlage zur Bemusterung.* · Entwurf$/);
+    assert.equal(await f.locator('.mm-zeile>[data-act="mm-raster"]').count(),0);
+    assert.equal(await f.locator('.mm-mehr-menue [data-act="mm-raster"]').count(),1);
+    assert.ok((await f.locator('.mm-zeile').evaluate(z=>z.getBoundingClientRect().height))<=44,'eine Zeile');
     // Für Work: Revision der Mappe, nichts offen; eine Änderung steht aus, flush speichert sie.
     const rev=await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.kind,window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending()]);
     assert.equal(rev[0],'mustermappe');assert.ok(rev[1]>=1);assert.equal(rev[2],false);
@@ -393,6 +400,58 @@ window.__nachrichten=[];addEventListener('message',e=>{if(e.origin===location.or
     assert.ok(nach[0]>rev[1],'gespeichert: neue Revision');assert.equal(nach[1],false);
     // Im Rahmen führt kein Link in die App.
     assert.equal(await f.locator('a[href^="./app/"]:visible').count(),0);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+// Eine Werkzeugzeile je Reiter (B2, Gari, 27.11.2026): auch in einem schmalen Reiter (1040 px) bleibt die Leiste eine
+// Zeile, Seiten, Bühne und Eigenschaften stehen nebeneinander. «•••» schließt mit Esc und mit einem Klick daneben, der
+// Schalter darin lässt es offen. Passt ein Text nicht in seinen Rahmen, erscheint «1 Übersatz» in derselben Zeile (die
+// Zeile bricht nicht um); ein Klick zeigt die Eigenschaften und wählt den Rahmen.
+test('Reiter: eine Zeile, «•••» mit Raster, Übersatz als Hinweis in der Leiste',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1060,height:900},deviceScaleFactor:1});
+  const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co/,r=>r.abort());
+  const PID='22222222-2222-4222-8222-222222222222';
+  await page.route(/\/__rahmen__\.html$/,r=>r.fulfill({contentType:'text/html',body:`<!doctype html><html lang="de"><body style="margin:0">
+<iframe id="f" style="width:1040px;height:860px;border:0" src="/projektdokumente.html?projekt=${PID}&werkzeug=mustermappe&neu=1"></iframe></body></html>`}));
+  try{
+    await page.goto(adresse('__rahmen__.html'));
+    const f=page.frameLocator('#f');
+    await f.locator('#pdDialog select[name="paket"]').selectOption('Bäder');
+    await f.locator('#pdDialog button[type="submit"]').click();
+    const zeile=f.locator('.pd-mappe-wrap>.mm-zeile');await zeile.waitFor();
+    const hoehe=()=>zeile.evaluate(z=>z.getBoundingClientRect().height);
+    assert.ok(await hoehe()<=44,'eine Zeile bei 1040 px');
+    const spalten=await f.locator('.mm').evaluate(m=>[m.querySelector('.mm-nav'),m.querySelector('.mm-mitte'),m.querySelector('.mm-rechts')]
+      .map(x=>Math.round(x.getBoundingClientRect().top)));
+    assert.equal(new Set(spalten).size,1,'Seiten, Bühne und Eigenschaften nebeneinander: '+spalten);
+    // «•••»: Raster schalten (das Menü bleibt offen), Esc schließt, ein Klick daneben auch.
+    const mehr=f.locator('[data-act="mm-mehr"]'),menue=f.locator('.mm-mehr-menue');
+    await mehr.click();assert.equal(await menue.isVisible(),true);assert.equal(await mehr.getAttribute('aria-expanded'),'true');
+    await menue.locator('[data-act="mm-raster"]').click();
+    assert.equal(await f.locator('.mm-buehne').evaluate(b=>b.classList.contains('raster')),true);
+    assert.equal(await menue.isVisible(),true,'der Schalter lässt das Menü offen');
+    await page.keyboard.press('Escape');
+    assert.equal(await menue.isVisible(),false);assert.equal(await mehr.getAttribute('aria-expanded'),'false');
+    await mehr.click();await f.locator('.mm-buehne').click({position:{x:4,y:4}});
+    assert.equal(await menue.isVisible(),false,'ein Klick daneben schließt');
+    // Übersatz: zu viel Text im Deckblatt, Eigenschaften vorher ausgeblendet.
+    const pille=f.locator('[data-mm-pille]');
+    assert.equal(await pille.isVisible(),false);
+    await f.locator('[data-act="mm-rechts"]').click();
+    await f.locator('.mm-buehne .mm-ed').first().click();
+    for(let k=0;k<26;k++){await page.keyboard.type('Zeile '+k);await page.keyboard.press('Enter')}
+    await pille.waitFor();
+    assert.equal(await pille.innerText(),'1 Übersatz');
+    assert.equal(await pille.getAttribute('title'),'Passt nicht ganz in den Rahmen: Deckblatt-Text');
+    assert.ok(await hoehe()<=44,'mit dem Hinweis bleibt es eine Zeile');
+    await pille.click();
+    assert.equal(await f.locator('.mm').evaluate(m=>m.classList.contains('ohne-rechts')),false,'Eigenschaften wieder da');
+    assert.equal(await f.locator('[data-act="mm-rechts"]').getAttribute('aria-pressed'),'true');
+    await f.locator('.mm-rechts .mm-uebersatz-liste',{hasText:'Deckblatt-Text'}).waitFor();
+    assert.match(await f.locator('[data-mm-kontext]').innerText(),/^Deckblatt-Text · /,'der Rahmen ist gewählt');
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
