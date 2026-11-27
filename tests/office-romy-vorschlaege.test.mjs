@@ -42,7 +42,7 @@ const NUR_WINDOW_RPC={
   minds_review_post_action_feedback:'Berechtigungen (data-action="permissions") verborgen',
   minds_review_debt_summary:'Prüfungen (data-action="reviews") verborgen',
   minds_review_artifact_intake:'Artefakte (data-action="artifacts") verborgen',
-  minds_register_push_subscription:'Push (data-action="push") verborgen; das Office hat keine Push-Avisos',
+  minds_register_push_subscription:'Web-Push (data-action="push") verborgen; Romys Mitteilungen kommen über die Window-App (office-push, APNs)',
   minds_remove_push_subscription:'Push (data-action="push") verborgen',
   minds_retry_window_code_v1:'Selbstprüfung von Window: im Office ohne Einstellungen (project&&!OFFICE)',
   minds_set_window_code_v1:'Selbstprüfung von Window: im Office ohne Einstellungen (project&&!OFFICE)',
