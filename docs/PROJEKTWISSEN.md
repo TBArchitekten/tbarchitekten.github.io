@@ -57,6 +57,7 @@ Der volle Text steht in `office_wissen_regeln` und geht bei jedem Teilen an Clau
 - Eine Seite je Sache, die man im Projekt nachschlägt; lieber wenige gehaltvolle Seiten. Titel kurz, sachlich, ohne Datum und ohne Personen.
 - Aufbau: zuerst in zwei bis vier Sätzen, wo die Sache steht; dann die Einzelheiten; am Ende die offenen Fragen.
 - Nichts erfinden; Unsicheres kennzeichnen; Zahlen mit Einheit und Stand; Herkunft in Klammern.
+- Stand der Quellen (seit 27.11.2026): es zählt das Datum des Inhalts (Protokoll, E-Mail, Planindex), nicht das des Hochladens; eine ältere Quelle überschreibt nie eine neuere; ist das Datum nicht zu erkennen, steht die Aussage mit «Stand unklar» bei den offenen Fragen, und es wird nachgefragt (Migration `…_office_wissen_regeln_stand.sql`).
 - Neues wird eingearbeitet, nicht angehängt. Ungeklärte Widersprüche werden mit beiden Herkünften benannt.
 - Als Entscheidung gilt nur, was das Projekt bindet (was geplant oder gebaut wird, Umfang, Kosten, Termine, Vorgaben der Bauherrschaft). Arbeitsregeln des Teams (wie wir mit Herstellern arbeiten, wie wir E-Mails und Unterlagen formulieren) stehen auf den Seiten.
 - «beschlossen» nur, wenn ausdrücklich entschieden hat, wer es zu entscheiden hat: die Bauherrschaft, was ihr zusteht; die Projektleitung, was die eigene Planung betrifft. Eine Empfehlung an die Bauherrschaft bleibt «vorgeschlagen», bis sie zustimmt (seit dem 26.11.2026 nach dem ersten Einsatz, Migration `20261126215655_office_projektwissen_entscheidungen.sql`).

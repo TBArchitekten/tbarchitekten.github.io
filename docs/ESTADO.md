@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Stand der Quellen:** Im Projektwissen zählt das Datum des Inhalts; eine ältere Quelle überschreibt nie eine neuere; ohne erkennbares Datum «Stand unklar» und nachfragen (Regeln `office_wissen_regeln`).
+
 **Stand 27.11.2026 · Claude · Terminplan lesbar:** Namen neben zu kurzen Balken und mitwandernd beim Blättern, Kärtchen beim Zeigen, «Heute ± 4 Wochen», «Lesemodus»; der linke Griff der Balken deckt den Namen nicht mehr zu.
 
 **Stand 27.11.2026 · Claude · Heute:** Heute ist die eine Tagesansicht mit dem einen Eingang oben («Braucht Sie»: was die Person als Projektleitung oder Admin entscheiden darf, dieselben Karten wie «Für dich» im Panorama); darunter Tag, «Bald fällig», «Überfällig» mit «Aufräumen», «Demnächst» (5 Tage) und das Wetter in Augsburg. Der Bildschirm «Eingang» führt nach Heute.

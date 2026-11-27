@@ -17,6 +17,15 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Projektwissen: Stand der Quellen · Claude
+- Qué cambió y por qué: Gari (27.11.), zu Dokumenten aus dem Desktop im Wissen und dem Problem, dass ein altes Protokoll neueres Wissen überschreibt: «hazlo como propones … 1. manda la fecha del contenido; 2. si la fecha no se sabe, se pregunta. Si vemos que se pregunta mucho y no es eficiente, lo hablamos de nuevo.» Die Regeln des Projektwissens (`office_wissen_regeln`, gehen bei jedem Teilen an Claude und an die nächtliche Pflege) haben jetzt den Abschnitt «Stand der Quellen»: das Datum des Inhalts zählt (Protokoll, E-Mail, Angebot, Planindex mit Datum), nicht das des Hochladens; eine ältere Quelle überschreibt nie eine neuere (sie erscheint höchstens als früherer Stand); ein Widerspruch nur bei gleichem Alter oder unklarer Reihenfolge; ist das Datum nicht zu erkennen, steht die Aussage mit «Stand unklar» bei den offenen Fragen, und es wird nachgefragt.
+- Archivos: `supabase/migrations/…_office_wissen_regeln_stand.sql`, `docs/PROJEKTWISSEN.md`; Tests: `tests/office-projektwissen.test.mjs`.
+- Base de datos: migración `office_wissen_regeln_stand` (ergänzt nur den Text der Regeln) — aplicada en Supabase: (folgt).
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün; die Migration läuft im CI auf einer frischen Datenbank nach allen anderen.
+- Quedó pendiente o sin probar: Romys nächtliche Akte-Pflege (Motor aus Window) liest diese Regeln nicht; dort kommt dieselbe Regel mit der Arbeit am Motor.
+- Riesgos o decisiones que necesitan a Gari: keine; wenn zu oft gefragt wird, sprechen wir neu darüber (Gari).
+- PR: (folgt)
 ### 2026-11-27 · Diktat in «Sie» · Claude
 - Qué cambió y por qué: Gari (27.11.) fragte nach der Sprachfunktion von Romy («Höre zu …», «Live sprechen», «Antwort anhören», «Hier erscheint deine Transkription»). Das Diktatfenster stammt aus Window und sprach «du»: «Hier erscheint die Transkription.», «Sie können die Nachricht auch tippen.»; der Status heißt beim Öffnen überall «Höre zu …». Die Seite «Live sprechen» (`app/live/`) und ihre Funktion `isabella-live-session` gehören zum Motor aus Window (Manifest) und bleiben unverändert; was dort fehlt, steht im Plan «Voz en tiempo real» (Projekt-Dokument `claude/isabella-plan-continuidad-voz.md`, Punkte 6e–6h: mit Kontext starten, ohne Knopf fragen, Gesprochenes in den Chat).
 - Archivos: `app/shell.js` (`?v=office64`), `app/app.js` (`?v=office60`), `app/index.html`; Tests: `tests/office-heute.test.mjs`, Versionsangaben.
