@@ -189,7 +189,7 @@ test('Nur Administratoren: Menü, Seiten und die Funktionen der Datenbank', () =
   }
   assert.match(sql, /revoke all on public\.office_ki_guthaben from public, anon, authenticated;/);
   // Monatslimit (27.11.2026): dieselben Regeln, und die KI-Nutzung reicht bis zum Monatsbeginn.
-  const limit = read('supabase/migrations/20261127170000_office_ki_monatslimit.sql');
+  const limit = read('supabase/migrations/20261127152755_office_ki_monatslimit.sql');
   for (const f of ['office_ki_monatslimit_eintragen', 'office_ki_nutzung']) {
     const rumpf = limit.slice(limit.indexOf('function public.' + f), limit.indexOf('$$;', limit.indexOf('function public.' + f)));
     assert.match(rumpf, /if not \(select private\.office_is_admin\(\)\) then\s+raise exception 'Nur für Administratoren\.' using errcode = '42501';/, f);
