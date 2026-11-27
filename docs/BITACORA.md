@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün (561); Werkzeuge bei 1500 px als Bildschirmfoto angesehen (drei Spalten).
 - Quedó pendiente o sin probar: keine.
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (wird ergänzt)
+- PR: #207
 
 ### 2026-11-27 · Terminplan Bernried: Bemusterung am 07.12. · Claude
 - Qué cambió y por qué: Auf Garis Wunsch (Termin mit den Bauherren, Jour fixe Mo 07.12.2026, 14:00) und nach seinen Antworten: «Bemusterungsunterlagen vorbereiten · Qualitäten, Materialien und Themenpläne» endet am Fr 04.12. statt 27.11.; der Meilenstein «Bemusterungsunterlagen an Bauherren übergeben» liegt auf dem 07.12. (Verknüpfung EA +1 AT statt +0); «Qualitätsfestlegungen und kostenrelevante Bemusterung abstimmen» läuft vom 08.12. bis 18.12. (wie bisher 9 AT, EA +1). M06 (28.01.2027) und alles danach bleiben, dort ist Puffer. Planner wie «Termine aus Terminplan», nur für die Aufgaben dieser drei Vorgänge, die noch auf dem alten Stand waren: sechs offene Aufgaben (Themenpakete und Konzept) fällig 04.12. statt 27.11., «Bemusterungsunterlagen zusammenstellen, prüfen und dem Auftraggeber übergeben» 07.12., «Bemusterung durchführen und Qualitätsentscheidungen dokumentieren (M06)» beginnt am 08.12.; erledigte bleiben. Der Stand des Plans (15.11.) bleibt, wie er war.
@@ -35,7 +35,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: Abfrage vorher (welche Aufgaben sich ändern) und danach (Vorgänge, Sicherung, Aufgaben).
 - Quedó pendiente o sin probar: keine.
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (wird ergänzt)
+- PR: #207
 
 ---
 
