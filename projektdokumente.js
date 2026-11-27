@@ -1422,7 +1422,9 @@ function renderMappe(){
       '<button type="button" class="btn btn-primary" data-act="vorlegen" title="Als vorgelegt markieren">'+(vorgelegt?'Erneut vorlegen':'Vorlegen')+'</button></span>'+
     '<span class="mm-mehr"><button type="button" class="mm-mehr-knopf" data-act="mm-mehr" aria-haspopup="true" aria-expanded="false" aria-label="Weitere Befehle" title="Weitere Befehle">•••</button>'+
       '<span class="mm-mehr-menue" role="group" aria-label="Weitere Befehle" hidden>'+schalter('mm-raster','Raster',a.raster,'Raster der Seite zeigen: 12 × 8 Felder, Grundlinie 4 mm')+'</span></span>':'';
-  const werkzeug='<div class="mm-werkzeug'+(IM_REITER?' mm-zeile':'')+'">'+schalter('mm-links','Seiten',a.seiten,'Seitenliste ein- oder ausblenden')+
+  // Im Reiter mit reduzierter Leiste wählt man die Mappe am Anfang der Zeile (shared/reiter-fassung.js füllt den Ort).
+  const werkzeug='<div class="mm-werkzeug'+(IM_REITER?' mm-zeile':'')+'">'+(IM_REITER?'<span data-reiter-fassung hidden></span>':'')+
+    schalter('mm-links','Seiten',a.seiten,'Seitenliste ein- oder ausblenden')+
     // Rückgängig und Wiederholen (Etappe 2): Knöpfe und Strg/⌘+Z, Strg+Y oder ⇧⌘Z außerhalb der Textfelder.
     '<span class="mm-verlauf" role="group" aria-label="Verlauf"><button type="button" class="btn" data-act="mm-zurueck" aria-label="Rückgängig" disabled>'+MM_ICON.zurueck+'</button>'+
     '<button type="button" class="btn" data-act="mm-vor" aria-label="Wiederholen" disabled>'+MM_ICON.vor+'</button></span>'+

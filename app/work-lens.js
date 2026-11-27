@@ -107,8 +107,36 @@
           `<button type="button" class="lens-work-fassung lens-work-fassung-neu" data-lens-fassung-neu title="${esc(f.neu)}"><span class="lens-work-punkt" aria-hidden="true">+</span><span class="lens-work-label">${esc(f.neu)}</span></button>`:''}</div>`}).join('')}
         ${mitPlus?`<button type="button" class="lens-work-plus" data-lens-plus aria-haspopup="dialog" title="Abschnitt hinzufügen" aria-label="Abschnitt hinzufügen"><span class="lens-work-icon">${PLUS}</span><span class="lens-work-label">Abschnitt</span></button>`:''}
       </div>`;
+    melden();
   }
   function planen(){if(geplant)return;geplant=true;requestAnimationFrame(zeichne)}
+  // Auf Symbole reduziert (B2, wie im Entwurf: «Bodenbeläge ▾» am Anfang der Werkzeugzeile): die Seite im Reiter fragt
+  // hier nach den Fassungen (shared/reiter-fassung.js) und wählt über die Leiste über dem Werkzeug, die dann entfällt.
+  // Hat die Seite keinen Ort dafür, bleibt die Leiste.
+  const paneVon=win=>[...document.querySelectorAll('#workToolHost [data-work-tool-pane]')].find(p=>p.querySelector('iframe')?.contentWindow===win)||null;
+  const reduziert=()=>['desk-enabled','minds-nav-collapsed','lens-work-an'].every(k=>document.body.classList.contains(k));
+  window.TBA_WORK_FASSUNG={
+    ort(win,da){
+      const pane=paneVon(win);if(!pane||(pane.dataset.fassungImWerkzeug==='1')===!!da)return;
+      if(da)pane.dataset.fassungImWerkzeug='1';else delete pane.dataset.fassungImWerkzeug;
+    },
+    lage(win){
+      const pane=paneVon(win),bar=pane&&pane.querySelector('.work-tool-bar');
+      if(!bar||bar.hidden||!reduziert())return {zeigen:false};
+      return {zeigen:true,titel:(pane.getAttribute('aria-label')||'Fassung')+' wählen',
+        liste:[...bar.querySelectorAll('[data-work-tool-pick]')].map(b=>({id:b.dataset.workToolPick,text:b.textContent.replace(/\s+/g,' ').trim(),aktiv:b.getAttribute('aria-selected')==='true'})),
+        neu:bar.querySelector('[data-work-tool-create]')?.textContent.trim()||''};
+    },
+    waehlen(win,id){paneVon(win)?.querySelector('.work-tool-bar [data-work-tool-pick="'+CSS.escape(String(id))+'"]')?.click()},
+    anlegen(win){paneVon(win)?.querySelector('.work-tool-bar [data-work-tool-create]')?.click()}
+  };
+  let gemeldet=false;
+  function melden(){
+    if(gemeldet)return;gemeldet=true;
+    requestAnimationFrame(()=>{gemeldet=false;
+      for(const f of document.querySelectorAll('#workToolHost [data-work-tool-pane] iframe'))
+        try{const w=f.contentWindow;if(w)w.dispatchEvent(new w.Event('tba-work-fassung'))}catch{}});
+  }
   box.addEventListener('click',e=>{
     const v=e.target.closest('[data-lens-view]');
     if(v){document.querySelector('.work-tabs [data-work-view="'+CSS.escape(v.dataset.lensView)+'"]')?.click();return}
@@ -129,6 +157,8 @@
       if(el)beobachter.observe(el,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','hidden','title','aria-selected']});
   };
   beobachte();planen();
+  // Leiste auf- oder zugeklappt: die Seiten im Reiter zeigen die Fassung oder nicht.
+  new MutationObserver(melden).observe(document.body,{attributes:true,attributeFilter:['class']});
   // Das Wissen zeichnet sich in #workBody; der Rest von Work (Planner beim Ziehen) soll die Leiste nicht neu zeichnen.
   const body=document.getElementById('workBody');
   let wissenDa=false;

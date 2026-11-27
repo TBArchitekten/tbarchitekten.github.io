@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Work B2 (reduziert):** Ist die Seitenleiste auf Symbole reduziert, wählt man die Fassung (Terminplan, Kostenberechnung, Mappe) am Anfang der Werkzeugzeile («LPH 3 ▾», «Bodenbeläge ▾»); die Zeile über dem Werkzeug entfällt. Aufgeklappt steht die Wahl in der Seitenleiste.
+
 **Stand 27.11.2026 · Claude · Mustermappe:** Beim Übersatz nennt der Hinweis je Rahmen, wie viele Zeilen zu viel sind; «Rahmen vergrößern» vergrößert den Rahmen um die fehlenden Felder, «Mit Romy kürzen» schlägt einen Text in der passenden Länge vor (Dialog, nur «Übernehmen» ändert; beides rückgängig wie jeder Schritt).
 
 **Stand 27.11.2026 · Claude · Abläufe:** Im Projektstart (und im Panorama verlinkt) führt «Besprechung nachbereiten» vom Protokoll zu Vorschlägen in beiden Listen, Aufgaben im Planner, Fristen gegen den Terminplan und einer Notiz im Projektwissen.
