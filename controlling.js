@@ -352,15 +352,23 @@ function renderProjekt(pr){
   const pakete=paketeVon(pr.id);
   const p=pakete.find(x=>x.id===ui.paket)||pakete[0]||null;
   ui.paket=p?.id||null;
-  root.innerHTML='<div class="pb-wrap">'+
-    '<a class="pb-back ct-zur-uebersicht" href="./controlling.html">‹ Controlling</a>'+
+  const intro='Honorar laut Vertrag, Stunden und Zahlungen. Gewinn: erarbeitetes Honorar minus Selbstkosten (Gehalt mal Gemeinkostenfaktor). '+
+    'Gegenüber Kalkulation: erarbeitetes Honorar minus Wert der Stunden zum Kalkulationssatz.';
+  const neu=voll?'<button type="button" class="btn'+(p?'':' btn-primary')+'" data-paket-neu>Neues Honorarpaket</button>':'';
+  const pillen=pakete.length>1?'<div class="pb-pills" role="group" aria-label="Honorarpakete">'+pakete.map(x=>
+      '<button type="button" class="pill" data-paket-wahl="'+esc(x.id)+'" aria-pressed="'+(x.id===ui.paket)+'">'+esc(x.bezeichnung)+'</button>').join('')+'</div>':'';
+  // Eine Werkzeugzeile im Reiter von Work (B2, 27.11.2026): Work nennt das Projekt schon; Honorarpakete, «Neues
+  // Honorarpaket» und «?» (die Erklärung) stehen in einer Zeile.
+  const kopf=IM_REITER
+    ?'<div class="ct-zeile">'+pillen+'<span class="ct-zeile-rest">'+neu+
+      '<details class="pb-hilfe"><summary title="Erklärung" aria-label="Erklärung">?</summary><div class="pb-hilfe-text"><p>'+esc(intro)+'</p></div></details></span></div>'+
+      '<p class="pb-banner info" data-meldung hidden></p>'
+    :'<a class="pb-back ct-zur-uebersicht" href="./controlling.html">‹ Controlling</a>'+
     '<header class="pb-head"><div class="pb-head-text"><p class="kicker">Controlling</p><h1>'+esc(projektName(pr))+'</h1>'+
-    '<p class="pb-intro">Honorar laut Vertrag, Stunden und Zahlungen. Gewinn: erarbeitetes Honorar minus Selbstkosten (Gehalt mal Gemeinkostenfaktor). '+
-    'Gegenüber Kalkulation: erarbeitetes Honorar minus Wert der Stunden zum Kalkulationssatz.</p></div>'+
-    (voll?'<div class="pb-actions"><button type="button" class="btn'+(p?'':' btn-primary')+'" data-paket-neu>Neues Honorarpaket</button></div>':'')+
-    '</header><p class="pb-banner info" data-meldung hidden></p>'+
-    (pakete.length>1?'<div class="pb-pills" role="group" aria-label="Honorarpakete">'+pakete.map(x=>
-      '<button type="button" class="pill" data-paket-wahl="'+esc(x.id)+'" aria-pressed="'+(x.id===ui.paket)+'">'+esc(x.bezeichnung)+'</button>').join('')+'</div>':'')+
+    '<p class="pb-intro">'+esc(intro)+'</p></div>'+
+    (neu?'<div class="pb-actions">'+neu+'</div>':'')+
+    '</header><p class="pb-banner info" data-meldung hidden></p>'+pillen;
+  root.innerHTML='<div class="pb-wrap">'+kopf+
     (p?paketBlatt(p):'<div class="card ct-leer"><p><strong>Für dieses Projekt ist noch kein Honorar erfasst.</strong></p><p class="meta">'+
       (voll?'Ein Honorarpaket je Auftrag, etwa «LPH 3» oder «Machbarkeitsstudie».':'Eintragen kann, wer vollen Zugang zum Controlling hat.')+'</p>'+
       (voll?'<button type="button" class="btn btn-primary" data-paket-neu>Honorarpaket anlegen</button>':'')+'</div>')+

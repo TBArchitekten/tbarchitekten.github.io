@@ -1,6 +1,6 @@
 # TBA Office · Estado actual
 
-**Stand 27.11.2026 · Claude · Work B2 (Schritt 2):** Im Reiter von Work haben Terminplan, Kostenberechnung, Produkte und Hersteller je eine Werkzeugzeile (Erklärungen hinter «?») (die Kostenberechnung baut sie selbst, weil sie sich neu zeichnet). Der Terminplan: seltene Befehle unter «•••», Modus und Speicherstand am Ende, die Statuszeile als knappe Info; die Kopfzeile entfällt (`shared/werkzeugleiste.js`, wirkt nur mit `html.im-reiter`). Als eigene Seite unverändert.
+**Stand 27.11.2026 · Claude · Work B2 (Schritt 2):** Im Reiter von Work haben Terminplan, Kostenberechnung, Controlling, Produkte und Hersteller je eine Werkzeugzeile (Erklärungen hinter «?») (die Kostenberechnung baut sie selbst, weil sie sich neu zeichnet). Der Terminplan: seltene Befehle unter «•••», Modus und Speicherstand am Ende, die Statuszeile als knappe Info; die Kopfzeile entfällt (`shared/werkzeugleiste.js`, wirkt nur mit `html.im-reiter`). Als eigene Seite unverändert.
 
 **Stand 27.11.2026 · Claude · Work B2 (Schritt 1):** Am Desktop stehen Projektwahl und Abschnitte des Projekts unter «Work» in der Seitenleiste (`app/work-lens.js`, spiegelt `.work-tabs` und `.work-project-switch` aus `work.js`); Projekt- und Reiterzeile oben sind dort ausgeblendet; die Fassungen eines Werkzeugs (Terminpläne, Mappen) stehen unter dem Abschnitt. Reduziert zeigt die Leiste Projektkürzel und Symbole. Der Planner hat Titel, Filter und Knöpfe in einer Leiste. Unter 950 px bleiben die Reiter oben.
 

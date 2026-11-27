@@ -627,9 +627,12 @@ test('Im Rahmen von Work: kein Weg zur Übersicht; iPhone ohne Querscrollen',asy
   try{
     await page.goto(adresse('rahmen.html'));
     const f=page.frameLocator('#f');
-    await f.locator('h1').waitFor();
-    assert.equal(await f.locator('h1').textContent(),'T-01 · Testhaus');
-    assert.equal(await f.locator('.ct-zur-uebersicht').isVisible(),false);
+    // Eine Werkzeugzeile im Reiter (B2, 27.11.2026): Work nennt das Projekt schon; «Neues Honorarpaket» und «?» in einer Zeile.
+    await f.locator('.ct-zeile').waitFor();
+    assert.equal(await f.locator('h1').count(),0,'keine zweite Überschrift');
+    assert.equal(await f.locator('.ct-zeile [data-paket-neu]').count(),1);
+    assert.match(await f.locator('.ct-zeile .pb-hilfe-text').textContent(),/Honorar laut Vertrag, Stunden und Zahlungen/);
+    assert.equal(await f.locator('.ct-zur-uebersicht').count(),0);
     assert.equal(await page.frames()[1].evaluate(()=>document.documentElement.classList.contains('im-reiter')&&window.TBA_OFFICE_TOOL.kind),'controlling');
     // Paket und Reiter wechseln bleibt im Rahmen und in der Adresse.
     await f.locator('[data-reiter="zahlungen"]').click();
