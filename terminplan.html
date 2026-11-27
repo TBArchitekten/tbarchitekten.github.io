@@ -60,7 +60,9 @@
   .status-stand{color:var(--text)}
   .status-stand strong{font-weight:700}
   .workspace{flex:1;min-height:0;display:flex;position:relative}
-  .left{
+  /* Nur die Tabelle (section.left): auch der linke Griff eines Balkens heißt «handle left» und bekam sonst ihre
+     Mindestbreite und ihren weißen Grund; beim Zeigen deckte ein 300 bis 430 px breiter weißer Griff den Namen zu. */
+  section.left{
     width:var(--left-w);min-width:300px;max-width:1200px;background:#fff;border-right:1px solid var(--line-strong);
     overflow:hidden;display:flex;flex-direction:column;position:relative;z-index:8
   }
@@ -158,6 +160,19 @@
   .milestone:active{cursor:grabbing}
   .milestone.critical{box-shadow:0 1px 3px rgba(0,0,0,.24),0 0 0 2px rgba(220,38,38,.42)}
   .milestone-label{position:absolute;top:10px;z-index:8;font-size:11px;font-weight:650;white-space:nowrap;pointer-events:none}
+  /* Lesbarkeit (Gari, 27.11.2026): passt der Name nicht in den Balken, steht er daneben; ragt ein Balken links aus dem
+     Bild, wandert sein Name mit (sticky); beim Zeigen ein Kärtchen mit Daten, Dauer und Vorgängern. */
+  .bar.bar-kurz .bar-label{visibility:hidden}
+  .bar-label-aussen{position:absolute;z-index:8;height:24px;line-height:24px;font-size:11px;font-weight:650;white-space:nowrap;pointer-events:none;color:var(--m-ink)}
+  .bar-label-aussen.links{text-align:right}
+  .tp-tip{position:fixed;z-index:60;max-width:340px;padding:10px 12px;border-radius:10px;border:1px solid var(--m-border);background:var(--m-surface-raised);color:var(--m-ink);box-shadow:0 8px 24px color-mix(in srgb,var(--m-ink) 18%,transparent);font-size:12px;line-height:1.45;pointer-events:none}
+  .tp-tip strong{display:block;font-size:12.5px;margin-bottom:2px}
+  .tp-tip span{display:block;color:var(--m-ink-soft)}
+  .tp-tip .tp-tip-krit{color:var(--m-error)}
+  /* Lesemodus: nichts lässt sich ziehen oder anfassen, die Tabelle zeigt PSP und Vorgang. */
+  html.tp-lesen .bar,html.tp-lesen .milestone{cursor:default}
+  html.tp-lesen .handle{display:none}
+  #lesenBtn[aria-pressed="true"]{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue)}
   .deps{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:4}
   .dep-path{fill:none;stroke:#88939e;stroke-width:1.2}
   .dep-arrow{fill:#88939e}
@@ -534,7 +549,9 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
     <button class="btn" data-zoom="day">Tag</button>
     <button class="btn active" data-zoom="week">Woche</button>
     <button class="btn" data-zoom="month">Monat</button>
+    <button class="btn" data-zoom="fenster" title="Heute in der Mitte, vier Wochen davor und danach, so breit wie das Fenster">Heute ± 4 Wochen</button>
     <button class="btn" id="todayBtn">Heute</button>
+    <button class="btn" id="lesenBtn" type="button" aria-pressed="false" title="Nur lesen: Balken lassen sich nicht ziehen oder öffnen, die Tabelle zeigt PSP und Vorgang">Lesemodus</button>
     <label><input class="toggle" type="checkbox" id="weekendToggle" checked> Wochenenden ausblenden</label>
     <span class="sep"></span>
     <label class="connection-mode" for="linkMode" title="Übersicht: je Vorgang eine repräsentative zeitliche Vorgängerbeziehung; Anklicken zeigt alle direkten Beziehungen. Alle: vollständiges Netz.">Verbindungen
@@ -810,6 +827,7 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
   let drag = null;
   const UI_KEY = 'tba_office_terminplan_ui_v1';
   let uiState = loadUIState();
+  let lesen = !!uiState.lesen;
   const linkView=window.TBATerminplanLinkView;
   let linkMode=linkView.normalizeMode(uiState.linkMode);
   let printConnectionMode='hidden'; // Clean PDF by default; independent of Gantt mode.
@@ -1109,10 +1127,13 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
           saved.linkModeVersion===2||saved.linkMode==='hidden'||saved.linkMode==='all'
             ?saved.linkMode:'overview'
         ),
-        linkModeVersion:2
+        linkModeVersion:2,
+        leftWidthBreit:Number(saved.leftWidthBreit)||0,
+        leftWidthVorLesen:Number(saved.leftWidthVorLesen)||0,
+        lesen:saved.lesen===true
       };
     }catch(e){
-      return {leftWidth:0,colors:{...DEFAULT_COLORS},linkMode:'overview',linkModeVersion:2};
+      return {leftWidth:0,colors:{...DEFAULT_COLORS},linkMode:'overview',linkModeVersion:2,leftWidthBreit:0,lesen:false};
     }
   }
 
@@ -1224,7 +1245,7 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
   function render(){
     const projectStart=data.project.start, projectEnd=data.project.end;
     visibleDates=dateRange(projectStart,projectEnd);
-    cellWidth=zoom==='day'?46:zoom==='week'?28:18;
+    cellWidth=zoom==='day'?46:zoom==='week'?28:zoom==='fenster'?fensterBreite():18;
     document.documentElement.style.setProperty('--cell-w',cellWidth+'px');
     rebuildRows();
     auditPlan();
@@ -1253,7 +1274,10 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
       else weekGroups.at(-1).count++;
       const el=document.createElement('div');el.className='day-label'+(isWeekend(s)?' weekend':'');
       el.style.left=(i*cellWidth)+'px';el.style.width=cellWidth+'px';
-      el.textContent=zoom==='month'?(d.getUTCDate()===1?d.getUTCDate():''):(zoom==='week'?d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',timeZone:'UTC'}):d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'UTC'}));
+      // Nach der Breite der Tage (auch für «Heute ± 4 Wochen»): lang, kurz, nur der Tag, bei sehr schmalen nur montags.
+      const tag2=String(d.getUTCDate()).padStart(2,'0');
+      el.textContent=zoom==='month'?(d.getUTCDate()===1?d.getUTCDate():''):cellWidth>=40?d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'UTC'})
+        :cellWidth>=24?d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',timeZone:'UTC'}):cellWidth>=14?tag2:(d.getUTCDay()===1?tag2:'');;
       $('#days').appendChild(el);
     });
     monthGroups.forEach(g=>appendHead('#months',g,'month'));
@@ -1366,7 +1390,7 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
   function renderTimeline(){
     const totalW=visibleDates.length*cellWidth;
     const totalH=rows.length*parseInt(getComputedStyle(document.documentElement).getPropertyValue('--row-h'));
-    timelineBody.innerHTML='';
+    timelineBody.innerHTML='';stickyBalken=[];tipZu();
     timelineBody.style.width=totalW+'px';timelineBody.style.height=totalH+'px';
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','deps');svg.setAttribute('width',totalW);svg.setAttribute('height',totalH);
     timelineBody.appendChild(svg);
@@ -1390,7 +1414,72 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
       const label=document.createElement('div');label.className='today-label';label.style.left=x+'px';label.style.top='-88px';label.textContent='HEUTE';
       timelineBody.append(line,label);
     }
+    stickyNamen();
   }
+
+  // «Heute ± 4 Wochen»: so breite Tage, dass acht Wochen um heute ins Fenster passen.
+  const FENSTER_TAGE=28;
+  function fensterBreite(){
+    const heute=localIsoToday(),von=addDays(heute,-FENSTER_TAGE),bis=addDays(heute,FENSTER_TAGE);
+    const n=visibleDates.filter(d=>d>=von&&d<=bis).length||1;
+    const w=timelineWrap.clientWidth||900;
+    return Math.max(10,Math.min(60,Math.floor((w-8)/n)));
+  }
+  // Breite eines Namens in der Schrift der Balken, ohne Layout (Canvas).
+  let textMass=null;
+  function textBreite(text){
+    if(!textMass){textMass=document.createElement('canvas').getContext('2d');textMass.font='650 11px '+getComputedStyle(document.body).fontFamily}
+    return Math.ceil(textMass.measureText(String(text||'')).width);
+  }
+  // Balken, deren Namen beim waagrechten Blättern mitwandern (siehe stickyNamen).
+  let stickyBalken=[];
+  function stickyNamen(){
+    const sl=timelineWrap.scrollLeft;
+    for(const b of stickyBalken){
+      const dx=Math.max(0,Math.min(sl-b.left,b.width-b.textW-18));
+      b.label.style.transform=dx>0?'translateX('+dx+'px)':'';
+    }
+  }
+  // Das Kärtchen beim Zeigen: Name, Zeitraum, Arbeitstage, Art, Fortschritt, Vorgänger, kritischer Weg.
+  const REL_TEXT={EA:'Ende–Anfang',AA:'Anfang–Anfang',EE:'Ende–Ende',AE:'Anfang–Ende'};
+  const ART_TEXT={arch:'Architektur',fach:'Fachplanung',ag:'Auftraggeber / Freigabe',cost:'Kosten / Abschluss'};
+  function tipHtml(id,summary){
+    const t=summary?null:data.tasks.find(x=>x.id===id);
+    const r=summary?{...rows.find(x=>x.id===id),...(computeGroupRange(id)||{})}:t;
+    if(!r||!r.start)return '';
+    const zeitraum=r.type==='milestone'?fmtDate(r.start):fmtDate(r.start)+' – '+fmtDate(r.end);
+    const teile=[esc(zeitraum)+(r.type==='milestone'?'':' · '+esc(workDuration(r.start,r.end))+' AT')];
+    if(t&&ART_TEXT[t.category])teile.push(esc(ART_TEXT[t.category])+(t.progress?' · '+esc(t.progress)+' % erledigt':''));
+    const deps=t?(Array.isArray(t.dependencies)&&t.dependencies.length?t.dependencies:(t.pred?[{pred:t.pred,rel:t.rel,lagDays:0}]:[])):[];
+    for(const d of deps.slice(0,4)){
+      const v=data.tasks.find(x=>x.id===d.pred);if(!v)continue;
+      const lag=Number(d.lagDays)||0;
+      teile.push('Nach '+esc(v.name)+' ('+esc(REL_TEXT[d.rel||'EA']||d.rel||'EA')+(lag?(lag>0?' +':' ')+lag+' AT':'')+')');
+    }
+    if(t&&t.critical)teile.push('<span class="tp-tip-krit">Auf dem kritischen Weg</span>');
+    return '<strong>'+esc(r.name||'Vorgang')+'</strong>'+teile.map(x=>'<span>'+x+'</span>').join('');
+  }
+  const tip=document.createElement('div');tip.className='tp-tip';tip.hidden=true;tip.setAttribute('role','tooltip');document.body.appendChild(tip);
+  let tipTimer=0;
+  function tipZu(){clearTimeout(tipTimer);tip.hidden=true}
+  function tipAuf(el,x,y){
+    const html=tipHtml(el.dataset.id,el.classList.contains('summary'));if(!html){tipZu();return}
+    tip.innerHTML=html;tip.hidden=false;
+    const w=tip.offsetWidth,h=tip.offsetHeight;
+    tip.style.left=Math.max(8,Math.min(window.innerWidth-w-8,x+14))+'px';
+    tip.style.top=(y+18+h>window.innerHeight?y-h-12:y+18)+'px';
+  }
+  timelineBody.addEventListener('pointerover',e=>{
+    if(e.pointerType&&e.pointerType!=='mouse')return;
+    const el=e.target.closest?.('.bar,.milestone');if(!el||drag)return;
+    clearTimeout(tipTimer);tipTimer=setTimeout(()=>{if(!drag)tipAuf(el,e.clientX,e.clientY)},250);
+  });
+  timelineBody.addEventListener('pointerout',e=>{
+    const el=e.target.closest?.('.bar,.milestone');if(!el)return;
+    if(e.relatedTarget&&el.contains(e.relatedTarget))return;
+    tipZu();
+  });
+  timelineBody.addEventListener('pointerdown',tipZu);
 
   function makeBar(t,rowIndex,isSummary){
     const startIdx=nearestVisibleIndex(t.start), endIdx=nearestVisibleIndex(t.end);
@@ -1398,14 +1487,25 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
     if(t.type==='milestone'&&!isSummary){
       const m=document.createElement('div');m.className='milestone'+(t.critical?' critical':'')+(auditHighlightIds.has(t.id)?' audit-affected':'');m.style.left=(left+cellWidth/2-9)+'px';m.style.top=(rowIndex*38+10)+'px';m.style.background=categoryColor(t.category);m.dataset.id=t.id;m.title=t.name;
       const lab=document.createElement('div');lab.className='milestone-label';lab.style.left=(left+cellWidth/2+14)+'px';lab.style.top=(rowIndex*38+10)+'px';lab.textContent=t.name;lab.title=t.name;
-      m.ondblclick=()=>openTask(t.id);m.oncontextmenu=e=>showContext(e,t.id);m.onpointerdown=e=>startDrag(e,t,'move');
+      m.removeAttribute('title');
+      m.ondblclick=()=>{if(!lesen)openTask(t.id)};m.oncontextmenu=e=>{if(lesen){e.preventDefault();return}showContext(e,t.id)};m.onpointerdown=e=>startDrag(e,t,'move');
       timelineBody.append(m,lab);return;
     }
     const bar=document.createElement('div');bar.className='bar'+(isSummary?' summary':'')+(t.critical&&!isSummary?' critical':'')+(!isSummary&&auditHighlightIds.has(t.id)?' audit-affected':'');
-    bar.style.left=left+'px';bar.style.width=width+'px';bar.style.top=(rowIndex*38+(isSummary?13:7))+'px';bar.style.background=categoryColor(t.category);bar.dataset.id=t.id;bar.title=t.name;
+    bar.style.left=left+'px';bar.style.width=width+'px';bar.style.top=(rowIndex*38+(isSummary?13:7))+'px';bar.style.background=categoryColor(t.category);bar.dataset.id=t.id;bar.setAttribute('aria-label',t.name);
     bar.innerHTML=`<div class="bar-progress" style="width:${t.progress||0}%"></div><span class="bar-label">${esc(t.name)}</span>${isSummary?'':'<i class="handle left"></i><i class="handle right"></i>'}`;
     if(!isSummary){
-      bar.ondblclick=()=>openTask(t.id);bar.oncontextmenu=e=>showContext(e,t.id);
+      // Passt der Name nicht hinein, steht er rechts daneben (am Ende des Plans links davor); sonst wandert er mit.
+      const textW=textBreite(t.name),top=rowIndex*38+7;
+      if(textW+18>width){
+        bar.classList.add('bar-kurz');
+        const aussen=document.createElement('div');aussen.className='bar-label-aussen';aussen.textContent=t.name;aussen.style.top=top+'px';
+        const totalW=visibleDates.length*cellWidth;
+        if(left+width+8+textW>totalW&&left-8-textW>=0){aussen.classList.add('links');aussen.style.left=(left-8-textW)+'px';aussen.style.width=textW+'px'}
+        else aussen.style.left=(left+width+8)+'px';
+        timelineBody.appendChild(aussen);
+      }else stickyBalken.push({label:bar.querySelector('.bar-label'),left,width,textW});
+      bar.ondblclick=()=>{if(!lesen)openTask(t.id)};bar.oncontextmenu=e=>{if(lesen){e.preventDefault();return}showContext(e,t.id)};
       bar.onpointerdown=e=>{
         if(e.target.classList.contains('left'))startDrag(e,t,'resize-left');
         else if(e.target.classList.contains('right'))startDrag(e,t,'resize-right');
@@ -1475,6 +1575,7 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
     updateDependencyOverlay();
     renderAssistant();
     if(!canEdit)return;
+    if(lesen)return; // Lesemodus: auswählen ja, ziehen nein.
     e.preventDefault();e.stopPropagation();
 
     drag={
@@ -2780,7 +2881,25 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
 
   document.querySelectorAll('[data-zoom]').forEach(b=>b.onclick=()=>{
     zoom=b.dataset.zoom;document.querySelectorAll('[data-zoom]').forEach(x=>x.classList.toggle('active',x===b));render();
+    if(zoom==='fenster'){
+      const von=addDays(localIsoToday(),-FENSTER_TAGE);
+      timelineWrap.scrollTo({left:Math.max(0,nearestVisibleIndex(von<data.project.start?data.project.start:von)*cellWidth)});
+      toast('Heute ± 4 Wochen');
+    }
   });
+  // Lesemodus (Gari, 27.11.2026): nur lesen; die Tabelle schmal auf PSP und Vorgang, beim Verlassen wie vorher.
+  function lesenAnwenden(){
+    document.documentElement.classList.toggle('tp-lesen',lesen);
+    $('#lesenBtn').setAttribute('aria-pressed',String(lesen));
+  }
+  $('#lesenBtn').onclick=()=>{
+    lesen=!lesen;uiState.lesen=lesen;
+    if(lesen){uiState.leftWidthVorLesen=uiState.leftWidth||925;uiState.leftWidth=tabelleBreite(360)}
+    else uiState.leftWidth=tabelleBreite(uiState.leftWidthVorLesen||uiState.leftWidth||925);
+    saveUIState();lesenAnwenden();hideContext();render();
+    toast(lesen?'Lesemodus: nichts lässt sich ziehen':'Bearbeiten');
+  };
+  lesenAnwenden();
   $('#todayBtn').onclick=()=>{
     const today=localIsoToday();
     const start=data.project.start;
@@ -2894,7 +3013,7 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
   // Sync vertical scroll
   let syncing=false;
   leftScroll.addEventListener('scroll',()=>{if(syncing)return;syncing=true;timelineWrap.scrollTop=leftScroll.scrollTop;requestAnimationFrame(()=>syncing=false)});
-  timelineWrap.addEventListener('scroll',()=>{if(syncing)return;syncing=true;leftScroll.scrollTop=timelineWrap.scrollTop;requestAnimationFrame(()=>syncing=false)});
+  timelineWrap.addEventListener('scroll',()=>{tipZu();if(syncing)return;syncing=true;leftScroll.scrollTop=timelineWrap.scrollTop;requestAnimationFrame(()=>{syncing=false;stickyNamen()})});
 
   // Splitter
   $('#splitter').onpointerdown=e=>{

@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Terminplan lesbar:** Namen neben zu kurzen Balken und mitwandernd beim Blättern, Kärtchen beim Zeigen, «Heute ± 4 Wochen», «Lesemodus»; der linke Griff der Balken deckt den Namen nicht mehr zu.
+
 **Stand 27.11.2026 · Claude · Heute:** Heute ist die eine Tagesansicht mit dem einen Eingang oben («Braucht Sie»: was die Person als Projektleitung oder Admin entscheiden darf, dieselben Karten wie «Für dich» im Panorama); darunter Tag, «Bald fällig», «Überfällig» mit «Aufräumen», «Demnächst» (5 Tage) und das Wetter in Augsburg. Der Bildschirm «Eingang» führt nach Heute.
 
 **Stand 27.11.2026 · Claude · Monatslimit:** Die KI-Nutzung zeigt das Monatslimit bei OpenAI (ausgegeben, Hochrechnung, was bleibt, Stufe) statt eines Guthabens; der Systemstatus prüft es. Tatsächliche Kosten liest `office-ki-kosten`, sobald das Secret `OPENAI_ADMIN_KEY` (Admin-Schlüssel nur zum Lesen) gesetzt ist; bis dahin die Ablesung plus Schätzung.
