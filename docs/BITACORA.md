@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; SQL-Abnahme in der flüchtigen Datenbank der CI (Mitarbeiter und nicht mehr aktive Administratoren abgewiesen, Guthaben geprüft und gerundet, vor/nach dem Guthaben getrennt, keine Person in der Antwort); beide Seiten in Chrome mit Testdaten angesehen (Desktop und 390 px, Tooltip, kein Überlauf).
 - Quedó pendiente o sin probar: Office und Window nutzen dasselbe OpenAI-Konto (Gari, 27.11.); die Seite sieht nur den Verbrauch des Office, deshalb soll das Guthaben regelmäßig neu eingetragen werden. Genaue Kosten für das ganze Konto gäbe es über die Costs API von OpenAI mit einem Admin-Schlüssel nur zum Lesen (Vorschlag an Gari). Der Preis von `gpt-5.6-sol` ist bis 30.11.2026 ein Aktionspreis.
 - Riesgos o decisiones que necesitan a Gari: ob ein Admin-Schlüssel (nur lesen) für genaue Kosten angelegt werden soll.
-- PR: siehe unten
+- PR: #195
 
 ---
 
