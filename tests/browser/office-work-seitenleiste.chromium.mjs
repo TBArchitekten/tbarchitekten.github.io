@@ -34,7 +34,11 @@ async function oeffne(breite,ansicht='planner'){
       office_project_abschnitte:['terminplan','kosten','mustermappe'].map(abschnitt=>({project_id:P,abschnitt})),
       isabella_projects:[{id:P,client_key:P,name:'Beispielhaus',number:'101',archived:false},{id:Q,client_key:Q,name:'Wohnhaus am Lindenweg',number:'102',archived:false}],
       office_projects:[{id:P,number:'101',name:'Beispielhaus',status:'aktiv'},{id:Q,number:'102',name:'Wohnhaus am Lindenweg',status:'aktiv'}],
-      minds_work_buckets:[{id:'b0',name:'Entwurf',sort_order:0,archived:false}]};
+      minds_work_buckets:[{id:'b0',name:'Entwurf',sort_order:0,archived:false}],
+      // Zwei Terminpläne: die Wahl steht am Desktop unter «Terminplan» in der Seitenleiste.
+      office_terminplan_instances:[
+        {id:'tp-lph5',project_id:P,phase:'LPH5',updated_at:'2026-11-22T10:00:00Z',server_revision:1,is_archived:false},
+        {id:'tp-lph3',project_id:P,phase:'LPH3',updated_at:'2026-11-20T10:00:00Z',server_revision:1,is_archived:false}]};
     try{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('minds-work-project',P);localStorage.setItem('minds-work-view',ansicht)}}catch{}
   },[P,Q,ansicht]);
   await page.goto(`http://localhost:${server.address().port}/app/#section=work`);
@@ -116,5 +120,22 @@ test('iPhone: Reiter oben wie bisher, keine Abschnitte in einer Seitenleiste',as
     assert.equal(await sichtbar(page,'#lensWork'),false);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'kein Überlauf');
     assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});
+
+test('Terminpläne: die Wahl steht unter «Terminplan» in der Seitenleiste, reduziert wieder über dem Werkzeug',async()=>{
+  const {page,errors}=await oeffne(1440,'terminplan');
+  try{
+    if(await page.evaluate(()=>document.body.classList.contains('minds-nav-collapsed')))await page.click('.desk-nav-collapse');
+    await page.waitForSelector('#lensWork [data-lens-fassung]');
+    assert.deepEqual(await page.$$eval('#lensWork [data-lens-fassung]',bs=>bs.map(b=>[b.textContent.trim(),b.getAttribute('aria-pressed')])),[['LPH 5','true'],['LPH 3','false']]);
+    assert.equal(await sichtbar(page,'#workToolHost .work-tool-bar'),false,'keine Leiste über dem Werkzeug');
+    await page.click('#lensWork [data-lens-fassung="tp-lph3"]');
+    await page.waitForFunction(()=>document.querySelector('#workToolHost [data-work-tool-pick="tp-lph3"]')?.getAttribute('aria-selected')==='true');
+    await page.waitForFunction(()=>document.querySelector('#lensWork [data-lens-fassung="tp-lph3"]')?.getAttribute('aria-pressed')==='true');
+    await page.click('.desk-nav-collapse');
+    await page.waitForFunction(()=>document.body.classList.contains('minds-nav-collapsed'));
+    assert.equal(await sichtbar(page,'#workToolHost .work-tool-bar'),true,'reduziert: Wahl wieder über dem Werkzeug');
+    assert.deepEqual(errors.filter(e=>!/terminplan/i.test(e)),[]);
   }finally{await page.close()}
 });

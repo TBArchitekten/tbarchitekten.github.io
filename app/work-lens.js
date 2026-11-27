@@ -36,11 +36,21 @@
   const tabs=()=>[...document.querySelectorAll('.work-tabs [data-work-view]')];
   const plus=()=>document.querySelector('.work-tabs [data-work-abschnitte]');
   const projekte=()=>[...document.querySelectorAll('.work-project-switch [data-work-project]')];
+  // Fassungen des geöffneten Werkzeugs (Terminpläne LPH 3/5, Mappen, Kostenberechnungen): die Wahl aus der Leiste
+  // über dem Werkzeug steht am Desktop unter dem Abschnitt in der Seitenleiste.
+  function fassungen(){
+    const pane=[...document.querySelectorAll('#workToolHost [data-work-tool-pane]')].find(p=>!p.hidden&&!document.getElementById('workToolHost')?.hidden);
+    const bar=pane&&pane.querySelector('.work-tool-bar');
+    if(!bar||bar.hidden)return {ansicht:null,liste:[],neu:null};
+    return {ansicht:pane.dataset.workToolPane,
+      liste:[...bar.querySelectorAll('[data-work-tool-pick]')].map(b=>({id:b.dataset.workToolPick,text:b.textContent.replace(/\s+/g,' ').trim(),aktiv:b.getAttribute('aria-selected')==='true'})),
+      neu:bar.querySelector('[data-work-tool-create]')?.textContent.trim()||null};
+  }
   function lage(){
     const sichtbar=tabs().filter(b=>!b.hidden);
     const alle=projekte(),aktiv=alle.find(b=>b.classList.contains('active'));
     const name=(aktiv&&aktiv.textContent.trim())||document.getElementById('workProjectTitle')?.textContent.trim()||'Work';
-    return {sichtbar,alle,name,titel:aktiv?.getAttribute('title')||name,plus:!!plus()&&!plus().hidden};
+    return {sichtbar,alle,name,titel:aktiv?.getAttribute('title')||name,plus:!!plus()&&!plus().hidden,fassungen:fassungen()};
   }
   let menue=null;
   function schliesseMenue(){if(!menue)return;menue.remove();menue=null;box.querySelector('.lens-work-projekt')?.setAttribute('aria-expanded','false');
@@ -70,7 +80,7 @@
   let geplant=false;
   function zeichne(){
     geplant=false;
-    const {sichtbar,alle,name,titel,plus:mitPlus}=lage();
+    const {sichtbar,alle,name,titel,plus:mitPlus,fassungen:f}=lage();
     const an=sichtbar.length>0;
     box.hidden=!an;
     document.body.classList.toggle('lens-work-an',an);
@@ -79,7 +89,11 @@
         <span class="lens-work-chip" aria-hidden="true">${esc(kuerzel(name))}</span><span class="lens-work-name">${esc(name)}</span>${alle.length>1?'<span class="lens-work-pfeil">'+PFEIL+'</span>':''}</button>
       <div class="lens-work-liste" role="tablist" aria-label="Abschnitte des Projekts">${sichtbar.map(b=>{
         const v=b.dataset.workView,label=b.textContent.trim(),aktiv=b.classList.contains('active');
-        return `<button type="button" role="tab" aria-selected="${aktiv}" class="lens-work-abschnitt${aktiv?' active':''}" data-lens-view="${esc(v)}" title="${esc(label)}"><span class="lens-work-icon">${ICONS[v]||ICONS.overview}</span><span class="lens-work-label">${esc(label)}</span></button>`}).join('')}
+        const knopf=`<button type="button" role="tab" aria-selected="${aktiv}" class="lens-work-abschnitt${aktiv?' active':''}" data-lens-view="${esc(v)}" title="${esc(label)}"><span class="lens-work-icon">${ICONS[v]||ICONS.overview}</span><span class="lens-work-label">${esc(label)}</span></button>`;
+        if(!aktiv||f.ansicht!==v||!(f.liste.length||f.neu))return knopf;
+        return knopf+`<div class="lens-work-fassungen" role="group" aria-label="${esc(label)} wählen">${f.liste.map(x=>
+          `<button type="button" class="lens-work-fassung${x.aktiv?' active':''}" aria-pressed="${x.aktiv}" data-lens-fassung="${esc(x.id)}" title="${esc(x.text)}"><span class="lens-work-punkt" aria-hidden="true"></span><span class="lens-work-label">${esc(x.text)}</span></button>`).join('')}${f.neu?
+          `<button type="button" class="lens-work-fassung lens-work-fassung-neu" data-lens-fassung-neu title="${esc(f.neu)}"><span class="lens-work-punkt" aria-hidden="true">+</span><span class="lens-work-label">${esc(f.neu)}</span></button>`:''}</div>`}).join('')}
         ${mitPlus?`<button type="button" class="lens-work-plus" data-lens-plus aria-haspopup="dialog" title="Abschnitt hinzufügen" aria-label="Abschnitt hinzufügen"><span class="lens-work-icon">${PLUS}</span><span class="lens-work-label">Abschnitt</span></button>`:''}
       </div>`;
   }
@@ -87,6 +101,10 @@
   box.addEventListener('click',e=>{
     const v=e.target.closest('[data-lens-view]');
     if(v){document.querySelector('.work-tabs [data-work-view="'+CSS.escape(v.dataset.lensView)+'"]')?.click();return}
+    const fa=e.target.closest('[data-lens-fassung]');
+    if(fa){[...document.querySelectorAll('#workToolHost [data-work-tool-pane]:not([hidden]) .work-tool-bar [data-work-tool-pick]')]
+      .find(b=>b.dataset.workToolPick===fa.dataset.lensFassung)?.click();return}
+    if(e.target.closest('[data-lens-fassung-neu]')){document.querySelector('#workToolHost [data-work-tool-pane]:not([hidden]) .work-tool-bar [data-work-tool-create]')?.click();return}
     const p=e.target.closest('[data-lens-plus]');
     if(p){window.TBA_WORK_ABSCHNITTE?.oeffnen?.(p);return}
     const projekt=e.target.closest('.lens-work-projekt');
@@ -94,8 +112,8 @@
   });
   const beobachter=new MutationObserver(planen);
   const beobachte=()=>{
-    for(const el of [document.querySelector('.work-tabs'),document.querySelector('.work-project-switch'),document.getElementById('workProjectTitle')])
-      if(el)beobachter.observe(el,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','hidden','title']});
+    for(const el of [document.querySelector('.work-tabs'),document.querySelector('.work-project-switch'),document.getElementById('workProjectTitle'),document.getElementById('workToolHost')])
+      if(el)beobachter.observe(el,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','hidden','title','aria-selected']});
   };
   beobachte();planen();
   window.TBA_WORK_LENS={zeichne,kuerzel};

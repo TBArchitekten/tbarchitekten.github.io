@@ -33,6 +33,21 @@
   .lens-work-icon svg{width:16px;height:16px}
   .lens-work-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+  /* Fassungen des Werkzeugs (Terminpläne, Mappen, Kostenberechnungen) unter dem Abschnitt; die Leiste über dem
+     Werkzeug entfällt. Reduziert bleibt sie, weil die schmale Leiste keine Namen zeigt. */
+  body.desk-enabled[data-section="work"].lens-work-an:not(.minds-nav-collapsed) .work-tool-bar{display:none!important}
+  .lens-work-fassungen{display:flex;flex-direction:column;gap:1px;margin:1px 0 4px 26px}
+  .lens-work-fassung{
+    display:flex;align-items:center;gap:8px;width:100%;min-height:27px;padding:4px 8px;margin:0;border:0;border-radius:7px;
+    background:transparent;color:var(--m-ink-soft);font:inherit;font-size:12px;text-align:left;cursor:pointer}
+  .lens-work-fassung:hover{background:var(--m-fill);color:var(--m-ink)}
+  .lens-work-fassung.active{color:var(--m-blue);font-weight:600}
+  .lens-work-punkt{flex:none;display:grid;place-items:center;width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;font-size:0}
+  .lens-work-fassung.active .lens-work-punkt{background:currentColor}
+  .lens-work-fassung-neu .lens-work-punkt{width:auto;height:auto;border:0;border-radius:0;font-size:13px;line-height:1}
+  .lens-work-fassung-neu{color:var(--m-ink-faint)}
+  body.desk-enabled.minds-nav-collapsed .lens-work-fassungen{display:none}
+
   /* Auf Symbole reduziert: Projektkürzel und Symbole, die Namen stehen im Tooltip. */
   body.desk-enabled.minds-nav-collapsed .lens-work-projekt{justify-content:center;padding:4px;border-color:transparent;background:transparent}
   body.desk-enabled.minds-nav-collapsed .lens-work-name,
