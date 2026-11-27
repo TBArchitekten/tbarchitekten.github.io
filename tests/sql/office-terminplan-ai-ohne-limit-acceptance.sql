@@ -2,7 +2,7 @@
 -- Entscheidung Gari, 22.11.2026). Erfundene Personen und Projekte; alles läuft in einer Transaktion, die am Ende
 -- zurückgerollt wird. M = Office-Mitglied, N = angemeldet, aber kein Office-Mitglied.
 -- Erwartet (Wahrheitswerte als «true»/«false»: so schreibt PL/pgSQL sie in Text):
--- M_ohne_limit=true; M_gezaehlt=30; N_kontingent=false; fremder_plan=false; anon=verweigert;
+-- M_ohne_limit=true; M_gezaehlt=0; N_kontingent=false; fremder_plan=false; anon=verweigert;
 begin;
 insert into auth.users(id,aud,role,email,instance_id) values
  ('a2000000-0000-4000-8000-00000000000a','authenticated','authenticated','tp-m@example.invalid','00000000-0000-0000-0000-000000000000'),
@@ -16,10 +16,10 @@ insert into public.office_terminplan_instances(id,project_id,template_version,pr
 do $test$
 declare
   r text := ''; n int; ok boolean;
-  erwartet constant text := 'M_ohne_limit=true; M_gezaehlt=30; N_kontingent=false; fremder_plan=false; anon=verweigert; ';
+  erwartet constant text := 'M_ohne_limit=true; M_gezaehlt=0; N_kontingent=false; fremder_plan=false; anon=verweigert; ';
   t constant uuid := 'f2000000-0000-4000-8000-0000000000f2';
 begin
-  -- M: 30 Anfragen an einem Tag gehen alle durch und sind alle gezählt.
+  -- M: 30 Anfragen an einem Tag gehen alle durch; gespeichert wird seit dem 27.11.2026 keine (ohne Person).
   perform set_config('request.jwt.claims', '{"sub":"a2000000-0000-4000-8000-00000000000a","role":"authenticated"}', true);
   execute 'set local role authenticated';
   for i in 1..29 loop perform public.office_ai_consume_request(t); end loop;

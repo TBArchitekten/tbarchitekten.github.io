@@ -5,7 +5,7 @@
 -- A = Projektleitung von P, B = Team von P, C = Mitglied ohne Bezug zu P, D = kein Office-Mitglied.
 -- Erwartet (Wahrheitswerte als «true»/«false»: so schreibt PL/pgSQL sie in Text):
 -- B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=ok; C_kontingent=true; C_liest=1;
--- B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=31;
+-- B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=0;
 begin;
 insert into auth.users(id,aud,role,email,instance_id) values
  ('a1000000-0000-4000-8000-00000000000a','authenticated','authenticated','ka-a@example.invalid','00000000-0000-0000-0000-000000000000'),
@@ -26,7 +26,7 @@ do $test$
 declare
   r text := ''; n int; ok boolean;
   erwartet constant text := 'B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=ok; C_kontingent=true; C_liest=1; '
-    || 'B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=31; ';
+    || 'B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=0; ';
   k constant uuid := 'f1000000-0000-4000-8000-0000000000f1';
 begin
   -- B (Team, Ersteller): schreibt und liest den eigenen Verlauf, verbraucht Kontingent.
@@ -77,7 +77,8 @@ begin
   exception when others then r := r || 'anon=verweigert; ';
   end;
   execute 'reset role';
-  -- Kein Tageslimit (Entscheidung Gari, 22.11.2026): auch nach 29 weiteren Anfragen geht es, und alle sind gezählt.
+  -- Kein Tageslimit (Entscheidung Gari, 22.11.2026): auch nach 29 weiteren Anfragen geht es. Seit dem 27.11.2026 wird
+  -- keine Anfrage mit Person gespeichert (OK von Gari): die Tabelle bleibt leer.
   perform set_config('request.jwt.claims', '{"sub":"b1000000-0000-4000-8000-00000000000b","role":"authenticated"}', true);
   execute 'set local role authenticated';
   for i in 1..29 loop perform public.office_kosten_ai_consume_request(k); end loop;
