@@ -469,16 +469,19 @@ function renderUebersicht(){
       (da?'<button type="button" class="btn" data-act="excel" data-art="'+art+'">Excel</button>':'')+'</div></article>';
   };
   const folgt=(titel,code,text)=>'<article class="card pd-karte pd-folgt"><div class="pd-karte-kopf"><h3>'+esc(titel)+'</h3><span class="pd-code">'+esc(code)+'</span></div>'+
-    '<p class="meta">'+esc(text)+'</p><p class="pd-folgt-text">folgt nach dem ersten Schritt</p></article>';
+    '<p class="meta">'+esc(text)+'</p><p class="pd-folgt-text">Noch nicht gebaut</p></article>';
   const vorlagenListe=vorlagen.length?'<ul class="pd-vorlagen">'+vorlagen.map(v=>{
     const inh=K.vorlageInhalt(v,zeilen.entscheidungsliste,{projekt});
     return '<li><a href="'+esc(url({projekt:projekt.id,vorlage:v.id}))+'" data-nav><span class="pd-nr">'+esc(inh.nr)+'</span> '+esc(inh.titel)+'</a> · '+
       (v.daten.status==='vorgelegt'?'vorgelegt am '+esc(K.datumKurz(v.daten.vorgelegt_am)):'in Arbeit')+'</li>';
   }).join('')+'</ul>':'<p class="meta">Noch keine Vorlage. Eine Vorlage entsteht aus Entscheidungen der Entscheidungsliste.</p>';
   const fokus=vorZeichnen();
-  const html='<div class="pd-wrap">'+kopf({zurueck:['./app/#section=tools','‹ Werkzeuge'],kicker:'Werkzeuge · Projektstart · '+projektName(),titel:'Projektstart',
+  // Im Reiter «Listen» von Work (Gari, 27.11.2026: «listen»): ohne Kopf, Projektwahl und Rückweg, denn das Projekt wählt
+  // Work; das Muster bleibt unter Werkzeuge.
+  const kopfHtml=IM_REITER?meldungHtml():kopf({zurueck:['./app/#section=tools','‹ Werkzeuge'],kicker:'Werkzeuge · Projektstart · '+projektName(),titel:'Projektstart',
     intro:'Die Bürovorlagen werden Dokumente des Projekts: hier bearbeiten und als Word, Excel oder PDF ausgeben, wenn Fachplaner oder Bauherr sie brauchen. Das Muster bleibt, wie es ist; jedes Projekt bekommt seine eigene Fassung.',
-    aktionen:projektwahl+'<a class="btn" href="./projektstart.html">Muster ansehen</a>'})+ablaufPanel()+
+    aktionen:projektwahl+'<a class="btn" href="./projektstart.html">Muster ansehen</a>'});
+  const html='<div class="pd-wrap'+(IM_REITER?' pd-im-reiter':'')+'">'+kopfHtml+ablaufPanel()+
     (ui.ablauf?'':'<section class="pd-abschnitt"><h2>Abläufe</h2><p class="meta">wiederkehrende Arbeit des Büros, Schritt für Schritt mit den Werkzeugen des Office</p><div class="pd-grid">'+
       '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Besprechung nachbereiten</h3></div><p class="meta">Romy liest das Protokoll und schlägt Klärungen und Entscheidungen vor, '+
       'jede mit Fundstelle. Danach: Aufgaben im Planner, Fristen gegen den Terminplan, das Ergebnis ins Projektwissen.</p>'+
@@ -622,7 +625,7 @@ function renderListe(){
   const fuss='<p class="meta pd-fuss">'+(ui.alleSpalten?'Alle '+(spalten.length)+' Spalten wie in der Bürovorlage.':'Kompakt: '+KOMPAKT[art].filter(k=>k!=='_vorlage').length+' von '+K.SPALTEN[art].length+' Spalten. «Alle Spalten» zeigt alle Spalten der Bürovorlage.')+
     ' Klick in eine Zelle bearbeitet sie; Enter oder Tab springt weiter, Esc bricht ab. Die Nummer öffnet die Details.'+(sicht.length<alle.length?' Gefiltert: '+sicht.length+' von '+alle.length+'.':'')+'</p>';
   const fokus=vorZeichnen();
-  const html='<div class="pd-wrap pd-liste-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({projekt:projekt.id}),'‹ Projektstart'],kicker:'Projektstart · '+projektName(),titel:doc.titel,meta,aktionen})+
+  const html='<div class="pd-wrap pd-liste-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({projekt:projekt.id}),IM_REITER?'‹ Listen':'‹ Projektstart'],kicker:IM_REITER?'Listen':'Projektstart · '+projektName(),titel:doc.titel,meta,aktionen})+
     filter+banner+leiste+
     '<div class="pd-tabelle-wrap"><table class="pd-tabelle'+(ui.alleSpalten?' pd-alle':'')+'"><thead>'+kopfzeile+'</thead><tbody>'+reihen+neuZeile+'</tbody></table></div>'+fuss+
     '<datalist id="pdDisziplinen">'+K.DISZIPLINEN.map(([c,l])=>'<option value="'+c+'">'+esc(l)+'</option>').join('')+'</datalist>'+
@@ -1162,7 +1165,7 @@ function bearbeitbar(bloecke){
 }
 function renderVorlage(){
   const v=vorlageZeile();
-  if(!v){root.innerHTML='<div class="pd-wrap">'+kopf({zurueck:[url({projekt:projekt.id}),'‹ Projektstart'],kicker:'Projektstart · '+projektName(),titel:'Entscheidungsvorlage'})+'<div class="pd-banner warn">Diese Vorlage gibt es nicht mehr.</div></div>';return}
+  if(!v){root.innerHTML='<div class="pd-wrap">'+kopf({zurueck:[url({projekt:projekt.id}),IM_REITER?'‹ Listen':'‹ Projektstart'],kicker:IM_REITER?'Listen':'Projektstart · '+projektName(),titel:'Entscheidungsvorlage'})+'<div class="pd-banner warn">Diese Vorlage gibt es nicht mehr.</div></div>';return}
   const inh=inhaltVon(v),bl=K.vorlageBloecke(inh);
   const punkte=inh.punkte.map(p=>zeilen.entscheidungsliste.find(z=>z.id===p.id)).filter(Boolean);
   const vorgelegt=v.daten.status==='vorgelegt';
@@ -1184,7 +1187,7 @@ function renderVorlage(){
     :'<p class="meta">Noch kein Stand. Beim Vorlegen wird der Stand festgehalten und bleibt unverändert.</p>';
   const fokus=vorZeichnen();
   const html='<div class="pd-wrap pd-vorlage-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({projekt:projekt.id,liste:'entscheidungsliste'}),'‹ Entscheidungsliste'],
-    kicker:'Projektstart · '+projektName()+' · Vorlage '+inh.nr,titel:'Entscheidungsvorlage '+inh.nr,meta,aktionen})+
+    kicker:(IM_REITER?'Listen':'Projektstart · '+projektName())+' · Vorlage '+inh.nr,titel:'Entscheidungsvorlage '+inh.nr,meta,aktionen})+
     '<div class="pd-vorlage"><article class="pd-papier" aria-label="Entscheidungsvorlage">'+(punkte.length?bearbeitbar(bl):'<p class="meta">Diese Vorlage hat noch keine Entscheidung. Rechts eine hinzufügen.</p>')+'</article>'+
     '<aside class="pd-seite">'+
     '<section class="card"><h2>Angaben der Vorlage</h2>'+ang('titel','Titel',inh.titel)+ang('auftraggeber','Auftraggeber')+ang('besprechung','Besprechung','M04')+ang('besprechung_am','Datum der Besprechung','TT.MM.JJJJ')+
