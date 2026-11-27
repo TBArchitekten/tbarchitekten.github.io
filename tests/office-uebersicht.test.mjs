@@ -144,6 +144,68 @@ test('Monatslimit mit den tatsächlichen Kosten bei OpenAI', () => {
   assert.match(U.kiNutzungHtml(DATEN), /Noch kein Monatslimit eingetragen/);
 });
 
+// Guthaben (27.11.2026, abends): vorausbezahlt; bei 0 $ hält OpenAI die Anfragen an. Abgelesen am 25.11. um 08:00 UTC.
+test('Guthaben: Ablesung minus Verbrauch seitdem; das ganze Konto zählt, wenn es mehr ist als das Office', () => {
+  const nah = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, a + ' ≠ ' + b);
+  const mitGuthaben = DATEN.zeilen.map(z => ({...z, nach_guthaben: !!z.nach_stand}));
+  // Ohne Monatslimit: Verbrauch des Office seit der Ablesung (25., 26. und heute = 1,43 $), Rate = Durchschnitt 0,20 $.
+  const g = M.zusammenfassen({...DATEN, zeilen: mitGuthaben}).guthaben;
+  assert.equal(g.betrag, 10);
+  nah(g.seit, Math.max(1.43, 0.2 * 2.25));
+  assert.equal(g.ausKonto, false);
+  nah(g.rest, 10 - 1.43);
+  nah(g.tageRest, (10 - 1.43) / 0.2);
+  assert.equal(g.stufe, 'ok');
+  assert.equal(g.leerAm, '2027-01-08');      // 42 volle Tage nach dem 27.11.
+  // Mit Ablesung des Monats (7,92 $ in 24⅓ Tagen fürs ganze Konto): die Rate des Kontos ist höher, sie zählt.
+  const mitLimit = M.zusammenfassen({...DATEN, zeilen: mitGuthaben, monatslimit: {limit_usd: 50, warnen_ab_prozent: 80,
+    ausgegeben_usd: 7.92, abgelesen_am: '2026-11-25T08:00:00Z'}});
+  const rate = 7.92 / (24 + 8 / 24);
+  nah(mitLimit.guthaben.rate, rate);
+  nah(mitLimit.guthaben.seit, Math.max(1.43, rate * 2.25));
+  // Stufen: weniger als «warnen ab» Tage knapp, weniger als drei Tage (oder unter 1 $) fast aufgebraucht, 0 leer.
+  // (Ablesung gerade eben: noch nichts verbraucht.)
+  const stufe = (betrag, warnen = 7) => M.zusammenfassen({...DATEN, zeilen: DATEN.zeilen.map(z => ({...z, nach_guthaben: false})),
+    guthaben: {betrag_usd: betrag, warnen_ab_tage: warnen, stand_am: '2026-11-27T11:00:00Z'}}).guthaben.stufe;
+  assert.equal(stufe(10), 'ok');        // 50 Tage bei 0,20 $
+  assert.equal(stufe(1.2), 'knapp');    // 6 Tage
+  assert.equal(stufe(1.2, 5), 'ok');    // «warnen ab» 5 Tage
+  assert.equal(stufe(0.5), 'kritisch');
+  assert.equal(stufe(0), 'leer');
+  assert.equal(M.zusammenfassen({...DATEN, guthaben: null}).guthaben, null);
+  assert.equal(M.tageText(Infinity), 'mehr als 90 Tage');
+  assert.equal(M.tageText(42.7), 'etwa 42 Tage');
+});
+
+test('KI-Nutzung zeigt Guthaben und Monatslimit; der Balken endet am Limit, die Hochrechnung ist eine Verlängerung', () => {
+  const html = U.kiNutzungHtml({...DATEN, zeilen: DATEN.zeilen.map(z => ({...z, nach_guthaben: !!z.nach_stand})),
+    monatslimit: {limit_usd: 50, warnen_ab_prozent: 80, ausgegeben_usd: 7.93, abgelesen_am: '2026-11-25T08:00:00Z'}});
+  assert.match(html, /<p class="eyebrow">Guthaben bei OpenAI<\/p>/);
+  assert.match(html, /Bei 0 \$ hält OpenAI alle Anfragen an, auch Romy und Window, solange die automatische Aufladung aus ist\./);
+  assert.match(html, /data-ki-guthaben-form/);
+  assert.match(html, /<span class="pill ki-stufe-ok">Reicht<\/span> etwa \d+ Tage/);
+  // Der Balken: 0 und das Limit an den Enden, «warnen ab» beschriftet, die Hochrechnung als eigene, hellere Fläche.
+  assert.match(html, /<div class="ki-limit-skala" aria-hidden="true"><span>0 \$<\/span><span>Limit 50,00\s\$<\/span><\/div>/);
+  assert.match(html, /<span class="ki-legende-warnen"><\/span>Warnung ab 40,00\s\$<\/p>/);
+  assert.match(html, /<span class="pill ki-stufe-ok">Im Rahmen<\/span> bis zum Limit bleiben ≈ /);
+  assert.match(html, /<span class="ki-limit-hoch ki-limit-ok" style="width:\d+\.\d%"><\/span>\s*<span class="ki-limit-voll ki-limit-ok" style="width:\d+\.\d%"><\/span>/);
+  assert.doesNotMatch(html, /ki-limit-hoch" style="left/, 'kein Strich mehr, der wie das Limit aussieht');
+  assert.match(html, /<p class="ki-legende">/);
+  // Ohne Guthaben sagt die Karte, was einzutragen ist.
+  assert.match(U.kiNutzungHtml({...DATEN, guthaben: null}), /Noch kein Guthaben eingetragen/);
+});
+
+test('Systemstatus prüft Guthaben und Monatslimit', () => {
+  const nutzung = {...DATEN, zeilen: DATEN.zeilen.map(z => ({...z, nach_guthaben: !!z.nach_stand})),
+    monatslimit: {limit_usd: 50, warnen_ab_prozent: 80, ausgegeben_usd: 7.93, abgelesen_am: '2026-11-25T08:00:00Z'}};
+  const html = U.systemstatusHtml({stand: '2026-11-27T11:00:00Z', pruefungen: []}, nutzung);
+  assert.match(html, /Guthaben bei OpenAI<\/span><span class="row-sub">Reicht etwa \d+ Tage \(≈ [\d,]+\s\$, abgelesen am 25\.11\.\)\./);
+  assert.match(html, /Monatslimit bei OpenAI/);
+  const leer = U.systemstatusHtml({stand: '2026-11-27T11:00:00Z', pruefungen: []},
+    {...nutzung, guthaben: {betrag_usd: 0, warnen_ab_tage: 7, stand_am: '2026-11-27T10:00:00Z'}});
+  assert.match(leer, /<span class="pill status-fehler">Gestört<\/span><span class="status-inhalt"><span class="row-title">Guthaben bei OpenAI/);
+});
+
 test('Die Seiten zeigen nie eine Person und maskieren fremden Text', () => {
   const html = U.kiNutzungHtml({...DATEN, projekte: [{id: 'p1', nummer: 'T-1', name: '<img src=x onerror=alert(1)>'}]});
   assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'));
@@ -152,7 +214,8 @@ test('Die Seiten zeigen nie eine Person und maskieren fremden Text', () => {
   assert.match(html, /Summen je Funktion und Projekt, nie je Person/);
   assert.match(html, /Monatslimit \(USD\)/);
   assert.match(html, /Diesen Monat laut OpenAI \(USD\)/);
-  assert.doesNotMatch(html, /Guthaben/);
+  // Seit dem Abend des 27.11. wieder mit Guthaben (vorausbezahlt), neben dem Monatslimit.
+  assert.match(html, /Guthaben laut OpenAI \(USD\)/);
   assert.match(html, /aria-label="Geschätzte Kosten pro Tag, 30 Tage"/);
   const status = U.systemstatusHtml({stand: '2026-11-27T10:00:00Z', pruefungen: [
     {bereich: 'heartbeat', status: 'ok', zuletzt_ok: '2026-11-27T09:45:00Z', ok_24h: 96, fehler_24h: 0},

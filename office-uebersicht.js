@@ -2,10 +2,12 @@
 // Beides liest nur Summen über eigene Funktionen der Datenbank, die nur Administratoren aufrufen dürfen
 // (office_ki_nutzung, office_ki_monatslimit_eintragen, office_systemstatus). Nie je Person.
 // Die Kosten je Funktion und Projekt sind eine Schätzung aus den Tokens nach den Listenpreisen von OpenAI.
-// Monatslimit (27.11.2026, Gari: «sí prepáralo como propones»): das Konto bei OpenAI hat ein Limit je Monat, kein
-// Guthaben. Was diesen Monat ausgegeben ist, liest office-ki-kosten bei OpenAI, wenn ein Admin-Schlüssel (nur lesen)
-// hinterlegt ist; sonst gilt, was eine Administratorin oder ein Administrator bei OpenAI abgelesen hat, plus die
-// Schätzung seitdem, und ohne Ablesung nur die Schätzung des Office.
+// Monatslimit (27.11.2026, Gari: «sí prepáralo como propones»): was diesen Monat ausgegeben ist, liest office-ki-kosten
+// bei OpenAI, wenn ein Admin-Schlüssel (nur lesen) hinterlegt ist; sonst gilt, was eine Administratorin oder ein
+// Administrator bei OpenAI abgelesen hat, plus die Schätzung seitdem, und ohne Ablesung nur die Schätzung des Office.
+// Guthaben (27.11.2026, abends, Gari: «creo que solo tengo eso de créditos, aunque tenga un limit de 50?»): das Konto ist
+// vorausbezahlt. Bei 0 $ hält OpenAI alle Anfragen an, solange die automatische Aufladung aus ist; das Monatslimit ist
+// nur eine Obergrenze. Die Seite zeigt beides: wie lange das Guthaben reicht und wie nah das Limit des Monats ist.
 (function(root){
 'use strict';
 
@@ -90,6 +92,27 @@ function monatslimitRechnen({m,ist,heute,stand,monatBeginn,monatOffice,seitAbles
     projekte:quelle==='openai'&&Array.isArray(ist.projekte)?ist.projekte:[]};
 }
 
+const GUTHABEN_STUFE={ok:'Reicht',knapp:'Wird knapp',kritisch:'Fast aufgebraucht',leer:'Aufgebraucht'};
+const GUTHABEN_PILL={ok:'ok',knapp:'knapp',kritisch:'kritisch',leer:'leer'};
+// Guthaben: abgelesener Betrag minus Verbrauch seitdem. Window läuft über dasselbe Konto und ist im Office nicht zu
+// sehen; darum zählt der Verbrauch des ganzen Kontos nach der Tagesrate des Monatslimits, wenn er größer ist als die
+// Schätzung des Office seit der Ablesung.
+function guthabenRechnen({g,seitGuthaben,rate,stand,heute}){
+  if(!g||g.betrag_usd==null||!Number.isFinite(Number(g.betrag_usd)))return null;
+  const betrag=Number(g.betrag_usd),warnen=Math.min(60,Math.max(1,Number(g.warnen_ab_tage)||7));
+  const tageSeit=Math.max(0,(new Date(stand)-new Date(g.stand_am))/864e5)||0;
+  const kontoSeit=Math.max(0,rate)*tageSeit,seit=Math.max(zahl(seitGuthaben),kontoSeit);
+  const rest=betrag-seit,tageRest=rate>0?Math.max(0,rest)/rate:Infinity;
+  const stufe=rest<=0?'leer':(rest<1||tageRest<Math.min(3,warnen))?'kritisch':tageRest<warnen?'knapp':'ok';
+  return {betrag,standAm:g.stand_am,seit,ausKonto:kontoSeit>zahl(seitGuthaben),rest,rate,tageRest,warnen,stufe,
+    leerAm:Number.isFinite(tageRest)?tagPlus(heute,Math.floor(tageRest)):null};
+}
+function tageText(n){
+  if(n===Infinity||n>90)return 'mehr als 90 Tage';
+  const t=Math.max(0,Math.floor(n));
+  return t===1?'etwa 1 Tag':t===0?'weniger als 1 Tag':'etwa '+t+' Tage';
+}
+
 // Alles, was die Seite zeigt, aus der Antwort von office_ki_nutzung und, wenn vorhanden, den Kosten bei OpenAI.
 function zusammenfassen(daten,ist=null){
   const heute=String(daten&&daten.heute||new Date().toISOString().slice(0,10));
@@ -97,11 +120,12 @@ function zusammenfassen(daten,ist=null){
   const monatBeginn=String(daten&&daten.monat_beginn||heute.slice(0,8)+'01');
   const tage30=Array.from({length:30},(_,i)=>tagPlus(heute,i-29)),imFenster=new Set(tage30);
   const proTag=Object.fromEntries(tage30.map(t=>[t,0])),funktionen={},projekte={},ohnePreisModelle=new Set();
-  let ohnePreis=0,seitStand=0,monatOffice=0;
+  let ohnePreis=0,seitStand=0,seitGuthaben=0,monatOffice=0;
   for(const z of zeilen){
     const k=kosten(z),aufrufe=zahl(z.aufrufe);
     if(!k.bepreist){ohnePreis+=aufrufe;ohnePreisModelle.add(String(z.modell||'?'))}
     if(z.nach_stand)seitStand+=k.usd;
+    if(z.nach_guthaben)seitGuthaben+=k.usd;
     if(String(z.tag)>=monatBeginn&&String(z.tag)<=heute)monatOffice+=k.usd;
     if(!imFenster.has(String(z.tag)))continue;
     proTag[z.tag]+=k.usd;
@@ -118,11 +142,13 @@ function zusammenfassen(daten,ist=null){
   const durchschnitt=tage30.slice(-8,-1).reduce((s,t)=>s+proTag[t],0)/7;
   const monatslimit=monatslimitRechnen({m:daten&&daten.monatslimit,ist,heute,stand:daten&&daten.stand,monatBeginn,
     monatOffice,seitAblesung:seitStand,durchschnitt});
+  const guthaben=guthabenRechnen({g:daten&&daten.guthaben,seitGuthaben,rate:monatslimit?monatslimit.rate:durchschnitt,
+    stand:daten&&daten.stand||new Date().toISOString(),heute});
   return {heute,monatBeginn,tage30,proTag:tage30.map(t=>({tag:t,usd:proTag[t]})),heuteUsd:proTag[heute]||0,durchschnitt,
     summe30:tage30.reduce((s,t)=>s+proTag[t],0),monatOffice,
     nachFunktion:Object.values(funktionen).sort((a,b)=>b.usd-a.usd||b.aufrufe-a.aufrufe),
     nachProjekt:Object.values(projekte).sort((a,b)=>b.usd-a.usd||b.aufrufe-a.aufrufe),
-    monatslimit,ist:ist&&typeof ist==='object'?ist:null,
+    monatslimit,guthaben,ist:ist&&typeof ist==='object'?ist:null,
     ohnePreis:{aufrufe:ohnePreis,modelle:[...ohnePreisModelle].sort()},preiseStand:PREISE_STAND};
 }
 
@@ -205,14 +231,20 @@ function limitHerkunft(l,s){
   if(l.quelle==='ablesung')return 'Bei OpenAI abgelesen: '+usd(l.abgelesen.usd)+' am '+datum(l.abgelesen.am)+' um '+zeit(l.abgelesen.am)+' Uhr · seitdem im Office ≈ '+usd(l.seitAblesung);
   return 'Nur die Aufrufe des Office seit '+tagKurz(s.monatBeginn)+', geschätzt. Was sonst über dasselbe Konto läuft (etwa Window), fehlt; tragen Sie ein, was OpenAI für diesen Monat zeigt.';
 }
-// Balken: ausgegeben, Hochrechnung als Strich, «warnen ab» als feine Linie. Werte stehen daneben als Text.
+// Balken bis zum Limit (rechtes Ende): ausgegeben kräftig, die Hochrechnung bis Monatsende als hellere Verlängerung,
+// «warnen ab» als beschriftete Linie, 0 und das Limit an den Enden. Früher stand die Hochrechnung als schwarzer Strich
+// direkt neben der Füllung und sah aus wie das Limit (Gari, 27.11.2026: «parece como si ya estuviéramos casi al límite»).
 function limitBalken(l){
   const anteil=v=>Math.max(0,Math.min(100,v/l.limit*100)).toFixed(1)+'%';
-  return `<div class="ki-limit" role="img" aria-label="${esc(usd(l.ausgegeben)+' von '+usd(l.limit)+' ausgegeben, Hochrechnung '+usd(l.hochrechnung))}">
-      <span class="ki-limit-voll ki-limit-${esc(LIMIT_PILL[l.stufe])}" style="width:${anteil(l.ausgegeben)}"></span>
-      <span class="ki-limit-warnen" style="left:${anteil(l.limit*l.warnen/100)}"></span>
-      <span class="ki-limit-hoch" style="left:${anteil(l.hochrechnung)}"></span>
-    </div>`;
+  const pill=esc(LIMIT_PILL[l.stufe]),warnenUsd=l.limit*l.warnen/100;
+  const hoch=Math.max(l.ausgegeben,Math.min(l.hochrechnung,l.limit));
+  return `<div class="ki-limit" role="img" aria-label="${esc(usd(l.ausgegeben)+' von '+usd(l.limit)+' ausgegeben; Hochrechnung bis Monatsende '+usd(l.hochrechnung)+'; Warnung ab '+usd(warnenUsd))}">
+      <span class="ki-limit-hoch ki-limit-${pill}" style="width:${anteil(hoch)}"></span>
+      <span class="ki-limit-voll ki-limit-${pill}" style="width:${anteil(l.ausgegeben)}"></span>
+      <span class="ki-limit-warnen" style="left:${anteil(warnenUsd)}"></span>
+    </div>
+    <div class="ki-limit-skala" aria-hidden="true"><span>0 $</span><span>Limit ${esc(usd(l.limit))}</span></div>
+    <p class="ki-legende"><span class="ki-legende-voll ki-limit-${pill}"></span>ausgegeben ${l.quelle==='openai'?'':'≈ '}${esc(usd(l.ausgegeben))}<span class="ki-legende-hoch ki-limit-${pill}"></span>Hochrechnung bis ${esc(tagKurz(l.monatsEnde))} ≈ ${esc(usd(l.hochrechnung))}<span class="ki-legende-warnen"></span>Warnung ab ${esc(usd(warnenUsd))}</p>`;
 }
 function limitKarte(s){
   const l=s.monatslimit,ist=s.ist;
@@ -223,10 +255,10 @@ function limitKarte(s){
   const kopf=l
     ?`<p class="ki-zahl">${l.quelle==='openai'?'':'≈ '}${esc(usd(l.ausgegeben))} <span class="ki-von">von ${esc(usd(l.limit))}</span></p>
       ${limitBalken(l)}
-      <p class="ki-sub">${esc(limitHerkunft(l,s))}</p>${projekte}
-      <p class="ki-reicht"><span class="pill ki-stufe-${esc(LIMIT_PILL[l.stufe])}">${esc(LIMIT_STUFE[l.stufe])}</span> ${l.stufe==='erreicht'?'Bitte das Limit bei OpenAI prüfen.':'Hochrechnung bis '+esc(tagKurz(l.monatsEnde))+' ≈ '+esc(usd(l.hochrechnung))+' · bleiben ≈ '+esc(usd(Math.max(0,l.rest)))}</p>`
+      <p class="ki-reicht"><span class="pill ki-stufe-${esc(LIMIT_PILL[l.stufe])}">${esc(LIMIT_STUFE[l.stufe])}</span> ${l.stufe==='erreicht'?'Bitte das Limit bei OpenAI prüfen.':'bis zum Limit bleiben ≈ '+esc(usd(Math.max(0,l.rest)))}</p>
+      <p class="ki-sub ki-regel">${esc(limitHerkunft(l,s))}</p>${projekte}`
     :`<p class="ki-zahl ki-leer">–</p><p class="ki-sub">Noch kein Monatslimit eingetragen. Tragen Sie das Limit ein, das bei OpenAI gilt; die Seite rechnet dann mit.</p>`;
-  return `<section class="card ki-guthaben">
+  return `<section class="card ki-karte ki-limit-karte">
         <p class="eyebrow">Monatslimit bei OpenAI</p>
         ${kopf}
         <form class="ki-form" data-ki-form>
@@ -237,6 +269,26 @@ function limitKarte(s){
         </form>
         <p class="message" data-ki-meldung aria-live="polite"></p>
         <p class="muted ki-hinweis">${esc(schluessel)}</p>
+      </section>`;
+}
+function guthabenKarte(s){
+  const g=s.guthaben;
+  const kopf=g
+    ?`<p class="ki-zahl">≈ ${esc(usd(Math.max(0,g.rest)))}</p>
+      <p class="ki-sub">Bei OpenAI abgelesen: ${esc(usd(g.betrag))} am ${esc(datum(g.standAm))} um ${esc(zeit(g.standAm))} Uhr · seitdem ≈ ${esc(usd(g.seit))}${g.ausKonto?' (ganzes Konto, nach dem Verbrauch des Monats)':' (Office, geschätzt)'}</p>
+      <p class="ki-reicht"><span class="pill ki-stufe-${esc(GUTHABEN_PILL[g.stufe])}">${esc(GUTHABEN_STUFE[g.stufe])}</span> ${g.stufe==='leer'?'Bitte bei OpenAI Guthaben kaufen; sonst antwortet keine KI mehr.':esc(tageText(g.tageRest))+(g.leerAm&&g.tageRest<=90?', bis etwa '+esc(tagKurz(g.leerAm)):'')+(g.rate>0?' · bei ≈ '+esc(usd(g.rate))+' pro Tag':'')}</p>`
+    :`<p class="ki-zahl ki-leer">–</p><p class="ki-sub">Noch kein Guthaben eingetragen. Tragen Sie ein, was bei OpenAI unter Billing steht; ab dann rechnet die Seite mit.</p>`;
+  return `<section class="card ki-karte ki-guthaben">
+        <p class="eyebrow">Guthaben bei OpenAI</p>
+        ${kopf}
+        <p class="ki-sub ki-regel">Bei 0 $ hält OpenAI alle Anfragen an, auch Romy und Window, solange die automatische Aufladung aus ist. Das Monatslimit ist nur eine Obergrenze.</p>
+        <form class="ki-form" data-ki-guthaben-form>
+          <label>Guthaben laut OpenAI (USD)<input name="betrag" type="number" min="0" step="0.01" inputmode="decimal" required></label>
+          <label>Warnen ab (Tage)<input name="warnen" type="number" min="1" max="60" step="1" value="${esc(g?g.warnen:7)}"></label>
+          <button class="primary" type="submit">Eintragen</button>
+        </form>
+        <p class="message" data-ki-guthaben-meldung aria-live="polite"></p>
+        <p class="muted ki-hinweis">Das Guthaben steht bei OpenAI unter Settings → Billing («Credit balance»).</p>
       </section>`;
 }
 function kiNutzungHtml(daten,ist=null){
@@ -250,11 +302,12 @@ function kiNutzungHtml(daten,ist=null){
       <div>
         <p class="eyebrow">Administration</p>
         <h1>KI-Nutzung</h1>
-        <p class="lead">Was das Office bei OpenAI verbraucht, geschätzt aus den Tokens jedes Aufrufs. Summen je Funktion und Projekt, nie je Person.</p>
+        <p class="lead">Wie lange das Guthaben bei OpenAI reicht, wie nah das Monatslimit ist und was das Office verbraucht, geschätzt aus den Tokens jedes Aufrufs. Summen je Funktion und Projekt, nie je Person.</p>
       </div>
       <div class="page-actions"><button type="button" data-ki-neu>Aktualisieren</button></div>
     </div>
     <div class="ki-oben">
+      ${guthabenKarte(s)}
       ${limitKarte(s)}
       <section class="card ki-kennzahlen">
         <div><p class="eyebrow">Heute · Office</p><p class="ki-wert">${esc(usd(s.heuteUsd))}</p></div>
@@ -280,7 +333,7 @@ function kiNutzungHtml(daten,ist=null){
         <div class="card">${projektZeilen?`<table class="ki-liste"><thead><tr><th>Projekt</th><th class="zahl">Aufrufe</th><th class="zahl">Kosten</th></tr></thead><tbody>${projektZeilen}</tbody></table>`:'<p class="muted ki-leer-text">Noch kein Verbrauch der Werkzeuge.</p>'}</div>
       </section>
     </div>
-    <p class="muted ki-fuss">Schätzung nach den Listenpreisen von OpenAI (Stand ${esc(datumLang(s.preiseStand))}), mit Websuchen (0,01 $ je Suche) und Containern für Romys Dateien (0,03 $). Romys Chat, Präsenz und nächtliche Pflege gehören zu keinem Projekt. Was außerhalb des Office über dasselbe OpenAI-Konto läuft, zählt nur im Monatslimit mit, und nur mit Admin-Schlüssel oder Ablesung.${s.ohnePreis.aufrufe?' '+esc(ganz.format(s.ohnePreis.aufrufe))+' Aufrufe ohne bekannten Preis ('+esc(s.ohnePreis.modelle.join(', '))+') sind nur mit ihren Werkzeugen gezählt.':''}</p>`;
+    <p class="muted ki-fuss">Schätzung nach den Listenpreisen von OpenAI (Stand ${esc(datumLang(s.preiseStand))}), mit Websuchen (0,01 $ je Suche) und Containern für Romys Dateien (0,03 $). Romys Chat, Präsenz und nächtliche Pflege gehören zu keinem Projekt. Was außerhalb des Office über dasselbe OpenAI-Konto läuft (Window), zählt im Guthaben und im Monatslimit nur über die Ablesungen oder den Admin-Schlüssel mit.${s.ohnePreis.aufrufe?' '+esc(ganz.format(s.ohnePreis.aufrufe))+' Aufrufe ohne bekannten Preis ('+esc(s.ohnePreis.modelle.join(', '))+') sind nur mit ihren Werkzeugen gezählt.':''}</p>`;
 }
 // Tatsächliche Kosten des Monats bei OpenAI; ohne Schlüssel oder bei einem Fehler null (die Seite schätzt dann).
 async function istKosten(sb){
@@ -297,6 +350,7 @@ async function kiNutzung(host,sb){
   try{
     const [nutzung,kostenIst]=await Promise.all([sb.rpc('office_ki_nutzung',{p_tage:35}),istKosten(sb)]);
     if(nutzung.error)throw nutzung.error;
+    if(!nutzung.data)throw new Error('Die Datenbank hat keine Zahlen geliefert. Bitte später noch einmal versuchen.');
     daten=nutzung.data;ist=kostenIst;
   }catch(e){host.innerHTML=`<div class="empty">${esc(fehlerText(e))}</div>`;return}
   host.innerHTML=kiNutzungHtml(daten,ist);
@@ -306,6 +360,19 @@ async function kiNutzung(host,sb){
   if(svg&&figur.clientWidth>0)svg.outerHTML=balkenSvg(proTag,figur.clientWidth-32);
   tooltipVerbinden(figur,proTag);
   host.querySelector('[data-ki-neu]').onclick=()=>void kiNutzung(host,sb);
+  const gform=host.querySelector('[data-ki-guthaben-form]');
+  gform.onsubmit=async e=>{
+    e.preventDefault();
+    const knopf=gform.querySelector('button'),meldung=host.querySelector('[data-ki-guthaben-meldung]');
+    const roh=String(gform.betrag.value).trim().replace(',','.'),betrag=roh?Number(roh):NaN,warnen=Number(gform.warnen.value)||null;
+    if(!(betrag>=0)){meldung.textContent='Bitte das Guthaben in US-Dollar eingeben.';return}
+    knopf.disabled=true;meldung.textContent='';
+    try{
+      const {error}=await sb.rpc('office_ki_guthaben_eintragen',{p_betrag:betrag,p_warnen_ab_tage:warnen});
+      if(error)throw error;
+      await kiNutzung(host,sb);
+    }catch(err){meldung.textContent=fehlerText(err);knopf.disabled=false}
+  };
   const form=host.querySelector('[data-ki-form]');
   form.onsubmit=async e=>{
     e.preventDefault();
@@ -353,6 +420,7 @@ function pruefungText(p){
       :'Keine Fehler in 24 Stunden.',fehler:Array.isArray(p.haeufigste)?p.haeufigste:[]};
     case 'ki':return {titel:'KI-Verbrauch',text:ganz.format(p.tokens_24h||0)+' Tokens in 24 Stunden (an einem üblichen Tag '+ganz.format(p.median_tag||0)+').',link:true};
     case 'monatslimit':return {titel:'Monatslimit bei OpenAI',text:p.text,link:true};
+    case 'guthaben':return {titel:'Guthaben bei OpenAI',text:p.text,link:true};
     default:return {titel:String(p.bereich||''),text:''};
   }
 }
@@ -366,6 +434,12 @@ function pruefungHtml(p){
 function systemstatusHtml(daten,nutzung,ist=null){
   const pruefungen=Array.isArray(daten&&daten.pruefungen)?daten.pruefungen.slice():[];
   if(nutzung){
+    const g=zusammenfassen(nutzung,ist).guthaben;
+    pruefungen.push(g
+      ?{bereich:'guthaben',status:g.stufe==='ok'?'ok':g.stufe==='knapp'?'warnung':'fehler',
+        text:g.stufe==='leer'?'Aufgebraucht: OpenAI hält die Anfragen an, bis Guthaben gekauft ist.'
+          :'Reicht '+tageText(g.tageRest)+' (≈ '+usd(Math.max(0,g.rest))+', abgelesen am '+datum(g.standAm)+').'}
+      :{bereich:'guthaben',status:'unbekannt',text:'Noch kein Guthaben eingetragen.'});
     const l=zusammenfassen(nutzung,ist).monatslimit;
     pruefungen.push(l
       ?{bereich:'monatslimit',status:l.stufe==='ok'?'ok':l.stufe==='erreicht'?'fehler':'warnung',
@@ -392,13 +466,14 @@ async function systemstatus(host,sb){
   try{
     const [status,ki,kostenIst]=await Promise.all([sb.rpc('office_systemstatus'),sb.rpc('office_ki_nutzung',{p_tage:35}),istKosten(sb)]);
     if(status.error)throw status.error;
+    if(!status.data)throw new Error('Die Datenbank hat keinen Status geliefert. Bitte später noch einmal versuchen.');
     daten=status.data;nutzung=ki.error?null:ki.data;ist=kostenIst;
   }catch(e){host.innerHTML=`<div class="empty">${esc(fehlerText(e))}</div>`;return}
   host.innerHTML=systemstatusHtml(daten,nutzung,ist);
   host.querySelector('[data-status-neu]').onclick=()=>void systemstatus(host,sb);
 }
 
-const API={kiNutzung,systemstatus,kiNutzungHtml,systemstatusHtml,modell:{PREISE,PREISE_STAND,WEBSUCHE_USD,CONTAINER_USD,LANG_INPUT,preisFuer,kosten,zusammenfassen,monatslimitRechnen,obereGrenze,funktionName,pruefungText,LIMIT_STUFE}};
+const API={kiNutzung,systemstatus,kiNutzungHtml,systemstatusHtml,modell:{PREISE,PREISE_STAND,WEBSUCHE_USD,CONTAINER_USD,LANG_INPUT,preisFuer,kosten,zusammenfassen,monatslimitRechnen,guthabenRechnen,tageText,obereGrenze,funktionName,pruefungText,LIMIT_STUFE,GUTHABEN_STUFE}};
 if(typeof module==='object'&&module.exports)module.exports=API;
 root.TBA_OFFICE_UEBERSICHT=API;
 })(typeof self!=='undefined'?self:globalThis);

@@ -73,11 +73,12 @@
 }
 
 /* KI-Nutzung */
-.office-verwaltung .ki-oben{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;margin-bottom:26px}
-.office-verwaltung .ki-guthaben{padding:20px 22px}
+.office-verwaltung .ki-oben{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:26px}
+.office-verwaltung .ki-karte{display:flex;flex-direction:column;padding:20px 22px}
 .office-verwaltung .ki-zahl{margin:2px 0 6px;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:-.02em;color:var(--m-ink)}
 .office-verwaltung .ki-zahl.ki-leer{color:var(--m-ink-faint)}
 .office-verwaltung .ki-sub{margin:0;font-size:13px;line-height:1.45;color:var(--m-ink-soft)}
+.office-verwaltung .ki-regel{margin-top:10px}
 .office-verwaltung .ki-reicht{margin:10px 0 0;font-size:13px;color:var(--m-ink-soft)}
 .office-verwaltung .ki-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:16px}
 .office-verwaltung .ki-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--m-ink-soft)}
@@ -85,13 +86,21 @@
 .office-verwaltung .ki-form input[name="warnen"]{width:96px}
 .office-verwaltung .ki-hinweis{margin:8px 0 0;font-size:12px}
 .office-verwaltung .ki-von{font-size:15px;font-weight:500;letter-spacing:0;color:var(--m-ink-soft)}
-.office-verwaltung .ki-limit{position:relative;height:10px;margin:8px 0 10px;border-radius:var(--m-radius-pill);background:var(--m-fill)}
-.office-verwaltung .ki-limit-voll{position:absolute;left:0;top:0;bottom:0;max-width:100%;border-radius:var(--m-radius-pill);background:var(--m-success)}
-.office-verwaltung .ki-limit-voll.ki-limit-knapp{background:var(--m-attention)}
-.office-verwaltung .ki-limit-voll:is(.ki-limit-kritisch,.ki-limit-leer){background:var(--m-error)}
-.office-verwaltung .ki-limit-warnen{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--m-border-strong)}
-.office-verwaltung .ki-limit-hoch{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--m-ink)}
-.office-verwaltung .ki-kennzahlen{display:grid;gap:14px;align-content:start;padding:20px 22px}
+/* Balken bis zum Limit: die Farbe der Stufe, ausgegeben voll, die Hochrechnung schraffiert, 0 und Limit an den Enden. */
+.office-verwaltung .ki-limit-ok{--ki-farbe:var(--m-success-fill)}
+.office-verwaltung .ki-limit-knapp{--ki-farbe:var(--m-attention-fill)}
+.office-verwaltung :is(.ki-limit-kritisch,.ki-limit-leer){--ki-farbe:var(--m-error-fill)}
+.office-verwaltung .ki-limit{position:relative;height:12px;margin:14px 0 4px;border-radius:var(--m-radius-pill);background:var(--m-fill)}
+.office-verwaltung :is(.ki-limit-voll,.ki-limit-hoch){position:absolute;left:0;top:0;bottom:0;max-width:100%;border-radius:var(--m-radius-pill)}
+.office-verwaltung .ki-limit-voll,.office-verwaltung .ki-legende-voll{background:var(--ki-farbe)}
+.office-verwaltung .ki-limit-hoch,.office-verwaltung .ki-legende-hoch{background:repeating-linear-gradient(135deg,var(--ki-farbe) 0 2px,transparent 2px 5px);opacity:.6}
+.office-verwaltung .ki-limit-warnen{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--m-ink-faint)}
+.office-verwaltung .ki-limit-skala{position:relative;display:flex;justify-content:space-between;height:16px;font-size:11.5px;color:var(--m-ink-faint);font-variant-numeric:tabular-nums}
+.office-verwaltung .ki-legende{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 8px;font-size:12.5px;color:var(--m-ink-soft)}
+.office-verwaltung :is(.ki-legende-voll,.ki-legende-hoch){display:inline-block;width:14px;height:8px;border-radius:2px}
+.office-verwaltung :is(.ki-legende-hoch,.ki-legende-warnen){margin-left:10px}
+.office-verwaltung .ki-legende-warnen{display:inline-block;width:1px;height:12px;background:var(--m-ink-faint)}
+.office-verwaltung .ki-kennzahlen{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px 22px}
 .office-verwaltung .ki-kennzahlen .eyebrow{margin:0}
 .office-verwaltung .ki-wert{margin:2px 0 0;font-size:22px;font-weight:650;letter-spacing:-.015em;font-variant-numeric:tabular-nums;color:var(--m-ink)}
 .office-verwaltung .ki-chart{position:relative;margin:0;padding:16px 16px 10px}
@@ -121,6 +130,7 @@
 .office-verwaltung .pill:is(.ki-stufe-kritisch,.ki-stufe-leer,.status-fehler){background:var(--m-error-soft);color:var(--m-error)}
 .office-verwaltung .pill:is(.status-unbekannt,.status-ausstehend){background:var(--m-fill);color:var(--m-ink-soft)}
 @media(max-width:900px){.office-verwaltung :is(.ki-oben,.ki-tabellen){grid-template-columns:1fr}}
+@media(max-width:520px){.office-verwaltung .ki-kennzahlen{grid-template-columns:1fr}}
 
 /* Systemstatus */
 .office-verwaltung .status-gesamt{display:flex;align-items:center;gap:10px;margin:-8px 0 16px;font-size:13px}
