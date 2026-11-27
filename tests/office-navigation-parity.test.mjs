@@ -22,7 +22,7 @@ test('Root navigation remains a five-button floating bar on mobile, with account
   assert.ok(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
   assert.ok(css.includes('#appView>.lens-account'));
   assert.ok(index.includes('href="./app/#section=assistant" aria-label="Romy"'));
-  assert.ok(index.includes('style.css?v=office28'));
+  assert.ok(index.includes('style.css?v=office29'));
   assert.ok(index.includes('app.js?v=9'));
 });
 test('Tools opens inside the Window shell, while Terminplan remains available',()=>{
