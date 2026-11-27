@@ -19,13 +19,13 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ### 2026-11-27 · Fehler aus dem Browser für die Codeprüfung · Claude
 - Qué cambió y por qué: Gari wollte eine tägliche Codeprüfung durch Claude; damit sie mit echten Fehlern arbeitet statt mit Vermutungen, melden die Seiten des Office jetzt, was im Browser schiefgeht. `shared/fehler-melden.js` hört auf Skriptfehler und abgelehnte Versprechen und schickt sie an `office_client_fehler_melden`: Meldung, Ort im Code (mit Version), Seite ohne Parameter, Browser in Kurzform. Nicht gemeldet: Rauschen (fremde Skripte, Erweiterungen, ResizeObserver, abgebrochene Anfragen), Wiederholungen, mehr als acht je Seitenaufruf. E-Mail-Adressen, Tokens und Parameter in fremden Adressen entfernt schon das Skript, die Datenbank noch einmal. In der Datenbank: nur aktive Mitglieder, höchstens 50 verschiedene Fehler je Person und Tag, derselbe Fehler zählt hoch. Lesen kann über die App niemand (keine Policy); die geplanten Prüfungen fragen die Tabelle direkt ab.
-- Archivos: `supabase/migrations/20261127100000_office_client_fehler.sql` (Tabelle `office_client_fehler`, `private.office_fehler_saeubern`, `office_client_fehler_melden`), `shared/fehler-melden.js` (neu), eingebunden direkt nach dem Supabase-Client in `index.html`, `app/index.html`, `terminplan.html`, `kostenberechnung.html`, `controlling.html`, `projektdokumente.html`, `produktbibliothek.html`, `herstellerkatalog.html`; `tests/office-client-fehler.test.mjs`, `tests/sql/office-client-fehler-acceptance.sql`, Schritt in `.github/workflows/verify.yml`.
-- Base de datos: migración `office_client_fehler` — aplicada en Supabase: siehe unten (angekündigt, `apply_migration`, Datei auf die registrierte Version umbenannt).
+- Archivos: `supabase/migrations/20261127093042_office_client_fehler.sql` (Tabelle `office_client_fehler`, `private.office_fehler_saeubern`, `office_client_fehler_melden`), `shared/fehler-melden.js` (neu), eingebunden direkt nach dem Supabase-Client in `index.html`, `app/index.html`, `terminplan.html`, `kostenberechnung.html`, `controlling.html`, `projektdokumente.html`, `produktbibliothek.html`, `herstellerkatalog.html`; `tests/office-client-fehler.test.mjs`, `tests/sql/office-client-fehler-acceptance.sql`, Schritt in `.github/workflows/verify.yml`.
+- Base de datos: migración `20261127093042_office_client_fehler` — aplicada en Supabase: sí (angekündigt, `apply_migration` am 27.11.2026, Datei auf die registrierte Version umbenannt). Geprüft: RLS an, keine Policy, `authenticated` darf nicht lesen, aber melden; `anon` darf nicht melden; Bereinigung entfernt Parameter, E-Mail und Token.
 - Deploy de funciones: ninguno.
 - Cómo se probó: `node --test` grün (Skript in einer VM: bereinigt, meldet mit Ort und Version, lässt Rauschen weg, höchstens acht); SQL-Abnahme in der flüchtigen Datenbank der CI.
 - Quedó pendiente o sin probar: Aufbewahrung (Vorschlag: Zeilen älter als 30 Tage löschen, als Cron) braucht Garis OK, weil sie löscht.
 - Riesgos o decisiones que necesitan a Gari: die Aufbewahrungsfrist.
-- PR: (dieser)
+- PR: #191
 
 ---
 
