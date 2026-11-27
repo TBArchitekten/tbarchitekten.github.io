@@ -44,5 +44,5 @@ test('Work: Fassungen aus der Leiste über dem Werkzeug, die reduziert entfällt
   assert.ok(lens.includes("observe(document.body,{attributes:true,attributeFilter:['class']})"),'auf- und zuklappen');
   assert.ok(css.includes('body.desk-enabled.minds-nav-collapsed[data-section="work"].lens-work-an [data-work-tool-pane][data-fassung-im-werkzeug="1"] .work-tool-bar{display:none!important}'));
   const index=read('app/index.html');
-  assert.match(index,/work-lens\.js\?v=4/);assert.match(index,/work-lens\.css\?v=4/);
+  assert.match(index,/work-lens\.js\?v=5/);assert.match(index,/work-lens\.css\?v=4/);
 });

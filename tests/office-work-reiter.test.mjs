@@ -10,7 +10,8 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const shell=read('app/shell.js'),work=read('app/work.js'),index=read('app/index.html');
 
 test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigenem Platz für die Werkzeugseite',()=>{
-  assert.match(shell,/<button data-work-view="planner">Planner<\/button>\s*<button data-work-view="terminplan" hidden>Terminplan<\/button>\s*<button data-work-view="kosten" hidden>Kostenberechnung<\/button>\s*<button data-work-view="controlling" hidden>Controlling<\/button>\s*<button data-work-view="mustermappe" hidden>Mustermappe<\/button>\s*<button data-work-view="produkte" hidden>Produkte<\/button>\s*<button data-work-view="hersteller" hidden>Hersteller<\/button>/);
+  // Seit dem 27.11.2026 steht «Listen» (Klärungs- und Entscheidungsliste, Vorlagen, Abläufe) neben dem Planner.
+  assert.match(shell,/<button data-work-view="planner">Planner<\/button>\s*<button data-work-view="listen" hidden>Listen<\/button>\s*<button data-work-view="terminplan" hidden>Terminplan<\/button>\s*<button data-work-view="kosten" hidden>Kostenberechnung<\/button>\s*<button data-work-view="controlling" hidden>Controlling<\/button>\s*<button data-work-view="mustermappe" hidden>Mustermappe<\/button>\s*<button data-work-view="produkte" hidden>Produkte<\/button>\s*<button data-work-view="hersteller" hidden>Hersteller<\/button>/);
   assert.match(shell,/<div id="workBody" class="work-body">[^\n]*<\/div>\s*<div id="workToolHost" class="work-tool-host" hidden><\/div>/);
   assert.doesNotMatch(shell+work,/data-work-tool="|openProjectTool|work-tool-menu/,'kein Menü mehr, das Work verlässt');
   assert.match(work,/:isToolView\(view\)\?renderTool\(view\)/);
@@ -26,6 +27,18 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(work,/void flushToolFrame\(pane\.querySelector\('iframe'\)\)\.finally\(\(\)=>pane\.remove\(\)\)/);
   // Neu laden nur, wenn jemand anderes gespeichert hat, nichts aussteht und niemand in der Seite arbeitet.
   assert.match(work,/api&&!api\.pending\(\)&&!frame\.contentDocument\?\.hasFocus\(\)&&Number\(row\?\.server_revision\)>Number\(api\.revision\(\)\)/);
+  // «Listen»: eine Seite je Projekt (projektdokumente.html ?projekt=), immer da wie das Controlling; ein Ablauf aus dem
+  // Panorama öffnet dort mit seinem Dialog, ohne Work zu verlassen.
+  assert.match(work,/listen:\{page:'\.\.\/projektdokumente\.html',name:'Listen',single:true,/);
+  assert.match(work,/if\(listenAblauf\)\{p\.ablauf=listenAblauf;listenAblauf=null\}return '\.\.\/projektdokumente\.html\?'\+new URLSearchParams\(p\)/);
+  assert.match(work,/data-work-open-tool="listen" data-work-tool-ablauf="besprechung"/);
+  assert.doesNotMatch(work,/cockpit-ablauf"[^>]*target="_blank"/);
+  assert.match(work,/void Promise\.all\(offen\.map\(f=>flushToolFrame\(f\)\.then\(\(\)=>f\.remove\(\)\)\)\)/);
+  const pd=read('projektdokumente.js');
+  assert.match(pd,/const kopfHtml=IM_REITER\?meldungHtml\(\):kopf\(\{zurueck:\['\.\/app\/#section=tools','‹ Werkzeuge'\]/);
+  assert.match(pd,/IM_REITER\?'‹ Listen':'‹ Projektstart'/);
+  assert.match(pd,/<p class="pd-folgt-text">Noch nicht gebaut<\/p>/);
+  assert.match(read('app/work-lens.js'),/listen:svg\(/);
   // Panorama und «Neuer Terminplan» öffnen den Reiter.
   assert.match(work,/data-work-open-tool="terminplan" data-work-tool-id="/);
   assert.match(work,/openNewPlan\?\.\(button\.dataset\.officeNewPlan,\{onCreated:id=>openToolTab\('terminplan',id\)\}\)/);
@@ -33,7 +46,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office67','shell.js?v=office65','office-projects.js?v=office62','work-polish.css?v=8','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office68','shell.js?v=office66','office-projects.js?v=office62','work-polish.css?v=8','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 

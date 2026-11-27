@@ -197,6 +197,7 @@ document.body.innerHTML = `
           <button data-work-view="knowledge" hidden>Wissen</button>
           <button data-work-view="desktop">Desktop</button>
           <button data-work-view="planner">Planner</button>
+          <button data-work-view="listen" hidden>Listen</button>
           <button data-work-view="terminplan" hidden>Terminplan</button>
           <button data-work-view="kosten" hidden>Kostenberechnung</button>
           <button data-work-view="controlling" hidden>Controlling</button>

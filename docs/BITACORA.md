@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Work: Reiter «Listen» · Claude
+- Qué cambió y por qué: Gari (27.11., 15:50, Punkt 14, und 18:23: «1. listen», «hazlo»): die Listen und Texte des Projekts gehören in Work, wie der Terminplan; das Muster bleibt unter Werkzeuge. Neuer Reiter «Listen» neben dem Planner, eine Seite je Projekt (`projektdokumente.html?projekt=` im Rahmen, Werkzeug `listen` in `WORK_TOOLS`, immer da wie das Controlling, Symbol in der Seitenleiste). Im Rahmen zeigt die Seite keinen eigenen Kopf, keine Projektwahl und keinen Rückweg; Unterseiten führen «‹ Listen» zurück. «Besprechung nachbereiten» im Panorama öffnet jetzt im Reiter (vorher ein neues Browserfenster) mit seinem Dialog; ist die Seite schon offen, wird vorher gespeichert, was aussteht. Karten für noch Fehlendes sagen «Noch nicht gebaut» statt «folgt nach dem ersten Schritt».
+- Archivos: `app/work.js` (office68), `app/shell.js` (office66), `app/work-lens.js` (v5), `app/index.html`, `projektdokumente.js` (office18), `projektdokumente.html`; Tests: `tests/office-work-reiter.test.mjs` und die Versionen in weiteren.
+- Base de datos: ninguna.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün; Chromium mit Fake-Supabase: Reiter sichtbar, Seite im Rahmen ohne Kopf, Projektwahl und Rückweg, Symbol in der Seitenleiste.
+- Quedó pendiente o sin probar: der Phasenwechsel (sieben Schritte) kommt als zweiter Ablauf in diesen Reiter.
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: #216
+
 ### 2026-11-27 · KI-Nutzung: Guthaben und Monatslimit zusammen · Claude
 - Qué cambió y por qué: Gari (27.11., 18:23): «cambié el Monatslimit a 50 … al cambiarlo en la vista de KI-Nutzung, no se ajusta la gráfica y parece como si ya estuviéramos casi al límite» und «por alguna razón me cambió ahora en OpenAI a 12,01 (creo que solo tengo eso de créditos, aunque tenga un limit de 50?)». Seine Bildschirme bei OpenAI: Pay-as-you-go mit Guthaben 12,01 $, automatische Aufladung aus («When your credit balance reaches $0, your API requests will stop working»), November 7,93 $ von 50 $. Das Guthaben ist also die eigentliche Grenze. (1) Die KI-Nutzung zeigt wieder das Guthaben: abgelesen minus Verbrauch seitdem (das ganze Konto nach der Tagesrate des Monats, wenn das mehr ist als die Schätzung des Office, denn Window läuft über dasselbe Konto), wie viele Tage es reicht, Stufe nach «warnen ab» (Tage), Formular zum Eintragen; (2) der Balken des Monatslimits endet am Limit, ausgegeben voll, die Hochrechnung schraffiert als Verlängerung, «0 $» und «Limit 50 $» an den Enden, die Warnung in der Legende; vorher stand die Hochrechnung als schwarzer Strich direkt neben der Füllung und sah aus wie das Limit; (3) der Systemstatus prüft das Guthaben; (4) `office_ki_nutzung` markiert jede Zeile mit `nach_guthaben` und reicht bis zur älteren der beiden Ablesungen zurück (`nach_stand` bleibt wie es war).
 - Archivos: `supabase/migrations/20261127175740_office_ki_guthaben_und_limit.sql`, `office-uebersicht.js` (v5), `app/office-verwaltung.css` (v2), `app/index.html`; Tests: `tests/office-uebersicht.test.mjs`, `tests/sql/office-ki-guthaben-limit-acceptance.sql` (neu, in `.github/workflows/verify.yml`).

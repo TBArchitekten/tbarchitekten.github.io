@@ -73,7 +73,18 @@ function bindStatic(){
     if(e.target.closest('[data-work-retry]')){void render();return}
     // Terminplan-Links im Panorama öffnen den Reiter; mit gedrückter Taste bleibt es ein normaler Link.
     const link=e.target.closest('[data-work-open-tool]');
-    if(link&&e.button===0&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey){e.preventDefault();openToolTab(link.dataset.workOpenTool,link.dataset.workToolId)}
+    if(link&&e.button===0&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey){
+      e.preventDefault();
+      // Ein Ablauf (Panorama): die Seite im Reiter lädt mit ihm neu, auch wenn sie schon offen ist; was dort noch
+      // aussteht, wird vorher gespeichert.
+      if(link.dataset.workToolAblauf){
+        listenAblauf=link.dataset.workToolAblauf;
+        const offen=$$('#workToolHost [data-work-tool-pane="'+link.dataset.workOpenTool+'"] iframe');
+        void Promise.all(offen.map(f=>flushToolFrame(f).then(()=>f.remove()))).then(()=>openToolTab(link.dataset.workOpenTool,link.dataset.workToolId));
+        return;
+      }
+      openToolTab(link.dataset.workOpenTool,link.dataset.workToolId);
+    }
   });
   body?.addEventListener('dragover',e=>{if(view!=='desktop')return;e.preventDefault();body.classList.add('is-dragging')});
   body?.addEventListener('dragleave',()=>body.classList.remove('is-dragging'));
@@ -413,9 +424,9 @@ function officeTerminplaene(m){
     (rows||'<p class="cockpit-empty">Noch kein Terminplan für dieses Projekt.</p>')+'</section>'+
     // «Neu im Projektwissen» (26.11.2026): nur für das Projektteam; ohne Team oder ohne Antwort keine Karte.
     (window.TBA_OFFICE_WISSEN?.panoramaHtml?.(m.wissen)||'')+
-    // Abläufe (27.11.2026): wiederkehrende Arbeit Schritt für Schritt; der Ablauf läuft im Projektstart (eigener Tab).
+    // Abläufe (27.11.2026): wiederkehrende Arbeit Schritt für Schritt; der Ablauf läuft im Reiter «Listen».
     '<section class="cockpit-panel" aria-labelledby="cockpitAblaeufe"><div class="cockpit-head"><h2 id="cockpitAblaeufe">Abläufe</h2></div>'+
-      '<a class="cockpit-file cockpit-ablauf" href="../projektdokumente.html?'+esc(new URLSearchParams({projekt:project.id,ablauf:'besprechung'}).toString())+'" target="_blank" rel="noopener">'+
+      '<a class="cockpit-file cockpit-ablauf" href="../projektdokumente.html?'+esc(new URLSearchParams({projekt:project.id,ablauf:'besprechung'}).toString())+'" data-work-open-tool="listen" data-work-tool-ablauf="besprechung">'+
       '<span>Besprechung nachbereiten</span><small>Protokoll lesen, Aufgaben, Fristen, Projektwissen</small></a></section></div>';
 }
 function officeNextMilestone(state,today){
@@ -984,6 +995,11 @@ const WORK_TOOLS={
   none:'Für dieses Projekt gibt es noch keine Kostenberechnung.',create:'Kostenberechnung anlegen'},
  controlling:{page:'../controlling.html',name:'Controlling',single:true,
   src:pid=>'../controlling.html?projekt='+encodeURIComponent(pid)},
+ // Listen (Gari, 27.11.2026: «listen»): Klärungsliste, Entscheidungsliste, Vorlagen und Abläufe des Projekts, eine Seite
+ // je Projekt wie das Controlling; das Muster bleibt unter Werkzeuge. Ein Ablauf aus dem Panorama öffnet hier mit seinem
+ // Dialog (listenAblauf, einmal).
+ listen:{page:'../projektdokumente.html',name:'Listen',single:true,
+  src:pid=>{const p={projekt:pid};if(listenAblauf){p.ablauf=listenAblauf;listenAblauf=null}return '../projektdokumente.html?'+new URLSearchParams(p)}},
  mustermappe:{page:'../projektdokumente.html',name:'Mustermappe',idParam:'vorlage',load:loadMustermappen,
   none:'Für dieses Projekt gibt es noch keine Mustermappe.',create:'Mustermappe anlegen',add:'Neue Mustermappe',
   src:(pid,id,neu)=>'../projektdokumente.html?'+new URLSearchParams(neu?{projekt:pid,werkzeug:'mustermappe',neu:'1'}:{projekt:pid,vorlage:id})},
@@ -1004,6 +1020,7 @@ async function loadMustermappen(pid){
  if(error)return {data:null,error};
  return {data:(data||[]).map(r=>({id:r.id,phase:r.themenpaket||r.titel||'Mustermappe',updated_at:r.updated_at,server_revision:r.server_revision})),error:null};
 }
+let listenAblauf=null;
 const WORK_TOOL_PICK_KEY='tba-office-work-tool-v1';
 // Abschnitte je Projekt (Gari, 25.11.2026): Terminplan, Kostenberechnung, Mustermappe, Produkte und Hersteller braucht
 // nicht jedes Projekt (eine Machbarkeitsstudie etwa keinen davon). Das Projekt nimmt sie über «+» am Ende der Reiter
