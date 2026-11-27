@@ -19,8 +19,8 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ### 2026-11-27 · Projektwissen: Stand der Quellen · Claude
 - Qué cambió y por qué: Gari (27.11.), zu Dokumenten aus dem Desktop im Wissen und dem Problem, dass ein altes Protokoll neueres Wissen überschreibt: «hazlo como propones … 1. manda la fecha del contenido; 2. si la fecha no se sabe, se pregunta. Si vemos que se pregunta mucho y no es eficiente, lo hablamos de nuevo.» Die Regeln des Projektwissens (`office_wissen_regeln`, gehen bei jedem Teilen an Claude und an die nächtliche Pflege) haben jetzt den Abschnitt «Stand der Quellen»: das Datum des Inhalts zählt (Protokoll, E-Mail, Angebot, Planindex mit Datum), nicht das des Hochladens; eine ältere Quelle überschreibt nie eine neuere (sie erscheint höchstens als früherer Stand); ein Widerspruch nur bei gleichem Alter oder unklarer Reihenfolge; ist das Datum nicht zu erkennen, steht die Aussage mit «Stand unklar» bei den offenen Fragen, und es wird nachgefragt.
-- Archivos: `supabase/migrations/…_office_wissen_regeln_stand.sql`, `docs/PROJEKTWISSEN.md`; Tests: `tests/office-projektwissen.test.mjs`.
-- Base de datos: migración `office_wissen_regeln_stand` (ergänzt nur den Text der Regeln) — aplicada en Supabase: (folgt).
+- Archivos: `supabase/migrations/20261127161705_office_wissen_regeln_stand.sql`, `docs/PROJEKTWISSEN.md`; Tests: `tests/office-projektwissen.test.mjs`.
+- Base de datos: migración `20261127161705_office_wissen_regeln_stand` (ergänzt nur den Text der Regeln) — aplicada en Supabase: sí (MCP, 27.11.; der erste Versuch kam wegen eines Fehlers der Verbindung nicht an, geprüft und wiederholt).
 - Deploy de funciones: ninguno.
 - Cómo se probó: `node --test` grün; die Migration läuft im CI auf einer frischen Datenbank nach allen anderen.
 - Quedó pendiente o sin probar: Romys nächtliche Akte-Pflege (Motor aus Window) liest diese Regeln nicht; dort kommt dieselbe Regel mit der Arbeit am Motor.

@@ -360,7 +360,7 @@ test('Oberfläche: Farben nur aus den Tokens',()=>{
 });
 
 test('Stand der Quellen: das Datum des Inhalts zählt, Älteres überschreibt nie Neueres, unklar wird gefragt',()=>{
-  const sql=readFileSync(new URL('../supabase/migrations/20261127180000_office_wissen_regeln_stand.sql',import.meta.url),'utf8');
+  const sql=readFileSync(new URL('../supabase/migrations/20261127161705_office_wissen_regeln_stand.sql',import.meta.url),'utf8');
   assert.match(sql,/where id = 1 and position\('Stand der Quellen' in text\) = 0;/,'ein zweiter Lauf ändert nichts');
   assert.match(sql,/replace\(text, E'\\n\\nEntscheidungen\\n', E'\\n\\nStand der Quellen\\n'/);
   for(const satz of ['Es zählt das Datum des Inhalts, nicht das des Hochladens oder Teilens','Eine ältere Quelle überschreibt nie eine neuere',
