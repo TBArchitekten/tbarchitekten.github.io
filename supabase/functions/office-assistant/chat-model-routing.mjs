@@ -1,12 +1,11 @@
-// Window · which OpenAI model answers a turn.
-// Luna answers everyday turns: fast and cheap. Terra answers where a wrong or missed
-// detail costs more: complex turns, normal and complex turns inside a Work Thread,
-// and reading or comparing project documents. Background turns stay on Luna so that
-// routines never raise the bill on their own.
-// Secrets: OPENAI_MODEL overrides Luna (as before), OPENAI_DEEP_MODEL overrides Terra.
-// Setting OPENAI_DEEP_MODEL=gpt-5.6-luna switches Terra off without a deploy.
-export const FAST_MODEL="gpt-5.6-luna";
-export const DEEP_MODEL="gpt-5.6-terra";
+// Office · welches OpenAI-Modell einen Zug von Romy in den Threads beantwortet (Aufbau wie in Window).
+// Seit 27.11.2026 (Gari: «haz el cambio para todos»): GPT-6.1 Terra beantwortet die alltäglichen Züge,
+// GPT-6.2 Sol die Züge, in denen ein falsches oder übersehenes Detail mehr kostet: komplexe Züge, normale
+// und komplexe Züge in einem Work-Thread und das Lesen oder Vergleichen von Projektdokumenten.
+// Vorher GPT-5.6 Luna und GPT-5.6 Terra. Das Einordnen eines Zugs bleibt beim kleinen Modell (index.ts).
+// Secrets ersetzen beides ohne Deploy: TBA_OFFICE_ASSISTANT_MODEL (alltäglich), TBA_OFFICE_ASSISTANT_DEEP_MODEL.
+export const FAST_MODEL="gpt-6.1-terra";
+export const DEEP_MODEL="gpt-6.2-sol";
 
 const clean=value=>String(value||"").trim();
 export function fastModel(env){return clean(env&&env.OPENAI_MODEL)||FAST_MODEL}

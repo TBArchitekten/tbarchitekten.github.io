@@ -8,8 +8,13 @@
 
 // ── Preise · USD je 1 Mio. Tokens, Standard. Modelle, die auch Romys Motor kennt (credit-model.mjs), hält ein Test gleich.
 const PREISE_STAND='2026-11-27';
+// Seit 27.11.2026 arbeitet das Office mit GPT-6.1 Terra (Chat, Werkzeuge), GPT-6.2 Sol (gründliche Züge, Fähigkeiten)
+// und GPT-6 Luna (Hintergrund, Einordnen). Die älteren Modelle bleiben für die Summen der letzten Wochen.
 const PREISE=[
   {id:'gpt-6.1-terra',input:1,cached:0.05,output:5},
+  {id:'gpt-6.2-sol',input:2,cached:0.10,output:10},
+  {id:'gpt-6.2-astra',input:8,cached:0.40,output:40},
+  {id:'gpt-6-luna',input:0.10,cached:0.01,output:0.50},
   {id:'gpt-6-astra',input:10,cached:1,output:50},
   {id:'gpt-5.6-luna',input:0.20,cached:0.02,output:1.20},
   {id:'gpt-5.6-terra',input:2,cached:0.20,output:12},

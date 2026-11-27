@@ -147,7 +147,8 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
  const env={OPENAI_MODEL:Deno.env.get("TBA_OFFICE_ASSISTANT_MODEL"),
             OPENAI_DEEP_MODEL:Deno.env.get("TBA_OFFICE_ASSISTANT_DEEP_MODEL")};
  const complexity=await routeRomyTurn({message,history,apiKey,
-   model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||env.OPENAI_MODEL||"gpt-5.6-luna"});
+   // Einordnen ist eine kleine Aufgabe: immer das kleine Modell, nicht das alltägliche (seit 27.11.2026).
+   model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||"gpt-6-luna"});
  // Verbrauch jedes Aufrufs, je Projekt und ohne Person (Übersicht für Administratoren).
  const merken=(payload:any,schritt:string)=>verbrauchSchreiben(admin,{funktion:"romy_chat",payload,projectId,details:{schritt}});
  await merken({usage:complexity.usage,model:complexity.model},"einordnen");

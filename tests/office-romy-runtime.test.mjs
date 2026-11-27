@@ -9,7 +9,11 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('Romy reuses Window model routing and removes unsanctioned manual modes',()=>{
  assert.equal(chatTurnModel({complexity:'light',env:{}}).tier,'fast');
  assert.equal(chatTurnModel({complexity:'deep',env:{}}).tier,'deep');
- assert.equal(documentModel({}),'gpt-5.6-terra');
+ assert.equal(documentModel({}),'gpt-6.2-sol');
+ // Seit 27.11.2026: alltäglich GPT-6.1 Terra, gründlich GPT-6.2 Sol; Secrets ersetzen beides.
+ assert.equal(chatTurnModel({complexity:'light',env:{}}).model,'gpt-6.1-terra');
+ assert.equal(chatTurnModel({complexity:'deep',env:{}}).model,'gpt-6.2-sol');
+ assert.equal(chatTurnModel({complexity:'light',env:{OPENAI_MODEL:'gpt-6-luna'}}).model,'gpt-6-luna');
  const router=read('supabase/functions/office-assistant/romy-router.mjs');
  assert.ok(router.includes('routeRomyTurn'));
  assert.ok(router.includes('decision_model'));
