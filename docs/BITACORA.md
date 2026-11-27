@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; Browserprüfungen Terminplan im Reiter, Muster-Planner und Planner–Terminplan lokal mit Chrome grün.
 - Quedó pendiente o sin probar: dieselbe Werkzeugzeile für Kostenberechnung, Mustermappe, Controlling, Produkte und Hersteller; «?» für Erklärungen.
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: siehe unten
+- PR: #197
 
 ---
 
