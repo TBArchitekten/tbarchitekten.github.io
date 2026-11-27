@@ -171,16 +171,27 @@ test('Die Seiten zeigen nie eine Person und maskieren fremden Text', () => {
 });
 
 test('Nur Administratoren: Menü, Seiten und die Funktionen der Datenbank', () => {
-  const index = read('index.html'), app = read('app.js'), core = read('office-core.js'), shell = read('app/shell.js');
-  assert.match(index, /data-view="kinutzung" data-admin-only hidden>KI-Nutzung</);
-  assert.match(index, /data-view="systemstatus" data-admin-only hidden>Systemstatus</);
-  assert.match(index, /<section id="kinutzungView" class="view view-wide" hidden><div id="kinutzungHost"><\/div><\/section>/);
-  assert.match(index, /<script src="\.\/office-uebersicht\.js\?v=\d+"><\/script>\s*<script src="\.\/app\.js\?v=\d+">/);
+  // Seit dem 27.11.2026 sind KI-Nutzung und Systemstatus Seiten der App (Gari: auf der Startseite «se vuelve a colar la
+  // versión de pantalla que no debe de ser»); alte Adressen der Startseite führen dorthin.
+  const appIndex = read('app/index.html'), app = read('app/app.js'), root = read('app.js'), core = read('office-core.js'),
+    shell = read('app/shell.js'), verwaltung = read('app/office-verwaltung.js');
+  assert.match(appIndex, /<script src="\.\.\/office-uebersicht\.js\?v=\d+"><\/script>\n<script src="\.\/office-verwaltung\.js\?v=\d+"><\/script>/);
+  assert.match(appIndex, /<link rel="stylesheet" href="\.\/office-verwaltung\.css\?v=\d+">/);
+  assert.match(app, /const WINDOW_SECTIONS=\[[^\]]*'kinutzung','systemstatus','mitglieder'\];/);
+  assert.match(app, /if\(\['kinutzung','systemstatus','mitglieder'\]\.includes\(name\)\)whenLoaded\(\(\)=>\{if\(state\.screen===name\)window\.TBA_OFFICE_VERWALTUNG\?\.zeigen\?\.\(name\)\}\);/);
+  assert.match(verwaltung, /if\(mitglied\.role!=='admin'\)\{host\.innerHTML='<div class="empty">Diese Seite ist nur für die Administration\.<\/div>';return\}/);
+  assert.match(verwaltung, /if\(name==='kinutzung'\)void U\?\.kiNutzung\(host,sb\(\)\);/);
+  assert.match(verwaltung, /if\(name==='systemstatus'\)void U\?\.systemstatus\(host,sb\(\)\);/);
+  for (const [name, id] of [['kinutzung', 'officeKiNutzung'], ['systemstatus', 'officeSystemstatus'], ['mitglieder', 'officeMitglieder']]) {
+    assert.match(shell, new RegExp(`<section id="${name}Screen" class="screen office-verwaltung-screen" data-screen="${name}"`), name);
+    assert.ok(shell.includes(`id="${id}"`), id);
+  }
+  assert.match(shell, /<a class="drawer-link" href="#section=kinutzung" data-office-verwaltung="kinutzung" data-office-admin hidden>KI-Nutzung<\/a>/);
+  assert.match(shell, /<a class="drawer-link" href="#section=systemstatus" data-office-verwaltung="systemstatus" data-office-admin hidden>Systemstatus<\/a>/);
+  assert.match(read('office-uebersicht.js'), /<a href="#section=kinutzung">KI-Nutzung öffnen<\/a>/);
   assert.match(core, /const VIEWS=\[[^\]]*'kinutzung','systemstatus'\]/);
-  assert.match(app, /if\(ADMIN_VIEWS\.includes\(name\)&&member\?\.role!=='admin'\)name='work';/);
-  assert.match(app, /TBA_OFFICE_UEBERSICHT\?\.kiNutzung\(\$\('#kinutzungHost'\),sb\)/);
-  assert.match(shell, /<a class="drawer-link" href="\.\.\/#kinutzung" data-office-admin hidden>KI-Nutzung<\/a>/);
-  assert.match(shell, /<a class="drawer-link" href="\.\.\/#systemstatus" data-office-admin hidden>Systemstatus<\/a>/);
+  assert.match(root, /if\(\['plans','tools','kinutzung','systemstatus'\]\.includes\(r\.view\)\)return '\.\/app\/#section='\+r\.view;/);
+  assert.doesNotMatch(read('index.html'), /office-uebersicht\.js|kinutzungHost/);
   const sql = read('supabase/migrations/20261127102635_office_admin_uebersicht.sql');
   for (const f of ['office_ki_guthaben_eintragen', 'office_ki_nutzung', 'office_systemstatus']) {
     const rumpf = sql.slice(sql.indexOf('function public.' + f), sql.indexOf('$$;', sql.indexOf('function public.' + f)));

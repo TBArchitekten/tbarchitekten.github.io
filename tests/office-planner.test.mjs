@@ -75,18 +75,13 @@ test('Schema: buckets and tasks behind RLS, one rule set for read, write and del
   assert.doesNotMatch(sql,/to anon/);
 });
 
-test('The first Kalender and Planner are retired: the start page links into the office app',()=>{
+test('The first Kalender and Planner are retired: the start page leads into the office app',()=>{
   const index=read('index.html'),app=read('app.js');
   assert.doesNotMatch(index,/planner\.js|id="kalenderView"|data-project-tab=|id="taskDialog"|id="bucketDialog"/);
-  for(const [section,label] of [['feed','Heute'],['calendar','Kalender']])
-    assert.match(index,new RegExp(`<a class="lens-nav-item" href="\\./app/#section=${section}" aria-label="${label}">`));
-  // Work und Tools führen in die App (27.11.2026); die alte Projektseite hier gibt es nicht mehr als Ansicht.
-  assert.match(index,/<a class="lens-nav-item" href="\.\/app\/#section=work" aria-label="Work">/);
-  assert.match(index,/<a class="lens-nav-item" href="\.\/app\/#section=tools" aria-label="Tools">/);
-  assert.doesNotMatch(index,/data-view="work"|data-view="tools"/);
-  assert.match(app,/if\(\['work','project','plans','tools'\]\.includes\(name\)\)\{zurApp\(name,id\);return\}/);
-  assert.match(index,/href=".\/app\/#section=assistant" aria-label="Romy"/);
-  assert.match(app,/if\(r\.view==='kalender'\)\{location\.replace\('\.\/app\/#section=calendar'\);return\}/);
-  assert.match(app,/\$\('#projectWorkLink'\)\.href='\.\/app\/#section=work&project='\+encodeURIComponent\(p\.id\)/);
+  // Seit dem 27.11.2026 ist die Startseite nur die Anmeldung; jede alte Adresse führt auf die Seite der App.
+  assert.match(app,/if\(r\.view==='kalender'\)return '\.\/app\/#section=calendar';/);
+  assert.match(app,/const projekt=r\.view==='project'&&r\.id\?'&project='\+encodeURIComponent\(r\.id\):'';/);
+  assert.match(app,/return '\.\/app\/#section=work'\+projekt;/);
+  assert.doesNotMatch(index,/data-view="work"|data-view="tools"|lens-nav-item/);
   assert.doesNotMatch(app,/TBA_PLANNER|TBA_OFFICE_APP/);
 });

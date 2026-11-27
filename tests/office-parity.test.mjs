@@ -3,14 +3,13 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const file=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('Office and Window Tools use the same five-icon navigation rather than switching UI shells',()=>{
-  const root=file('index.html'),shell=file('app/shell.js'),app=file('app/app.js'),css=file('style.css');
-  assert.equal((root.match(/class="lens-nav-item/g)||[]).length,5);
+  // Seit dem 27.11.2026 gibt es die Navigation nur in der App; die Startseite ist die Anmeldung.
+  const root=file('index.html'),shell=file('app/shell.js'),app=file('app/app.js');
+  assert.equal((root.match(/class="lens-nav-item/g)||[]).length,0);
+  assert.equal((shell.match(/class="lens-nav-item[^"]*" data-nav="(assistant|feed|calendar|work|tools)"/g)||[]).length,5);
   for(const name of ['Romy','Heute','Kalender','Work','Tools'])
-    assert.ok(root.includes('aria-label="'+name+'"'),'Root nav missing '+name);
-  assert.ok(root.includes('id="accountButton"'));
-  assert.ok(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
+    assert.ok(shell.includes('aria-label="'+name+'"'),'App nav missing '+name);
   assert.ok(file('app/office.css').includes('.office-app #mainNav{grid-template-columns:repeat(5,minmax(0,1fr))}'));
-  assert.ok(css.includes('.lens-account{'));
   assert.ok(shell.includes('id="toolsScreen"'));
   assert.ok(shell.includes('data-screen="tools"'));
   assert.ok(shell.includes('data-nav="tools"'));

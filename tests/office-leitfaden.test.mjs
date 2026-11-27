@@ -102,11 +102,15 @@ test('Gestaltung: nur Tokens, Grün, Gelb und Rot mit Wort, am Telefon über die
 });
 
 test('Mitglieder: freischalten, ausschalten und wer wann bestätigt hat',()=>{
-  assert.match(root,/<section id="leitfadenSection" class="section" hidden>/);
-  assert.match(root,/<button type="button" id="leitfadenToggle"><\/button>/);
-  assert.match(root,/\.\/app\.js\?v=9/);assert.match(root,/\.\/style\.css\?v=office29/);
-  assert.match(rootJs,/from\('office_leitfaeden'\)\.update\(\{aktiv:!l\.aktiv\}\)\.eq\('leitfaden','desktop'\)\.select\('aktiv'\)/,'nur «aktiv»');
-  assert.match(rootJs,/'Leitfaden gelesen am '\+esc\(tagDe\(leitfaden\.gelesen\.get\(m\.user_id\)\)\)/);
-  assert.match(rootJs,/'Leitfaden noch nicht bestätigt'/);
-  assert.match(rootJs,/const \[\{members:list\},leitfaden\]=await Promise\.all\(\[admin\('list'\),loadLeitfaden\(\)\]\);/);
+  // Seit dem 27.11.2026 ist «Mitglieder» eine Seite der App (office-verwaltung.js), nicht mehr der Startseite.
+  const verwaltung=read('app/office-verwaltung.js');
+  assert.match(verwaltung,/<section class="section" data-leitfaden hidden>/);
+  assert.match(verwaltung,/<button type="button" data-leitfaden-knopf><\/button>/);
+  assert.match(appIndex,/\.\/office-verwaltung\.js\?v=\d+/);
+  assert.match(verwaltung,/from\('office_leitfaeden'\)\.update\(\{aktiv:!l\.aktiv\}\)\.eq\('leitfaden','desktop'\)\.select\('aktiv'\)/,'nur «aktiv»');
+  assert.match(verwaltung,/'Leitfaden gelesen am '\+esc\(tagDe\(lf\.gelesen\.get\(m\.user_id\)\)\)/);
+  assert.match(verwaltung,/'Leitfaden noch nicht bestätigt'/);
+  assert.match(verwaltung,/const \[\{members:alle\},lf\]=await Promise\.all\(\[admin\('list'\),leitfaden\(\)\]\);/);
+  assert.doesNotMatch(rootJs,/office_leitfaeden/);
+  assert.doesNotMatch(root,/leitfadenSection/);
 });
