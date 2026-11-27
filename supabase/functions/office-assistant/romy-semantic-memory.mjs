@@ -1,5 +1,6 @@
 // Romy semantic retrieval: a read of private owner-scoped canonical sources.
 // Embeddings are auxiliary indexes, never memories or project facts.
+import {verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 export const ROMY_EMBEDDING_MODEL="text-embedding-3-small";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const norm=(s,n)=>String(s||"").trim().slice(0,n);
@@ -38,7 +39,8 @@ async function embedTexts(texts,apiKey){
       body:JSON.stringify({model:ROMY_EMBEDDING_MODEL,input:texts})
     });
     if(!response.ok)return {error:"office_semantic_provider_unavailable"};
-    return {vectors:parseEmbeddings(await response.json(),texts.length)};
+    const payload=await response.json();
+    return {vectors:parseEmbeddings(payload,texts.length),usage:payload?.usage||null};
   }catch{return {error:"office_semantic_provider_unavailable"}}
   finally{clearTimeout(timeout)}
 }
@@ -66,6 +68,8 @@ export async function searchRomySemanticMemory({userDb,admin,userId,query,apiKey
     const {pending,unindexed_in_window}=semanticCandidates(messages,memories,indexed,24);
     const embedded=await embedTexts([term,...pending.map(x=>x.content)],apiKey);
     if(embedded.error)return {error:embedded.error,scope:"only_employee_private_sources"};
+    // Verbrauch ohne Person und ohne Projekt (Übersicht für Administratoren).
+    await verbrauchSchreiben(admin,{funktion:"romy_gedaechtnis",modell:ROMY_EMBEDDING_MODEL,payload:{usage:embedded.usage,model:ROMY_EMBEDDING_MODEL}});
     const [queryVector,...documentVectors]=embedded.vectors;
     // Only already-authorized, canonical source IDs are indexed by the privileged writer.
     const msg=[],mem=[];

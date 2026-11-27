@@ -10,6 +10,7 @@ import { SKILL_RUNTIME_VERSION, normalizeSkillRecord,composeSkillTrace,skillLoad
 import { listRomySystemSkills,findRomySystemSkill } from "./romy-skills.mjs";
 import { startRomyCapability,romyCapabilityStatus,romyCapabilityCancel } from "./romy-capability-service.ts";
 import { romyDialogueInput,failureNotice,failureKind,isOutOfCredit,reviewReceiptText,romyRadar,radarNote,ROMY_INITIATIVE } from "./romy-continuity.mjs";
+import { verbrauchSchreiben } from "../_office/ki-verbrauch.mjs";
 
 // Office has its OWN Supabase users and records. This is a scoped adaptation of
 // Window's tool-capable turn architecture, not a connection to Gari's Isabella.
@@ -55,10 +56,11 @@ const functionCalls=payload=>(payload?.output||[]).filter(x=>x?.type==="function
 // dialogue with local times and the app's notices marked (romy-continuity.mjs, 08.11.2026).
 const apiInput=romyDialogueInput;
 // A private project Thread in Work (decision of Gari, 07.11.2026): Romy works in that project's context.
-async function threadNote(db,uid,conversationId){
+async function threadNote(db,uid,conversationId,kontext:any={}){
  const {data}=await db.from("minds_work_threads").select("title,project_id,office_projects(name,number)")
    .eq("conversation_id",conversationId).eq("user_id",uid).maybeSingle();
  if(!data)return [];
+ kontext.projectId=data.project_id||null;
  const p=data.office_projects||{};
  return ["Dieses Gespräch ist der private Thread «"+String(data.title||"").slice(0,160)+"» im Projekt «"+String(p.name||"")+"»"+
    (p.number?" (Nr. "+p.number+")":"")+", project_id "+data.project_id+". Beziehe dich auf dieses Projekt und nutze sein Projektwissen, seine Aufgaben, Dateien und Terminpläne, wenn es hilft."];
@@ -138,7 +140,7 @@ async function requestModel({apiKey,model,input,allowTools=true,onDelta=()=>{}})
 // A light turn («Danke», «verschieb das auf Mittwoch») carries less (08.11.2026, Gari: a «¡Gracias!» must
 // not cost like a project review): the last LIGHT_HISTORY messages and no work radar.
 const LIGHT_HISTORY=10;
-async function runRomy({db,admin,uid,conversationId,requestId,history,message,attachmentInputs=[],apiKey,onDelta,notes=[],radar=""}){
+async function runRomy({db,admin,uid,conversationId,requestId,history,message,attachmentInputs=[],apiKey,onDelta,notes=[],radar="",projectId=null}){
  // Use Window's server-authoritative capability contract on every browser turn.
  const contract=interactiveTurnContract({surface:"chat_browser",background:false,attachments:attachmentInputs.length});
  if(contract.tools!=="governed")throw new Error("capability_contract_failed");
@@ -146,6 +148,9 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
             OPENAI_DEEP_MODEL:Deno.env.get("TBA_OFFICE_ASSISTANT_DEEP_MODEL")};
  const complexity=await routeRomyTurn({message,history,apiKey,
    model:Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||env.OPENAI_MODEL||"gpt-5.6-luna"});
+ // Verbrauch jedes Aufrufs, je Projekt und ohne Person (Übersicht für Administratoren).
+ const merken=(payload:any,schritt:string)=>verbrauchSchreiben(admin,{funktion:"romy_chat",payload,projectId,details:{schritt}});
+ await merken({usage:complexity.usage,model:complexity.model},"einordnen");
  let route=chatTurnModel({complexity:complexity.complexity,depth:"normal",background:false,env});
  const light=complexity.complexity==="light"&&!attachmentInputs.length;
  let prompt=apiInput(light?history.slice(-LIGHT_HISTORY):history,message,attachmentInputs,light?notes:[...notes,radar].filter(Boolean)),text="",proposals=[],artifacts=[],skillTrace=[],sources=[],
@@ -153,6 +158,7 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
  for(let round=0;round<5;round++){
   const payload=await requestModel({apiKey,model:route.model,input:prompt,onDelta,
     allowTools:round<4});
+  await merken(payload,"antwort");
   inTokens+=Number(payload.usage?.input_tokens||0);
   outTokens+=Number(payload.usage?.output_tokens||0);
   const portion=textOf(payload);
@@ -163,6 +169,7 @@ async function runRomy({db,admin,uid,conversationId,requestId,history,message,at
   if(!calls.length&&!text.trim()){
    // A completed turn without any text gets one plain retry before it can become a silence.
    const again:any=await requestModel({apiKey,model:route.model,input:prompt,onDelta,allowTools:false});
+   await merken(again,"antwort");
    inTokens+=Number(again.usage?.input_tokens||0);outTokens+=Number(again.usage?.output_tokens||0);
    text=textOf(again);
   }
@@ -341,10 +348,11 @@ Deno.serve(async req=>{
   return json(503,{error:"message_save_failed"});
  }
  const process=async onDelta=>{
-  const [thread,radar]=await Promise.all([threadNote(db,uid,conversation.id).catch(()=>[]),romyRadar(db,uid)]);
+  const kontext:any={};
+  const [thread,radar]=await Promise.all([threadNote(db,uid,conversation.id,kontext).catch(()=>[]),romyRadar(db,uid)]);
   const notes=[...thread].filter(Boolean),radarText=radarNote(radar);
   const result=await runRomy({db,admin,uid,conversationId:conversation.id,
-    requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta,notes,radar:radarText});
+    requestId,history,message,attachmentInputs:attached.inputs,apiKey:key,onDelta,notes,radar:radarText,projectId:kontext.projectId||null});
   if(!result.reply)throw new Error("ai_empty_response");
   await persistReply(admin,uid,conversation.id,requestId,result.reply,result.artifacts,result.skill_trace,result.sources);
   await completeRequest(admin,uid,requestId,{

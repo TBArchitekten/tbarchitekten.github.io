@@ -1,4 +1,5 @@
 import {normalizeSkillTrace} from "./skill-registry.ts";
+import {verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 
 export const CAPABILITY_RUNTIME_VERSION="capability-runtime-v0.3.0";
 export const GENERAL_EXECUTION_MODEL="gpt-6-astra";
@@ -242,6 +243,18 @@ export async function cancelGeneralExecution(apiKey:string,responseId:string){
   return payload;
 }
 
+// Verbrauch eines abgeschlossenen Laufs, einmal je Lauf (eindeutiger Schlüssel), je Projekt und ohne Person.
+async function laufVerbrauch(admin:any,run:any,payload:any){
+ try{
+  let projectId=null;
+  if(run?.conversation_id){
+   const {data}=await admin.from("minds_work_threads").select("project_id").eq("conversation_id",run.conversation_id).maybeSingle();
+   projectId=data?.project_id||null;
+  }
+  await verbrauchSchreiben(admin,{funktion:"romy_faehigkeit",modell:run?.metadata?.model||GENERAL_EXECUTION_MODEL,payload,projectId,
+    details:{einmal:String(run.id),container:containerIds(payload).length}});
+ }catch{/* Die Übersicht darf einen Lauf nie aufhalten. */}
+}
 export async function reconcileRomyRun(admin:any,apiKey:string,run:any){
  if(!run?.provider_response_id)return {run,status:"queued",artifacts:[]};
  const payload=await retrieveGeneralExecution(apiKey,run.provider_response_id);
@@ -264,6 +277,7 @@ export async function reconcileRomyRun(admin:any,apiKey:string,run:any){
   const {data,error}=await admin.from("office_romy_capability_runs")
     .update(patch).eq("id",run.id).eq("user_id",run.user_id).select("*").single();
   if(error)throw new Error("capability_terminal_save_failed");
+  await laufVerbrauch(admin,run,payload);
   return {run:data,status:finalStatus,artifacts:[]};
  }
  const artifacts=await storeRomyOutputs(admin,apiKey,run,payload);
@@ -277,6 +291,7 @@ export async function reconcileRomyRun(admin:any,apiKey:string,run:any){
  const {data,error}=await admin.from("office_romy_capability_runs")
    .update(patch).eq("id",run.id).eq("user_id",run.user_id).select("*").single();
  if(error)throw new Error("capability_complete_save_failed");
+ await laufVerbrauch(admin,run,payload);
  if(artifacts.length){
   const delivered=await deliverRomyCompletion(admin,data||run,artifacts,summary);
   if(delivered)await admin.from("office_romy_capability_runs")

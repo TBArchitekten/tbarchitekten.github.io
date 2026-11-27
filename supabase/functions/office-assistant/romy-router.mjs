@@ -27,6 +27,8 @@ export async function routeRomyTurn({message,history,apiKey,model}){
   try{data=JSON.parse(found?.[0]||"")}catch{}
   return {complexity:["light","standard","deep"].includes(data?.complexity)?data.complexity:"standard",
    input_tokens:Number(p.usage?.input_tokens||0),
-   output_tokens:Number(p.usage?.output_tokens||0),source:"decision_model"};
+   output_tokens:Number(p.usage?.output_tokens||0),source:"decision_model",
+   // Für die Verbrauchsübersicht des Office: Modell und Verbrauch dieses Aufrufs.
+   usage:p.usage||null,model:String(p.model||model||"")};
  }catch{return fallback}
 }

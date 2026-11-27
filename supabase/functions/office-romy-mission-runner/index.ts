@@ -1,4 +1,5 @@
 import {createClient} from "npm:@supabase/supabase-js@2.57.0";
+import {verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 // Office background checkpoints only. No projects/tasks/calendar/storage tools or external web search.
 const ORIGIN="https://tbarchitekten.github.io";
 const SECRET_HEADER="x-romy-runner-secret";
@@ -27,7 +28,7 @@ function nextWake(value){
  if(!Number.isFinite(stamp.getTime())||stamp.getTime()<=Date.now()||stamp.getTime()>Date.now()+365*86400000)return null;
  return stamp.toISOString();
 }
-async function runCheckpoint(m,apiKey){
+async function runCheckpoint(m,apiKey,admin=null){
  const prompt=[
   "You are Romy's bounded persistent work checkpoint. This is a PRIVATE, read-only, user-approved work objective.",
   "Never simulate actions or claim to have accessed a project, document, calendar, email, website, or employee data.",
@@ -56,6 +57,8 @@ async function runCheckpoint(m,apiKey){
   });
   if(!response.ok)throw Error("mission_provider_status_"+response.status);
   const data=await response.json();
+  // Verbrauch ohne Person (Übersicht für Administratoren); auch ein unvollständiger Lauf kostet.
+  await verbrauchSchreiben(admin,{funktion:"romy_auftrag",modell:MODEL,payload:data});
   if(data.status!=="completed")throw Error("mission_provider_incomplete");
   return resultObject(data);
  }finally{clearTimeout(timer)}
@@ -76,7 +79,7 @@ Deno.serve(async req=>{
  const results=[];
  for(const mission of claimed||[]){
   try{
-   const outcome=await runCheckpoint(mission,ai);
+   const outcome=await runCheckpoint(mission,ai,admin);
    const state=outcome.status==="continue"?"queued":outcome.status;
    // Model-generated dates cannot schedule work. Only a timestamp explicitly reviewed by the employee can.
    const wake=state==="waiting_until"&&mission.approved_wake_at

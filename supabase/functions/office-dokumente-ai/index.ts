@@ -6,6 +6,7 @@ import {createClient} from "npm:@supabase/supabase-js@2.57.0";
 import {MODEL,VERSION,AUFGABEN,TEXTFELDER,GRENZE,schemaVorschlaege,SCHEMA_TEXT,SCHEMA_FELDTEXT,SCHEMA_ZAHLEN,anweisungen,
   pruefeVorschlaege,pruefeText,pruefeFeldtext,pruefeZahlen,kandidatenPruefen,kurzZeilen,termineAusPlaenen} from "./core.mjs";
 import {normalizePlanAttachments} from "../office-terminplan-ai/attachments.mjs";
+import {dienstFuer,verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 
 const ORIGIN="https://tbarchitekten.github.io";
 const headers={
@@ -171,6 +172,9 @@ Deno.serve(async req=>{
     });
     if(!response.ok){console.error("Office document AI provider failed",response.status);return respond(502,{error:"ai_provider_unavailable"})}
     provider=await response.json();
+    // Verbrauch je Funktion und Projekt, ohne Person (Übersicht für Administratoren).
+    await verbrauchSchreiben(dienstFuer(createClient),{funktion:"dokumente",modell:MODEL,payload:provider,projectId:dok.project_id,
+      details:{aufgabe:String(aufgabe||action||"")}});
   }catch(error){
     console.error("Office document AI request did not complete",String((error as Error)?.name||"request_failed"));
     return respond(504,{error:"ai_timeout_or_network"});

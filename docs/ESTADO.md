@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · KI-Verbrauch:** Jeder Aufruf der Office-Funktionen an OpenAI (Kostenberechnung, Dokumente, Produkte, Terminplan, Romy in Threads und im Assistenten, Romys Fähigkeiten, Gedächtnis und Aufträge) schreibt seinen Verbrauch in `office_ki_verbrauch`: Funktion, Modell, Tokens, Projekt, nie die Person (keine Spalte dafür). Schreiben nur der Dienst über `supabase/functions/_office/ki-verbrauch.mjs`; lesen über die App niemand direkt. Romys Motor schreibt weiter in `minds_ai_usage`.
+
 **Stand 27.11.2026 · Claude · Geplante Aufgaben:** Neu in Claude: Codeprüfung (Mo–Fr, beide Repos, erst ein vollständiger Durchgang, dann täglich die Änderungen plus ein Bereich; Entwurfs-PRs, nie mergen; Sicherheitsfunde nur an Gari) und Radar (Mo und Do: Neuigkeiten und Fristen). Die Office-Prüfung achtet zusätzlich auf Spitzen im KI-Verbrauch und auf Fehler aus dem Browser, die das Team treffen.
 
 **Stand 27.11.2026 · Claude · Fehler aus dem Browser:** Jede Seite des Office meldet Skriptfehler und abgelehnte Versprechen über `shared/fehler-melden.js` an `office_client_fehler_melden` (nur Technisches, bereinigt, gedrosselt; Tabelle `office_client_fehler`, über die App nicht lesbar). Die tägliche Codeprüfung und die Office-Prüfung lesen sie direkt in der Datenbank. Aufbewahrung 30 Tage: der Cron `office_client_fehler_aufraeumen_v1` löscht täglich, was zuletzt vor mehr als 30 Tagen auftrat.

@@ -133,5 +133,5 @@ test('A light turn carries less: the last ten messages and no radar (08.11.2026)
   assert.match(fn,/const LIGHT_HISTORY=10;/);
   assert.match(fn,/const light=complexity\.complexity==="light"&&!attachmentInputs\.length;/);
   assert.match(fn,/apiInput\(light\?history\.slice\(-LIGHT_HISTORY\):history,message,attachmentInputs,light\?notes:\[\.\.\.notes,radar\]\.filter\(Boolean\)\)/);
-  assert.match(fn,/onDelta,notes,radar:radarText\}\);/);
+  assert.match(fn,/onDelta,notes,radar:radarText,projectId:kontext\.projectId\|\|null\}\);/);
 });

@@ -14,6 +14,7 @@ on:
       - 'tests/sql/office-leitfaden-*.sql'
       - 'tests/sql/office-push-*.sql'
       - 'tests/sql/office-client-*.sql'
+      - 'tests/sql/office-ki-*.sql'
       - 'tests/office-kostenberechnung.test.mjs'
       - 'tests/office-romy-*.test.mjs'
       - '.github/workflows/verify.yml'
@@ -159,6 +160,11 @@ jobs:
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < tests/sql/office-client-fehler-acceptance.sql
+      - name: Verify the AI usage log (no person column, only the service writes, sums survive a deleted project)
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-ki-verbrauch-acceptance.sql
       - name: Verify no generated fixtures persist in the ephemeral database
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
