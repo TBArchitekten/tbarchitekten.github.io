@@ -35,5 +35,5 @@ test('gemerkt wird je Board: seitliche Position, Position in jedem Bucket, offen
 });
 
 test('work.js wird mit neuer Version geladen',()=>{
-  assert.match(read('app/index.html'),/<script src="\.\/work\.js\?v=office65"><\/script>/);
+  assert.match(read('app/index.html'),/<script src="\.\/work\.js\?v=office66"><\/script>/);
 });

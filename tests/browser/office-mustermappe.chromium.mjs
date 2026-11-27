@@ -50,7 +50,7 @@ function pdfDatei(){
 }
 async function oeffne(){
   if(!geteilt){
-    const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+    const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});await mitEigenschaften(ctx);
     const page=await ctx.newPage();
     const fehler=[];
     page.on('pageerror',e=>fehler.push(e.message));
@@ -67,6 +67,9 @@ async function oeffne(){
   }
   return geteilt;
 }
+// Seit dem 27.11.2026 sind die Eigenschaften zu Beginn aus (Gari); die Abläufe hier arbeiten mit ihnen.
+const mitEigenschaften=ctx=>ctx.addInitScript(()=>{try{if(!localStorage.getItem('tba-office.mustermappe.ansicht'))
+  localStorage.setItem('tba-office.mustermappe.ansicht',JSON.stringify({v:2,rechts:true}))}catch{}});
 const db=page=>page.evaluate(()=>window.__fake.db);
 const gespeichert=page=>page.waitForFunction(()=>document.querySelector('[data-speicher]')?.textContent==='gespeichert');
 async function zeilen(page,art){
@@ -366,7 +369,7 @@ test('Präsentieren im Termin: Entscheidung je Position, danach in der Produktbi
 // App und ohne zweite Projektzeile; ?neu=1 öffnet nur den Dialog, Abbrechen meldet die Seite, die neue Mappe öffnet sie
 // über die Adresse; Work liest die Revision der Mappe und lässt vor dem Schließen speichern.
 test('Als Reiter in Work: kein Rücksprung, Anlegen und Abbrechen gemeldet, Revision und Speichern für Work',async()=>{
-  const ctx=await browser.newContext({viewport:{width:1320,height:940},deviceScaleFactor:1});
+  const ctx=await browser.newContext({viewport:{width:1320,height:940},deviceScaleFactor:1});await mitEigenschaften(ctx);
   const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
   await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
   await page.route(/supabase\.co/,r=>r.abort());
@@ -425,7 +428,7 @@ window.__nachrichten=[];addEventListener('message',e=>{if(e.origin===location.or
 // Schalter darin lässt es offen. Passt ein Text nicht in seinen Rahmen, erscheint «1 Übersatz» in derselben Zeile (die
 // Zeile bricht nicht um); ein Klick zeigt die Eigenschaften und wählt den Rahmen.
 test('Reiter: eine Zeile, «•••» mit Raster, Übersatz als Hinweis in der Leiste',async()=>{
-  const ctx=await browser.newContext({viewport:{width:1060,height:900},deviceScaleFactor:1});
+  const ctx=await browser.newContext({viewport:{width:1060,height:900},deviceScaleFactor:1});await mitEigenschaften(ctx);
   const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
   await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
   await page.route(/supabase\.co/,r=>r.abort());
@@ -478,7 +481,7 @@ test('Reiter: eine Zeile, «•••» mit Raster, Übersatz als Hinweis in der
 // Wie im Entwurf: passt ein Text nicht, vergrößert «Rahmen vergrößern» den Rahmen um so viele Felder, wie er braucht
 // (ein Schritt im Verlauf); danach ist der Hinweis weg. Rückgängig stellt die Größe wieder her.
 test('Übersatz: «Rahmen vergrößern» um die fehlenden Felder, rückgängig wie jeder Schritt',async()=>{
-  const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+  const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});await mitEigenschaften(ctx);
   const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
   await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
   await page.route(/supabase\.co/,r=>r.abort());
@@ -513,7 +516,7 @@ test('Übersatz: «Rahmen vergrößern» um die fehlenden Felder, rückgängig w
 // passen, Romy schlägt den kürzeren Text vor, der Dialog zeigt ihn zum Ändern; erst «Übernehmen» setzt ihn (ein Schritt
 // im Verlauf), danach passt der Rahmen. «Verwerfen» lässt alles, wie es war.
 test('Übersatz: «Mit Romy kürzen» schlägt vor, nur «Übernehmen» ändert, rückgängig wie jeder Schritt',async()=>{
-  const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+  const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});await mitEigenschaften(ctx);
   const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
   await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
   await page.route(/supabase\.co/,r=>r.abort());
@@ -558,6 +561,41 @@ test('Übersatz: «Mit Romy kürzen» schlägt vor, nur «Übernehmen» ändert,
     assert.match(await page.locator('[data-act="mm-zurueck"]').getAttribute('title'),/^Rückgängig: Text «Kopf» gekürzt/);
     await page.locator('[data-act="mm-zurueck"]').click();
     await page.waitForFunction(t=>document.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="kopf"] .mm-frage')?.innerText.trim()===t,lang);
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+// Gari, 27.11.2026: die Eigenschaften sind zu Beginn aus, jede Person schaltet sie ein und behält das. Eine Ansicht von
+// vor dem 27.11. (ohne v:2) beginnt einmal ohne Eigenschaften. Eine neue Position zeigt sie, damit man sie ausfüllt.
+test('Eigenschaften: zu Beginn aus, eingeschaltet bleiben sie; eine neue Position zeigt sie',async()=>{
+  const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+  const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+  await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
+  await page.route(/supabase\.co/,r=>r.abort());
+  try{
+    await page.goto(adresse('projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&werkzeug=mustermappe&neu=1'));
+    await page.locator('#pdDialog select[name="paket"]').selectOption('Bäder');
+    await page.locator('#pdDialog button[type="submit"]').click();
+    await page.locator('h1',{hasText:'Mustermappe Bäder'}).waitFor();
+    const aus=()=>page.locator('.mm').evaluate(m=>m.classList.contains('ohne-rechts'));
+    const schalter=page.locator('[data-act="mm-rechts"]');
+    assert.equal(await aus(),true,'zu Beginn aus');assert.equal(await schalter.getAttribute('aria-pressed'),'false');
+    // Eine Ansicht von früher (Eigenschaften an, ohne v:2): einmal aus, der Zoom bleibt.
+    await page.evaluate(()=>localStorage.setItem('tba-office.mustermappe.ansicht',JSON.stringify({zoom:'breite',rechts:true,seiten:true})));
+    await page.reload();await page.locator('h1',{hasText:'Mustermappe Bäder'}).waitFor();
+    assert.equal(await aus(),true,'alte Ansicht: einmal aus');
+    assert.equal(await page.locator('select[data-act="mm-zoom"]').inputValue(),'breite','der Zoom von früher bleibt');
+    await schalter.click();assert.equal(await aus(),false);
+    await page.reload();await page.locator('h1',{hasText:'Mustermappe Bäder'}).waitFor();
+    assert.equal(await aus(),false,'eingeschaltet bleibt eingeschaltet');
+    await schalter.click();assert.equal(await aus(),true);
+    // Eine neue Position: die Eigenschaften gehen auf, im Reiter «Position».
+    await hinzufuegen(page,'Position hinzufügen');
+    await page.locator('#pdDialog input[name="code"]').fill('S1');await page.locator('#pdDialog input[name="bez"]').fill('Waschtisch');
+    await page.locator('#pdDialog button[type="submit"]').click();
+    await page.locator('.mm-seitenliste .active',{hasText:'S1 Waschtisch'}).waitFor();
+    assert.equal(await aus(),false,'neue Position: Eigenschaften sichtbar');
+    assert.equal(await page.locator('.mm-rechts').getAttribute('data-teil'),'position');
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

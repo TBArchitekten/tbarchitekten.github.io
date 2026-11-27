@@ -192,3 +192,14 @@
 .cockpit-file.cockpit-ablauf{flex-direction:column;align-items:flex-start;gap:2px;text-decoration:none}
 .cockpit-file.cockpit-ablauf span{font-weight:600;color:var(--m-link)}
 .cockpit-file.cockpit-ablauf small{white-space:normal}
+/* Rückmeldung zu einer vorgeschlagenen Entscheidung im Panorama (27.11.2026): «Stimmt etwas nicht?» und «Verwerfen …»
+   öffnen ein kurzes Feld in der Karte. Nur Tokens. */
+.cockpit-card .cockpit-stimmt{align-self:flex-start;min-height:32px;font-size:13px}
+.cockpit-card .cockpit-stimmt[hidden]{display:none}
+.cockpit-rueck{display:grid;gap:8px}
+.cockpit-rueck[hidden]{display:none}
+.cockpit-rueck label{font-size:13px;font-weight:600;color:var(--m-ink)}
+.cockpit-rueck textarea{width:100%;min-height:72px;padding:8px 10px;border:1px solid var(--m-field);border-radius:10px;background:var(--m-surface);
+  color:var(--m-ink);font:inherit;font-size:13.5px;resize:vertical;box-sizing:border-box}
+.cockpit-card [data-cockpit-knoepfe][hidden]{display:none}
+.cockpit-hinweis-gesendet{color:var(--m-ink-soft)}

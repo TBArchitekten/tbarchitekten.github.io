@@ -17,6 +17,31 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Rückmeldungen von Gari: Mustermappe, Terminplan, Panorama · Claude
+- Qué cambió y por qué:
+  - **Mustermappe: Eigenschaften zu Beginn aus** (Gari): die Ansicht beginnt ohne Eigenschaften; wer sie einschaltet, behält sie (gespeichert mit `v:2`). Ansichten von vor dem 27.11. beginnen einmal ohne, Zoom und Seitenleiste bleiben. Eine neue Position zeigt die Eigenschaften (Reiter «Position»), damit man sie ausfüllt; «1 Übersatz» zeigt sie wie bisher.
+  - **Terminplan: Tabelle schmal** (Gari: die Balken waren kaum lesbar, die Tabelle ließ sich nicht schmaler als 853 px ziehen): jetzt bis 300 px. Je schmaler, desto weniger Spalten (Stufen über `html[data-tp-spalten]`): zuerst Fortschritt (unter 860 px), dann Verantwortlich (730), dann Dauer (620), zuletzt Anfang und Ende (550); PSP und Vorgang bleiben, der Rest steht im Dialog des Vorgangs. Doppelklick auf den Trenner: nur PSP und Vorgang (360 px), noch einmal: so breit wie vorher. Die Breite bleibt je Person gespeichert.
+  - **Panorama: Rückmeldung an einer Entscheidung** (Gari: was, wenn etwas nicht stimmt; geht beim Verwerfen Wissen verloren?): unter «Warum» steht «Stimmt etwas nicht?»; der Text geht als Hinweis (`korrektur`) an die Seite der Entscheidung, sie bleibt offen, die Karte zeigt «Hinweis gesendet · wird eingearbeitet». «Verwerfen …» fragt nach dem Grund (freiwillig), verwirft über `office_wissen_entscheidung_pruefen` und hält den Grund als Hinweis fest («Verworfen: «…»»). Gelöscht wird nie etwas; verworfene Entscheidungen stehen im Wissen unter «Ersetzt oder verworfen». Eine Stelle für Beiträge im Modul (`beitragTeilen`), neu `rueckmeldung`.
+- Archivos: `projektdokumente.js` (`?v=office17`), `projektdokumente.html`, `terminplan.html`, `app/work.js` (`?v=office66`), `app/office-wissen.js` (`?v=office6`), `app/office.css` (`?v=office48`), `app/index.html`; Tests: `tests/office-mustermappe.test.mjs`, `tests/browser/office-mustermappe.chromium.mjs` (Eigenschaften zu Beginn aus; die übrigen Abläufe mit eingeschalteten Eigenschaften), `tests/browser/office-terminplan-reiter.chromium.mjs` (schmal ziehen, Spalten, Doppelklick, nach dem Neuladen), `tests/browser/office-wissen.chromium.mjs` (Hinweis und Verwerfen mit Grund), Versionsangaben in zehn Tests.
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün (561); Browserprüfungen Mustermappe (12), Terminplan im Reiter (4), Wissen (11) lokal mit Chrome grün; Karte, Formular und schmale Tabelle als Bildschirmfoto angesehen.
+- Quedó pendiente o sin probar: Hinweise und Gründe arbeitet die KI beim nächsten Mal ein (Claude über den Konnektor oder auf «Wissen pflegen»); noch nicht automatisch über Nacht.
+- Riesgos o decisiones que necesitan a Gari: die neuen Texte.
+- PR: #205
+
+### 2026-11-27 · Projektwissen Bernried: Lichtplanungsmappe keine Projektentscheidung; zweite Testmitteilung · Claude
+- Qué cambió y por qué: Gari: «Lichtplanungsmappe LPH 3 als finale Lichtabgabe … Teil der Bemusterungsmappe» ist eine Arbeitsweise der Abgabe, keine Entscheidung des Projekts. Am 26.11. war nur die Formulierungsregel herausgenommen worden, die Entscheidung blieb. Jetzt wie die beiden Arbeitsweisen vom 26.11.: Status `superseded` mit Grund («Arbeitsweise der Abgabe …, keine Projektentscheidung; steht auf der Seite»), `auf_seite` «Lichtkonzept», Eintrag `entscheidung_ersetzt` im Protokoll des Wissens. Nichts gelöscht; die Seite «Lichtkonzept» nennt die Mappe weiter im Text. Außerdem eine zweite Testmitteilung an Garis iPhone (14:38, APNs 200), um zu sehen, ob der Text entschlüsselt erscheint.
+- Archivos: ninguno (Daten in Supabase).
+- Base de datos: Datenänderung in `minds_work_memory` und `office_wissen_protokoll` (eine Zeile je); Testzeile in `office_push_nachrichten`.
+- Deploy de funciones: ninguno.
+- Cómo se probó: Abfrage danach: Status `superseded`, Grund gesetzt; Mitteilung `gesendet`.
+- Quedó pendiente o sin probar: Garis Rückmeldung, was die Mitteilung zeigt.
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: #205
+
+---
+
 ### 2026-11-27 · Work: die Fassung am Anfang der Werkzeugzeile, wenn die Leiste reduziert ist · Claude
 - Qué cambió y por qué: Letzter offener Punkt aus dem Entwurf B2. Aufgeklappt steht die Wahl der Fassung (Terminpläne LPH 3/5, Kostenberechnungen, Mappen) unter dem Abschnitt in der Seitenleiste (#196); auf Symbole reduziert stand sie bisher in einer eigenen Zeile über dem Werkzeug. Jetzt steht sie wie im Entwurf am Anfang der Werkzeugzeile der Seite als «Name ▾» mit einem Strich dahinter («LPH 3 ▾», «Bodenbeläge ▾»), das Menü wie «•••» (gewählte blau, «+ Neue Mustermappe» unten, Esc oder ein Klick daneben schließt); die Zeile über dem Werkzeug entfällt. Liste und Wahl bleiben bei Work: `app/work-lens.js` stellt `window.TBA_WORK_FASSUNG` bereit (`ort`, `lage`, `waehlen`, `anlegen`; gelesen und geklickt wird die Leiste über dem Werkzeug, wie schon die Seitenleiste) und meldet den Seiten jede Änderung (Leiste, Fassung, auf- und zuklappen). `shared/reiter-fassung.js` in der Seite füllt den Ort (`data-reiter-fassung`), nur im Reiter und nur, wenn Work es will; hat die Seite keinen Ort, bleibt die Zeile über dem Werkzeug. Auf dem iPhone und aufgeklappt ändert sich nichts.
 - Archivos: `shared/reiter-fassung.js` und `shared/reiter-fassung.css` (neu, `?v=1`), `app/work-lens.js` und `app/work-lens.css` (`?v=4`), `app/index.html`, `terminplan.html` (Ort am Anfang der Leiste), `kostenberechnung.js` (`?v=office15`, Ort in `.kb-zeile`), `kostenberechnung.html`, `projektdokumente.js` (`?v=office16`, Ort in der Zeile der Mappe), `projektdokumente.html`; Tests: `tests/office-reiter-fassung.test.mjs` (neu), `tests/browser/office-work-seitenleiste.chromium.mjs` (reduziert: «LPH 3 ▾», Menü, LPH 5 wählen, aufgeklappt wieder in der Seitenleiste), Versionsangaben in `tests/office-mustermappe.test.mjs`, `tests/office-work-reiter.test.mjs`, `tests/office-kostenberechnung.test.mjs`.

@@ -385,3 +385,39 @@ test('Panorama: «Für dich» mit Bestätigen für die Projektleitung, Themen, E
     assert.deepEqual(ana.errors,[]);
   }finally{await ana.page.close()}
 });
+
+// Gari, 27.11.2026: an der Karte im Panorama sagen können, was nicht stimmt. «Stimmt etwas nicht?» schickt einen Hinweis
+// an die Seite der Entscheidung (sie bleibt offen); «Verwerfen …» fragt nach dem Grund, verwirft über die Funktion des
+// Wissens und hält den Grund als Hinweis fest. Nie ein direktes Schreiben.
+test('Panorama: Rückmeldung an einer Entscheidung, Hinweis oder Verwerfen mit Grund',async()=>{
+  const {page,errors}=await oeffnen('panorama',undefined,'#cockpitParaTi');
+  try{
+    const karte=page.locator('[data-cockpit-entscheidung="d1"]');
+    await karte.locator('[data-cockpit-rueck="korrektur"]').click();
+    const form=karte.locator('[data-cockpit-rueck-form="d1"][data-art="korrektur"]');
+    assert.equal(await form.isVisible(),true);
+    assert.equal(await karte.locator('[data-cockpit-knoepfe]').isVisible(),false,'Bestätigen und Verwerfen warten');
+    await form.locator('textarea').fill('Nicht in den Fluren, nur in den Nebenräumen.');
+    await form.locator('button[type="submit"]').click();
+    await page.waitForFunction(()=>window.__rpc.some(c=>c.name==='office_wissen_beitrag_teilen'));
+    let teilen=(await rpcs(page)).filter(c=>c.name==='office_wissen_beitrag_teilen');
+    assert.deepEqual(teilen.at(-1).args,{p_project:'p1',p_titel:'Korrektur zu «Feinsteinzeug 60 × 60 in den Fluren»',
+      p_inhalt:'Nicht in den Fluren, nur in den Nebenräumen.\n\nEs geht um die vorgeschlagene Entscheidung «Feinsteinzeug 60 × 60 in den Fluren» (Quelle: Claude-Chat «Bodenbeläge»).',
+      p_art:'korrektur',p_quelle:'Panorama',p_seite:'Bodenbelag Flure'},'an die Seite der Entscheidung');
+    await page.locator('[data-cockpit-entscheidung="d1"] .cockpit-hinweis-gesendet',{hasText:'Hinweis gesendet'}).waitFor();
+    assert.equal((await rpcs(page)).some(c=>c.name==='office_wissen_entscheidung_pruefen'),false,'die Entscheidung bleibt offen');
+    // Verwerfen mit Grund.
+    await page.locator('[data-cockpit-entscheidung="d1"] [data-cockpit-rueck="verwerfen"]').click();
+    const weg=page.locator('[data-cockpit-rueck-form="d1"][data-art="verwerfen"]');
+    await weg.locator('textarea').fill('Keine Projektentscheidung, nur eine Idee aus der Besprechung.');
+    await weg.locator('button[type="submit"]').click();
+    await page.waitForFunction(()=>window.__rpc.some(c=>c.name==='office_wissen_entscheidung_pruefen'&&c.args.p_beschliessen===false));
+    await page.waitForFunction(()=>window.__rpc.filter(c=>c.name==='office_wissen_beitrag_teilen').length===2);
+    teilen=(await rpcs(page)).filter(c=>c.name==='office_wissen_beitrag_teilen');
+    assert.equal(teilen.at(-1).args.p_titel,'Verworfen: «Feinsteinzeug 60 × 60 in den Fluren»');
+    assert.match(teilen.at(-1).args.p_inhalt,/^Keine Projektentscheidung, nur eine Idee aus der Besprechung\.\n\nVerworfen wurde die vorgeschlagene Entscheidung/);
+    await page.waitForFunction(()=>/Nichts offen/.test(document.querySelector('section[aria-labelledby="cockpitParaTi"]')?.textContent||''));
+    assert.deepEqual(await page.evaluate(()=>window.__writes),[],'kein direktes Schreiben');
+    assert.deepEqual(errors,[]);
+  }finally{await page.close()}
+});

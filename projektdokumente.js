@@ -1281,14 +1281,16 @@ const mm={offen:'',seite:null,produkte:new Map(),fotos:new Map(),urls:new Map(),
 // Arbeitsfläche der Mappe (Gari, 26.11.2026): Zoom «Einpassen» (die ganze Seite im Fenster), «Seitenbreite» oder in
 // Prozent (100 % = A3 in Originalgröße), Raster ein oder aus, Seitenliste und Eigenschaften ein- und ausblenden.
 // Gemerkt je Gerät; ohne Speicher (privates Fenster) gilt die Grundeinstellung.
+// Eigenschaften sind zu Beginn aus (Gari, 27.11.2026); wer sie einschaltet, behält sie. Ansichten von vor diesem Tag
+// (ohne v:2) beginnen einmal mit ausgeschalteten Eigenschaften, der Rest bleibt.
 function mmAnsichtLesen(){
-  const grund={zoom:'fit',raster:false,seiten:true,rechts:true,teil:'seite'};
+  const grund={zoom:'fit',raster:false,seiten:true,rechts:false,teil:'seite'};
   try{const x=JSON.parse(localStorage.getItem('tba-office.mustermappe.ansicht')||'null');
-    if(x&&typeof x==='object')return {zoom:x.zoom==='breite'||(typeof x.zoom==='number'&&x.zoom>=.2&&x.zoom<=4)?x.zoom:'fit',raster:!!x.raster,seiten:x.seiten!==false,rechts:x.rechts!==false,
-      teil:['seite','position','mappe'].includes(x.teil)?x.teil:'seite'}}catch{}
+    if(x&&typeof x==='object')return {zoom:x.zoom==='breite'||(typeof x.zoom==='number'&&x.zoom>=.2&&x.zoom<=4)?x.zoom:'fit',raster:!!x.raster,seiten:x.seiten!==false,
+      rechts:x.v>=2&&x.rechts===true,teil:['seite','position','mappe'].includes(x.teil)?x.teil:'seite'}}catch{}
   return grund;
 }
-function mmAnsichtMerken(){try{localStorage.setItem('tba-office.mustermappe.ansicht',JSON.stringify(mm.ansicht))}catch{}}
+function mmAnsichtMerken(){try{localStorage.setItem('tba-office.mustermappe.ansicht',JSON.stringify({...mm.ansicht,v:2}))}catch{}}
 const istMappe=v=>!!M&&M.istMappe(v);
 const mappen=()=>zeilen.entscheidungsvorlagen.filter(istMappe);
 function mappePunkte(v){return (v?.daten?.punkte||[]).map(id=>zeilen.entscheidungsliste.find(z=>z.id===id)).filter(Boolean)}
@@ -1798,7 +1800,7 @@ async function positionAnlegen(v,{code,bezeichnung,strategie}){
   const seite={id:M.neueId(),typ:'vergleich',punkt:z.id};
   const t=vorher('Position '+code+' angelegt',[v]);
   v.daten={...v.daten,punkte:[...(v.daten.punkte||[]),z.id],seiten:[...M.seitenVon(v.daten),seite]};markiere(v);nachher(t);
-  mm.seite=seite.id;mm.ansicht.teil='position';mmAnsichtMerken();meldung('Position '+code+' angelegt; sie steht auch in der Entscheidungsliste.');render();
+  mm.seite=seite.id;mm.ansicht.teil='position';mm.ansicht.rechts=true;mmAnsichtMerken();meldung('Position '+code+' angelegt; sie steht auch in der Entscheidungsliste.');render();
 }
 function positionWeg(v,id){
   const z=zeileVon(id);
