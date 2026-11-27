@@ -1498,16 +1498,18 @@ function uebersatzPruefen(){
   cancelAnimationFrame(mm.uebersatzRaf);
   mm.uebersatzRaf=requestAnimationFrame(()=>{
     const b=root.querySelector('.mm-buehne'),ziel=root.querySelector('[data-mm-uebersatz]');if(!b)return;
-    const namen=[];
+    const namen=[],knoepfe=[];
     for(const r of b.querySelectorAll('.mm-r[data-rahmen]')){
       const ueber=r.scrollHeight>r.clientHeight+1;r.classList.toggle('mm-uebersatz',ueber);
       if(!ueber)continue;
       const tab=r.querySelector('.mm-kennwerte'),unten=r.getBoundingClientRect().bottom+.5;
       const weg=tab?[...tab.rows].filter(tr=>tr.getBoundingClientRect().bottom>unten).length:0;
       namen.push(r.dataset.rahmen+(weg?' ('+weg+(weg===1?' Kennwert':' Kennwerte')+' nicht auf der Seite)':''));
+      // Wie im Entwurf: «Rahmen vergrößern» je Rahmen, der nicht passt (nur Rahmen, die sich verschieben lassen).
+      if(r.dataset.mmr)knoepfe.push('<button type="button" class="btn" data-act="mm-groesser" data-k="'+esc(r.dataset.mmr)+'">«'+esc(r.dataset.rahmen)+'» vergrößern</button>');
     }
     if(ziel)ziel.innerHTML=namen.length?'<div class="mm-intern mm-uebersatz-liste" role="status"><strong>Passt nicht ganz in den Rahmen</strong><span>'+esc(namen.join(' · '))+
-      '. Kürzen oder weniger zeigen; im PDF steht nur, was in den Rahmen passt.</span></div>':'';
+      '. Kürzen oder weniger zeigen; im PDF steht nur, was in den Rahmen passt.</span>'+(knoepfe.length?'<div class="mm-knoepfe">'+knoepfe.join('')+'</div>':'')+'</div>':'';
     const pille=root.querySelector('[data-mm-pille]');
     if(pille){
       pille.hidden=!namen.length;
@@ -1515,6 +1517,18 @@ function uebersatzPruefen(){
       pille.title=namen.length?'Passt nicht ganz in den Rahmen: '+namen.join(' · '):'';
     }
   });
+}
+// «Rahmen vergrößern»: so viele Felder nach unten, wie der Text braucht (ein Feld und sein Abstand sind 32 mm), höchstens
+// bis zum Ende des Rasters. Ein Schritt im Verlauf; was danach überlappt, nennt die Karte «Layout».
+function rahmenGroesser(key){
+  const el=rahmenEl(key),blatt=el?.closest('.mm-seite');if(!el||!blatt)return;
+  const g=geoAus(el.dataset.mmrG),Z=M.RASTER.zeilen,proMm=blatt.getBoundingClientRect().width/M.RASTER.breite;
+  const schritt=(M.RASTER.feld+M.RASTER.abstand)*proMm,fehlt=el.scrollHeight-el.clientHeight;
+  const mehr=Math.max(1,Math.ceil(fehlt/Math.max(1,schritt))),h=Math.min(g.h+mehr,Z-g.r+1);
+  if(h<=g.h){meldung('Unter «'+(el.dataset.mmrName||key)+'» ist im Raster kein Platz mehr: den Rahmen verschieben oder den Text kürzen.','warn');return}
+  waehle(key);
+  layoutAendern(key,{...g,h},'Rahmen «'+(el.dataset.mmrName||key)+'» vergrößert');
+  if(h<g.h+mehr)meldung('«'+(el.dataset.mmrName||key)+'» reicht jetzt bis zum Ende des Rasters; passt es noch nicht, den Text kürzen.','warn');
 }
 // Ein Klick auf den Hinweis in der Leiste: Eigenschaften zeigen, den ersten Rahmen wählen, der nicht passt, und ihn in
 // den Blick holen.
@@ -2348,6 +2362,7 @@ function mappeKlickInnen(act,el,v){
   if(act==='mm-zs-mitte'){if(mm.zuschnitt){mm.zuschnitt.a={x:50,y:50,z:1};zuschnittZeigen()}return}
   if(act==='mm-mehr'||act==='mm-plus'){const n=act.slice(3);menue(n,!!root.querySelector('.mm-'+n+'-menue')?.hidden);return}
   if(act==='mm-teil'){teilZeigen(el.dataset.teil);return}
+  if(act==='mm-groesser'){rahmenGroesser(el.dataset.k);return}
   if(act==='mm-seite-neu'){menue('plus',false);seiteNeu(v,el.dataset.wert);return}
   if(act==='mm-uebersatz'){uebersatzZeigen();return}
   if(act==='mm-seite'){mm.seite=el.dataset.id;mm.auswahl=null;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
