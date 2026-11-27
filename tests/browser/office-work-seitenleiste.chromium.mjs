@@ -24,12 +24,12 @@ const browser=await chromium.launch({headless:true});
 test.after(async()=>{await browser.close();server.close()});
 
 const P='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',Q='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-async function oeffne(breite,ansicht='planner'){
+async function oeffne(breite,ansicht='planner',extra={}){
   const page=await browser.newPage({viewport:{width:breite,height:900}});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
   await page.route(/supabase\.co|fonts\.(googleapis|gstatic)/,r=>r.abort());
-  await page.addInitScript(([P,Q,ansicht])=>{
+  await page.addInitScript(([P,Q,ansicht,extra])=>{
     window.__fakeRows={
       office_project_abschnitte:['terminplan','kosten','mustermappe'].map(abschnitt=>({project_id:P,abschnitt})),
       isabella_projects:[{id:P,client_key:P,name:'Beispielhaus',number:'101',archived:false},{id:Q,client_key:Q,name:'Wohnhaus am Lindenweg',number:'102',archived:false}],
@@ -38,9 +38,9 @@ async function oeffne(breite,ansicht='planner'){
       // Zwei Terminpläne: die Wahl steht am Desktop unter «Terminplan» in der Seitenleiste.
       office_terminplan_instances:[
         {id:'tp-lph5',project_id:P,phase:'LPH5',updated_at:'2026-11-22T10:00:00Z',server_revision:1,is_archived:false},
-        {id:'tp-lph3',project_id:P,phase:'LPH3',updated_at:'2026-11-20T10:00:00Z',server_revision:1,is_archived:false}]};
+        {id:'tp-lph3',project_id:P,phase:'LPH3',updated_at:'2026-11-20T10:00:00Z',server_revision:1,is_archived:false}],...extra};
     try{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('minds-work-project',P);localStorage.setItem('minds-work-view',ansicht)}}catch{}
-  },[P,Q,ansicht]);
+  },[P,Q,ansicht,extra]);
   await page.goto(`http://localhost:${server.address().port}/app/#section=work`);
   await page.waitForFunction(()=>document.querySelectorAll('.work-tabs [data-work-view]:not([hidden])').length>3,null,{timeout:10000});
   await page.waitForTimeout(300);
@@ -137,5 +137,30 @@ test('Terminpläne: die Wahl steht unter «Terminplan» in der Seitenleiste, red
     await page.waitForFunction(()=>document.body.classList.contains('minds-nav-collapsed'));
     assert.equal(await sichtbar(page,'#workToolHost .work-tool-bar'),true,'reduziert: Wahl wieder über dem Werkzeug');
     assert.deepEqual(errors.filter(e=>!/terminplan/i.test(e)),[]);
+  }finally{await page.close()}
+});
+
+// Wissen (wie im Entwurf: «die Seitenliste wandert in die Leiste links»): Neu, Entscheidungen und die Seiten stehen unter
+// «Wissen» in der Seitenleiste, im Wissen selbst entfällt die Liste; reduziert steht sie wieder im Wissen. Die Attrappe
+// filtert nicht: jede Zeile von minds_work_memory ist hier eine Seite.
+test('Wissen: Seiten in der Seitenleiste, reduziert wieder im Wissen',async()=>{
+  const seite=(id,title,t)=>({id,project_id:P,memory_type:'document_state',status:'confirmed',title,body:'## Stand\nText.\n## Offen\nFrage.',
+    metadata:{kind:'wissensseite'},updated_at:t,user_id:'11111111-1111-4111-8111-111111111111'});
+  const {page,errors}=await oeffne(1440,'knowledge',{minds_work_memory:[seite('s1','Bodenbelag Flure','2026-11-25T10:00:00Z'),seite('s2','Bäder','2026-11-24T10:00:00Z')],
+    office_project_members:[{project_id:P,user_id:'11111111-1111-4111-8111-111111111111'}],office_wissen_beitraege:[],office_wissen_protokoll:[],office_wissen_versionen:[]});
+  try{
+    if(await page.evaluate(()=>document.body.classList.contains('minds-nav-collapsed')))await page.click('.desk-nav-collapse');
+    await page.locator('#lensWork .lens-work-wissen').waitFor();
+    assert.deepEqual(await page.$$eval('#lensWork [data-lens-wissen]',bs=>bs.map(b=>b.textContent.trim())),['Neu','Entscheidungen','Bodenbelag Flure','Bäder']);
+    assert.equal(await sichtbar(page,'#workBody .wissen-liste'),false,'die Liste steht in der Leiste');
+    assert.equal(await sichtbar(page,'#workBody .wissen-kontext'),true,'neben dem Text, was zur Seite gehört');
+    await page.click('#lensWork [data-lens-wissen="3"]');
+    await page.waitForFunction(()=>document.querySelector('#lensWork [data-lens-wissen="3"]')?.classList.contains('active'));
+    assert.equal(await page.$eval('#workBody .wissen-eintrag.is-aktiv strong',e=>e.textContent),'Bäder');
+    await page.click('.desk-nav-collapse');
+    await page.waitForFunction(()=>document.body.classList.contains('minds-nav-collapsed'));
+    assert.equal(await sichtbar(page,'#workBody .wissen-liste'),true,'reduziert: die Liste im Wissen');
+    assert.equal(await sichtbar(page,'#lensWork .lens-work-wissen'),false);
+    assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });

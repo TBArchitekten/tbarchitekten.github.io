@@ -46,11 +46,20 @@
       liste:[...bar.querySelectorAll('[data-work-tool-pick]')].map(b=>({id:b.dataset.workToolPick,text:b.textContent.replace(/\s+/g,' ').trim(),aktiv:b.getAttribute('aria-selected')==='true'})),
       neu:bar.querySelector('[data-work-tool-create]')?.textContent.trim()||null};
   }
+  // Das Wissen (B2, wie im Entwurf: «die Seitenliste wandert in die Leiste links»): Neu, Entscheidungen und die Seiten
+  // stehen unter dem Abschnitt «Wissen»; ein Klick klickt den Eintrag in der Liste des Wissens.
+  function wissenEintraege(){
+    return [...document.querySelectorAll('#workBody .wissen-liste .wissen-sonder,#workBody .wissen-liste .wissen-eintrag')];
+  }
+  function wissen(){
+    return wissenEintraege().map((b,i)=>({i,aktiv:b.classList.contains('is-aktiv'),sonder:b.classList.contains('wissen-sonder'),
+      text:(b.querySelector('strong')?.textContent||b.firstChild?.textContent||'').trim(),zahl:b.querySelector('.wissen-zahl')?.textContent.trim()||''}));
+  }
   function lage(){
     const sichtbar=tabs().filter(b=>!b.hidden);
     const alle=projekte(),aktiv=alle.find(b=>b.classList.contains('active'));
     const name=(aktiv&&aktiv.textContent.trim())||document.getElementById('workProjectTitle')?.textContent.trim()||'Work';
-    return {sichtbar,alle,name,titel:aktiv?.getAttribute('title')||name,plus:!!plus()&&!plus().hidden,fassungen:fassungen()};
+    return {sichtbar,alle,name,titel:aktiv?.getAttribute('title')||name,plus:!!plus()&&!plus().hidden,fassungen:fassungen(),wissen:wissen()};
   }
   let menue=null;
   function schliesseMenue(){if(!menue)return;menue.remove();menue=null;box.querySelector('.lens-work-projekt')?.setAttribute('aria-expanded','false');
@@ -80,7 +89,7 @@
   let geplant=false;
   function zeichne(){
     geplant=false;
-    const {sichtbar,alle,name,titel,plus:mitPlus,fassungen:f}=lage();
+    const {sichtbar,alle,name,titel,plus:mitPlus,fassungen:f,wissen:w}=lage();
     const an=sichtbar.length>0;
     box.hidden=!an;
     document.body.classList.toggle('lens-work-an',an);
@@ -90,6 +99,8 @@
       <div class="lens-work-liste" role="tablist" aria-label="Abschnitte des Projekts">${sichtbar.map(b=>{
         const v=b.dataset.workView,label=b.textContent.trim(),aktiv=b.classList.contains('active');
         const knopf=`<button type="button" role="tab" aria-selected="${aktiv}" class="lens-work-abschnitt${aktiv?' active':''}" data-lens-view="${esc(v)}" title="${esc(label)}"><span class="lens-work-icon">${ICONS[v]||ICONS.overview}</span><span class="lens-work-label">${esc(label)}</span></button>`;
+        if(aktiv&&v==='knowledge'&&w.length)return knopf+`<div class="lens-work-fassungen lens-work-wissen" role="group" aria-label="Projektwissen">${w.map(x=>
+          `<button type="button" class="lens-work-fassung${x.aktiv?' active':''}${x.sonder?' lens-work-sonder':''}" aria-pressed="${x.aktiv}" data-lens-wissen="${x.i}" title="${esc(x.text)}"><span class="lens-work-punkt" aria-hidden="true"></span><span class="lens-work-label">${esc(x.text)}</span>${x.zahl?`<span class="lens-work-zahl">${esc(x.zahl)}</span>`:''}</button>`).join('')}</div>`;
         if(!aktiv||f.ansicht!==v||!(f.liste.length||f.neu))return knopf;
         return knopf+`<div class="lens-work-fassungen" role="group" aria-label="${esc(label)} wählen">${f.liste.map(x=>
           `<button type="button" class="lens-work-fassung${x.aktiv?' active':''}" aria-pressed="${x.aktiv}" data-lens-fassung="${esc(x.id)}" title="${esc(x.text)}"><span class="lens-work-punkt" aria-hidden="true"></span><span class="lens-work-label">${esc(x.text)}</span></button>`).join('')}${f.neu?
@@ -104,6 +115,8 @@
     const fa=e.target.closest('[data-lens-fassung]');
     if(fa){[...document.querySelectorAll('#workToolHost [data-work-tool-pane]:not([hidden]) .work-tool-bar [data-work-tool-pick]')]
       .find(b=>b.dataset.workToolPick===fa.dataset.lensFassung)?.click();return}
+    const wi=e.target.closest('[data-lens-wissen]');
+    if(wi){wissenEintraege()[Number(wi.dataset.lensWissen)]?.click();return}
     if(e.target.closest('[data-lens-fassung-neu]')){document.querySelector('#workToolHost [data-work-tool-pane]:not([hidden]) .work-tool-bar [data-work-tool-create]')?.click();return}
     const p=e.target.closest('[data-lens-plus]');
     if(p){window.TBA_WORK_ABSCHNITTE?.oeffnen?.(p);return}
@@ -116,5 +129,10 @@
       if(el)beobachter.observe(el,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','hidden','title','aria-selected']});
   };
   beobachte();planen();
+  // Das Wissen zeichnet sich in #workBody; der Rest von Work (Planner beim Ziehen) soll die Leiste nicht neu zeichnen.
+  const body=document.getElementById('workBody');
+  let wissenDa=false;
+  if(body)new MutationObserver(()=>{const da=!!body.querySelector('.wissen-liste');if(da||wissenDa){wissenDa=da;planen()}})
+    .observe(body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
   window.TBA_WORK_LENS={zeichne,kuerzel};
 })();
