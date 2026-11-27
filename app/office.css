@@ -187,3 +187,8 @@
 .work-desktop-leitfaden{margin:0 0 var(--m-space-3);font-size:var(--m-size-meta)}
 .work-desktop-leitfaden button{padding:0;border:0;background:none;color:var(--m-link);font:inherit;text-decoration:underline;
  text-underline-offset:2px;cursor:pointer}
+
+/* Panorama «Abläufe» (27.11.2026): Name und Schritte untereinander, damit der Name nie wegfällt. */
+.cockpit-file.cockpit-ablauf{flex-direction:column;align-items:flex-start;gap:2px;text-decoration:none}
+.cockpit-file.cockpit-ablauf span{font-weight:600;color:var(--m-link)}
+.cockpit-file.cockpit-ablauf small{white-space:normal}

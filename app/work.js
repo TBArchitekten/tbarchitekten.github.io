@@ -415,7 +415,7 @@ function officeTerminplaene(m){
     (window.TBA_OFFICE_WISSEN?.panoramaHtml?.(m.wissen)||'')+
     // Abläufe (27.11.2026): wiederkehrende Arbeit Schritt für Schritt; der Ablauf läuft im Projektstart (eigener Tab).
     '<section class="cockpit-panel" aria-labelledby="cockpitAblaeufe"><div class="cockpit-head"><h2 id="cockpitAblaeufe">Abläufe</h2></div>'+
-      '<a class="cockpit-file" href="../projektdokumente.html?'+esc(new URLSearchParams({projekt:project.id,ablauf:'besprechung'}).toString())+'" target="_blank" rel="noopener">'+
+      '<a class="cockpit-file cockpit-ablauf" href="../projektdokumente.html?'+esc(new URLSearchParams({projekt:project.id,ablauf:'besprechung'}).toString())+'" target="_blank" rel="noopener">'+
       '<span>Besprechung nachbereiten</span><small>Protokoll lesen, Aufgaben, Fristen, Projektwissen</small></a></section></div>';
 }
 function officeNextMilestone(state,today){
