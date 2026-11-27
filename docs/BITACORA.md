@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Fehler aus dem Browser: 30 Tage Aufbewahrung; Push in Betrieb · Claude
+- Qué cambió y por qué: Gari hat die Aufbewahrungsfrist bestätigt (30 Tage). `private.office_client_fehler_aufraeumen()` löscht Zeilen, deren letztes Auftreten mehr als 30 Tage zurückliegt; Cron `office_client_fehler_aufraeumen_v1` täglich 03:17 UTC (04:17 Winterzeit). Jede Zeile gilt für einen Tag, ein Fehler, der weiter auftritt, bleibt also sichtbar. Aufrufen darf die Funktion nur die Datenbank selbst. Außerdem Push in Betrieb: Gari hat `APNS_KEY_P8` und `APNS_KEY_ID` angelegt; ein Aufruf von `office-push` hat das Anbieter-Token signiert, eine Testmitteilung (`office_push_test`) ging um 11:00 an Garis iPhone (APNs 200, «zugestellt»).
+- Archivos: `supabase/migrations/20261127100440_office_client_fehler_aufbewahrung.sql`, `tests/sql/office-client-fehler-acceptance.sql` (zweiter Block: löscht nur Älteres als 30 Tage, die App darf nicht aufrufen, Cron-Job einmal), `docs/ESTADO.md`, `docs/BITACORA.md`.
+- Base de datos: migración `20261127100440_office_client_fehler_aufbewahrung` — aplicada en Supabase: sí (angekündigt, `apply_migration` am 27.11.2026, Datei auf die registrierte Version umbenannt). Geprüft: Cron-Job aktiv, weder `authenticated` noch `anon` noch der Dienst dürfen die Funktion aufrufen.
+- Deploy de funciones: ninguno.
+- Cómo se probó: SQL-Abnahme in der flüchtigen Datenbank der CI; Push: Antwort von APNs in `office_push_nachrichten.ergebnis` (200, mit `apns-id`).
+- Quedó pendiente o sin probar: ob die Testmitteilung den entschlüsselten Text zeigte oder nur «Neue Mitteilung» (sieht nur Gari auf dem iPhone).
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: #193
+
+---
+
 ### 2026-11-27 · Geplante Aufgaben: Codeprüfung, Radar, Office-Prüfung erweitert · Claude
 - Qué cambió y por qué: Gari wollte, dass Claude den Code täglich prüft (zuerst alles Bestehende, bevor Window weiter wächst) und zweimal pro Woche nach Neuem sucht, das Office und Window hilft. Neu in Claude: **Codeprüfung** (Mo–Fr 04:47): erster Durchgang über 20 Bereiche beider Repos, nach Risiko geordnet (Sicherheit zuerst), danach täglich die Änderungen der letzten 24 Stunden plus ein Bereich im Wechsel; liest die Fehler aus dem Browser (`office_client_fehler`); meldet nur Belegtes (Test, Reproduktion oder Spur mit Datei:Zeile); kleine Korrekturen als Entwurfs-PR nach den Regeln des Repos, nie mergen; Sicherheitsfunde nie öffentlich (beide Repos sind öffentlich), nur an Gari. **Radar** (Mo und Do 06:52): Neuigkeiten von Anthropic, OpenAI, Apple, Supabase, GitHub und ähnlichen Werkzeugen mit konkretem Nutzen, dazu Fristen und Abkündigungen der nächsten sechs Monate. **Office-Prüfung** (täglich) prüft zusätzlich Spitzen im KI-Verbrauch (`minds_ai_usage`, nur Summen je Funktion, nie wer) und Fehler aus dem Browser, die zwei oder mehr Personen treffen oder 20-mal auftreten; `office_client_fehler` steht in der Liste der akzeptierten Hinweise (Tabelle nur für den Dienst).
 - Archivos: `docs/ESTADO.md`, `docs/BITACORA.md`.
