@@ -29,7 +29,7 @@ declare
   uc constant text := '{"sub":"f9000000-0000-4000-8000-00000000000c","role":"authenticated"}';
   tok1 constant text := repeat('ab', 32);
   tok2 constant text := repeat('cd', 32);
-  schluessel constant text := encode(decode(repeat('11', 32), 'hex'), 'base64');
+  k32 constant text := encode(decode(repeat('11', 32), 'hex'), 'base64');
   erwartet constant text :=
        'A_sieht=1; A_token_klein=1; A_token=verweigert; A_schluessel=verweigert; A_direkt=verweigert; '
     || 'A_nachricht_direkt=verweigert; kurzer_schluessel=22023; falsches_token=22023; test1=wartet; test2=schon_unterwegs; '
@@ -42,7 +42,7 @@ begin
   -- A meldet sein iPhone an (Token in Großbuchstaben, gespeichert klein) und sieht es, ohne Token und Schlüssel.
   perform set_config('request.jwt.claims', ua, true);
   execute 'set local role authenticated';
-  perform public.office_push_geraet_anmelden('iphone-a-0001', upper(tok1), 'production', 'com.example.window', schluessel, '0.1.0 (30)');
+  perform public.office_push_geraet_anmelden('iphone-a-0001', upper(tok1), 'production', 'com.example.window', k32, '0.1.0 (30)');
   select count(*) into n from public.office_push_geraete; r := r || 'A_sieht=' || n || '; ';
   execute 'reset role';
   select count(*) into n from public.office_push_geraete where user_id = a and apns_token = tok1; r := r || 'A_token_klein=' || n || '; ';
@@ -54,7 +54,7 @@ begin
   exception when insufficient_privilege then r := r || 'A_schluessel=verweigert; '; end;
   begin
     insert into public.office_push_geraete(user_id,geraet_id,apns_token,umgebung,bundle_id,schluessel)
-    values (a,'iphone-a-0009',repeat('ee',32),'production','com.example.window',schluessel);
+    values (a,'iphone-a-0009',repeat('ee',32),'production','com.example.window',k32);
     r := r || 'A_direkt=erlaubt; ';
   exception when insufficient_privilege then r := r || 'A_direkt=verweigert; '; end;
   begin
@@ -67,7 +67,7 @@ begin
     r := r || 'kurzer_schluessel=angenommen; ';
   exception when sqlstate '22023' then r := r || 'kurzer_schluessel=22023; '; end;
   begin
-    perform public.office_push_geraet_anmelden('iphone-a-0001', 'zz', 'production', 'com.example.window', schluessel);
+    perform public.office_push_geraet_anmelden('iphone-a-0001', 'zz', 'production', 'com.example.window', k32);
     r := r || 'falsches_token=angenommen; ';
   exception when sqlstate '22023' then r := r || 'falsches_token=22023; '; end;
   -- Eine Testmitteilung, höchstens eine pro Minute.
@@ -77,7 +77,7 @@ begin
   begin perform public.office_push_holen(5); r := r || 'A_holen=erlaubt; ';
   exception when insufficient_privilege then r := r || 'A_holen=verweigert; '; end;
   -- Dasselbe iPhone mit einem neuen Token: das alte gilt nicht mehr.
-  perform public.office_push_geraet_anmelden('iphone-a-0001', tok2, 'production', 'com.example.window', schluessel);
+  perform public.office_push_geraet_anmelden('iphone-a-0001', tok2, 'production', 'com.example.window', k32);
   select count(*) into n from public.office_push_geraete where aktiv; r := r || 'A_aktiv=' || n || '; ';
   execute 'reset role';
 
@@ -87,14 +87,14 @@ begin
   select count(*) into n from public.office_push_geraete; r := r || 'B_sieht=' || n || '; ';
   select count(*) into n from public.office_push_nachrichten; r := r || 'B_nachrichten=' || n || '; ';
   r := r || 'B_test=' || public.office_push_test() || '; ';
-  perform public.office_push_geraet_anmelden('iphone-a-0001', tok2, 'production', 'com.example.window', schluessel);
+  perform public.office_push_geraet_anmelden('iphone-a-0001', tok2, 'production', 'com.example.window', k32);
   select count(*) into n from public.office_push_geraete where aktiv; r := r || 'B_aktiv=' || n || '; ';
   execute 'reset role';
   perform set_config('request.jwt.claims', ua, true);
   execute 'set local role authenticated';
   select count(*) into n from public.office_push_geraete where aktiv; r := r || 'A_nach_wechsel=' || n || '; ';
   -- A meldet sein eigenes iPhone wieder an (für den Auslöser unten).
-  perform public.office_push_geraet_anmelden('iphone-a-0002', tok1, 'production', 'com.example.window', schluessel);
+  perform public.office_push_geraet_anmelden('iphone-a-0002', tok1, 'production', 'com.example.window', k32);
   execute 'reset role';
   -- B meldet sich von Office ab: keine Mitteilungen mehr auf dieses iPhone.
   perform set_config('request.jwt.claims', ub, true);
@@ -107,14 +107,14 @@ begin
   perform set_config('request.jwt.claims', uc, true);
   execute 'set local role authenticated';
   begin
-    perform public.office_push_geraet_anmelden('iphone-c-0001', repeat('ef', 32), 'production', 'com.example.window', schluessel);
+    perform public.office_push_geraet_anmelden('iphone-c-0001', repeat('ef', 32), 'production', 'com.example.window', k32);
     r := r || 'C=angenommen; ';
   exception when sqlstate '42501' then r := r || 'C=42501; '; end;
   execute 'reset role';
   perform set_config('request.jwt.claims', '{"role":"anon"}', true);
   execute 'set local role anon';
   begin
-    perform public.office_push_geraet_anmelden('iphone-x-0001', repeat('ef', 32), 'production', 'com.example.window', schluessel);
+    perform public.office_push_geraet_anmelden('iphone-x-0001', repeat('ef', 32), 'production', 'com.example.window', k32);
     r := r || 'anon=angenommen; ';
   exception when insufficient_privilege then r := r || 'anon=verweigert; '; end;
   begin perform count(*) from public.office_push_geraete; r := r || 'anon_lesen=erlaubt; ';
