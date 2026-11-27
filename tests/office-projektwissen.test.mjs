@@ -310,7 +310,7 @@ test('Oberfläche: Reiter «Wissen» neben Panorama, geladen vor work.js, liest 
   assert.match(work,/:view==='knowledge'\?\(OFFICE\?renderWissen\(\):renderKnowledge\(\)\)/);
   assert.match(work,/isCurrent:\(\)=>current===workRenderVersion&&view==='knowledge'&&project\?\.id===id/);
   assert.ok(index.indexOf('<script src="./office-wissen.js?v=office5"></script>')>0);
-  assert.ok(index.indexOf('./office-wissen.js?v=office5')<index.indexOf('./work.js?v=office63'),'vor work.js');
+  assert.ok(index.indexOf('./office-wissen.js?v=office5')<index.indexOf('./work.js?v=office65'),'vor work.js');
   assert.match(index,/<link rel="stylesheet" href="\.\/office-wissen\.css\?v=office2">/);
   // Keine direkten Schreibzugriffe; nur die zwei Funktionen für das Team.
   assert.doesNotMatch(js,/\.(insert|update|upsert|delete)\(/);
@@ -344,7 +344,9 @@ test('Panorama: Karte «Neu im Projektwissen» nur fürs Team, kurz, liest nur; 
   // work.js: in derselben Spalte wie die Terminpläne; Klick merkt Ansicht oder Seite vor und öffnet den Reiter.
   const work=read('app/work.js');
   assert.match(work,/wissen\?\.panorama\?wissen\.panorama\(\{sb,project:\{id:projectId\}\}\):none/);
-  assert.match(work,/\(window\.TBA_OFFICE_WISSEN\?\.panoramaHtml\?\.\(m\.wissen\)\|\|''\)\+'<\/div>';/);
+  assert.match(work,/\(window\.TBA_OFFICE_WISSEN\?\.panoramaHtml\?\.\(m\.wissen\)\|\|''\)\+/);
+  // Darunter die Abläufe (27.11.2026): «Besprechung nachbereiten» öffnet den Projektstart mit dem Ablauf.
+  assert.match(work,/<h2 id="cockpitAblaeufe">Abläufe<\/h2>[\s\S]{0,260}new URLSearchParams\(\{projekt:project\.id,ablauf:'besprechung'\}\)/);
   assert.match(work,/window\.TBA_OFFICE_WISSEN\?\.vormerken\?\.\(projectId,\{ansicht:button\.dataset\.workWissen,seite:button\.dataset\.wissenTitel\}\);document\.querySelector\('\[data-work-view="knowledge"\]'\)\?\.click\(\)/);
 });
 

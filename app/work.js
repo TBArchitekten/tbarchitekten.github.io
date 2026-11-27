@@ -412,7 +412,11 @@ function officeTerminplaene(m){
   return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitPlans"><div class="cockpit-head"><h2 id="cockpitPlans">Terminpläne</h2><button type="button" class="cockpit-link" data-office-new-plan="'+esc(project.id)+'">+ Terminplan</button></div>'+
     (rows||'<p class="cockpit-empty">Noch kein Terminplan für dieses Projekt.</p>')+'</section>'+
     // «Neu im Projektwissen» (26.11.2026): nur für das Projektteam; ohne Team oder ohne Antwort keine Karte.
-    (window.TBA_OFFICE_WISSEN?.panoramaHtml?.(m.wissen)||'')+'</div>';
+    (window.TBA_OFFICE_WISSEN?.panoramaHtml?.(m.wissen)||'')+
+    // Abläufe (27.11.2026): wiederkehrende Arbeit Schritt für Schritt; der Ablauf läuft im Projektstart (eigener Tab).
+    '<section class="cockpit-panel" aria-labelledby="cockpitAblaeufe"><div class="cockpit-head"><h2 id="cockpitAblaeufe">Abläufe</h2></div>'+
+      '<a class="cockpit-file cockpit-ablauf" href="../projektdokumente.html?'+esc(new URLSearchParams({projekt:project.id,ablauf:'besprechung'}).toString())+'" target="_blank" rel="noopener">'+
+      '<span>Besprechung nachbereiten</span><small>Protokoll lesen, Aufgaben, Fristen, Projektwissen</small></a></section></div>';
 }
 function officeNextMilestone(state,today){
   const list=Array.isArray(state?.tasks)?state.tasks:[];

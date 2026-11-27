@@ -208,7 +208,7 @@
   const client={
     auth:{getSession:async()=>({data:{session},error:null}),getUser:async()=>({data:{user:session.user},error:null}),
       onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({error:null})},
-    from:t=>builder(t),rpc:async()=>({data:null,error:null}),functions:{invoke},storage:{from:speicher}
+    from:t=>builder(t),rpc:async(name,args)=>{(window.__fake.rpc=window.__fake.rpc||[]).push({name,args:kopie(args||{})});return {data:null,error:null}},functions:{invoke},storage:{from:speicher}
   };
   window.supabase={createClient:()=>client};
 })();

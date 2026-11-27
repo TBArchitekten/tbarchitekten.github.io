@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Abläufe: «Besprechung nachbereiten» · Claude
+- Qué cambió y por qué: Gari (27.11.2026) zu den «Abläufen»: so umsetzen, wie vorgeschlagen. Ein Ablauf führt durch wiederkehrende Arbeit des Büros und benutzt die vorhandenen Werkzeuge. Erster Ablauf im Projektstart (Abschnitt «Abläufe», im Panorama unter «Abläufe» verlinkt): Romy liest das Protokoll einer Besprechung einmal für die Klärungsliste und einmal für die Entscheidungsliste (`office-dokumente-ai`, Aktion `vorschlaege`, wie «Romy fragen»). Danach zeigt der Projektstart den Ablauf in vier Schritten: 1. Vorschläge prüfen (offene je Liste; nichts ohne «Übernehmen»), 2. Aufgaben im Planner für neue Klärungen mit Verantwortlichem und Frist, 3. Fristen gegen den Terminplan (Romy, `fristen_terminplan`, nur die Klärungen dieser Besprechung, auch die, deren Frist sie geändert hat), 4. Ins Projektwissen (eine Notiz mit Romys Zusammenfassung und den übernommenen Zeilen über `office_wissen_beitrag_teilen`; die KI arbeitet sie in die Seiten ein). Was zur Besprechung gehört, merkt sich der Ablauf beim «Übernehmen» (auch wenn die Zeile danach von Hand weiter bearbeitet wird). Der Stand bleibt in diesem Fenster, je Projekt; «Ablauf beenden» schließt ihn. `?ablauf=besprechung` öffnet den Dialog einmal (wartet, bis Romy bereit ist).
+- Archivos: `projektdokumente.js` (`?v=office13`), `projektdokumente.css` (`?v=office14`), `projektdokumente.html`, `app/work.js` (`?v=office65`, Panorama «Abläufe»), `app/office.css` (`?v=office47`), `app/index.html`, Versionsangaben in zehn Tests, `tests/office-projektwissen.test.mjs`, `tests/browser/office-projektdokumente.chromium.mjs` (neu: der ganze Ablauf), `tests/browser/fixtures/fake-supabase-dokumente.js` (merkt sich Aufrufe von Funktionen der Datenbank).
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün; Browserprüfungen Projektstart (9), Wissen (10), Seitenleiste (6), Mustermappe (9) lokal mit Chrome grün; Bildschirmfotos von Karte, Dialog und Ablauf.
+- Quedó pendiente o sin probar: der zweite Ablauf «Phasenwechsel» (Schritte an Gari vorgeschlagen, wartet auf sein OK); mit einem echten Protokoll in Produktion noch nicht gelaufen.
+- Riesgos o decisiones que necesitan a Gari: die Schritte des Phasenwechsels.
+- PR: #201
+
+---
+
 ### 2026-11-27 · Work B2, Schritt 5: Panorama mit «Für dich», Themen, Entscheidungen und «Neu im Desktop» · Claude
 - Qué cambió y por qué: Das Panorama im Office zeigte nur Kopf, die nächsten 14 Tage, Terminpläne und «Neu im Projektwissen». Jetzt, wie in Window, aber mit den Daten des Office und in «Sie»: «Für dich» (der Projektleitung die Entscheidungen des Wissens zur Bestätigung, mit «Warum», «Bestätigen» und «Verwerfen» über die Funktion des Wissens `office_wissen_entscheidung_pruefen`; dazu die überfälligen Aufgaben des Projekts mit «Aufgabe öffnen» und «Erledigt»), «Themen» (die Threads des Projekts mit Themenblatt, «In Claude fortsetzen»), «Entscheidungen» (die beschlossenen, mit Datum und Herkunft; «Alle im Wissen») und «Neu im Desktop» (die letzten fünf Dokumente des Projekts). Ein Teammitglied ohne Projektleitung sieht keine Knöpfe zum Bestätigen. `TBA_OFFICE_WISSEN.panorama` meldet dafür, ob die Person bestätigen darf; die Datenbank prüft es noch einmal.
 - Archivos: `app/work.js` (`?v=office63`), `app/office-wissen.js` (`?v=office5`, `entscheiden`), `app/index.html`, Versionsangaben in neun Tests, `tests/browser/office-wissen.chromium.mjs` (neu: Panorama «Für dich», mit und ohne Projektleitung).

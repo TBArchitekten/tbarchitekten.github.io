@@ -87,8 +87,8 @@ test('Ablauf: nach der Mitgliedsprüfung, einmal je Stand, Bestätigung nur mit 
 test('Desktop: Link «Was darf ins TBA Office?», nur wenn freigeschaltet; Versionen',()=>{
   assert.match(work,/window\.TBA_OFFICE_LEITFADEN\?\.verfuegbar\?\.\(\)\?'<p class="work-desktop-leitfaden"><button type="button" data-work-leitfaden>Was darf ins TBA Office\?<\/button><\/p>':''/);
   assert.match(work,/\$\('\[data-work-leitfaden\]'\)\?\.addEventListener\('click',\(\)=>window\.TBA_OFFICE_LEITFADEN\?\.oeffnen\(\)\);/);
-  assert.match(appIndex,/work\.js\?v=office63/);
-  assert.match(appIndex,/office\.css\?v=office46/);
+  assert.match(appIndex,/work\.js\?v=office65/);
+  assert.match(appIndex,/office\.css\?v=office47/);
 });
 
 test('Gestaltung: nur Tokens, Grün, Gelb und Rot mit Wort, am Telefon über die ganze Fläche',()=>{

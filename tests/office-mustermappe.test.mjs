@@ -174,7 +174,7 @@ test('Werkzeug Mustermappe: Mappen je Projekt, nicht mehr im Projektstart; die M
   assert.match(js,/if\(neu\)history\.replaceState\(null,'',url\(\{werkzeug:ui\.werkzeug,projekt:pid\}\)\);/);
   assert.match(js,/if\(neu&&IM_REITER\)zeichne\('<div class="pd-wrap"><p class="meta">Neue Mustermappe …<\/p><\/div>',null\);else render\(\);/);
   const html=readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8');
-  assert.match(html,/projektdokumente\.css\?v=office13/);assert.match(html,/projektdokumente\.js\?v=office12/);
+  assert.match(html,/projektdokumente\.css\?v=office14/);assert.match(html,/projektdokumente\.js\?v=office13/);
 });
 
 // Gari, 26.11.2026: Layouts nach dem Erzeugen bearbeiten. Texte aus der Bibliothek nur für diese Mappe ändern (markiert,

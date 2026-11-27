@@ -419,6 +419,61 @@ test('Romy: Vorschläge mit Fundstelle, nichts ändert sich ohne «Übernehmen»
   await ctx.close();
 });
 
+// Abläufe (Gari, 27.11.2026): «Besprechung nachbereiten» liest das Protokoll einmal je Liste und führt durch Prüfen,
+// Aufgaben im Planner, Fristen gegen den Terminplan und das Projektwissen.
+test('Ablauf «Besprechung nachbereiten»: beide Listen, Aufgaben, Fristen, Projektwissen',async()=>{
+  const {page,fehler}=await oeffne();
+  const PID='22222222-2222-4222-8222-222222222222',Q='Protokoll Jour fixe 05';
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&ablauf=besprechung'));
+  await page.locator('dialog[open] h2',{hasText:'Besprechung nachbereiten'}).waitFor();
+  assert.doesNotMatch(page.url(),/ablauf=/,'der Dialog öffnet sich einmal');
+  await page.locator('dialog input[name="quelle"]').fill(Q);
+  await page.locator('dialog textarea[name="text"]').fill('TOP 4: Aussparung Steigschacht … TOP 7: Wärmepumpe … Fenster: Holz oder Holz-Aluminium?');
+  await page.locator('dialog button[type="submit"]').click();
+  const panel=page.locator('.pd-ablauf');
+  await panel.waitFor();
+  assert.match(await panel.innerText(),/Protokoll Jour fixe 05[\s\S]*Romy: Im Protokoll stehen zwei neue Klärungen[\s\S]*Eine Frage an den Auftraggeber/);
+  const gelesen=(await page.evaluate(()=>window.__fake.anfragen)).filter(a=>a.body.action==='vorschlaege'&&a.body.quelle===Q);
+  assert.equal(gelesen.length,2,'einmal je Liste');
+  const schritte=panel.locator('.pd-ablauf-schritt');
+  assert.match(await schritte.nth(0).innerText(),/Offen: 3 in der Klärungsliste, 1 in der Entscheidungsliste/);
+  // Prüfen: alle Vorschläge dieser Besprechung übernehmen (Klärungen, dann die Frage an den Auftraggeber).
+  for(const art of ['klaerungsliste','entscheidungsliste']){
+    await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste='+art));
+    const zeile=()=>page.locator('tr.pd-vorschlag',{hasText:Q});
+    await zeile().first().waitFor();
+    while(await zeile().count()){const n=await zeile().count();await zeile().first().locator('[data-act="vs-ja"]').click();await page.waitForFunction(([q,n])=>
+      [...document.querySelectorAll('tr.pd-vorschlag')].filter(t=>t.textContent.includes(q)).length<n,[Q,n])}
+    await gespeichert(page);
+  }
+  await page.goto(adresse('projektdokumente.html?projekt='+PID));
+  await panel.waitFor();
+  assert.match(await schritte.nth(0).innerText(),/übernommen oder verworfen: 2 Klärungen und 1 Entscheidung aus dieser Besprechung/);
+  assert.equal(await schritte.nth(0).getAttribute('class'),'pd-ablauf-schritt fertig');
+  // Aufgaben: die zwei neuen Klärungen haben Verantwortliche und Frist.
+  await schritte.nth(1).locator('[data-act="ablauf-aufgaben"]',{hasText:'Aufgaben anlegen (2)'}).click();
+  await page.locator('.pd-meldung',{hasText:'2 Aufgaben im Planner angelegt.'}).waitFor();
+  assert.equal((await db(page,'isabella_tasks')).filter(t=>/Aussparung für den Steigschacht|Außengerät der Wärmepumpe/.test(t.title)).length,2);
+  // Fristen gegen den Terminplan: Romy prüft die Klärungen dieser Besprechung.
+  await schritte.nth(2).locator('[data-act="ablauf-fristen"]').click();
+  await page.waitForFunction(()=>/Geprüft/.test(document.querySelectorAll('.pd-ablauf-schritt')[2]?.textContent||''));
+  const fristen=(await page.evaluate(()=>window.__fake.anfragen)).filter(a=>a.body.aufgabe==='fristen_terminplan').at(-1);
+  // Die zwei neuen Klärungen dieser Besprechung und die, deren Frist sie geändert hat (Nr 1), sonst keine.
+  const kl=await zeilenVon(page,'klaerungsliste'),neueZwei=kl.slice(-2).map(z=>z.id),eins=kl.find(z=>z.nr===1);
+  assert.deepEqual([...fristen.body.zeilen_ids].sort(),[...neueZwei,...(eins&&!['gelöst','entfällt'].includes(eins.daten.status)?[eins.id]:[])].sort());
+  // Ins Projektwissen: als Notiz über die Funktion des Wissens.
+  await schritte.nth(3).locator('[data-act="ablauf-teilen"]').click();
+  await page.locator('.pd-meldung',{hasText:'Im Projektwissen geteilt'}).waitFor();
+  const rpc=(await page.evaluate(()=>window.__fake.rpc||[])).find(r=>r.name==='office_wissen_beitrag_teilen');
+  assert.equal(rpc.args.p_titel,'Besprechung: Protokoll Jour fixe 05');assert.equal(rpc.args.p_art,'notiz');assert.equal(rpc.args.p_project,PID);
+  assert.match(rpc.args.p_inhalt,/^Besprechung: Protokoll Jour fixe 05 \(nachbereitet am [\s\S]*Klärungen:\n- [\s\S]*Aussparung für den Steigschacht fehlt im Positionsplan · TWP · bis [\s\S]*Entscheidungen \(offen, bis der Bauherr entscheidet\):\n- [\s\S]*Fenster, Material/);
+  assert.equal(await panel.locator('.pd-ablauf-schritt.fertig').count(),4);
+  await page.locator('[data-act="ablauf-ende"]').click();
+  assert.equal(await panel.count(),0);
+  assert.equal(await page.locator('[data-act="ablauf-besprechung"]').count(),1,'wieder die Karte «Besprechung nachbereiten»');
+  assert.deepEqual(fehler,[]);
+});
+
 test('iPhone: Übersicht, Liste und Vorlage ohne Querscrollen der Seite',async()=>{
   const {ctx,page,fehler}=await oeffne();
   await page.setViewportSize({width:390,height:844});
