@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: die neuen Abfragen der Office-Prüfung von Hand gelaufen (KI-Verbrauch je Funktion mit Median, Fehler aus dem Browser: noch leer).
 - Quedó pendiente o sin probar: der erste Lauf (Codeprüfung und Radar am 30.11.); die KI-Funktionen des Office (Kosten, Produkte, Terminplan, Dokumente, Assistent) schreiben noch nicht in `minds_ai_usage`, die Prüfung sieht nur Romys Motor.
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (dieser)
+- PR: #192
 
 ---
 
