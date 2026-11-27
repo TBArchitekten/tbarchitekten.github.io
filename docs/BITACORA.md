@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; Browserprüfungen Mustermappe (9) lokal mit Chrome grün; Bildschirmfotos im Reiter bei 1180 und 1376 px.
 - Quedó pendiente o sin probar: «Rahmen vergrößern» und «Mit Romy kürzen» beim Übersatz; die Wahl der Mappe in der Zeile, wenn die Leiste von Work eingeklappt ist (heute eine eigene Zeile darüber).
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (pendiente)
+- PR: #198
 
 ---
 
