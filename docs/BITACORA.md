@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün (558); Browserprüfungen Mustermappe lokal mit Chrome grün; Übersatz-Hinweis und Dialog als Bildschirmfoto angesehen.
 - Quedó pendiente o sin probar: mit dem echten Modell erst nach dem Deploy.
 - Riesgos o decisiones que necesitan a Gari: die neuen Texte (siehe oben).
-- PR: (wird ergänzt)
+- PR: #203
 
 ---
 
