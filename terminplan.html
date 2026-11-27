@@ -396,6 +396,20 @@
 body.read-only .editor-only{display:none!important}
 @media print{.office-plan-head{display:none!important}}
 html.im-reiter #officeBack{display:none}
+/* Eine Werkzeugzeile im Reiter von Work (B2, 27.11.2026): keine Kopfzeile, Stand und Speichern am Ende der Leiste,
+   seltene Befehle unter «•••», die Statuszeile als knappe Info in derselben Zeile (shared/werkzeugleiste.js). */
+html.im-reiter .office-plan-head{display:none}
+html.im-reiter .app{height:100%}
+html.wz-eine-zeile .app>.toolbar{min-height:0;padding:8px 16px;gap:8px}
+html.wz-eine-zeile .app>.toolbar .sep{display:none}
+html.wz-eine-zeile .app>.toolbar .statusbar{padding:0 4px;border:0;gap:12px;flex-wrap:nowrap;background:transparent}
+html.wz-eine-zeile .app>.toolbar .search{width:180px}
+/* In der knappen Info zuerst Zeitraum, Vorgänge und die Netzprüfung; der volle Text steht im Tooltip. */
+html.wz-eine-zeile .app>.toolbar .statusbar>span:nth-child(2){order:1}
+html.wz-eine-zeile .app>.toolbar .statusbar>span:nth-child(3){order:2}
+html.wz-eine-zeile .app>.toolbar .statusbar>#tpInsights{order:3}
+html.wz-eine-zeile .app>.toolbar .statusbar>.status-stand,html.wz-eine-zeile .app>.toolbar .statusbar>span:nth-child(4),
+html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
 
   /* Office Assistant: rule-backed conversational surface, no provider/model connection. */
   .assistant-body{max-height: min(720px,76vh)}
@@ -480,6 +494,7 @@ html.im-reiter #officeBack{display:none}
 <link rel="stylesheet" href="./assistant-surface.css?v=office39">
 <link rel="stylesheet" href="./window-editor.css?v=2">
 <link rel="stylesheet" href="./terminplan-planning.css?v=office1">
+<link rel="stylesheet" href="./shared/werkzeugleiste.css?v=2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="./office-config.js?v=1"></script>
 <!-- In the Window app (account Office) this client borrows the app's session; in the browser it is the usual office client. -->
@@ -2885,6 +2900,17 @@ html.im-reiter #officeBack{display:none}
 
   loadRemoteData().catch(error=>{console.error(error);document.body.innerHTML='<div class="empty">Terminplan konnte nicht geladen werden.</div>'});
 })();
+</script>
+<script src="./shared/werkzeugleiste.js?v=2"></script>
+<script>
+// Eine Werkzeugzeile im Reiter von Work (B2, 27.11.2026): seltene Befehle unter «•••», die Statuszeile als knappe Info,
+// die Anleitung als «?» am Ende.
+window.TBA_WERKZEUGLEISTE?.einreihen({
+  leiste:document.querySelector('.app>.toolbar'),
+  selten:['#addGroupBtn','label:has(>#weekendToggle)','label.connection-mode:has(#linkMode)','.tp-feature-actions','#exportCsvBtn',
+    '#exportJsonBtn','#importJsonBtn','#printBtn','label.connection-mode:has(#printConnectionMode)','#saveNowBtn','.app>.toolbar .legend'],
+  info:'.app>.statusbar',status:['#officeMode','#saveState'],hilfe:'#tpHelp'
+});
 </script>
 </body>
 </html>

@@ -1,0 +1,34 @@
+/* TBA Office · Eine Werkzeugzeile je Reiter (B2, 27.11.2026). Nur im Reiter von Work (html.im-reiter), nur Tokens. */
+html.wz-eine-zeile .wz-info{
+  flex:1 1 120px;min-width:0;display:flex;align-items:center;gap:12px;margin:0;padding:0 4px;border:0;background:transparent;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px;color:var(--m-ink-soft)}
+html.wz-eine-zeile .wz-info>*{flex:none}
+html.wz-eine-zeile .wz-status{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:12px;color:var(--m-ink-soft);white-space:nowrap}
+html.wz-eine-zeile .wz-mehr{
+  flex:none;min-width:36px;height:34px;padding:0 9px;border:1px solid var(--m-border);border-radius:var(--m-radius-control);
+  background:var(--m-surface);color:var(--m-ink);font:inherit;font-size:13px;letter-spacing:.08em;cursor:pointer}
+html.wz-eine-zeile .wz-mehr:hover{background:var(--m-fill)}
+html.wz-eine-zeile .wz-hilfe{
+  flex:none;display:grid;place-items:center;width:30px;height:30px;min-height:0;margin:0;padding:0;border:1px solid var(--m-border);
+  border-radius:50%;background:transparent;color:var(--m-ink-soft);font-size:13px;font-weight:650;text-decoration:none}
+html.wz-eine-zeile .wz-hilfe:hover{color:var(--m-link);border-color:var(--m-link);text-decoration:none}
+html.wz-eine-zeile .wz-mehr[aria-expanded="true"]{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue)}
+.wz-menue{
+  position:fixed;z-index:1000;display:flex;flex-direction:column;gap:2px;width:max-content;min-width:230px;max-width:340px;
+  max-height:72vh;overflow:auto;padding:6px;border:1px solid var(--m-border);border-radius:var(--m-radius-card);
+  background:var(--m-surface-raised);color:var(--m-ink);font-size:13px}
+.wz-menue[hidden]{display:none}
+.wz-menue>span,.wz-menue>div{display:flex;flex-direction:column;gap:2px}
+.wz-menue button,.wz-menue a{
+  display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%;min-height:32px;margin:0;padding:6px 10px;
+  border:0;border-radius:8px;background:transparent;box-shadow:none;color:var(--m-ink);font:inherit;font-size:13px;
+  text-align:left;text-decoration:none;white-space:normal;cursor:pointer}
+.wz-menue button:hover,.wz-menue a:hover{background:var(--m-fill)}
+.wz-menue label:not(.swatch-label){display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px;
+  padding:4px 10px;font-size:13px;color:var(--m-ink)}
+.wz-menue label:not(.swatch-label):has(input[type="checkbox"]){justify-content:flex-start;gap:9px}
+.wz-menue select{max-width:170px}
+.wz-menue .legend{flex-direction:row;flex-wrap:wrap;gap:8px 12px;padding:8px 10px;border-top:1px solid var(--m-hairline);
+  font-size:12px;color:var(--m-ink-soft)}
+.wz-menue .legend span{display:inline-flex;align-items:center;gap:5px}
+@media print{.wz-mehr,.wz-menue,.wz-hilfe{display:none!important}}

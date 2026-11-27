@@ -301,3 +301,7 @@
 
 /* Als Reiter «Controlling» eines Projekts in Work: Work nennt das Projekt schon; kein Weg zur Übersicht aller Projekte. */
 .im-reiter .ct-zur-uebersicht{display:none}
+.ct-zeile{display:flex;align-items:center;gap:12px;min-height:40px;margin:0 0 14px}
+.ct-zeile .pb-pills{flex:1 1 auto;min-width:0}
+.ct-zeile-rest{display:flex;align-items:center;gap:10px;margin-left:auto}
+.ct-zeile .btn{min-height:34px;padding:6px 12px}

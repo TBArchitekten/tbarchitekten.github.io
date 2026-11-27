@@ -208,12 +208,19 @@ test('Als Reiter in Work: Sitzung über die App, kein Rücksprung, Abbrechen gem
     // Anlegen: die Seite öffnet die neue Kostenberechnung im Rahmen, ohne «‹ Kostenberechnungen».
     await rahmen().evaluate(()=>location.assign('/kostenberechnung.html?neu=22222222-2222-4222-8222-222222222222'));
     await f.locator('#kbNeu button[type="submit"]').click();
-    await f.locator('h1',{hasText:'Testhaus'}).waitFor({state:'attached'});
+    // Im Reiter gibt es keine Überschrift mehr (B2): die Werkzeugzeile zeigt, dass die Kostenberechnung offen ist.
+    await f.locator('.kb-zeile').waitFor();
     assert.match(rahmen().url(),/kostenberechnung\.html\?id=/);
-    assert.equal(await f.locator('.kb-back').evaluate(a=>getComputedStyle(a).display),'none');
-    // Im Reiter steht das Projekt schon in Work: keine zweite Überschrift, kein «Office · Kostenberechnung» (Gari, 24.11.2026).
-    assert.deepEqual(await f.locator('.kb-head').evaluate(h=>[getComputedStyle(h.querySelector('h1')).display,getComputedStyle(h.querySelector('.kicker')).display]),['none','none']);
-    assert.match(await f.locator('.kb-intro').textContent(),/T-01 · LPH 3 · DIN 276/);
+    assert.equal(await f.locator('.kb-back').count(),0,'kein Rücksprung-Link im Reiter');
+    // Im Reiter steht das Projekt schon in Work (Gari, 24.11.2026), und seit B2 (27.11.2026) gibt es nur eine Werkzeugzeile:
+    // Ansichten, knappe Angaben (voll im Tooltip), Speicherstand, «Mengen aus Archicad» und «?» für die Anleitung.
+    assert.equal(await f.locator('.kb-head').count(),0,'keine Kopfzeile');
+    await f.locator('.kb-zeile .tabs').waitFor();
+    assert.match(await f.locator('.kb-zeile-info').textContent(),/LPH 3 · DIN 276/);
+    assert.match(await f.locator('.kb-zeile-info').getAttribute('title'),/T-01 · LPH 3 · DIN 276/);
+    const zeile=await f.locator('.kb-zeile').evaluate(z=>[...z.children].filter(e=>e.offsetWidth).map(e=>Math.round(e.getBoundingClientRect().top+e.getBoundingClientRect().height/2)));
+    assert.ok(Math.max(...zeile)-Math.min(...zeile)<=8,'eine Zeile: '+zeile.join(', '));
+    assert.equal(await f.locator('.kb-zeile .kb-hilfe').getAttribute('href'),'./kostenberechnung-hilfe.html');
     assert.deepEqual(await page.evaluate(()=>window.__nachrichten),[{tbaOfficeTool:'abgebrochen'}],'Anlegen ist kein Abbruch');
     assert.deepEqual(await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending()]),[1,false]);
     // Eine Änderung steht aus; Work ruft flush, bevor es den Rahmen schließt: gespeichert, nichts mehr offen.

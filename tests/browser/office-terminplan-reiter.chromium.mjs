@@ -67,9 +67,11 @@ test('Terminplan im Rahmen: Sitzung über die App, kein Rücksprung-Link, Revisi
   const {ctx,page,fehler,rahmen}=await oeffne('/terminplan.html?id=tp-1');
   try{
     const f=page.frameLocator('#f');
-    // Im Reiter steht das Projekt schon in Work: die Kopfzeile nennt nur die Phase.
-    await f.locator('#officePlanLabel',{hasText:'LPH3'}).waitFor();
+    // Im Reiter steht das Projekt schon in Work: die Kopfzeile nennt nur die Phase, und seit B2 (27.11.2026) ist sie
+    // ausgeblendet; Stand und Speichern stehen am Ende der einen Werkzeugzeile.
+    await f.locator('#officePlanLabel',{hasText:'LPH3'}).waitFor({state:'attached'});
     assert.equal(await f.locator('#officePlanLabel').textContent(),'LPH3');
+    assert.equal(await f.locator('.office-plan-head').evaluate(h=>getComputedStyle(h).display),'none');
     await page.waitForFunction(()=>window.__bruecke.includes('session.get'));
     assert.deepEqual(await rahmen().evaluate(()=>[document.documentElement.classList.contains('im-reiter'),!!window.WINDOW_NATIVE?.available]),[true,true]);
     assert.equal(await f.locator('#officeBack').evaluate(a=>getComputedStyle(a).display),'none');
@@ -85,6 +87,39 @@ test('Terminplan im Rahmen ohne gewählten Plan: eine Meldung, nicht die App im 
   try{
     await page.frameLocator('#f').locator('.empty',{hasText:'Kein Terminplan gewählt.'}).waitFor();
     assert.match(rahmen().url(),/\/terminplan\.html$/,'der Rahmen bleibt auf der Seite');
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});
+
+test('Terminplan im Reiter: eine Werkzeugzeile, seltene Befehle unter «•••» (B2, 27.11.2026)',async()=>{
+  const {ctx,page,fehler,rahmen}=await oeffne('/terminplan.html?id=tp-1');
+  try{
+    const f=page.frameLocator('#f');
+    await f.locator('.app>.toolbar>.wz-mehr').waitFor();
+    // Alles Sichtbare der Leiste steht in einer Zeile.
+    const zeilen=await rahmen().evaluate(()=>[...document.querySelector('.app>.toolbar').children]
+      .filter(e=>e.offsetWidth&&e.offsetHeight).map(e=>Math.round(e.getBoundingClientRect().top+e.getBoundingClientRect().height/2)));
+    assert.ok(Math.max(...zeilen)-Math.min(...zeilen)<=6,'eine Zeile: '+zeilen.join(', '));
+    // Seltene Befehle im Menü, die Info und der Speicherstand in der Leiste.
+    for(const id of ['exportCsvBtn','exportJsonBtn','importJsonBtn','printBtn','addGroupBtn'])
+      assert.equal(await rahmen().evaluate(id=>!!document.querySelector('.wz-menue #'+id),id),true,id+' im Menü');
+    assert.equal(await rahmen().evaluate(()=>!!document.querySelector('.app>.toolbar .wz-status #saveState')),true);
+    assert.equal(await rahmen().evaluate(()=>!!document.querySelector('.app>.toolbar>.statusbar.wz-info #taskCount')),true);
+    // «•••» öffnet das Menü; ein Schalter darin wirkt und lässt es offen; Escape schließt.
+    await f.locator('.wz-mehr').click();
+    assert.equal(await f.locator('.wz-menue').isVisible(),true);
+    const vorher=await f.locator('#weekendToggle').isChecked();
+    await f.locator('#weekendToggle').click();
+    assert.equal(await f.locator('#weekendToggle').isChecked(),!vorher);
+    assert.equal(await f.locator('.wz-menue').isVisible(),true,'Schalter lässt das Menü offen');
+    await f.locator('.wz-mehr').press('Escape');
+    assert.equal(await f.locator('.wz-menue').isVisible(),false);
+    // Die Auswertung, die die Seite später einfügt, landet ebenfalls im Menü; die Anleitung steht als «?» vor «•••».
+    await rahmen().waitForFunction(()=>!document.querySelector('.app>.toolbar .tp-feature-actions'));
+    await rahmen().waitForFunction(()=>document.querySelector('#tpHelp')?.nextElementSibling?.classList.contains('wz-mehr'));
+    assert.deepEqual(await rahmen().evaluate(()=>{const h=document.querySelector('#tpHelp');
+      return [h.parentElement.matches('.app>.toolbar'),h.textContent,h.getAttribute('aria-label'),h.getAttribute('href'),!!document.querySelector('.wz-menue #tpOpenAnalysis')]}),
+      [true,'?','Anleitung','./terminplan-hilfe.html',true]);
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });

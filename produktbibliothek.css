@@ -175,4 +175,29 @@ label.btn:focus-within{outline:2px solid var(--pb-link);outline-offset:2px}
 /* Als Reiter «Produkte» oder «Hersteller» eines Projekts in Work (25.11.2026): Work nennt Projekt und Werkzeug schon;
    kein Rücksprung in die App (das hieße die App im Rahmen). */
 .im-reiter .pb{padding-top:14px}
+/* Eine Werkzeugzeile im Reiter (B2, 27.11.2026; gilt auch für den Herstellerkatalog): Suche, Filter, Kategorien, Zahl,
+   «… öffnen» und «?» in einer Zeile; Einleitung und Hinweis stehen hinter «?». */
+.im-reiter .pb-auswahl{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;column-gap:12px}
+.im-reiter .pb-auswahl>.pb-head{display:contents}
+.im-reiter .pb-auswahl>.pb-head .pb-head-text{display:none}
+.im-reiter .pb-auswahl>.pb-head .pb-actions{grid-column:3;grid-row:1;margin:0}
+.im-reiter .pb-auswahl>.pb-filter{grid-column:1;grid-row:1;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 10px;
+  margin:0;padding:0;border:0;background:transparent;box-shadow:none}
+.im-reiter .pb-auswahl .pb-filter-zeile{display:contents}
+.im-reiter .pb-auswahl .pb-gruppe>label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.im-reiter .pb-auswahl .pb-gruppe-suche{flex:1 1 160px}
+.im-reiter .pb-auswahl .pb-filter select.pb-input{max-width:168px}
+.im-reiter .pb-auswahl>.pb-head .pb-actions .btn{min-height:34px;padding:6px 12px}
+.im-reiter .pb-auswahl .pb-pills{flex-wrap:nowrap;gap:6px}
+.im-reiter .pb-auswahl>.pb-zahl{grid-column:2;grid-row:1;white-space:nowrap}
+.im-reiter .pb-auswahl>.pb-hilfe{grid-column:4;grid-row:1}
+.im-reiter .pb-auswahl>[data-meldung],.im-reiter .pb-auswahl>[data-ergebnis]{grid-column:1/-1;margin-top:14px}
+.pb-hilfe{position:relative}
+.pb-hilfe>summary{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--m-border);border-radius:50%;
+  list-style:none;cursor:pointer;color:var(--m-ink-soft);font-size:13px;font-weight:650}
+.pb-hilfe>summary::-webkit-details-marker{display:none}
+.pb-hilfe[open]>summary{color:var(--m-blue);border-color:var(--m-blue)}
+.pb-hilfe-text{position:absolute;right:0;top:38px;z-index:20;width:min(360px,80vw);padding:12px 14px;border:1px solid var(--m-border);
+  border-radius:var(--m-radius-card);background:var(--m-surface-raised);font-size:13px;color:var(--m-ink-soft);line-height:1.5}
+.pb-hilfe-text p{margin:0 0 8px}.pb-hilfe-text p:last-child{margin:0}
 .im-reiter .pb-back[href^="./app/"]{display:none}

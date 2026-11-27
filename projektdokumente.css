@@ -312,9 +312,12 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-uebersatz-liste{border-color:var(--m-error);color:var(--m-error)}
 .mm-neu{background:var(--m-attention-soft);color:var(--m-attention);border-radius:var(--m-radius-card);padding:10px 12px;display:grid;gap:8px;font-size:14px}
 .mm-rechts{display:grid;gap:14px;min-width:0;align-content:start}
+.mm-rechts>div:empty{display:none}
 .mm-rechts .card{padding:16px}
 .mm-rechts h2{font-size:17px}
-@media (min-width:1181px){
+/* Ab 1000 px stehen Seiten, Bühne und Eigenschaften nebeneinander (B2, 27.11.2026: auch im Reiter von Work, der oft
+   schmaler als 1180 px ist); bis 1180 px mit schmaleren Spalten. */
+@media (min-width:1000px){
   .mm{height:calc(100vh - var(--mm-oben,200px) - 16px);min-height:480px;align-items:stretch}
   .mm>.mm-nav,.mm>.mm-rechts{overflow:auto;min-height:0}
   .mm-mitte{min-height:0}
@@ -469,7 +472,7 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
   background:var(--m-paper);color:var(--m-ink);box-shadow:0 8px 28px var(--m-hairline);font-size:14px}
 .mm-zs-leiste label{display:inline-flex;gap:8px;align-items:center}
 .mm-zs-leiste input[type="range"]{width:140px}
-@media (max-width:1180px){.mm-zs-ort{position:fixed}}
+@media (max-width:999px){.mm-zs-ort{position:fixed}}
 /* Fotos auf die Seite ziehen: die Ziele blau umrandet, der freie Platz für Bild 2 und 3 nur beim Ziehen. */
 .mm-r-ablage{display:none}
 .mm-r-ablage.sichtbar{display:block;z-index:3}
@@ -490,7 +493,12 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 /* Nur zum Messen: eine Seite unsichtbar wie im Druck gesetzt (Seitenverhältnis der Fotos im PDF). */
 .mm-messen{position:fixed;left:-40000px;top:0;width:1587px;visibility:hidden;pointer-events:none}
 @media (max-width:760px){.mm-bild-raster{grid-template-columns:minmax(0,1fr)}}
-@media (max-width:1180px){
+@media (min-width:1000px) and (max-width:1180px){
+  .mm{grid-template-columns:180px minmax(0,1fr) 290px}
+  .mm.ohne-seiten{grid-template-columns:minmax(0,1fr) 290px}
+  .mm.ohne-rechts{grid-template-columns:180px minmax(0,1fr)}
+}
+@media (max-width:999px){
   .mm,.mm.ohne-seiten,.mm.ohne-rechts{grid-template-columns:200px minmax(0,1fr)}
   .mm.ohne-seiten.ohne-rechts{grid-template-columns:minmax(0,1fr)}
   .mm-rechts{grid-column:1/-1;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));align-items:start}
@@ -548,3 +556,31 @@ html.mm-praes-offen{overflow:hidden}
 .im-reiter .pd{padding-top:14px}
 .im-reiter .pd-back[href^="./app/"],.im-reiter .pd-mappe-wrap>.pd-back,.im-reiter .pd-mappe-wrap .pd-head .kicker{display:none}
 .im-reiter .pd-mappe-wrap .pd-head h1{margin-top:0}
+/* Eine Werkzeugzeile je Reiter (B2, 27.11.2026): eine Zeile über der ganzen Mappe statt Überschrift, Unterzeile und
+   zweiter Leiste; der Stand steht vor «Präsentieren», «PDF» und «Vorlegen», das Raster unter «•••». */
+.pd-mappe-wrap>.mm-zeile{margin:0 0 12px}
+/* Ab 1000 px bricht die Zeile nie um (sonst springt die Seite, sobald etwa der Übersatz-Hinweis erscheint): nur die Info
+   wird schmaler, ihr ganzer Text steht im Tooltip. */
+@media (min-width:1000px){.mm-zeile{flex-wrap:nowrap}.mm-zeile>*{flex-shrink:0}}
+.mm-zeile .mm-seiteninfo{flex:1 1 0;min-width:0;display:block;-webkit-line-clamp:none;white-space:nowrap;text-overflow:ellipsis}
+.mm-zeile-stand{white-space:nowrap;font-size:12px}
+.mm-aktionen{display:inline-flex;gap:8px;align-items:center}
+.mm-zeile .btn-primary{min-height:40px;padding:9px 14px;font-size:13px}
+/* Schmaler Reiter (unter 1100 px): Zoom über die Auswahl, ohne «−» und «+»; die Zeile bleibt eine Zeile. */
+@media (max-width:1099px){.mm-zeile .mm-zoom .btn{display:none}}
+.mm-mehr{position:relative;display:inline-flex}
+.mm-mehr-knopf{min-width:40px;min-height:40px;padding:0 10px;border:1px solid var(--m-field);border-radius:9px;background:var(--m-surface);
+  color:var(--m-ink);font:inherit;font-size:13px;letter-spacing:.08em;cursor:pointer}
+.mm-mehr-knopf:hover{background:var(--m-fill)}
+.mm-mehr-knopf[aria-expanded="true"]{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue-press)}
+.mm-mehr-menue{position:absolute;right:0;top:calc(100% + 6px);z-index:30;display:flex;flex-direction:column;gap:2px;min-width:220px;padding:6px;
+  border:1px solid var(--m-border);border-radius:var(--m-radius-card);background:var(--m-surface-raised)}
+.mm-mehr-menue[hidden]{display:none}
+.mm-mehr-menue .btn{justify-content:flex-start;width:100%;min-height:34px;border-color:transparent;background:transparent}
+.mm-mehr-menue .btn:hover{background:var(--m-fill)}
+.mm-mehr-menue .mm-schalter[aria-pressed="true"]{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue-press)}
+/* Übersatz als Hinweis in der Leiste (auch außerhalb von Work): nur da, wenn ein Rahmen nicht passt. */
+.mm-pille{min-height:30px;padding:4px 11px;border:1px solid var(--m-error);border-radius:var(--m-radius-pill);background:var(--m-error-soft);
+  color:var(--m-error);font:inherit;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer}
+.mm-pille:hover{border-color:var(--m-error-fill);color:var(--m-error-fill)}
+.mm-pille[hidden]{display:none}

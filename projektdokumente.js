@@ -282,9 +282,9 @@ function kopf({zurueck,kicker,titel,meta='',aktionen='',intro=''}){
   return '<a class="pd-back" href="'+esc(zurueck[0])+'" data-nav>'+esc(zurueck[1])+'</a>'+
     '<header class="pd-head"><div class="pd-head-text"><p class="kicker">'+esc(kicker)+'</p><h1>'+esc(titel)+'</h1>'+
     (intro?'<p class="pd-intro">'+intro+'</p>':'')+(meta?'<p class="meta">'+meta+'</p>':'')+'</div>'+
-    (aktionen?'<div class="pd-actions">'+aktionen+'</div>':'')+'</header>'+
-    '<p class="pd-meldung'+(ui.meldung?' '+ui.meldungArt:'')+'" data-meldung role="status" aria-live="polite">'+esc(ui.meldung)+'</p>';
+    (aktionen?'<div class="pd-actions">'+aktionen+'</div>':'')+'</header>'+meldungHtml();
 }
+function meldungHtml(){return '<p class="pd-meldung'+(ui.meldung?' '+ui.meldungArt:'')+'" data-meldung role="status" aria-live="polite">'+esc(ui.meldung)+'</p>'}
 const projektName=()=>projekt?projekt.number+' · '+projekt.name:'';
 const url=p=>'?'+new URLSearchParams(Object.entries(p).filter(([,v])=>v)).toString();
 function render(){
@@ -1268,20 +1268,34 @@ function renderMappe(){
     '</select></label><button type="button" class="btn" data-act="mm-position-neu">Position hinzufügen</button></nav>';
   const a=mm.ansicht,schalter=(act,t,an,titel)=>'<button type="button" class="btn mm-schalter" data-act="'+act+'" aria-pressed="'+(an?'true':'false')+'" title="'+esc(titel)+'">'+t+'</button>';
   const info='Seite '+(i+1)+' von '+seiten.length+' · A3 quer';
-  const mitte='<section class="mm-mitte" aria-label="Seite '+(i+1)+' von '+seiten.length+'"><div class="mm-werkzeug">'+schalter('mm-links','Seiten',a.seiten,'Seitenliste ein- oder ausblenden')+
+  // Im Reiter von Work (B2, 27.11.2026): eine Zeile über der ganzen Mappe statt Überschrift, Unterzeile und zweiter
+  // Leiste. Welche Mappe offen ist, zeigt die Leiste von Work; «gespeichert» (Entwurf oder vorgelegt im Tooltip),
+  // «Präsentieren», «PDF» und «Vorlegen» rücken ans Ende der Zeile, das Raster unter «•••».
+  const stand=(vorgelegt?'vorgelegt am '+K.datumLang(v.daten.vorgelegt_am):'Entwurf');
+  const zeile=IM_REITER?'<span class="meta mm-zeile-stand" title="'+esc('Vorlage zur Bemusterung'+(inh.termin?' am '+K.datumLang(inh.termin):'')+' · '+stand)+'">'+
+      '<span data-speicher>'+esc(speicherText())+'</span></span>'+
+    '<span class="mm-aktionen"><button type="button" class="btn" data-act="mm-praes">Präsentieren</button><button type="button" class="btn" data-act="mm-pdf">PDF</button>'+
+      '<button type="button" class="btn btn-primary" data-act="vorlegen" title="Als vorgelegt markieren">'+(vorgelegt?'Erneut vorlegen':'Vorlegen')+'</button></span>'+
+    '<span class="mm-mehr"><button type="button" class="mm-mehr-knopf" data-act="mm-mehr" aria-haspopup="true" aria-expanded="false" aria-label="Weitere Befehle" title="Weitere Befehle">•••</button>'+
+      '<span class="mm-mehr-menue" role="group" aria-label="Weitere Befehle" hidden>'+schalter('mm-raster','Raster',a.raster,'Raster der Seite zeigen: 12 × 8 Felder, Grundlinie 4 mm')+'</span></span>':'';
+  const werkzeug='<div class="mm-werkzeug'+(IM_REITER?' mm-zeile':'')+'">'+schalter('mm-links','Seiten',a.seiten,'Seitenliste ein- oder ausblenden')+
     // Rückgängig und Wiederholen (Etappe 2): Knöpfe und Strg/⌘+Z, Strg+Y oder ⇧⌘Z außerhalb der Textfelder.
     '<span class="mm-verlauf" role="group" aria-label="Verlauf"><button type="button" class="btn" data-act="mm-zurueck" aria-label="Rückgängig" disabled>'+MM_ICON.zurueck+'</button>'+
     '<button type="button" class="btn" data-act="mm-vor" aria-label="Wiederholen" disabled>'+MM_ICON.vor+'</button></span>'+
-    '<span class="meta mm-seiteninfo" data-mm-kontext data-grund="'+esc(info)+'">'+esc(info)+'</span>'+
+    '<span class="meta mm-seiteninfo" data-mm-kontext data-grund="'+esc(info)+'" title="'+esc(info)+'">'+esc(info)+'</span>'+
     '<span class="mm-zoom" role="group" aria-label="Zoom"><button type="button" class="btn" data-act="mm-zoom-minus" aria-label="Verkleinern">−</button>'+
     '<select class="pd-in" data-act="mm-zoom" aria-label="Zoom">'+zoomOptionen()+'</select><button type="button" class="btn" data-act="mm-zoom-plus" aria-label="Vergrößern">+</button></span>'+
-    schalter('mm-raster','Raster',a.raster,'Raster der Seite zeigen: 12 × 8 Felder, Grundlinie 4 mm')+schalter('mm-rechts','Eigenschaften',a.rechts,'Eigenschaften ein- oder ausblenden')+'</div>'+
+    // Übersatz als Hinweis in der Leiste: ein Klick wählt den ersten Rahmen, der nicht passt.
+    '<button type="button" class="mm-pille" data-act="mm-uebersatz" data-mm-pille hidden></button>'+
+    (IM_REITER?'':schalter('mm-raster','Raster',a.raster,'Raster der Seite zeigen: 12 × 8 Felder, Grundlinie 4 mm'))+schalter('mm-rechts','Eigenschaften',a.rechts,'Eigenschaften ein- oder ausblenden')+
+    zeile+'</div>';
+  const mitte='<section class="mm-mitte" aria-label="Seite '+(i+1)+' von '+seiten.length+'">'+(IM_REITER?'':werkzeug)+
     '<div class="mm-buehne'+(a.raster?' raster':'')+'">'+(seite?M.seiteHtml(seite,inh,{nr:i+1,gesamt:seiten.length,modus:'bearbeiten',bild:bildUrl}):'<p class="meta">Die Mappe hat keine Seite.</p>')+'</div>'+
     // Beim Zuschneiden schwebt die Leiste unten über der Bühne: die Seite bleibt, wo sie ist.
     '<div class="mm-zs-ort" data-mm-zs></div></section>';
   const fokus=vorZeichnen();
-  const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({werkzeug:'mustermappe',projekt:projekt.id}),'‹ Mustermappen'],
-    kicker:'Mustermappe · '+projektName(),titel:inh.titel,meta,aktionen})+
+  const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+(IM_REITER?werkzeug+meldungHtml():kopf({zurueck:[url({werkzeug:'mustermappe',projekt:projekt.id}),'‹ Mustermappen'],
+    kicker:'Mustermappe · '+projektName(),titel:inh.titel,meta,aktionen}))+
     '<div class="mm'+(a.seiten?'':' ohne-seiten')+(a.rechts?'':' ohne-rechts')+'">'+nav+mitte+'<aside class="mm-rechts" aria-label="Eigenschaften">'+
       '<div data-mm-hinweise>'+mappeHinweise(v,seite)+'</div><div data-mm-uebersatz></div><div data-mm-rahmen>'+layoutKarte()+'</div>'+mappeSeitenleiste(v,inh,seite)+'</aside></div>'+
     '<div class="pd-druck mm-druck" aria-hidden="true">'+M.mappeHtml(inh,{modus:'druck',bild:bildUrl})+'</div>'+(ui.detail?detailPanel('entscheidungsliste'):'')+'</div>';
@@ -1350,8 +1364,38 @@ function uebersatzPruefen(){
     }
     if(ziel)ziel.innerHTML=namen.length?'<div class="mm-intern mm-uebersatz-liste" role="status"><strong>Passt nicht ganz in den Rahmen</strong><span>'+esc(namen.join(' · '))+
       '. Kürzen oder weniger zeigen; im PDF steht nur, was in den Rahmen passt.</span></div>':'';
+    const pille=root.querySelector('[data-mm-pille]');
+    if(pille){
+      pille.hidden=!namen.length;
+      pille.textContent=namen.length===1?'1 Übersatz':namen.length+' Übersätze';
+      pille.title=namen.length?'Passt nicht ganz in den Rahmen: '+namen.join(' · '):'';
+    }
   });
 }
+// Ein Klick auf den Hinweis in der Leiste: Eigenschaften zeigen, den ersten Rahmen wählen, der nicht passt, und ihn in
+// den Blick holen.
+function uebersatzZeigen(){
+  if(!mm.ansicht.rechts){
+    mm.ansicht.rechts=true;mmAnsichtMerken();root.querySelector('.mm')?.classList.remove('ohne-rechts');
+    root.querySelector('[data-act="mm-rechts"]')?.setAttribute('aria-pressed','true');zoomAnwenden();
+  }
+  const r=root.querySelector('.mm-buehne .mm-r.mm-uebersatz[data-mmr]');
+  if(r){waehle(r.dataset.mmr);r.scrollIntoView({block:'nearest',inline:'nearest'})}
+  root.querySelector('[data-mm-uebersatz]')?.scrollIntoView({block:'nearest'});
+}
+// «•••» im Reiter: seltene Befehle. Ein Klick daneben oder Esc schließt das Menü; ein Schalter darin lässt es offen.
+function mehrMenue(auf){
+  const m=root.querySelector('.mm-mehr-menue'),k=root.querySelector('[data-act="mm-mehr"]');if(!m||!k)return;
+  m.hidden=!auf;k.setAttribute('aria-expanded',String(!!auf));
+  if(auf)m.querySelector('button')?.focus();
+}
+document.addEventListener('pointerdown',e=>{
+  if(root.querySelector('.mm-mehr-menue:not([hidden])')&&!e.target.closest?.('.mm-mehr'))mehrMenue(false);
+},true);
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape'||!root.querySelector('.mm-mehr-menue:not([hidden])'))return;
+  e.preventDefault();e.stopPropagation();mehrMenue(false);root.querySelector('[data-act="mm-mehr"]')?.focus();
+},true);
 // Was nur das Büro sieht: neuer Stand in der Bibliothek, Datenblatt, was im Datenblatt fehlt.
 function mappeHinweise(v,seite){
   const z=seite&&['vergleich','material'].includes(seite.typ)?zeilen.entscheidungsliste.find(x=>x.id===seite.punkt):null;
@@ -1889,15 +1933,15 @@ function kontextZeigen(){
       '<button type="button" class="btn" data-act="mm-zs-mitte">Zurücksetzen</button><button type="button" class="btn" data-act="mm-zs-ab">Abbrechen</button>'+
       '<button type="button" class="btn btn-primary" data-act="mm-zs-ok">Fertig</button></div>';
     const r=ort?.querySelector('[data-act="mm-zs-zoom"]');if(r)r.value=mm.zuschnitt.a.z;
-    if(el)el.textContent='Zuschneiden · Enter übernimmt, Esc bricht ab';
+    if(el)el.textContent=el.title='Zuschneiden · Enter übernimmt, Esc bricht ab';
     return;
   }
   if(ort&&ort.firstChild)ort.innerHTML='';
   if(!el)return;
   const r=rahmenEl(mm.auswahl?.key);
-  if(!r){el.textContent=el.dataset.grund||'';return}
+  if(!r){el.textContent=el.title=el.dataset.grund||'';return}
   const m=M.rahmenMass(geoAus(r.dataset.mmrG));
-  el.textContent=(r.dataset.mmrName||'')+' · '+m.felder+' · '+m.mm+' · '+m.verhaeltnis;
+  el.textContent=el.title=(r.dataset.mmrName||'')+' · '+m.felder+' · '+m.mm+' · '+m.verhaeltnis;
 }
 // Rechts: der gewählte Rahmen (Größe, Stelle, Überlappung, wie die Vorlage, ausblenden), ausgeblendete Rahmen und
 // «Ganze Seite wie die Vorlage».
@@ -2145,6 +2189,8 @@ function mappeKlickInnen(act,el,v){
   if(act.startsWith('mm-rahmen-')||act==='mm-layout-vorlage'){rahmenKlick(act,el.dataset.k);return}
   if(act==='mm-zs-ok'||act==='mm-zs-ab'){zuschnittEnde(act==='mm-zs-ok');return}
   if(act==='mm-zs-mitte'){if(mm.zuschnitt){mm.zuschnitt.a={x:50,y:50,z:1};zuschnittZeigen()}return}
+  if(act==='mm-mehr'){mehrMenue(el.closest('.mm-mehr')?.querySelector('.mm-mehr-menue')?.hidden);return}
+  if(act==='mm-uebersatz'){uebersatzZeigen();return}
   if(act==='mm-seite'){mm.seite=el.dataset.id;mm.auswahl=null;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
   else if(act==='mm-zoom-plus'||act==='mm-zoom-minus')zoomSchritt(act==='mm-zoom-plus'?1:-1);
   else if(act==='mm-raster'){mm.ansicht.raster=!mm.ansicht.raster;mmAnsichtMerken();root.querySelector('.mm-buehne')?.classList.toggle('raster',mm.ansicht.raster);el.setAttribute('aria-pressed',String(mm.ansicht.raster))}

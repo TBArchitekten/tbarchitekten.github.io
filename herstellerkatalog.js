@@ -171,6 +171,8 @@ function renderListe(){
       </div>
       <div class="pb-pills" role="group" aria-label="Kategorie">${pills}</div>
     </section>
+    ${IM_REITER&&PROJEKT?'<details class="pb-hilfe"><summary title="Erklärung" aria-label="Erklärung">?</summary><div class="pb-hilfe-text"><p>'+
+      esc('Firmen, mit denen jemand aus dem Büro in diesem Projekt Kontakt hatte, und die Hersteller der Produkte, die dafür ausgewählt sind.')+'</p></div></details>':''}
     <p class="meta pb-zahl" data-zahl aria-live="polite"></p>
     <div data-ergebnis></div>
   </div>`;
