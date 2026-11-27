@@ -486,8 +486,11 @@ body[data-section="work"] .work-tabs button.work-tab-plus{
   width:44px;min-width:44px;height:44px;min-height:44px;padding:0;margin:0 0 0 4px;
   border:0;border-radius:0;background:var(--m-canvas);color:var(--m-on-blue);
   font-size:19px;font-weight:500;line-height:1}
+/* Kreis und Kreuz exakt in der Mitte (Gari, 27.11.2026): das «+» war ein Schriftzeichen und saß je nach Schrift tiefer
+   als der Kreis; jetzt ein gezeichnetes Kreuz, und der Kreis wird ausdrücklich mittig gesetzt (inset 0, margin auto). */
 body[data-section="work"] .work-tabs button.work-tab-plus::before{
-  content:"";position:absolute;width:28px;height:28px;border-radius:var(--m-radius-pill);background:var(--m-blue);z-index:-1}
+  content:"";position:absolute;inset:0;margin:auto;width:28px;height:28px;border-radius:var(--m-radius-pill);background:var(--m-blue);z-index:-1}
+body[data-section="work"] .work-tabs button.work-tab-plus svg{display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 body[data-section="work"] .work-tabs button.work-tab-plus:hover{color:var(--m-on-blue);background:var(--m-canvas)}
 body[data-section="work"] .work-tabs button.work-tab-plus:hover::before{background:var(--m-blue-hover)}
 body[data-section="work"] .work-tabs button.work-tab-plus[aria-expanded="true"]::before{background:var(--m-blue-press)}

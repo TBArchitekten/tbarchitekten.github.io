@@ -192,7 +192,7 @@ document.body.innerHTML = `
           <button data-work-view="produkte" hidden>Produkte</button>
           <button data-work-view="hersteller" hidden>Hersteller</button>
           <button data-work-view="threads">Threads</button>
-          <button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" title="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden>+</button>
+          <button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" title="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 3v10M3 8h10"/></svg></button>
         </div>
         <div id="workStatus" class="work-status" aria-live="polite"></div>
         <div id="workBody" class="work-body"><div class="surface-loading">Öffne Work …</div></div>

@@ -29,8 +29,10 @@
   const load = () => {
     // At each new launch the views rail starts collapsed; it stays toggleable
     // across Chat, Time, Work, Lecturas, Situación and Thoughts in this session.
-    try { return {...M.sanitizePreferences(JSON.parse(localStorage.getItem(KEY) || 'null')),navCollapsed:true}; }
-    catch { return {...M.defaultPreferences(),navCollapsed:true}; }
+    // Der Kalender beginnt bei jedem Start mit heute (Gari, 27.11.2026); innerhalb der Sitzung bleibt der gewählte Tag.
+    const start = {navCollapsed:true,selectedDate:M.dayKey(new Date())};
+    try { return {...M.sanitizePreferences(JSON.parse(localStorage.getItem(KEY) || 'null')),...start}; }
+    catch { return {...M.defaultPreferences(),...start}; }
   };
   let prefs = load(),shell = null, stage = null, rail = null, parking = null, dock = null;
   let parts = {}, originalScroll = null, originalComposer = null, navButton = null;
@@ -434,6 +436,18 @@
     if (!shell || frame) return;
     frame = requestAnimationFrame(() => {frame=0;render();});
   };
+  // Über Mitternacht offen: stand der Kalender auf «heute», rückt er beim nächsten Hinsehen auf den neuen Tag.
+  let todayKey = M.dayKey(new Date());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const now = M.dayKey(new Date());
+    if (now === todayKey) return;
+    const wasToday = prefs.selectedDate === todayKey;
+    todayKey = now;
+    if (!wasToday) return;
+    prefs.selectedDate = now;remember();
+    app()?.selectCalendarDate?.(now);scheduleRender();
+  });
   const openTime = () => {
     app()?.selectCalendarDate?.(prefs.selectedDate);
     const button = document.querySelector('#desktopLenses [data-nav="calendar"]') ||
