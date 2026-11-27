@@ -1,0 +1,24 @@
+/* TBA Office · Die Fassung in der Werkzeugzeile (B2, 27.11.2026): «Name ▾» am Anfang der Zeile, dahinter ein Strich wie
+   im Entwurf; das Menü wie «•••». Nur im Reiter von Work und nur, wenn Work die Leiste reduziert hat. Nur Tokens. */
+[data-reiter-fassung]{display:inline-flex;align-items:center;gap:8px;flex:0 1 auto;min-width:0;max-width:240px}
+[data-reiter-fassung][hidden]{display:none!important}
+[data-reiter-fassung]::after{content:"";flex:none;width:1px;height:24px;background:var(--m-border)}
+.wz-fassung{
+  display:inline-flex;align-items:center;gap:4px;flex:0 1 auto;min-width:0;max-width:220px;min-height:36px;margin:0;padding:0 8px 0 10px;
+  border:1px solid var(--m-border);border-radius:var(--m-radius-control);background:var(--m-surface);color:var(--m-ink);
+  font:inherit;font-size:14px;font-weight:600;line-height:1.2;cursor:pointer}
+.wz-fassung span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wz-fassung svg{flex:none}
+.wz-fassung:hover{background:var(--m-fill)}
+.wz-fassung[aria-expanded="true"]{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue)}
+.wz-fassung-menue{
+  position:fixed;z-index:1000;display:flex;flex-direction:column;gap:2px;width:max-content;min-width:200px;max-width:320px;
+  max-height:60vh;overflow:auto;padding:6px;border:1px solid var(--m-border);border-radius:var(--m-radius-card);
+  background:var(--m-surface-raised);color:var(--m-ink);font-size:13px}
+.wz-fassung-menue button{
+  display:flex;align-items:center;width:100%;min-height:32px;margin:0;padding:6px 10px;border:0;border-radius:8px;
+  background:transparent;box-shadow:none;color:var(--m-ink);font:inherit;font-size:13px;text-align:left;white-space:normal;cursor:pointer}
+.wz-fassung-menue button:hover{background:var(--m-fill)}
+.wz-fassung-menue button[aria-pressed="true"]{color:var(--m-blue);font-weight:600}
+.wz-fassung-menue .wz-fassung-neu{margin-top:2px;border-top:1px solid var(--m-hairline);border-radius:0 0 8px 8px;color:var(--m-ink-soft)}
+@media print{[data-reiter-fassung],.wz-fassung-menue{display:none!important}}

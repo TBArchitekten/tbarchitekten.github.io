@@ -384,7 +384,8 @@ function render(){
       'Kostenstand '+(R.quartalText(st.kostenstand)||'offen')].filter(Boolean).join(' · ');
     const voll=[doc.project_number!=='Muster'?doc.project_number:'',angaben,(st.norm||'DIN 276')+' bis zur 3. Ebene',
       istMuster?'Version '+doc.version:'Stand '+datum(doc.updated_at)].filter(Boolean).join(' · ');
-    const zeile='<div class="kb-zeile">'+tabs+'<span class="kb-zeile-info" title="'+esc(voll)+'">'+esc(angaben)+'</span>'+
+    // Mit reduzierter Leiste in Work wählt man die Fassung am Anfang der Zeile (shared/reiter-fassung.js füllt den Ort).
+    const zeile='<div class="kb-zeile"><span data-reiter-fassung hidden></span>'+tabs+'<span class="kb-zeile-info" title="'+esc(voll)+'">'+esc(angaben)+'</span>'+
       '<p class="kb-save meta" id="kbSave"></p>'+
       (kannBearbeiten?'<button type="button" class="btn" data-act="import">'+ICON_IMPORT+'Mengen aus Archicad</button>':'')+
       '<a class="kb-hilfe" href="./kostenberechnung-hilfe.html" target="_blank" rel="noopener noreferrer" title="Anleitung" aria-label="Anleitung">?</a></div>';

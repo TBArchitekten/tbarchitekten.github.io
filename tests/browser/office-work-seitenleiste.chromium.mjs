@@ -123,7 +123,9 @@ test('iPhone: Reiter oben wie bisher, keine Abschnitte in einer Seitenleiste',as
   }finally{await page.close()}
 });
 
-test('Terminpläne: die Wahl steht unter «Terminplan» in der Seitenleiste, reduziert wieder über dem Werkzeug',async()=>{
+// Reduziert (wie im Entwurf B2): die Wahl steht als «LPH 3 ▾» am Anfang der Werkzeugzeile in der Seite, ohne Zeile
+// über dem Werkzeug; das Menü wählt wie die Seitenleiste.
+test('Terminpläne: die Wahl steht unter «Terminplan» in der Seitenleiste, reduziert am Anfang der Werkzeugzeile',async()=>{
   const {page,errors}=await oeffne(1440,'terminplan');
   try{
     if(await page.evaluate(()=>document.body.classList.contains('minds-nav-collapsed')))await page.click('.desk-nav-collapse');
@@ -135,7 +137,23 @@ test('Terminpläne: die Wahl steht unter «Terminplan» in der Seitenleiste, red
     await page.waitForFunction(()=>document.querySelector('#lensWork [data-lens-fassung="tp-lph3"]')?.getAttribute('aria-pressed')==='true');
     await page.click('.desk-nav-collapse');
     await page.waitForFunction(()=>document.body.classList.contains('minds-nav-collapsed'));
-    assert.equal(await sichtbar(page,'#workToolHost .work-tool-bar'),true,'reduziert: Wahl wieder über dem Werkzeug');
+    const f=page.frameLocator('#workToolHost [data-work-tool-pane]:not([hidden]) iframe');
+    const knopf=f.locator('.app>.toolbar>[data-reiter-fassung] .wz-fassung');
+    await knopf.waitFor();
+    assert.equal((await knopf.innerText()).trim(),'LPH 3');
+    assert.equal(await knopf.getAttribute('title'),'Terminplan wählen');
+    await page.waitForFunction(()=>{const b=document.querySelector('#workToolHost [data-work-tool-pane]:not([hidden]) .work-tool-bar');return !!b&&!b.offsetHeight});
+    await knopf.click();
+    const menue=f.locator('.wz-fassung-menue');
+    assert.deepEqual(await menue.locator('button').evaluateAll(bs=>bs.map(b=>[b.textContent.trim(),b.getAttribute('aria-pressed')])),[['LPH 5','false'],['LPH 3','true']]);
+    await menue.locator('button',{hasText:'LPH 5'}).click();
+    await page.waitForFunction(()=>document.querySelector('#workToolHost [data-work-tool-pick="tp-lph5"]')?.getAttribute('aria-selected')==='true');
+    await f.locator('.app>.toolbar>[data-reiter-fassung] .wz-fassung',{hasText:'LPH 5'}).waitFor();
+    // Wieder aufgeklappt: die Wahl in der Seitenleiste, nicht in der Seite.
+    await page.click('.desk-nav-collapse');
+    await page.waitForFunction(()=>!document.body.classList.contains('minds-nav-collapsed'));
+    await f.locator('.app>.toolbar>[data-reiter-fassung]').waitFor({state:'hidden'});
+    assert.equal(await sichtbar(page,'#workToolHost .work-tool-bar'),false);
     assert.deepEqual(errors.filter(e=>!/terminplan/i.test(e)),[]);
   }finally{await page.close()}
 });

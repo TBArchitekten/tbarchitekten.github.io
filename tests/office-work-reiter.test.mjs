@@ -50,7 +50,7 @@ test('Werkzeugseiten im Rahmen: ohne Rücksprung, nie die App im Rahmen, Revisio
   assert.match(kb,/if\(IM_REITER\)\{fehler\('Bitte in TBA Office neu anmelden\.'\);return\}/);
   assert.match(kb,/if\(IM_REITER\)dialog\.addEventListener\('close',\(\)=>\{if\(!angelegt\)window\.parent\.postMessage\(\{tbaOfficeTool:'abgebrochen'\},location\.origin\)\},\{once:true\}\)/);
   assert.match(kbHtml,/kostenberechnung\.css\?v=office12/);
-  assert.match(kbHtml,/kostenberechnung\.js\?v=office14/);
+  assert.match(kbHtml,/kostenberechnung\.js\?v=office15/);
 });
 
 test('Im Rahmen leiht die Seite die Brücke der App (die App nimmt nur den Hauptrahmen an)',()=>{

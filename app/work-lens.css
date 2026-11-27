@@ -47,6 +47,9 @@
   .lens-work-fassung-neu .lens-work-punkt{width:auto;height:auto;border:0;border-radius:0;font-size:13px;line-height:1}
   .lens-work-fassung-neu{color:var(--m-ink-faint)}
   body.desk-enabled.minds-nav-collapsed .lens-work-fassungen{display:none}
+  /* Reduziert steht die Wahl am Anfang der Werkzeugzeile in der Seite («Name ▾», shared/reiter-fassung.js), wenn die
+     Seite einen Ort dafür hat; dann entfällt die Leiste über dem Werkzeug auch hier. */
+  body.desk-enabled.minds-nav-collapsed[data-section="work"].lens-work-an [data-work-tool-pane][data-fassung-im-werkzeug="1"] .work-tool-bar{display:none!important}
   /* Wissen: Neu, Entscheidungen (mit Zahl) und die Seiten in der Leiste; im Wissen selbst entfällt die Liste. */
   body.desk-enabled[data-section="work"].lens-work-an:not(.minds-nav-collapsed) #workBody .wissen-liste{display:none!important}
   body.desk-enabled[data-section="work"].lens-work-an:not(.minds-nav-collapsed) #workBody .wissen-raster{grid-template-columns:minmax(0,760px) 300px;grid-template-areas:"blatt kontext"}
