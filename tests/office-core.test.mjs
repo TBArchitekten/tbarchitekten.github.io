@@ -229,7 +229,8 @@ test('Window design: sidebar of views, Mitglieder in the account menu, one id pe
   const index=read('index.html'),css=read('style.css'),app=read('app.js');
   const ids=[...index.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
   assert.deepEqual(ids.filter((x,i)=>ids.indexOf(x)!==i),[],'no duplicate ids');
-  for(const view of ['work','tools'])assert.match(index,new RegExp(`class="lens-nav-item[^"]*" data-view="${view}"`));
+  // Seit dem 27.11.2026 führen Work und Tools in die App.
+  for(const view of ['work','tools'])assert.match(index,new RegExp(`class="lens-nav-item[^"]*" href="\\./app/#section=${view}"`));
   assert.match(index,/<div id="accountMenu" class="account-menu" role="menu" hidden>[\s\S]*data-view="members" data-admin-only hidden[\s\S]*id="changePasswordBtn"[\s\S]*id="logoutBtn"/);
   assert.match(index,/<section id="projectView"[\s\S]*id="projectNewPlanBtn" class="primary"/);
   // One blue for actions, Window tokens, cards with a hairline. Since 24.11.2026 the values live only in the shared

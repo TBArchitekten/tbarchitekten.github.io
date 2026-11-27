@@ -31,8 +31,15 @@
   const LENS_OF={work:'work',project:'work',tools:'tools',plans:'tools',members:null,kinutzung:null,systemstatus:null};
   // Administration: Mitglieder, KI-Nutzung und Systemstatus nur für Administratoren (die Datenbank prüft es noch einmal).
   const ADMIN_VIEWS=['members','kinutzung','systemstatus'];
+  // Work, Projekte, Terminpläne und Tools leben in der App (./app/); hier bleiben Anmeldung, Passwort und die Seiten
+  // der Administration. Wer hier auf eine alte Ansicht kommt, landet dort (Gari, 27.11.2026).
+  function zurApp(name,id){
+    const project=name==='project'&&id?'&project='+encodeURIComponent(id):'';
+    location.assign('./app/#section='+(name==='tools'||name==='plans'?name:'work')+project);
+  }
   function switchView(name,{id=null,push=true}={}){
     if(ADMIN_VIEWS.includes(name)&&member?.role!=='admin')name='work';
+    if(['work','project','plans','tools'].includes(name)){zurApp(name,id);return}
     if(name==='project'&&!projects.some(p=>p.id===id))name='work';
     $$('.view').forEach(v=>v.hidden=true);
     $$('.lens-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===LENS_OF[name]));
@@ -56,7 +63,7 @@
     if(r.view==='project'&&r.tab==='planner'){location.replace('./app/#section=work&project='+encodeURIComponent(r.id));return}
     if(r.view==='work'||r.view==='project'||r.view==='plans'||r.view==='tools'){
       const project=r.view==='project'&&r.id?'&project='+encodeURIComponent(r.id):'';
-      const section=r.view==='tools'?'tools':'projects';
+      const section=r.view==='tools'||r.view==='plans'?r.view:'work';
       location.replace('./app/#section='+section+project);return;
     }
     switchView(r.view,{id:r.id,push:false});
