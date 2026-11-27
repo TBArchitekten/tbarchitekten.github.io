@@ -45,7 +45,7 @@ const NEU_FELD={klaerungsliste:'sachverhalt',entscheidungsliste:'thema'};
 let nutzer=null,mitglied=null,mitglieder=[],projekte=[],team=[];
 let projekt=null,dokumente={},zeilen=leer(),aufgaben=new Map(),geladenUm=0;
 const ui={ansicht:'',werkzeug:'',art:'',vorlage:null,filter:'alle',disziplin:'',suche:'',alleSpalten:false,auswahl:new Set(),detail:null,
-  verlauf:null,edit:null,meldung:'',meldungArt:'info',staende:null,spaeter:new Set(),romyText:null};
+  verlauf:null,edit:null,meldung:'',meldungArt:'info',staende:null,spaeter:new Set(),romyText:null,ablauf:null};
 const speicher={laeuft:0,fehler:''};
 const VORSCHLAG='id,dokument_id,zeile_id,art,daten,fundstelle,begruendung,quelle,created_by,created_at';
 const romy={bereit:false};
@@ -85,7 +85,7 @@ async function start(){
     window.addEventListener('popstate',()=>void route());
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&projekt&&Date.now()-geladenUm>30000)void auffrischen()});
     await route();
-    void romyStatus();
+    romy.pruefung=romy.pruefung||romyStatus();
   }catch(e){console.error('Projektdokumente',e);fehler(e?.message||'Projektdokumente nicht erreichbar.')}
 }
 const params=()=>new URLSearchParams(location.search);
@@ -110,6 +110,7 @@ async function route(){
     if(!darf(projekt)){zeigeProjektwahl('Die Dokumente eines Projekts sieht das Projektteam und die Projektleitung. Für «'+projekt.number+' '+projekt.name+'» bist du nicht eingetragen.');return}
     root.innerHTML='<div class="pd-wrap"><p class="meta">Dokumente werden geladen …</p></div>';
     await ladeProjekt();
+    ui.ablauf=ablaufLesen();
   }
   const liste=p.get('liste'),vorlage=p.get('vorlage');
   if(vorlage){
@@ -129,7 +130,11 @@ async function route(){
   else if(LISTEN.includes(liste)){
     if(ui.art!==liste){ui.filter='alle';ui.disziplin='';ui.suche='';ui.detail=null}
     ui.ansicht='liste';ui.art=liste;render();
-  }else{ui.ansicht='uebersicht';ui.detail=null;render()}
+  }else{
+    ui.ansicht='uebersicht';ui.detail=null;render();
+    // ?ablauf=besprechung (aus dem Panorama): einmal den Dialog, das Neuladen öffnet ihn nicht wieder.
+    if(p.get('ablauf')==='besprechung'){history.replaceState(null,'',url({projekt:pid}));void (romy.pruefung||(romy.pruefung=romyStatus())).then(()=>besprechungDialog())}
+  }
 }
 async function ladeProjekt(){
   dokumente={};zeilen=leer();aufgaben=new Map();
@@ -357,6 +362,97 @@ function zeigeProjektwahl(hinweis=''){
 }
 
 // ---------- Übersicht ----------
+// ---------- Abläufe (Gari, 27.11.2026: so umsetzen, wie vorgeschlagen) ----------
+// Ein Ablauf führt durch wiederkehrende Arbeit des Büros und benutzt dabei die vorhandenen Werkzeuge. «Besprechung
+// nachbereiten»: Romy liest das Protokoll einmal für die Klärungsliste und einmal für die Entscheidungsliste; danach
+// prüft das Team die Vorschläge (nichts ohne «Übernehmen»), legt für neue Klärungen mit Verantwortlichem und Frist
+// Aufgaben im Planner an, prüft ihre Fristen gegen den Terminplan und teilt das Ergebnis ins Projektwissen. Was zur
+// Besprechung gehört, sind die Zeilen, die aus ihren Vorschlägen übernommen wurden (neu oder geändert; gemerkt beim
+// Übernehmen, auch wenn sie danach von Hand weiter bearbeitet werden). Der Stand des Ablaufs bleibt in diesem Fenster,
+// je Projekt.
+const ablaufSchluessel=()=>'tba-office.ablauf.'+(projekt?.id||'');
+function ablaufLesen(){try{const x=JSON.parse(sessionStorage.getItem(ablaufSchluessel())||'null');return x&&x.art==='besprechung'&&x.quelle?x:null}catch{return null}}
+function ablaufMerken(){try{if(ui.ablauf)sessionStorage.setItem(ablaufSchluessel(),JSON.stringify(ui.ablauf));else sessionStorage.removeItem(ablaufSchluessel())}catch{}}
+function ablaufZeilen(art,{geaendert=false}={}){
+  const a=ui.ablauf,ids=new Set([...(a?.zeilen?.[art]||[]),...(geaendert?a?.geaendert?.[art]||[]:[])]);
+  return a?zeilen[art].filter(z=>ids.has(z.id)):[];
+}
+function ablaufNotieren(art,id,v,geaendert=false){
+  const a=ui.ablauf;if(!a||!id||v?.quelle!==a.quelle)return;
+  const feld=geaendert?'geaendert':'zeilen';a[feld]=a[feld]||{};
+  a[feld][art]=[...new Set([...(a[feld][art]||[]),id])];ablaufMerken();
+}
+const ablaufOffen=z=>!['gelöst','entfällt'].includes(z.daten.status);
+function besprechungDialog(){
+  if(!romy.bereit){meldung('Romy ist gerade nicht erreichbar; die Besprechung lässt sich später nachbereiten.','warn');return}
+  dialog.innerHTML='<form class="pd-dlg"><h2>Besprechung nachbereiten</h2>'+
+    '<p class="meta">Romy liest das Protokoll und schlägt für die Klärungsliste und die Entscheidungsliste neue Zeilen und Änderungen vor, jede mit Fundstelle. '+
+    'Danach führt der Ablauf durch Aufgaben, Fristen und das Projektwissen. Nichts ändert sich, bis jemand «Übernehmen» drückt.</p>'+
+    '<label class="pd-feld"><span>Besprechung</span><input class="pd-in" name="quelle" placeholder="z. B. Protokoll Jour fixe 05" required maxlength="120" autocomplete="off"></label>'+
+    '<label class="pd-feld"><span>Protokoll (PDF oder Bild, bis 8 MB)</span><input class="pd-in" type="file" name="datei" accept="application/pdf,image/png,image/jpeg,image/webp"></label>'+
+    '<label class="pd-feld"><span>oder Text einfügen</span><textarea class="pd-in" name="text" rows="6" placeholder="Text des Protokolls oder der Mitschrift"></textarea></label>'+
+    '<label class="pd-feld"><span>Hinweis an Romy (optional)</span><input class="pd-in" name="hinweis" placeholder="z. B. nur TOP 3 bis 7" autocomplete="off"></label>'+
+    '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Protokoll lesen</button></div></form>';
+  const form=dialog.querySelector('form'),f=dialog.querySelector('[data-dlg-fehler]');
+  form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
+  form.onsubmit=async e=>{
+    e.preventDefault();
+    const datei=form.datei.files[0],text=form.text.value.trim(),quelle=form.quelle.value.trim();
+    if(!datei&&!text){f.textContent='Bitte das Protokoll wählen oder Text einfügen.';return}
+    if(datei&&datei.size>8*1024*1024){f.textContent='Die Datei ist größer als 8 MB.';return}
+    const knopf=form.querySelector('button[type="submit"]');knopf.disabled=true;f.textContent='';
+    const ablauf={art:'besprechung',quelle,texte:[],hinweise:[],n:{},zeilen:{},geaendert:{},fristen:false,geteilt:false};
+    try{
+      const attachments=datei?[{name:datei.name.slice(0,180),mime:datei.type,size:datei.size,data:await alsDataUrl(datei)}]:undefined;
+      for(const [i,art] of ['klaerungsliste','entscheidungsliste'].entries()){
+        knopf.textContent='Romy liest ('+(i+1)+' von 2) …';
+        const dok=await sichereDokument(art);
+        const antwort=await romyAufruf({action:'vorschlaege',dokument_id:dok.id,quelle,text,hinweis:form.hinweis.value.trim(),attachments});
+        ablauf.n[art]=await vorschlaegeSpeichern(art,antwort.result.vorschlaege,antwort.quelle||quelle);
+        if(antwort.result.text)ablauf.texte.push(antwort.result.text);
+        ablauf.hinweise.push(...(antwort.result.hinweise||[]));
+      }
+      ui.ablauf=ablauf;ablaufMerken();dialog.close();ui.ansicht='uebersicht';render();
+    }catch(err){f.textContent=err?.message||'Romy ist gerade nicht erreichbar.';knopf.disabled=false;knopf.textContent='Protokoll lesen'}
+  };
+  dialog.showModal();
+}
+function ablaufPanel(){
+  const a=ui.ablauf;if(!a)return '';
+  const vs=art=>offene(art).filter(v=>v.quelle===a.quelle).length,vk=vs('klaerungsliste'),ve=vs('entscheidungsliste');
+  const kl=ablaufZeilen('klaerungsliste'),en=ablaufZeilen('entscheidungsliste');
+  const fuerAufgaben=kl.filter(z=>ablaufOffen(z)&&!z.daten.aufgabe_id&&String(z.daten.verantwortlich||'').trim()&&z.daten.frist);
+  const mitFrist=ablaufZeilen('klaerungsliste',{geaendert:true}).filter(z=>ablaufOffen(z)&&z.daten.frist);
+  const schritt=(nr,titel,text,knopf,fertig)=>'<li class="pd-ablauf-schritt'+(fertig?' fertig':'')+'"><span class="pd-ablauf-nr" aria-hidden="true">'+(fertig?'✓':nr)+'</span>'+
+    '<div><strong>'+esc(titel)+'</strong><p class="meta">'+text+'</p></div>'+(knopf?'<div class="pd-ablauf-knopf">'+knopf+'</div>':'')+'</li>';
+  const liste=art=>'<a href="'+esc(url({projekt:projekt.id,liste:art}))+'" data-nav>'+esc(K.DOKUMENTE[art].kurz)+'</a>';
+  return '<section class="card pd-ablauf" aria-label="Besprechung nachbereiten"><div class="pd-ablauf-kopf"><div><p class="kicker">Ablauf · Besprechung nachbereiten</p><h2>'+esc(a.quelle)+'</h2></div>'+
+      '<button type="button" class="btn btn-quiet" data-act="ablauf-ende">Ablauf beenden</button></div>'+
+    (a.texte.length?'<p class="pd-ablauf-romy"><strong>Romy:</strong> '+esc(a.texte.join(' '))+'</p>':'')+
+    (a.hinweise.length?'<ul class="pd-ablauf-hinweise">'+a.hinweise.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul>':'')+
+    '<ol class="pd-ablauf-schritte">'+
+    schritt(1,'Vorschläge prüfen',vk+ve?'Offen: '+vk+' in der '+liste('klaerungsliste')+', '+ve+' in der '+liste('entscheidungsliste')+'. Jeden übernehmen oder verwerfen.'
+      :'Alle Vorschläge sind übernommen oder verworfen: '+kl.length+(kl.length===1?' Klärung':' Klärungen')+' und '+en.length+(en.length===1?' Entscheidung':' Entscheidungen')+' aus dieser Besprechung.','',!(vk+ve))+
+    schritt(2,'Aufgaben im Planner',fuerAufgaben.length?fuerAufgaben.length+(fuerAufgaben.length===1?' neue Klärung hat':' neue Klärungen haben')+' Verantwortliche und Frist, aber noch keine Aufgabe.'
+      :'Keine neue Klärung mit Verantwortlichem und Frist ohne Aufgabe.',fuerAufgaben.length?'<button type="button" class="btn" data-act="ablauf-aufgaben">Aufgaben anlegen ('+fuerAufgaben.length+')</button>':'',!fuerAufgaben.length&&!(vk+ve))+
+    schritt(3,'Fristen gegen den Terminplan',a.fristen?'Geprüft; was nicht passt, steht als Vorschlag in der '+liste('klaerungsliste')+'.':mitFrist.length?mitFrist.length+(mitFrist.length===1?' offene Klärung':' offene Klärungen')+' mit Frist aus dieser Besprechung.'
+      :'Noch keine offene Klärung mit Frist aus dieser Besprechung.',mitFrist.length&&!a.fristen?'<button type="button" class="btn btn-romy" data-act="ablauf-fristen">Mit Romy prüfen</button>':'',a.fristen)+
+    schritt(4,'Ins Projektwissen',a.geteilt?'Geteilt; die KI arbeitet es beim nächsten Mal in die Seiten ein.':'Das Ergebnis der Besprechung (Romys Zusammenfassung und die übernommenen Zeilen) für das Projektteam.',
+      a.geteilt?'':'<button type="button" class="btn" data-act="ablauf-teilen"'+(vk+ve?' title="Erst die Vorschläge prüfen"':'')+'>Ins Projektwissen</button>',a.geteilt)+
+    '</ol></section>';
+}
+async function ablaufTeilen(){
+  const a=ui.ablauf;if(!a)return;
+  await alleSpeichern();
+  const zeile=(art,z)=>'- '+K.nummer(art,z.nr)+' · '+[art==='klaerungsliste'?z.daten.sachverhalt||z.daten.ort:z.daten.thema||z.daten.frage,
+    art==='klaerungsliste'?z.daten.verantwortlich:'',z.daten.frist?'bis '+K.datumLang(z.daten.frist):'',z.daten.status].map(x=>String(x||'').trim()).filter(Boolean).join(' · ');
+  const kl=ablaufZeilen('klaerungsliste'),en=ablaufZeilen('entscheidungsliste');
+  const inhalt=['Besprechung: '+a.quelle+' (nachbereitet am '+K.datumLang(heute())+').',a.texte.length?'Romy: '+a.texte.join(' '):'',
+    kl.length?'Klärungen:\n'+kl.map(z=>zeile('klaerungsliste',z)).join('\n'):'',en.length?'Entscheidungen (offen, bis der Bauherr entscheidet):\n'+en.map(z=>zeile('entscheidungsliste',z)).join('\n'):''].filter(Boolean).join('\n\n');
+  const {error}=await sb.rpc('office_wissen_beitrag_teilen',{p_project:projekt.id,p_titel:('Besprechung: '+a.quelle).slice(0,200),p_inhalt:inhalt,p_art:'notiz',p_quelle:a.quelle.slice(0,300),p_seite:null});
+  if(error){meldung('Das konnte nicht ins Projektwissen gehen. Gehört Ihr Konto zum Projektteam?','warn');return}
+  a.geteilt=true;ablaufMerken();meldung('Im Projektwissen geteilt; die KI arbeitet es beim nächsten Mal ein.');render();
+}
 function renderUebersicht(){
   const zk=K.zaehle('klaerungsliste',zeilen.klaerungsliste),ze=K.zaehle('entscheidungsliste',zeilen.entscheidungsliste);
   const warten=K.wartendeEntscheidungspunkte(zeilen.klaerungsliste,zeilen.entscheidungsliste);
@@ -382,7 +478,12 @@ function renderUebersicht(){
   const fokus=vorZeichnen();
   const html='<div class="pd-wrap">'+kopf({zurueck:['./app/#section=tools','‹ Werkzeuge'],kicker:'Werkzeuge · Projektstart · '+projektName(),titel:'Projektstart',
     intro:'Die Bürovorlagen werden Dokumente des Projekts: hier bearbeiten und als Word, Excel oder PDF ausgeben, wenn Fachplaner oder Bauherr sie brauchen. Das Muster bleibt, wie es ist; jedes Projekt bekommt seine eigene Fassung.',
-    aktionen:projektwahl+'<a class="btn" href="./projektstart.html">Muster ansehen</a>'})+
+    aktionen:projektwahl+'<a class="btn" href="./projektstart.html">Muster ansehen</a>'})+ablaufPanel()+
+    (ui.ablauf?'':'<section class="pd-abschnitt"><h2>Abläufe</h2><p class="meta">wiederkehrende Arbeit des Büros, Schritt für Schritt mit den Werkzeugen des Office</p><div class="pd-grid">'+
+      '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Besprechung nachbereiten</h3></div><p class="meta">Romy liest das Protokoll und schlägt Klärungen und Entscheidungen vor, '+
+      'jede mit Fundstelle. Danach: Aufgaben im Planner, Fristen gegen den Terminplan, das Ergebnis ins Projektwissen.</p>'+
+      '<div class="pd-karte-aktionen">'+(romy.bereit?'<button type="button" class="btn btn-primary" data-act="ablauf-besprechung">Protokoll lesen …</button>':'<span class="meta">Romy ist gerade nicht erreichbar.</span>')+'</div></article>'+
+      '</div></section>')+
     '<section class="pd-abschnitt"><h2>Listen</h2><p class="meta">bearbeiten wie im Büro-Excel · jede Spalte mit Typ · Ausgabe als Excel</p><div class="pd-grid">'+
     karte('klaerungsliste','L3.KLA',zk,zk.aufgaben?'<p class="meta">'+zk.aufgaben+(zk.aufgaben===1?' Punkt als Aufgabe':' Punkte als Aufgabe')+' im Planner</p>':'')+
     karte('entscheidungsliste','L3.ENV · L3.A3',ze,warten.length?'<p class="pd-hinweis">'+warten.length+(warten.length===1?' Entscheidungspunkt aus der Klärungsliste wartet':' Entscheidungspunkte aus der Klärungsliste warten')+'</p>':'')+
@@ -2557,7 +2658,8 @@ async function uebernehmen(v){
   await alleSpeichern();
   if(v.art==='neu'){
     const d={...K.leereZeile(art,{runde:dokumente[art]?.meta?.runde||''}),...v.daten,fundstelle:v.fundstelle,_romy:Object.keys(v.daten)};
-    await neueZeile(art,d,{vorschlagId:v.id});
+    const neu=await neueZeile(art,d,{vorschlagId:v.id});
+    ablaufNotieren(art,neu?.id,v);
   }else{
     const z=zeileVon(v.zeile_id);
     if(!z){await vorschlagStatus(v,'verworfen');meldung('Die Zeile gibt es nicht mehr; der Vorschlag ist verworfen.','warn');return}
@@ -2570,6 +2672,7 @@ async function uebernehmen(v){
     z.daten=neu;
     await speichere(z,{vorschlagId:v.id});
     if(speicher.fehler)throw new Error('Nicht gespeichert: '+speicher.fehler);
+    ablaufNotieren(art,z.id,v,true);
   }
   await vorschlagStatus(v,'uebernommen');
 }
@@ -2755,6 +2858,12 @@ root.addEventListener('click',e=>{
   else if(act==='punkt-details'){const z=zeileVon(el.dataset.z);if(z){ui.detail=z.id;ui.verlauf=null;render()}}
   else if(act==='punkt-weg')void sicher(()=>punktWeg(el.dataset.z));
   else if(act==='romy')romyDialog(ui.art);
+  else if(act==='ablauf-besprechung')besprechungDialog();
+  else if(act==='ablauf-ende'){ui.ablauf=null;ablaufMerken();render()}
+  else if(act==='ablauf-aufgaben'){const l=ablaufZeilen('klaerungsliste').filter(z=>ablaufOffen(z)&&!z.daten.aufgabe_id&&String(z.daten.verantwortlich||'').trim()&&z.daten.frist);void sicher(()=>aufgabenAnlegen(l))}
+  else if(act==='ablauf-fristen'){const ids=ablaufZeilen('klaerungsliste',{geaendert:true}).filter(z=>ablaufOffen(z)&&z.daten.frist).map(z=>z.id);
+    void sicher(async()=>{await romyAuswahl('fristen_terminplan',{ids});if(ui.ablauf){ui.ablauf.fristen=true;ablaufMerken();render()}})}
+  else if(act==='ablauf-teilen')void sicher(()=>ablaufTeilen());
   else if(act==='vs-ja')void sicher(async()=>{const v=vorschlaege.find(x=>x.id===el.dataset.id);if(!v)return;el.disabled=true;await uebernehmen(v);meldung('Übernommen.');render()});
   else if(act==='vs-nein')void sicher(async()=>{const v=vorschlaege.find(x=>x.id===el.dataset.id);if(!v)return;el.disabled=true;await vorschlagStatus(v,'verworfen');meldung('Verworfen.');render()});
   else if(act==='vs-alle-ja')void sicher(()=>alleVorschlaege(ui.art,true));

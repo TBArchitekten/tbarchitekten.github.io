@@ -239,6 +239,21 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .pd-romy-antwort{position:relative;background:#fff;border:1px solid var(--pd-romy-line);border-radius:12px;padding:10px 48px 10px 14px;margin:0 0 12px;font-size:14px;line-height:1.5}
 .pd-romy-antwort .pd-x{position:absolute;top:6px;right:6px;width:30px;height:30px;font-size:16px}
 .pd-romy-antwort ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--pd-meta)}
+/* Abläufe (27.11.2026): «Besprechung nachbereiten» als Schritte über den Listen. */
+.pd-ablauf{padding:18px 20px;margin:0 0 18px;display:grid;gap:12px;border:1px solid var(--pd-romy-line)}
+.pd-ablauf-kopf{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.pd-ablauf-kopf h2{margin:2px 0 0;font-size:20px}
+.pd-ablauf-romy{margin:0;font-size:14px;line-height:1.5}
+.pd-ablauf-hinweise{margin:0;padding-left:18px;font-size:13px;color:var(--m-ink-soft)}
+.pd-ablauf-schritte{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pd-ablauf-schritt{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--m-fill)}
+.pd-ablauf-schritt strong{font-size:14px}
+.pd-ablauf-schritt .meta{margin:2px 0 0;font-size:13px}
+.pd-ablauf-nr{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--m-surface);color:var(--m-ink-soft);font-size:13px;font-weight:700;
+  box-shadow:inset 0 0 0 1px var(--m-border)}
+.pd-ablauf-schritt.fertig .pd-ablauf-nr{background:var(--m-success-soft);color:var(--m-success);box-shadow:none}
+.pd-ablauf-schritt.fertig strong{color:var(--m-ink-soft)}
+@media (max-width:640px){.pd-ablauf-schritt{grid-template-columns:28px minmax(0,1fr)}.pd-ablauf-knopf{grid-column:2}}
 .pd-vorschlag td{background:var(--pd-romy-bg)}
 .pd-vorschlag td:first-child{box-shadow:inset 3px 0 0 var(--pd-romy-line)}
 .pd-vs-aenderung td{font-size:13px}

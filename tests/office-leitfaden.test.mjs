@@ -87,7 +87,7 @@ test('Ablauf: nach der Mitgliedsprüfung, einmal je Stand, Bestätigung nur mit 
 test('Desktop: Link «Was darf ins TBA Office?», nur wenn freigeschaltet; Versionen',()=>{
   assert.match(work,/window\.TBA_OFFICE_LEITFADEN\?\.verfuegbar\?\.\(\)\?'<p class="work-desktop-leitfaden"><button type="button" data-work-leitfaden>Was darf ins TBA Office\?<\/button><\/p>':''/);
   assert.match(work,/\$\('\[data-work-leitfaden\]'\)\?\.addEventListener\('click',\(\)=>window\.TBA_OFFICE_LEITFADEN\?\.oeffnen\(\)\);/);
-  assert.match(appIndex,/work\.js\?v=office63/);
+  assert.match(appIndex,/work\.js\?v=office64/);
   assert.match(appIndex,/office\.css\?v=office46/);
 });
 

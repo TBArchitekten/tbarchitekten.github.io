@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Abläufe:** Im Projektstart (und im Panorama verlinkt) führt «Besprechung nachbereiten» vom Protokoll zu Vorschlägen in beiden Listen, Aufgaben im Planner, Fristen gegen den Terminplan und einer Notiz im Projektwissen.
+
 **Stand 27.11.2026 · Claude · Work B2 (Schritt 5):** Das Panorama zeigt «Für dich» (Entscheidungen zur Bestätigung für die Projektleitung, überfällige Aufgaben), Themen, die beschlossenen Entscheidungen und «Neu im Desktop».
 
 **Stand 27.11.2026 · Claude · Work B2 (Schritt 4):** Das Wissen hat eine Werkzeugzeile (Suche, zuletzt eingearbeitet, Hinweis, Notiz, «?») und neben dem Text eine Kontextspalte (Inhalt, Entscheidungen der Seite, Hinweise, Herkunft, Verweise, Fassungen); mit offener Leiste stehen Neu, Entscheidungen und die Seiten unter «Wissen» in der Seitenleiste.
