@@ -42,9 +42,16 @@ entrypoint = "./functions/office-romy-mission-runner/index.ts"
 verify_jwt = false
 entrypoint = "./functions/office-mcp/index.ts"
 
+# Romy's notifications to the iPhone (APNs, encrypted per device). Called every minute by the database cron
+# with its own secret in the body, only when a notification is due; anything else gets 401.
+[functions.office-push]
+verify_jwt = false
+entrypoint = "./functions/office-push/index.ts"
+
 # Source: Window engine (profile=office); code only, never a deployment trigger.
 # JWT-off runners authenticate their own server-only secret, not the browser.
-# Do not enable Sofia, Feed, Ideas, Window code jobs, Window MCP or iPhone push.
+# Do not enable Sofia, Feed, Ideas, Window code jobs, Window MCP or Window's Web Push
+# (the office has its own iPhone push: office-push above).
 
 [functions.isabella-agent-shadow]
 verify_jwt = false
