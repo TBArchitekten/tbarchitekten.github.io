@@ -72,10 +72,12 @@ document.body.innerHTML = `
           <div class="ahora-head-tools"><div id="situationWeather" class="ahora-weather"></div><span class="minds-menu-slot" data-menu-slot="feed"></span></div>
         </header>
         <div id="ahoraWeatherWeek" class="ahora-weather-week hidden"></div>
-        <button type="button" id="ahoraBandejaLink" class="ahora-bandeja-link hidden"></button>
+        <section id="ahoraInbox" class="ahora-section ahora-inbox hidden" aria-labelledby="ahoraInboxTitle"></section>
         <div id="situationLedger" class="situation-ledger" aria-live="polite"></div>
-        <section id="ahoraNext" class="ahora-section hidden" aria-labelledby="ahoraNextTitle"></section>
         <section id="ahoraDay" class="ahora-section" aria-labelledby="ahoraDayTitle"></section>
+        <section id="ahoraBald" class="ahora-section hidden" aria-labelledby="ahoraBaldTitle"></section>
+        <section id="ahoraUeberfaellig" class="ahora-section hidden" aria-labelledby="ahoraUeberfaelligTitle"></section>
+        <section id="ahoraNext" class="ahora-section hidden" aria-labelledby="ahoraNextTitle"></section>
       </div>
     </section>
 

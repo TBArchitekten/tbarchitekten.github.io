@@ -435,12 +435,57 @@ function cockpitRueckForm(r,art){
     '<textarea id="'+esc(id)+'" rows="3"'+(verwerfen?'':' required')+'></textarea><div class="cockpit-actions"><button type="submit">'+(verwerfen?'Verwerfen':'Hinweis senden')+'</button>'+
     '<button type="button" class="secondary" data-cockpit-rueck-zu>Abbrechen</button></div></form>';
 }
-function officeFuerDich(m){
-  const leitung=!!m.wissen?.leitung,ents=leitung?m.pending.filter(r=>r.memory_type==='decision'):[];
-  const cards=ents.map(r=>'<article class="cockpit-card" data-cockpit-entscheidung="'+esc(r.id)+'"><span class="cockpit-kind">Entscheidung'+(r.occurred_at?' · '+esc(cockpitShort(r.occurred_at)):'')+'</span><p>'+esc(r.title)+'</p>'+cockpitSource(r)+cockpitWhy(r)+
+// Eine vorgeschlagene Entscheidung als Karte. Dieselbe Karte steht in Heute unter «Braucht Sie», dort mit dem Projekt
+// (Gari, 27.11.2026: «una sola bandeja para lo que necesita a una persona»).
+function fuerDichKarte(r,{projekt=''}={}){
+  return '<article class="cockpit-card" data-cockpit-entscheidung="'+esc(r.id)+'"><span class="cockpit-kind">Entscheidung'+(r.occurred_at?' · '+esc(cockpitShort(r.occurred_at)):'')+(projekt?' · '+esc(projekt):'')+'</span><p>'+esc(r.title)+'</p>'+cockpitSource(r)+cockpitWhy(r)+
     (cockpitHinweise.has(r.id)?'<small class="cockpit-hinweis-gesendet">Hinweis gesendet · wird eingearbeitet</small>':'<button type="button" class="cockpit-link cockpit-stimmt" data-cockpit-rueck="korrektur" data-id="'+esc(r.id)+'">Stimmt etwas nicht?</button>')+
     cockpitRueckForm(r,'korrektur')+cockpitRueckForm(r,'verwerfen')+
-    '<div class="cockpit-actions" data-cockpit-knoepfe><button type="button" data-wissen-pruefen="'+esc(r.id)+'" data-ja="1">Bestätigen</button><button type="button" class="secondary" data-cockpit-rueck="verwerfen" data-id="'+esc(r.id)+'">Verwerfen …</button></div></article>');
+    '<div class="cockpit-actions" data-cockpit-knoepfe><button type="button" data-wissen-pruefen="'+esc(r.id)+'" data-ja="1">Bestätigen</button><button type="button" class="secondary" data-cockpit-rueck="verwerfen" data-id="'+esc(r.id)+'">Verwerfen …</button></div></article>';
+}
+// Die Knöpfe dieser Karten, gebunden an ihren Bereich (Panorama oder Heute). eintraege: die gezeigten Vorschläge;
+// projektVon(r): das Projekt eines Vorschlags; meldung(text): die Statuszeile; nachher(): neu zeichnen.
+function fuerDichBinden(root,{eintraege,projektVon,meldung,nachher}){
+  if(!root)return;
+  const alle=s=>[...root.querySelectorAll(s)];
+  alle('[data-cockpit-rueck]').forEach(button=>button.onclick=()=>{
+    const karte=button.closest('.cockpit-card');if(!karte)return;
+    karte.querySelectorAll('[data-cockpit-rueck-form]').forEach(f=>{f.hidden=f.dataset.art!==button.dataset.cockpitRueck});
+    karte.querySelector('[data-cockpit-knoepfe]').hidden=true;karte.querySelector('.cockpit-stimmt')?.setAttribute('hidden','');
+    karte.querySelector('[data-cockpit-rueck-form]:not([hidden]) textarea')?.focus();
+  });
+  alle('[data-cockpit-rueck-zu]').forEach(button=>button.onclick=()=>{
+    const karte=button.closest('.cockpit-card');if(!karte)return;
+    karte.querySelectorAll('[data-cockpit-rueck-form]').forEach(f=>{f.hidden=true});
+    karte.querySelector('[data-cockpit-knoepfe]').hidden=false;karte.querySelector('.cockpit-stimmt')?.removeAttribute('hidden');
+  });
+  alle('[data-cockpit-rueck-form]').forEach(form=>form.onsubmit=async e=>{
+    e.preventDefault();
+    const modul=window.TBA_OFFICE_WISSEN,r=(eintraege||[]).find(x=>x.id===form.dataset.cockpitRueckForm);if(!modul?.rueckmeldung||!r)return;
+    const verwerfen=form.dataset.art==='verwerfen',text=form.querySelector('textarea').value.trim();
+    if(!verwerfen&&!text){form.querySelector('textarea').focus();return}
+    form.querySelectorAll('button').forEach(b=>b.disabled=true);
+    const {error}=await modul.rueckmeldung(sb,{projekt:projektVon(r),text,verwerfen,
+      entscheidung:{id:r.id,title:r.title,seite:r.metadata?.seite||null,quelle:r.metadata?.quelle||''}});
+    if(error){meldung(error.message||'Das ging nicht.');form.querySelectorAll('button').forEach(b=>b.disabled=false);return}
+    if(!verwerfen)cockpitHinweise.add(r.id);
+    meldung(verwerfen?(text?'Entscheidung verworfen; der Grund steht im Projektwissen.':'Entscheidung verworfen.'):'Danke, Ihr Hinweis ist gespeichert. Die KI arbeitet ihn beim nächsten Mal ein.');
+    window.MINDS_BANDEJA?.changed?.();
+    await nachher();
+  });
+  alle('[data-wissen-pruefen]').forEach(button=>button.onclick=async()=>{
+    const modul=window.TBA_OFFICE_WISSEN;if(!modul?.entscheiden)return;
+    button.closest('.cockpit-actions')?.querySelectorAll('button').forEach(b=>b.disabled=true);
+    const {data,error}=await modul.entscheiden(sb,button.dataset.wissenPruefen,button.dataset.ja==='1');
+    if(error){meldung(error.message||'Das ging nicht.');button.closest('.cockpit-actions')?.querySelectorAll('button').forEach(b=>b.disabled=false);return}
+    meldung(data==='confirmed'?'Entscheidung bestätigt.':data==='rejected'?'Entscheidung verworfen.':'');
+    window.MINDS_BANDEJA?.changed?.();
+    await nachher();
+  });
+}
+function officeFuerDich(m){
+  const leitung=!!m.wissen?.leitung,ents=leitung?m.pending.filter(r=>r.memory_type==='decision'):[];
+  const cards=ents.map(r=>fuerDichKarte(r));
   for(const t of m.overdue)cards.push('<article class="cockpit-card is-overdue"><span class="cockpit-kind">Überfällig · '+esc(cockpitIn(cockpitDayDiff(m.today,t.due_date)))+'</span><p>'+esc(t.title||'Ohne Titel')+'</p>'+(t.assignee?'<small>'+esc(t.assignee)+'</small>':'')+
     '<div class="cockpit-actions"><button type="button" class="secondary" data-work-edit-task="'+esc(t.id)+'">Aufgabe öffnen</button><button type="button" class="secondary" data-cockpit-done="'+esc(t.id)+'">Erledigt</button></div></article>');
   const head=[ents.length?ents.length+' zur Bestätigung':'',m.overdue.length?m.overdue.length+' überfällig':''].filter(Boolean).join(' · ');
@@ -523,37 +568,7 @@ async function renderOverview(){
   $$('[data-akte-undo]').forEach(button=>button.onclick=()=>{button.disabled=true;void undoSteckbrief(button.dataset.akteUndo)});
   $$('[data-cockpit-done]').forEach(button=>button.onclick=()=>{button.disabled=true;void completeTaskFromPanorama(button.dataset.cockpitDone)});
   $$('[data-cockpit-more]').forEach(button=>button.onclick=()=>{paraTiExpanded=!paraTiExpanded;void renderOverview()});
-  $$('[data-cockpit-rueck]').forEach(button=>button.onclick=()=>{
-    const karte=button.closest('.cockpit-card');if(!karte)return;
-    karte.querySelectorAll('[data-cockpit-rueck-form]').forEach(f=>{f.hidden=f.dataset.art!==button.dataset.cockpitRueck});
-    karte.querySelector('[data-cockpit-knoepfe]').hidden=true;karte.querySelector('.cockpit-stimmt')?.setAttribute('hidden','');
-    karte.querySelector('[data-cockpit-rueck-form]:not([hidden]) textarea')?.focus();
-  });
-  $$('[data-cockpit-rueck-zu]').forEach(button=>button.onclick=()=>{
-    const karte=button.closest('.cockpit-card');if(!karte)return;
-    karte.querySelectorAll('[data-cockpit-rueck-form]').forEach(f=>{f.hidden=true});
-    karte.querySelector('[data-cockpit-knoepfe]').hidden=false;karte.querySelector('.cockpit-stimmt')?.removeAttribute('hidden');
-  });
-  $$('[data-cockpit-rueck-form]').forEach(form=>form.onsubmit=async e=>{
-    e.preventDefault();
-    const modul=window.TBA_OFFICE_WISSEN,r=m.pending.find(x=>x.id===form.dataset.cockpitRueckForm);if(!modul?.rueckmeldung||!r)return;
-    const verwerfen=form.dataset.art==='verwerfen',text=form.querySelector('textarea').value.trim();
-    if(!verwerfen&&!text){form.querySelector('textarea').focus();return}
-    form.querySelectorAll('button').forEach(b=>b.disabled=true);
-    const {error}=await modul.rueckmeldung(sb,{projekt:projectId,text,verwerfen,
-      entscheidung:{id:r.id,title:r.title,seite:r.metadata?.seite||null,quelle:r.metadata?.quelle||''}});
-    if(error){setStatus(error.message||'Das ging nicht.');form.querySelectorAll('button').forEach(b=>b.disabled=false);return}
-    if(!verwerfen)cockpitHinweise.add(r.id);
-    setStatus(verwerfen?(text?'Entscheidung verworfen; der Grund steht im Projektwissen.':'Entscheidung verworfen.'):'Danke, Ihr Hinweis ist gespeichert. Die KI arbeitet ihn beim nächsten Mal ein.');
-    await renderOverview();
-  });
-  $$('[data-wissen-pruefen]').forEach(button=>button.onclick=async()=>{
-    const modul=window.TBA_OFFICE_WISSEN;if(!modul?.entscheiden)return;
-    button.closest('.cockpit-actions')?.querySelectorAll('button').forEach(b=>b.disabled=true);
-    const {data,error}=await modul.entscheiden(sb,button.dataset.wissenPruefen,button.dataset.ja==='1');
-    if(error){setStatus(error.message||'Das ging nicht.');button.closest('.cockpit-actions')?.querySelectorAll('button').forEach(b=>b.disabled=false);return}
-    setStatus(data==='confirmed'?'Entscheidung bestätigt.':data==='rejected'?'Entscheidung verworfen.':'');await renderOverview();
-  });
+  fuerDichBinden(body,{eintraege:m.pending,projektVon:()=>projectId,meldung:setStatus,nachher:renderOverview});
   $$('[data-work-wissen]').forEach(button=>button.onclick=()=>{window.TBA_OFFICE_WISSEN?.vormerken?.(projectId,{ansicht:button.dataset.workWissen,seite:button.dataset.wissenTitel});document.querySelector('[data-work-view="knowledge"]')?.click()});
   $$('[data-cockpit-thread]').forEach(button=>button.onclick=()=>{activeThreadId=button.dataset.cockpitThread;document.querySelector('[data-work-view="threads"]')?.click()});
   $$('[data-cockpit-file]').forEach(button=>button.onclick=async()=>{const file=m.files.find(x=>x.id===button.dataset.cockpitFile);if(!file)return;const r=await sb.storage.from('minds-work').createSignedUrl(file.storage_path,900);if(r.error||!r.data?.signedUrl){setStatus('Die Datei konnte nicht geöffnet werden.');return}window.open(r.data.signedUrl,'_blank','noopener')});
@@ -2153,6 +2168,7 @@ async function sendThreadMessage(thread,overrideMessage=null){
   }
 }
 
-window.MINDS_WORK={akte:{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask},render,open:(key,nextView='overview')=>{if(key){if(key!==projectKey)retireToolPanes();if(isMusterPlanner())history.replaceState(null,'','#section=work');projectKey=key;localStorage.setItem('minds-work-project',key)}view=nextView;localStorage.setItem('minds-work-view',view);folderId=null;activeThreadId=null;if(document.body.dataset.section==='work')void render()},refresh:()=>document.body.dataset.section==='work'?render():null,context:()=>project?{name:project.name,key:project.client_key,active:document.body.dataset.section==='work',view,thread_id:activeThreadId||null}:null};
+window.MINDS_WORK={akte:{card:akteCard,toConfirm:akteToConfirm,decide:saveAkteDecision,toTask:saveAkteTask},
+  fuerDich:{karte:fuerDichKarte,binden:fuerDichBinden},render,open:(key,nextView='overview')=>{if(key){if(key!==projectKey)retireToolPanes();if(isMusterPlanner())history.replaceState(null,'','#section=work');projectKey=key;localStorage.setItem('minds-work-project',key)}view=nextView;localStorage.setItem('minds-work-view',view);folderId=null;activeThreadId=null;if(document.body.dataset.section==='work')void render()},refresh:()=>document.body.dataset.section==='work'?render():null,context:()=>project?{name:project.name,key:project.client_key,active:document.body.dataset.section==='work',view,thread_id:activeThreadId||null}:null};
 if(document.body.dataset.section==='work'&&typeof setTimeout==='function')setTimeout(()=>{if(!bound)void render()},0);
 })();

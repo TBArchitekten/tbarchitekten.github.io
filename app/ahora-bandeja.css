@@ -136,3 +136,26 @@ body.window-app-shell #drawer>button[data-shell-nav]{display:block}
 }
 /* Five destinations on the phone: Chat · Ahora · Tiempo · Work · Bandeja (Lecturas and Thoughts are in •••) */
 .app .main-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
+
+/* Heute · der eine Tag und der eine Eingang (27.11.2026): «Braucht Sie», «Heute erledigen», «Bald fällig»,
+   «Überfällig» mit «Aufräumen», «Demnächst». Neue Regeln nur mit Farben aus den Tokens. */
+.ahora-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ahora-count{font-size:12.5px;color:var(--m-ink-soft)}
+.ahora-inbox-cards{margin:0}
+.ahora-more{align-self:flex-start;padding:0}
+.ahora-meldung{margin:0 2px;font-size:12.5px;color:var(--m-ink-soft)}
+.ahora-meldung:empty{display:none}
+.ahora-sub-label{margin:0;padding:12px 16px 4px;font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--m-ink-faint)}
+.ahora-ueberfaellig{display:flex;flex-direction:column;gap:10px}
+.ahora-ueberfaellig>summary{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:34px;cursor:pointer;list-style:none}
+.ahora-ueberfaellig>summary::-webkit-details-marker{display:none}
+.ahora-ueberfaellig>summary .ahora-label{color:var(--m-error)}
+.ahora-summary-hint{font-size:13px;font-weight:600;color:var(--m-link)}
+.ahora-ueberfaellig-kopf{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.ahora-ueberfaellig-kopf p{margin:0;font-size:13px;color:var(--m-ink-soft)}
+.ahora-task.has-werkzeuge{border-bottom:0;padding-bottom:6px}
+.ahora-aufraeumen{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 16px 12px 52px;border-bottom:1px solid var(--m-hairline)}
+.ahora-aufraeumen button{min-height:32px;padding:4px 12px;border-radius:var(--m-radius-pill);border:1px solid var(--m-border);background:var(--m-surface);color:var(--m-ink);font:inherit;font-size:12.5px;cursor:pointer}
+.ahora-aufraeumen button:hover{background:var(--m-fill)}
+.ahora-hinweis{font-size:12px;color:var(--m-ink-soft)}
+.ahora-weather-quelle{margin:8px 0 0;font-size:11px;color:var(--m-ink-faint)}
