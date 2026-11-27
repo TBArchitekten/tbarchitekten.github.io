@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Aufräumen mit Garis OK: KI-Anfragen ohne Person, Verlauf der Zeitpläne 7 Tage · Claude
+- Qué cambió y por qué: Gari hat beide Vorschläge bestätigt (27.11.2026). **KI-Anfragen ohne Person:** die vier Werkzeuge mit KI speicherten jede Anfrage mit der Person (`office_*_ai_requests`), für ein Tageslimit, das es seit dem 22.11. nicht mehr gibt; den Verbrauch zählt seit heute `office_ki_verbrauch` ohne Person. Die vier Funktionen `office_*_consume_request` prüfen weiter Anmeldung, Mitgliedschaft und Sichtbarkeit, speichern aber nichts mehr; die 8 gespeicherten Anfragen (alle Terminplan) sind gelöscht, die Tabellen bleiben leer stehen. **Verlauf der Zeitpläne:** `cron.job_run_details` hatte 114 693 Läufe seit dem 05.11. (115 MB, rund 5 MB am Tag, vor allem vier Läufe von Romy jede Minute). `private.office_cron_verlauf_aufraeumen()` löscht, was vor mehr als 7 Tagen begann; Cron `office_cron_verlauf_aufraeumen_v1` täglich 03:23 UTC, einmal sofort (danach 43 497 Läufe ab 20.11.). Der Platz wird wiederverwendet, die Datenbank wächst dadurch nicht weiter; der Systemstatus liest ohnehin nur 7 Tage.
+- Archivos: `supabase/migrations/20261127145319_office_ki_anfragen_ohne_person.sql`, `supabase/migrations/20261127145327_office_cron_verlauf_aufbewahrung.sql`, `tests/office-aufraeumen.test.mjs` (neu), Erwartungen in `tests/sql/office-kosten-ai-rls-acceptance.sql`, `tests/sql/office-produktbibliothek-acceptance.sql`, `tests/sql/office-terminplan-ai-ohne-limit-acceptance.sql` und `tests/office-kosten-assistent.test.mjs` (gespeichert: 0).
+- Base de datos: beide Migrationen — aplicadas en Supabase: sí (`apply_migration` am 27.11.2026 nach Garis Bestätigung; der erste Versuch um 14:3x bekam keine Antwort auf die Rückfrage und lief nicht; Dateien auf die registrierten Versionen umbenannt). Geprüft: keine Anfrage gespeichert, Funktion ohne `insert`, Cron-Job aktiv.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün; SQL-Abnahmen in der flüchtigen Datenbank der CI.
+- Quedó pendiente o sin probar: keine.
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: #206
+
+---
+
 ### 2026-11-27 · Rückmeldungen von Gari: Mustermappe, Terminplan, Panorama · Claude
 - Qué cambió y por qué:
   - **Mustermappe: Eigenschaften zu Beginn aus** (Gari): die Ansicht beginnt ohne Eigenschaften; wer sie einschaltet, behält sie (gespeichert mit `v:2`). Ansichten von vor dem 27.11. beginnen einmal ohne, Zoom und Seitenleiste bleiben. Eine neue Position zeigt die Eigenschaften (Reiter «Position»), damit man sie ausfüllt; «1 Übersatz» zeigt sie wie bisher.

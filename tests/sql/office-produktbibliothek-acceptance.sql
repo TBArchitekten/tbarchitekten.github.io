@@ -30,7 +30,7 @@ declare
     || 'loeschen=verweigert; entwurf_leert=true; T_prueft=true; B_dokument=ok; fremder_pfad=verweigert; pfad_fest=verweigert; '
     || 'T_entfernt_fremdes=0; B_entfernt=1; T_preis=ok; B_aendert_fremden_preis=0; T_aendert_eigenen=1; '
     || 'B_verwendung=verweigert; T_verwendung=ok; A_status=1; B_status=0; doppelter_code=verweigert; projekt_fest=verweigert; '
-    || 'B_zaehlt=true; D_zaehlt=false; gezaehlt=1; ';
+    || 'B_zaehlt=true; D_zaehlt=false; gezaehlt=0; ';
   ua constant text := '{"sub":"a5000000-0000-4000-8000-00000000000a","role":"authenticated"}';
   ut constant text := '{"sub":"b5000000-0000-4000-8000-00000000000b","role":"authenticated"}';
   ub constant text := '{"sub":"c5000000-0000-4000-8000-00000000000c","role":"authenticated"}';
@@ -157,7 +157,7 @@ begin
   exception when others then r := r || 'projekt_fest=verweigert; '; end;
   execute 'reset role';
 
-  -- Jede Anfrage an den Datenblatt-Leser zählt; ein Nicht-Mitglied bekommt keine.
+  -- Jede Anfrage an den Datenblatt-Leser wird geprüft (gespeichert wird seit dem 27.11.2026 nichts); ein Nicht-Mitglied bekommt keine.
   perform set_config('request.jwt.claims', ub, true);
   execute 'set local role authenticated';
   select public.office_produkt_ai_consume_request() into ok; r := r || 'B_zaehlt=' || ok || '; ';

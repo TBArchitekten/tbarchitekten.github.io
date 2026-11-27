@@ -263,8 +263,9 @@ test('Migrationen: Verlauf und Zählung mit RLS; kein Tageslimit für Terminplan
   assert.doesNotMatch(sql,/grant[^;]*(update|delete)[^;]*office_kosten_(dialogue_messages|ai_requests)/i);
   assert.match(abnahme,/^begin;$/m);assert.match(abnahme,/^rollback;$/m);
   assert.match(abnahme,/B_schreibt=ok; B_liest=1; B_kontingent=true; A_liest_B=0; A_schreibt=ok; C_schreibt=ok; C_kontingent=true; C_liest=1; /);
-  assert.match(abnahme,/B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=31; /);
-  assert.match(abnahmeTerminplan,/M_ohne_limit=true; M_gezaehlt=30; N_kontingent=false; fremder_plan=false; anon=verweigert; /);
+  // Seit dem 27.11.2026 (OK von Gari) speichern die Funktionen keine Anfrage mit Person mehr: gezählt werden 0.
+  assert.match(abnahme,/B_fremd=verweigert; D_kontingent=false; anon=verweigert; B_ohne_limit=true; B_gezaehlt=0; /);
+  assert.match(abnahmeTerminplan,/M_ohne_limit=true; M_gezaehlt=0; N_kontingent=false; fremder_plan=false; anon=verweigert; /);
   for(const a of [abnahme,abnahmeTerminplan]){assert.match(a,/^begin;$/m);assert.match(a,/^rollback;$/m);assert.match(a,/example\.invalid/)}
   const ci=read('.github/workflows/verify.yml');
   for(const f of ['tests/sql/office-kosten-ai-rls-acceptance.sql','tests/sql/office-terminplan-ai-ohne-limit-acceptance.sql'])
