@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün (561); Browserprüfungen Work-Seitenleiste lokal mit Chrome grün; Terminplan in Work, Mappe und Kostenberechnung im Reiter als Bildschirmfoto angesehen (eine Zeile, 41 und 45 px hoch).
 - Quedó pendiente o sin probar: keine.
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (wird ergänzt)
+- PR: #204
 
 ---
 
