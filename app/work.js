@@ -418,9 +418,45 @@ function officeNextMilestone(state,today){
   const list=Array.isArray(state?.tasks)?state.tasks:[];
   return list.filter(t=>t&&t.type==='milestone'&&typeof t.start==='string'&&t.start>=today).sort((a,b)=>a.start.localeCompare(b.start))[0]||null;
 }
+// Panorama im Office (B2, 27.11.2026): wie in Window «Für dich», Themen, Register und «Neu im Desktop», mit den Daten
+// des Office und in «Sie». Bestätigen dürfen nur Projektleitung und Admins, über die Funktion des Wissens.
+function officeFuerDich(m){
+  const leitung=!!m.wissen?.leitung,ents=leitung?m.pending.filter(r=>r.memory_type==='decision'):[];
+  const cards=ents.map(r=>'<article class="cockpit-card"><span class="cockpit-kind">Entscheidung'+(r.occurred_at?' · '+esc(cockpitShort(r.occurred_at)):'')+'</span><p>'+esc(r.title)+'</p>'+cockpitSource(r)+cockpitWhy(r)+
+    '<div class="cockpit-actions"><button type="button" data-wissen-pruefen="'+esc(r.id)+'" data-ja="1">Bestätigen</button><button type="button" class="secondary" data-wissen-pruefen="'+esc(r.id)+'" data-ja="0">Verwerfen</button></div></article>');
+  for(const t of m.overdue)cards.push('<article class="cockpit-card is-overdue"><span class="cockpit-kind">Überfällig · '+esc(cockpitIn(cockpitDayDiff(m.today,t.due_date)))+'</span><p>'+esc(t.title||'Ohne Titel')+'</p>'+(t.assignee?'<small>'+esc(t.assignee)+'</small>':'')+
+    '<div class="cockpit-actions"><button type="button" class="secondary" data-work-edit-task="'+esc(t.id)+'">Aufgabe öffnen</button><button type="button" class="secondary" data-cockpit-done="'+esc(t.id)+'">Erledigt</button></div></article>');
+  const head=[ents.length?ents.length+' zur Bestätigung':'',m.overdue.length?m.overdue.length+' überfällig':''].filter(Boolean).join(' · ');
+  const limit=8,shown=paraTiExpanded?cards:cards.slice(0,limit);
+  return '<section class="cockpit-section" aria-labelledby="cockpitParaTi"><div class="cockpit-head"><h2 id="cockpitParaTi">Für dich</h2><span>'+esc(head||'Nichts offen')+'</span></div>'+
+    (cards.length?'<div class="cockpit-cards">'+shown.join('')+'</div>'+(cards.length>limit?'<button type="button" class="cockpit-more" data-cockpit-more>'+(paraTiExpanded?'Weniger anzeigen':(cards.length-limit)+' weitere anzeigen')+'</button>':'')
+      :'<p class="cockpit-empty">'+(leitung?'Keine Entscheidung wartet auf Bestätigung, keine Aufgabe ist überfällig.':'Keine Aufgabe dieses Projekts ist überfällig.')+'</p>')+'</section>';
+}
+function officeThemen(m){
+  const cards=m.threads.map(t=>{
+    const tb=t.metadata?.themenblatt,stand=tb?.stand||t.summary||'',q=Array.isArray(tb?.offene_fragen)?tb.offene_fragen.length:0;
+    return '<article class="cockpit-topic'+(stand?'':' is-empty')+'"><div class="cockpit-topic-head"><button type="button" data-cockpit-thread="'+esc(t.id)+'">'+esc(t.title)+'</button><span>'+esc(cockpitAgo(tb?.aktualisiert_am||t.last_activity_at||t.updated_at,m.today))+'</span></div>'+
+      '<p>'+esc(stand||'Noch kein Themenblatt. Es entsteht nach der ersten abgeschlossenen Sitzung.')+'</p>'+(q?'<small>'+esc(q+(q===1?' offene Frage':' offene Fragen'))+'</small>':'')+
+      '<a class="cockpit-claude" href="'+esc(claudeContinueUrl(t))+'" target="_blank" rel="noopener noreferrer">In Claude fortsetzen</a></article>';
+  });
+  return '<section class="cockpit-section" aria-labelledby="cockpitTopics"><div class="cockpit-head"><h2 id="cockpitTopics">Themen</h2><button type="button" class="cockpit-link" data-work-go="threads">Alle Threads</button></div>'+
+    (cards.length?'<div class="cockpit-topics">'+cards.join('')+'</div>':'<p class="cockpit-empty">Noch keine Themen. Legen Sie eines unter Threads an.</p>')+'</section>';
+}
+function officeRegister(m){
+  const rows=m.confirmed.slice(0,8).map(r=>'<div class="cockpit-register-row"><span class="cockpit-chip'+(r.memory_type==='deadline'?' is-frist':'')+'">'+(r.memory_type==='deadline'?'Frist':'Entscheidung')+'</span><div><p>'+esc(r.title)+'</p>'+cockpitSource(r)+'</div>'+
+    '<span class="cockpit-date">'+esc(cockpitShort(r.occurred_at||r.confirmed_at||r.created_at))+'</span></div>').join('');
+  return '<section class="cockpit-panel cockpit-wide" aria-labelledby="cockpitRegister"><div class="cockpit-head"><h2 id="cockpitRegister">Entscheidungen</h2><button type="button" class="cockpit-link" data-work-wissen="entscheidungen">Alle im Wissen</button></div>'+
+    (rows||'<p class="cockpit-empty">Noch keine beschlossenen Entscheidungen. Was die Projektleitung bestätigt, steht hier mit Datum und Herkunft.</p>')+'</section>';
+}
+function officeDesktop(m){
+  const files=m.files.map(f=>'<button type="button" class="cockpit-file" data-cockpit-file="'+esc(f.id)+'"><span>'+esc(f.name)+'</span><small>'+esc([f.metadata?.art==='email'?'E-Mail':String(f.name||'').split('.').pop().toUpperCase().slice(0,5),cockpitShort(f.created_at)].filter(Boolean).join(' · '))+'</small></button>').join('');
+  return '<div class="cockpit-side cockpit-stack"><section class="cockpit-panel" aria-labelledby="cockpitNew"><div class="cockpit-head"><h2 id="cockpitNew">Neu im Desktop</h2><button type="button" class="cockpit-link" data-work-go="desktop">Desktop öffnen</button></div>'+
+    (files||'<p class="cockpit-empty">Der Desktop ist leer.</p>')+(m.fileCount?'<p class="cockpit-foot">'+esc(m.fileCount+(m.fileCount===1?' Dokument insgesamt':' Dokumente insgesamt'))+'</p>':'')+'</section></div>';
+}
 function cockpitMarkup(m){
-  if(OFFICE)return '<div class="work-overview work-cockpit" aria-label="Panorama '+esc(project.name)+'">'+cockpitHeader(m)+
-    '<div class="cockpit-row">'+cockpitTimeline(m)+officeTerminplaene(m)+'</div>'+
+  if(OFFICE)return '<div class="work-overview work-cockpit" aria-label="Panorama '+esc(project.name)+'">'+cockpitHeader(m)+officeFuerDich(m)+
+    '<div class="cockpit-row">'+cockpitTimeline(m)+officeTerminplaene(m)+'</div>'+officeThemen(m)+
+    '<div class="cockpit-row is-top">'+officeRegister(m)+officeDesktop(m)+'</div>'+
     (m.partial?'<p class="cockpit-foot">Teilweise geladen: eine Quelle hat nicht geantwortet. Bitte das Panorama gleich noch einmal öffnen.</p>':'')+'</div>';
   return '<div class="work-overview work-cockpit" aria-label="Panorama de '+esc(project.name)+'">'+cockpitHeader(m)+cockpitPflegeLine(m.pflege)+cockpitParaTi(m)+
     '<div class="cockpit-row">'+cockpitTimeline(m)+cockpitSteckbrief(m)+'</div>'+cockpitTopics(m)+
@@ -437,10 +473,11 @@ async function renderOverview(){
   const [t,c,f,a,pf,th,ev,pl,wi]=await Promise.allSettled([
     sb.from('isabella_tasks').select('id,title,due_date,start_date,assignee,work_status').eq('project_id',projectId).is('completed_at',null).is('archived_at',null).order('due_date',{ascending:true,nullsFirst:false}).limit(150),
     OFFICE?none:sb.from('minds_work_claims').select('id,claim_type,status').eq('project_id',projectId).in('status',['proposed','disputed']).limit(1000),
-    OFFICE?none:sb.from('minds_work_files').select('id,name,source_kind,created_at,storage_path,metadata',{count:'exact'}).eq('project_id',projectId).order('created_at',{ascending:false}).limit(5),
-    OFFICE?none:sb.from('minds_work_memory').select('id,memory_type,title,body,status,occurred_at,confirmed_at,metadata,updated_at,created_at').eq('project_id',projectId).in('memory_type',['document_state','decision','deadline','commitment','open_question']).in('status',['proposed','confirmed']).order('created_at',{ascending:false}).limit(150),
+    sb.from('minds_work_files').select('id,name,source_kind,created_at,storage_path,metadata',{count:'exact'}).eq('project_id',projectId).order('created_at',{ascending:false}).limit(5),
+    // Im Office nur Entscheidungen und Fristen (die Seiten des Wissens liest das Wissen selbst).
+    sb.from('minds_work_memory').select('id,memory_type,title,body,status,occurred_at,confirmed_at,metadata,updated_at,created_at').eq('project_id',projectId).in('memory_type',OFFICE?['decision','deadline']:['document_state','decision','deadline','commitment','open_question']).in('status',['proposed','confirmed']).order('created_at',{ascending:false}).limit(150),
     OFFICE?none:sb.from('isabella_preferences').select('value').eq('preference_key','akte_pflege').limit(1),
-    OFFICE?none:sb.from('minds_work_threads').select('id,title,summary,metadata,last_activity_at,updated_at,conversation_id').eq('project_id',projectId).eq('status','active').order('updated_at',{ascending:false}).limit(12),
+    sb.from('minds_work_threads').select('id,title,summary,metadata,last_activity_at,updated_at,conversation_id').eq('project_id',projectId).eq('status','active').order('updated_at',{ascending:false}).limit(12),
     sb.from('isabella_events').select('id,title,starts_at,all_day').eq('project_id',projectId).gte('starts_at',today).lte('starts_at',horizon).order('starts_at',{ascending:true}).limit(40),
     OFFICE?sb.from('office_terminplan_instances').select('id,phase,state,updated_at').eq('project_id',projectId).eq('is_archived',false).order('updated_at',{ascending:false}):none,
     wissen?.panorama?wissen.panorama({sb,project:{id:projectId}}):none
@@ -459,7 +496,7 @@ async function renderOverview(){
     confirmed:mem.filter(r=>(r.memory_type==='decision'||r.memory_type==='deadline')&&r.status==='confirmed'),
     threads:threadQ?.data||[],events:eventQ?.data||[],files:fileQ?.data||[],fileCount:fileQ?fileQ.count??null:null,
     claimsToReview:claims.length,claimDeadlines:claims.filter(x=>x.claim_type==='deadline').length,
-    pflege:pflegeQ?.data?.[0]?.value||null,plans:planQ?.data||[],wissen:wissenQ?.data||null,partial:(OFFICE?[taskQ,eventQ,planQ]:[taskQ,claimQ,fileQ,memQ,threadQ]).some(x=>!x)};
+    pflege:pflegeQ?.data?.[0]?.value||null,plans:planQ?.data||[],wissen:wissenQ?.data||null,partial:(OFFICE?[taskQ,eventQ,planQ,fileQ,memQ,threadQ]:[taskQ,claimQ,fileQ,memQ,threadQ]).some(x=>!x)};
   body.innerHTML=cockpitMarkup(m);
   $$('[data-work-go]').forEach(button=>button.onclick=()=>document.querySelector('[data-work-view="'+button.dataset.workGo+'"]')?.click());
   $$('[data-office-new-plan]').forEach(button=>button.onclick=()=>void window.TBA_OFFICE_PROJECTS?.openNewPlan?.(button.dataset.officeNewPlan,{onCreated:id=>openToolTab('terminplan',id)}));
@@ -469,6 +506,13 @@ async function renderOverview(){
   $$('[data-akte-undo]').forEach(button=>button.onclick=()=>{button.disabled=true;void undoSteckbrief(button.dataset.akteUndo)});
   $$('[data-cockpit-done]').forEach(button=>button.onclick=()=>{button.disabled=true;void completeTaskFromPanorama(button.dataset.cockpitDone)});
   $$('[data-cockpit-more]').forEach(button=>button.onclick=()=>{paraTiExpanded=!paraTiExpanded;void renderOverview()});
+  $$('[data-wissen-pruefen]').forEach(button=>button.onclick=async()=>{
+    const modul=window.TBA_OFFICE_WISSEN;if(!modul?.entscheiden)return;
+    button.closest('.cockpit-actions')?.querySelectorAll('button').forEach(b=>b.disabled=true);
+    const {data,error}=await modul.entscheiden(sb,button.dataset.wissenPruefen,button.dataset.ja==='1');
+    if(error){setStatus(error.message||'Das ging nicht.');button.closest('.cockpit-actions')?.querySelectorAll('button').forEach(b=>b.disabled=false);return}
+    setStatus(data==='confirmed'?'Entscheidung bestätigt.':data==='rejected'?'Entscheidung verworfen.':'');await renderOverview();
+  });
   $$('[data-work-wissen]').forEach(button=>button.onclick=()=>{window.TBA_OFFICE_WISSEN?.vormerken?.(projectId,{ansicht:button.dataset.workWissen,seite:button.dataset.wissenTitel});document.querySelector('[data-work-view="knowledge"]')?.click()});
   $$('[data-cockpit-thread]').forEach(button=>button.onclick=()=>{activeThreadId=button.dataset.cockpitThread;document.querySelector('[data-work-view="threads"]')?.click()});
   $$('[data-cockpit-file]').forEach(button=>button.onclick=async()=>{const file=m.files.find(x=>x.id===button.dataset.cockpitFile);if(!file)return;const r=await sb.storage.from('minds-work').createSignedUrl(file.storage_path,900);if(r.error||!r.data?.signedUrl){setStatus('Die Datei konnte nicht geöffnet werden.');return}window.open(r.data.signedUrl,'_blank','noopener')});
