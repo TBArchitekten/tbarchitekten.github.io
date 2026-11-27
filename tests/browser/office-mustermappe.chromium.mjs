@@ -74,6 +74,9 @@ async function zeilen(page,art){
   return dok?d.office_projektdokument_zeilen.filter(z=>z.dokument_id===dok.id).sort((a,b)=>a.nr-b.nr):[];
 }
 const seiteWaehlen=(page,text)=>page.locator('.mm-seitenliste button',{hasText:text}).click();
+// Eigenschaften in Reitern (B2, 27.11.2026): Seite, Position, Mappe; «+» über dem Streifen fügt Seiten und Positionen hinzu.
+const teil=(page,name)=>page.locator('.mm-teile button',{hasText:name}).click();
+async function hinzufuegen(page,text){await page.locator('[data-act="mm-plus"]').click();await page.locator('.mm-plus-menue button',{hasText:text}).click()}
 
 test('Mappe anlegen, Position mit Code, Kandidaten aus der Bibliothek, Texte auf der Seite',async()=>{
   const {page,fehler}=await oeffne();
@@ -91,14 +94,20 @@ test('Mappe anlegen, Position mit Code, Kandidaten aus der Bibliothek, Texte auf
   await page.locator('#pdDialog button[type="submit"]').click();
   await page.locator('h1',{hasText:'Mustermappe Bodenbeläge'}).waitFor();
   assert.deepEqual(await page.locator('.mm-seitenliste button').allInnerTexts(),['1\nDeckblatt','2\nÜbersicht']);
+  // Seiten als Bilder: eine kleine Seite je Eintrag, wie im PDF gesetzt (ohne Eingabefelder).
+  assert.equal(await page.locator('.mm-streifen-kopf h2').innerText(),'SEITEN · 2');
+  assert.equal(await page.locator('.mm-seitenliste li .mm-mini .mm-blatt').count(),2);
+  assert.equal(await page.locator('.mm-seitenliste .mm-mini [contenteditable]').count(),0);
   assert.match(await page.locator('.mm-buehne').innerText(),/Vorlage zur Bemusterung am 03\.12\.2026/);
   // Position B2: steht als Entscheidung in der Entscheidungsliste, mit Code, Thema und der Mappe als Vorlage.
-  await page.locator('.mm-nav button',{hasText:'Position hinzufügen'}).click();
+  await hinzufuegen(page,'Position hinzufügen');
   await page.locator('#pdDialog input[name="code"]').fill('B2');
   await page.locator('#pdDialog input[name="bez"]').fill('Holz – Eiche');
   await page.locator('#pdDialog select[name="strategie"]').selectOption('A');
   await page.locator('#pdDialog button[type="submit"]').click();
   await page.locator('.mm-seitenliste .active',{hasText:'B2 Holz – Eiche · Vergleich'}).waitFor();
+  // Nach dem Anlegen zeigen die Eigenschaften die neue Position.
+  assert.equal(await page.locator('.mm-teile button[aria-pressed="true"]').innerText(),'Position');
   await gespeichert(page);
   const mappe=(await zeilen(page,'entscheidungsvorlagen'))[0];
   let e=(await zeilen(page,'entscheidungsliste'))[0];
@@ -141,11 +150,13 @@ test('Mappe anlegen, Position mit Code, Kandidaten aus der Bibliothek, Texte auf
   // Nur im Büro: was im Datenblatt fehlt, steht neben der Seite, nicht auf ihr.
   assert.match(await page.locator('.mm-intern').innerText(),/nicht im Datenblatt: R-Gruppe/);
   assert.doesNotMatch(await buehne.innerText(),/R-Gruppe/);
-  // Foto wählen, Materialseite anlegen.
+  // Foto wählen (Eigenschaften der Seite), Materialseite anlegen (Eigenschaften der Position).
+  await teil(page,'Seite');
   await page.locator('button[data-act="mm-foto"][data-o="A"]').first().click();
   await gespeichert(page);
   e=(await zeilen(page,'entscheidungsliste'))[0];
   assert.equal(e.daten.optionen[0].muster_fotos.length,1);
+  await teil(page,'Position');
   await page.locator('button[data-act="mm-material"][data-o="A"]').click();
   await page.locator('.mm-seitenliste .active',{hasText:'B2 · Parkett Eiche geölt · Material'}).waitFor();
   // Seit 26.11.2026 steht das Foto in einem Rahmen (Ausschnitt); das Bild darin.
@@ -170,13 +181,16 @@ test('Neuer Stand der Bibliothek erst nach «Übernehmen»; Kennwert nur mit Bel
   });
   await page.reload();
   await page.locator('h1',{hasText:'Mustermappe Bodenbeläge'}).waitFor();
-  await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');
+  await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');await teil(page,'Seite');
   const hinweis=page.locator('.mm-intern',{hasText:'neuer Stand in der Bibliothek'});
   await hinweis.waitFor();
+  // Im Streifen: «neuer Stand» auf der Vergleichs- und der Materialseite von A.
+  assert.equal(await page.locator('.mm-seitenliste .mm-mini-marke').count(),2);
   const kennA=page.locator('.mm-buehne table[data-mmkwtab$="|A"]');
   assert.doesNotMatch(await kennA.innerText(),/R9/,'die Seite bleibt beim übernommenen Stand');
   await hinweis.locator('button',{hasText:'Übernehmen'}).click();
   await page.waitForFunction(()=>/Rutschhemmung\s+R9/.test(document.querySelector('.mm-buehne table[data-mmkwtab$="|A"]')?.innerText||''));
+  assert.equal(await page.locator('.mm-seitenliste .mm-mini-marke').count(),0,'übernommen: keine Marke mehr');
   assert.equal(await page.locator('.mm-buehne .mm-geaendert').count(),0,'der neue Stand ist keine Anpassung');
   await gespeichert(page);
   const e=(await zeilen(page,'entscheidungsliste'))[0];
@@ -213,7 +227,7 @@ test('Neuer Stand der Bibliothek erst nach «Übernehmen»; Kennwert nur mit Bel
 
 test('Freie Seite mit Bild und mit einer Seite aus einem PDF',async t=>{
   const {page,fehler}=await oeffne();
-  await page.locator('select[data-act="mm-neue-seite"]').selectOption('frei');
+  await hinzufuegen(page,'Freie Seite');await teil(page,'Seite');
   await page.locator('.mm-seitenliste .active',{hasText:'Freie Seite'}).waitFor();
   await page.locator('input[data-act="mm-datei"]').setInputFiles({name:'Plan EG.png',mimeType:'image/png',buffer:PNG});
   await page.locator('.pd-meldung',{hasText:'Das Bild steht auf der Seite.'}).waitFor();
@@ -228,7 +242,7 @@ test('Freie Seite mit Bild und mit einer Seite aus einem PDF',async t=>{
   assert.ok(await page.locator('.mm-buehne img.mm-foto-frei').count());
   if(!pdfjsOrdner){t.diagnostic('pdfjs-dist nicht installiert: PDF übersprungen');return}
   // Ein PDF: die gewählte Seite wird ein Bild auf der Seite.
-  await page.locator('select[data-act="mm-neue-seite"]').selectOption('frei');
+  await hinzufuegen(page,'Freie Seite');await teil(page,'Seite');
   await page.locator('input[data-act="mm-pdf-seite"]').fill('2');await page.locator('input[data-act="mm-pdf-seite"]').press('Tab');
   await page.locator('input[data-act="mm-datei"]').setInputFiles({name:'Plaene.pdf',mimeType:'application/pdf',buffer:pdfDatei()});
   // Fertig ist es mit der Bestätigung oder einer Meldung; die Meldung steht dann in der Prüfung.
@@ -257,6 +271,7 @@ test('Vorlegen hält den Stand fest; Übersicht, Entscheidungsliste und iPhone',
   assert.equal(st.inhalt.punkte[0].optionen[0].kennwert,'189,69 €/m²');
   assert.doesNotMatch(JSON.stringify(st.inhalt),/T-90|Altbau/,'auch der Stand ohne Fundstelle');
   assert.equal((await zeilen(page,'entscheidungsliste'))[0].daten.status,'vorgelegt');
+  await teil(page,'Mappe');
   await page.locator('[data-staende] button[data-act="stand"]').click();
   await page.locator('#pdDialog .mm-stand .mm-blatt').first().waitFor();
   assert.equal(await page.locator('#pdDialog .mm-stand textarea').count(),0);
@@ -334,7 +349,8 @@ test('Präsentieren im Termin: Entscheidung je Position, danach in der Produktbi
   await foto(page,'mappe-3-praesentieren');
   await praes.locator('[data-praes="ende"]').click();
   await praes.waitFor({state:'detached'});
-  // Nach dem Termin: die gewählten Produkte freigeben, die übrigen Kandidaten verworfen.
+  // Nach dem Termin: die gewählten Produkte freigeben, die übrigen Kandidaten verworfen (Eigenschaften der Mappe).
+  await teil(page,'Mappe');
   const karte=page.locator('.card',{hasText:'Entscheidungen der Bemusterung'});
   await karte.waitFor();
   await karte.locator('button',{hasText:'In der Produktbibliothek freigeben (1)'}).click();
@@ -390,7 +406,7 @@ window.__nachrichten=[];addEventListener('message',e=>{if(e.origin===location.or
     // Für Work: Revision der Mappe, nichts offen; eine Änderung steht aus, flush speichert sie.
     const rev=await rahmen().evaluate(()=>[window.TBA_OFFICE_TOOL.kind,window.TBA_OFFICE_TOOL.revision(),window.TBA_OFFICE_TOOL.pending()]);
     assert.equal(rev[0],'mustermappe');assert.ok(rev[1]>=1);assert.equal(rev[2],false);
-    await f.locator('.mm-nav button',{hasText:'Position hinzufügen'}).click();
+    await hinzufuegen(f,'Position hinzufügen');
     await f.locator('#pdDialog input[name="code"]').fill('S1');
     await f.locator('#pdDialog input[name="bez"]').fill('Waschtisch');
     await f.locator('#pdDialog button[type="submit"]').click();
@@ -465,7 +481,7 @@ test('Bearbeiten nach dem Erzeugen: Texte für diese Mappe, Bild ersetzen, zusch
   const mappe=(await zeilen(page,'entscheidungsvorlagen')).find(v=>v.daten.form==='mustermappe');
   await page.goto(adresse('projektdokumente.html?projekt='+PID+'&vorlage='+mappe.id));
   await page.locator('h1',{hasText:'Mustermappe Bodenbeläge'}).waitFor();
-  await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');
+  await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');await teil(page,'Seite');
   let e=(await zeilen(page,'entscheidungsliste'))[0];
   const produktVorher=JSON.stringify((await db(page)).office_produkte);
   // Name und Kennwerte nur für diese Mappe, direkt auf der Seite; markiert, rechts «zurücksetzen».
@@ -577,6 +593,7 @@ test('Bearbeiten nach dem Erzeugen: Texte für diese Mappe, Bild ersetzen, zusch
   await dlg.locator('[data-bd="zu"]').last().click();
   await dlg.waitFor({state:'detached'}).catch(()=>{});
   // Materialseite: «+ Bild» fügt ein zweites hinzu; entfernen nimmt es wieder weg. Das Raster bleibt.
+  await teil(page,'Position');
   await page.locator('button[data-act="mm-material"][data-o="A"]').click();
   await page.locator('.mm-seitenliste .active',{hasText:'Material'}).waitFor();
   await page.locator('[data-bildplatz="'+e.id+'|A|0"] button',{hasText:'+ Bild'}).click();
@@ -619,7 +636,7 @@ test('Etappe 2: Rahmen auf dem Raster, Rückgängig, Zuschneiden auf der Seite, 
   let mappe=(await zeilen(page,'entscheidungsvorlagen')).find(v=>v.daten.form==='mustermappe');
   await page.goto(adresse('projektdokumente.html?projekt='+PID+'&vorlage='+mappe.id));
   await page.locator('h1',{hasText:'Mustermappe Bodenbeläge'}).waitFor();
-  await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');
+  await seiteWaehlen(page,'B2 Holz – Eiche · Vergleich');await teil(page,'Seite');
   let e=(await zeilen(page,'entscheidungsliste'))[0];
   const seiteId=await page.locator('.mm-buehne .mm-blatt').getAttribute('data-seite');
   const layout=async()=>{await gespeichert(page);mappe=(await zeilen(page,'entscheidungsvorlagen')).find(v=>v.id===mappe.id);return mappe.daten.seiten.find(x=>x.id===seiteId)?.layout};
@@ -750,6 +767,7 @@ test('Etappe 2: Rahmen auf dem Raster, Rückgängig, Zuschneiden auf der Seite, 
   // Materialseite: ein eigenes Bild vom Schreibtisch auf das große Foto, dann ein Foto der Bibliothek auf den Platz für
   // Bild 2 (erscheint beim Ziehen). Die Bibliothek bleibt, wie sie ist.
   const produktVorher=JSON.stringify((await db(page)).office_produkte);
+  await teil(page,'Position');
   await page.locator('button[data-act="mm-material"][data-o="A"]').click();
   await page.locator('.mm-seitenliste .active',{hasText:'Material'}).waitFor();
   const datei=async(sel,name)=>page.evaluate(async([sel,name,b64])=>{

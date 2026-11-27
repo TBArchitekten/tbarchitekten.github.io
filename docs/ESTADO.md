@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Work B2 (Schritt 3):** Die Mustermappe zeigt die Seiten links als kleine Bilder («+» fügt Seiten und Positionen hinzu, «neuer Stand» markiert Seiten mit neuerem Produkt) und die Eigenschaften rechts in den Reitern «Seite», «Position» und «Mappe»; im Reiter von Work schweben Meldungen über der Bühne.
+
 **Stand 27.11.2026 · Claude · Work B2 (Schritt 2):** Im Reiter von Work haben Terminplan, Kostenberechnung, Controlling, Produkte, Hersteller und Mustermappe je eine Werkzeugzeile (Erklärungen hinter «?») (Kostenberechnung und Mustermappe bauen sie selbst, weil sie sich neu zeichnen; in der Mappe das Raster unter «•••», «1 Übersatz» als Hinweis in der Leiste, Seiten, Bühne und Eigenschaften ab 1000 px nebeneinander). Der Terminplan: seltene Befehle unter «•••», Modus und Speicherstand am Ende, die Anleitung als «?», die Statuszeile als knappe Info; die Kopfzeile entfällt (`shared/werkzeugleiste.js`, wirkt nur mit `html.im-reiter`). Als eigene Seite unverändert.
 
 **Stand 27.11.2026 · Claude · Work B2 (Schritt 1):** Am Desktop stehen Projektwahl und Abschnitte des Projekts unter «Work» in der Seitenleiste (`app/work-lens.js`, spiegelt `.work-tabs` und `.work-project-switch` aus `work.js`); Projekt- und Reiterzeile oben sind dort ausgeblendet; die Fassungen eines Werkzeugs (Terminpläne, Mappen) stehen unter dem Abschnitt. Reduziert zeigt die Leiste Projektkürzel und Symbole. Der Planner hat Titel, Filter und Knöpfe in einer Leiste. Unter 950 px bleiben die Reiter oben.
