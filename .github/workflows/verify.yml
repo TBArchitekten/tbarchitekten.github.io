@@ -13,6 +13,7 @@ on:
       - 'tests/sql/office-controlling-*.sql'
       - 'tests/sql/office-leitfaden-*.sql'
       - 'tests/sql/office-push-*.sql'
+      - 'tests/sql/office-client-*.sql'
       - 'tests/office-kostenberechnung.test.mjs'
       - 'tests/office-romy-*.test.mjs'
       - '.github/workflows/verify.yml'
@@ -153,6 +154,11 @@ jobs:
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < tests/sql/office-push-acceptance.sql
+      - name: Verify browser error reports (members only, cleaned, counted, throttled, unreadable through the app)
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-client-fehler-acceptance.sql
       - name: Verify no generated fixtures persist in the ephemeral database
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
