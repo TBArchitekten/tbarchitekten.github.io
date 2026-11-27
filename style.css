@@ -442,3 +442,53 @@ textarea{resize:vertical;min-height:72px;font-family:inherit}
 .leitfaden-card button{flex:none}
 .member-leitfaden{color:var(--m-ink-faint)}
 @media(max-width:760px){.leitfaden-card{flex-direction:column;align-items:stretch}}
+
+/* Administration · KI-Nutzung und Systemstatus (27.11.2026). Nur Farben aus den Tokens. */
+.ki-oben{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;margin-bottom:26px}
+.ki-guthaben{padding:20px 22px}
+.ki-zahl{margin:2px 0 6px;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:-.02em;color:var(--m-ink)}
+.ki-zahl.ki-leer{color:var(--m-ink-faint)}
+.ki-sub{margin:0;font-size:13px;line-height:1.45;color:var(--m-ink-soft)}
+.ki-reicht{margin:10px 0 0;font-size:13px;color:var(--m-ink-soft)}
+.ki-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:16px}
+.ki-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--m-ink-soft)}
+.ki-form input{width:150px}
+.ki-form input[name="warnen"]{width:96px}
+.ki-hinweis{margin:8px 0 0;font-size:12px}
+.ki-kennzahlen{display:grid;gap:14px;align-content:start;padding:20px 22px}
+.ki-kennzahlen .eyebrow{margin:0}
+.ki-wert{margin:2px 0 0;font-size:22px;font-weight:650;letter-spacing:-.015em;font-variant-numeric:tabular-nums;color:var(--m-ink)}
+.ki-chart{position:relative;margin:0;padding:16px 16px 10px}
+.ki-svg{display:block;width:100%;height:auto}
+.ki-gitter,.ki-basis{stroke:var(--m-hairline);stroke-width:1}
+.ki-achse{fill:var(--m-ink-faint);font-size:11px;font-family:var(--m-type)}
+.ki-balken{fill:var(--m-blue)}
+.ki-treffer{fill:transparent}
+.ki-tag{outline:none}
+.ki-tag:hover .ki-balken,.ki-tag:focus .ki-balken{fill:var(--m-blue-hover)}
+.ki-tag:focus-visible .ki-treffer{stroke:var(--m-focus);stroke-width:2}
+.ki-tooltip{position:absolute;top:8px;display:flex;flex-direction:column;gap:1px;padding:6px 10px;border:1px solid var(--m-border);border-radius:var(--m-radius-control);background:var(--m-surface-raised);font-size:12px;pointer-events:none}
+.ki-tooltip strong{font-size:13px;font-variant-numeric:tabular-nums;color:var(--m-ink)}
+.ki-tooltip span{color:var(--m-ink-soft)}
+.ki-tabelle{margin-top:8px;font-size:13px}
+.ki-tabelle summary{cursor:pointer;color:var(--m-link)}
+.ki-tabelle table,.ki-liste{width:100%;border-collapse:collapse;font-size:13px}
+.ki-liste th,.ki-liste td,.ki-tabelle th,.ki-tabelle td{padding:9px 14px;border-bottom:1px solid var(--m-hairline);text-align:left}
+.ki-liste th,.ki-tabelle th{font-size:11px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--m-ink-faint)}
+.ki-liste tr:last-child td{border-bottom:0}
+.ki-liste .zahl,.ki-tabelle .zahl{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ki-tabellen{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px}
+.ki-leer-text{margin:0;padding:16px}
+.ki-fuss{max-width:760px;margin-top:8px;font-size:12px}
+.pill.ki-stufe-ok,.pill.status-ok{background:var(--m-success-soft);color:var(--m-success)}
+.pill.ki-stufe-knapp,.pill.status-warnung{background:var(--m-attention-soft);color:var(--m-attention)}
+.pill.ki-stufe-kritisch,.pill.ki-stufe-leer,.pill.status-fehler{background:var(--m-error-soft);color:var(--m-error)}
+.pill.status-unbekannt,.pill.status-ausstehend{background:var(--m-fill);color:var(--m-ink-soft)}
+.status-gesamt{display:flex;align-items:center;gap:10px;margin:-8px 0 16px;font-size:13px}
+.row.status-row{grid-template-columns:auto minmax(0,1fr);align-items:start}
+.status-row>.pill{justify-content:center;min-width:104px;margin-top:1px}
+.status-inhalt{display:flex;flex-direction:column;min-width:0}
+.status-details{display:flex;flex-direction:column;gap:6px;margin:8px 0 2px;padding:0;list-style:none;font-size:12.5px;color:var(--m-ink-soft)}
+.status-details code{font-size:12px;white-space:pre-wrap;word-break:break-word;color:var(--m-ink)}
+.status-details .pill{min-height:18px;padding:1px 7px;font-size:11px}
+@media (max-width:820px){.ki-oben,.ki-tabellen{grid-template-columns:1fr}}
