@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Monatslimit:** Die KI-Nutzung zeigt das Monatslimit bei OpenAI (ausgegeben, Hochrechnung, was bleibt, Stufe) statt eines Guthabens; der Systemstatus prüft es. Tatsächliche Kosten liest `office-ki-kosten`, sobald das Secret `OPENAI_ADMIN_KEY` (Admin-Schlüssel nur zum Lesen) gesetzt ist; bis dahin die Ablesung plus Schätzung.
+
 **Stand 27.11.2026 · Claude · Modelle:** Romy in den Threads: alltäglich `gpt-6.1-terra`, gründlich und beim Lesen von Dokumenten `gpt-6.2-sol`, Einordnen `gpt-6-luna`; Fähigkeiten und Aufträge `gpt-6.2-sol`; Werkzeuge `gpt-6.1-terra`. Romys Motor (Romy-Tab, Präsenz, Traum, Pflege) wechselt erst mit den Secrets `OPENAI_*_MODEL` (Bitácora 27.11.); bis dahin `gpt-5.6-luna` und `gpt-5.6-terra`.
 
 **Stand 27.11.2026 · Claude · Navigation:** Die Startseite (`index.html`) dient nur noch Anmeldung, Passwort und Administration; «Work» und «Tools» führen in die App. Unter Tools heißt die Verwaltung der Projekte «Projekte verwalten»; die Werkzeuge stehen nebeneinander.

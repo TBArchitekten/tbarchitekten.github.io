@@ -455,6 +455,14 @@ textarea{resize:vertical;min-height:72px;font-family:inherit}
 .ki-form input{width:150px}
 .ki-form input[name="warnen"]{width:96px}
 .ki-hinweis{margin:8px 0 0;font-size:12px}
+/* Monatslimit (27.11.2026): ausgegeben als Fläche, «warnen ab» als feine Linie, Hochrechnung als Strich. */
+.ki-von{font-size:15px;font-weight:500;letter-spacing:0;color:var(--m-ink-soft)}
+.ki-limit{position:relative;height:10px;margin:8px 0 10px;border-radius:var(--m-radius-pill);background:var(--m-fill)}
+.ki-limit-voll{position:absolute;left:0;top:0;bottom:0;max-width:100%;border-radius:var(--m-radius-pill);background:var(--m-success)}
+.ki-limit-voll.ki-limit-knapp{background:var(--m-attention)}
+.ki-limit-voll.ki-limit-kritisch,.ki-limit-voll.ki-limit-leer{background:var(--m-error)}
+.ki-limit-warnen{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--m-border-strong)}
+.ki-limit-hoch{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--m-ink)}
 .ki-kennzahlen{display:grid;gap:14px;align-content:start;padding:20px 22px}
 .ki-kennzahlen .eyebrow{margin:0}
 .ki-wert{margin:2px 0 0;font-size:22px;font-weight:650;letter-spacing:-.015em;font-variant-numeric:tabular-nums;color:var(--m-ink)}
