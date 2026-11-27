@@ -19,9 +19,11 @@ test('Threads are private Romy conversations bound to a project', ()=>{
 
 test('Romy knows the project of a Thread; Threads stay out of Romy\'s chat list', ()=>{
   const fn=read('supabase/functions/office-assistant/index.ts');
-  assert.match(fn,/async function threadNote\(db,uid,conversationId\)\{/);
+  assert.match(fn,/async function threadNote\(db,uid,conversationId,kontext:any=\{\}\)\{/);
+  // Das Projekt des Threads zählt auch den KI-Verbrauch (27.11.2026).
+  assert.match(fn,/kontext\.projectId=data\.project_id\|\|null;/);
   assert.match(fn,/\.eq\("conversation_id",conversationId\)\.eq\("user_id",uid\)\.maybeSingle\(\)/);
-  assert.match(fn,/const \[thread,radar\]=await Promise\.all\(\[threadNote\(db,uid,conversation\.id\)\.catch\(\(\)=>\[\]\),romyRadar\(db,uid\)\]\);/);
+  assert.match(fn,/const \[thread,radar\]=await Promise\.all\(\[threadNote\(db,uid,conversation\.id,kontext\)\.catch\(\(\)=>\[\]\),romyRadar\(db,uid\)\]\);/);
   assert.match(read('supabase/functions/office-assistant/romy-continuity.mjs'),/\.\.\.\(notes\|\|\[\]\)\.filter\(Boolean\)\.map\(content=>\(\{role:"developer",content\}\)\)/);
   assert.match(read('app/office-assistant.js'),/\.eq\('user_id',ownerId\)\.eq\('work_thread',false\)/);
 });

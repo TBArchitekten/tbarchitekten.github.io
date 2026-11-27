@@ -3,6 +3,7 @@ import {INTENT_SCHEMA,MODEL,validId,validMessage,validRevision,toContext,validat
 import {domainLens,EXPERTISE_VERSION} from "./expertise.mjs";
 import {normalizePlanAttachments} from "./attachments.mjs";
 import {REBUILD_SCHEMA,REBUILD_INSTRUCTIONS,TRANSFORM_INSTRUCTIONS,validateRebuild} from "./rebuild-core.mjs";
+import {dienstFuer,verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 
 const ORIGIN="https://tbarchitekten.github.io";
 const headers={
@@ -195,6 +196,8 @@ Deno.serve(async req=>{
         });
         if(!response.ok)throw Error("router_provider_error");
         router=await response.json();
+        await verbrauchSchreiben(dienstFuer(createClient),{funktion:"terminplan",modell:MODEL,payload:router,
+          projectId:plan.project_id,details:{schritt:"einordnen"}});
       }finally{clearTimeout(timeout)}
       const classified=JSON.parse(outputText(router)||"{}");
       if(["discuss","transform","rebuild"].includes(classified.mode))effectiveAction=classified.mode;
@@ -247,6 +250,9 @@ Deno.serve(async req=>{
       return respond(502,{error:"ai_provider_unavailable"});
     }
     provider=await response.json();
+    // Verbrauch je Funktion und Projekt, ohne Person (Übersicht für Administratoren).
+    await verbrauchSchreiben(dienstFuer(createClient),{funktion:"terminplan",modell:MODEL,payload:provider,
+      projectId:plan.project_id,details:{schritt:String(effectiveAction||"")}});
   }catch(error){
     console.error("Office AI provider request did not complete",String(error?.name||"request_failed"));
     return respond(504,{error:"ai_timeout_or_network"});

@@ -7,6 +7,7 @@ import {createClient} from "npm:@supabase/supabase-js@2.57.0";
 import "./kosten-rechnen.js"; // derselbe Rechenkern wie im Werkzeug (Kopie, per Test gleich gehalten)
 import {MODEL,VERSION,SCHEMA,anweisungen,validId,validMessage,validRevision,pruefeTabelle,pruefeAuswahl,toContext,pruefeAntwort} from "./core.mjs";
 import {normalizePlanAttachments} from "../office-terminplan-ai/attachments.mjs";
+import {dienstFuer,verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 
 // deno-lint-ignore no-explicit-any
 const R=(globalThis as any).TBA_KOSTEN_RECHNEN;
@@ -132,6 +133,9 @@ Deno.serve(async req=>{
     });
     if(!response.ok){console.error("Office cost AI provider failed",response.status);return respond(502,{error:"ai_provider_unavailable"})}
     provider=await response.json();
+    // Verbrauch je Funktion und Projekt, ohne Person (Übersicht für Administratoren).
+    await verbrauchSchreiben(dienstFuer(createClient),{funktion:"kosten",modell:MODEL,payload:provider,projectId:inst.project_id,
+      details:{anhaenge:anhaenge.sources.length+(tabelle?1:0)}});
   }catch(error){
     console.error("Office cost AI request did not complete",String((error as Error)?.name||"request_failed"));
     return respond(504,{error:"ai_timeout_or_network"});
