@@ -17,6 +17,18 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-27 · Work B2, Schritt 4: Wissen mit Kontextspalte, die Seiten in der Leiste · Claude
+- Qué cambió y por qué: Wie im Entwurf (Variante B: «Text 680 · Kontext 300, die Seitenliste wandert in die Leiste links»). Oben eine Werkzeugzeile statt Überschrift und Einleitung: Suche, «zuletzt eingearbeitet heute, 07:12» (aus dem Verlauf), «Hinweis zu dieser Seite», «Notiz teilen» und «?» mit der Erklärung, die vorher über dem Wissen stand. Der Text der Seite bleibt höchstens 760 px breit; daneben (300 px) was zu ihr gehört: «Auf dieser Seite» (die Überschriften, ab zwei; Knöpfe statt Anker, die Adresse gehört der App), die Entscheidungen der Seite mit «Beschlossen» oder «Wartet auf Bestätigung», offene Hinweise, Herkunft, Verweise hierher, frühere Fassungen und «Hinweis geben». Reicht die Breite des Wissens nicht (gemessen am Wissen, nicht am Fenster), steht der Kontext unter dem Text. «Neu» zeigt die Zahl der Beiträge, die auf die KI warten. Am Desktop mit offener Leiste stehen Neu, Entscheidungen und die Seiten unter «Wissen» in der Seitenleiste (gespiegelt wie die Fassungen) und die Liste im Wissen entfällt; reduziert steht sie wieder im Wissen.
+- Archivos: `app/office-wissen.js` (`?v=office4`), `app/office-wissen.css` (`?v=office2`, Container-Abfrage), `app/work-lens.js` und `.css` (`?v=3`), `app/index.html`, `tests/office-projektwissen.test.mjs`, `tests/browser/office-wissen.chromium.mjs` (Kontext, Zeile, schmal und breit), `tests/browser/office-work-seitenleiste.chromium.mjs` (neu: Seiten in der Leiste, reduziert im Wissen).
+- Base de datos: ninguna migración.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün; Browserprüfungen Wissen (9) und Seitenleiste (6) lokal mit Chrome grün; Bildschirmfotos mit offener und reduzierter Leiste.
+- Quedó pendiente o sin probar: Panorama vervollständigen (Für dich, Register, Themen, Neu im Desktop).
+- Riesgos o decisiones que necesitan a Gari: keine.
+- PR: (pendiente)
+
+---
+
 ### 2026-11-27 · Work B2, Schritt 3: Mustermappe mit Seiten als Bildern und Eigenschaften in Reitern · Claude
 - Qué cambió y por qué: Wie im Entwurf (Variante B, «Seiten als Bilder, Eigenschaften in Reitern»; die Seite wird größer). Links ein Streifen mit kleinen Seiten (wie im PDF gesetzt, ohne Eingabefelder; Bilder laden erst beim Hinsehen) statt der Liste in Worten; «Seiten · n» mit «+» (Position hinzufügen …, Freie Seite, Übersicht, Deckblatt, Vergleich und Material je Position); «neuer Stand» auf Seiten, deren Produkt in der Bibliothek neuer ist. Die kleine offene Seite folgt der Bühne nach jedem Schritt. Rechts die Eigenschaften in drei Reitern: «Seite» (Hinweise, Übersatz, Rahmen, die Seite), «Position» (die Position der Seite; sonst ein Satz, wo die Positionen stehen) und «Mappe» (Positionen, Angaben, Termin, Stände); gemerkt je Gerät wie Zoom und Raster. Ein angeklickter Rahmen und der Hinweis «Übersatz» zeigen «Seite», eine neue Position zeigt «Position»; Schreiben im Text wechselt nichts. Spalten 168 | Bühne | 300 px (bis 1180 px 148 | Bühne | 280), unter 760 px läuft der Streifen quer. Im Reiter schweben Meldungen oben über der Bühne und gehen nach 6 s (Warnungen nach 12 s), statt die Mappe zu verschieben.
 - Archivos: `projektdokumente.js` (`?v=office12`), `projektdokumente.css` (`?v=office13`), `projektdokumente.html`, `tests/office-mustermappe.test.mjs`, `tests/browser/office-mustermappe.chromium.mjs` (Streifen, Reiter, «+», Marke «neuer Stand»; Hilfen `teil` und `hinzufuegen`).

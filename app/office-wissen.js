@@ -110,12 +110,12 @@ async function laden(ctx){
 const name=id=>daten?.namen.get(id)||'';
 
 function navigation(){
-  const offen=daten.entscheidungen.filter(e=>e.status==='proposed').length;
+  const offen=daten.entscheidungen.filter(e=>e.status==='proposed').length,wartend=daten.beitraege.filter(b=>!b.eingearbeitet_am).length;
   const eintrag=s=>'<button type="button" class="wissen-eintrag'+(zustand.ansicht==='seite'&&zustand.seite===s.id?' is-aktiv':'')+'" data-wissen-id="'+esc(s.id)+'"'+
     (zustand.ansicht==='seite'&&zustand.seite===s.id?' aria-current="page"':'')+'><strong>'+esc(s.title)+'</strong>'+
     (s.metadata?.kurz?'<small>'+esc(s.metadata.kurz)+'</small>':'')+'<span>'+esc(datum(s.updated_at))+'</span></button>';
   return '<nav class="wissen-liste" aria-label="Projektwissen">'+
-    '<button type="button" class="wissen-sonder'+(zustand.ansicht==='neu'?' is-aktiv':'')+'" data-wissen-ansicht="neu">Neu</button>'+
+    '<button type="button" class="wissen-sonder'+(zustand.ansicht==='neu'?' is-aktiv':'')+'" data-wissen-ansicht="neu">Neu'+(wartend?'<span class="wissen-zahl">'+wartend+'</span>':'')+'</button>'+
     '<button type="button" class="wissen-sonder'+(zustand.ansicht==='entscheidungen'?' is-aktiv':'')+'" data-wissen-ansicht="entscheidungen">Entscheidungen'+
       (offen?'<span class="wissen-zahl">'+offen+' offen</span>':'')+'</button>'+
     '<p class="wissen-liste-kopf">Seiten <span>'+daten.seiten.length+'</span></p>'+
@@ -123,6 +123,15 @@ function navigation(){
     '</nav>';
 }
 
+// Wann die KI zuletzt eine Seite geschrieben hat (aus dem Verlauf): «heute, 07:12», «gestern, 18:40» oder das Datum.
+function zuletzt(heute=new Date()){
+  const x=(daten?.protokoll||[]).find(p=>/^seite_/.test(p.art));if(!x)return '';
+  const d=new Date(x.created_at);if(isNaN(d))return '';
+  const tag=v=>new Intl.DateTimeFormat('de-DE',{timeZone:TZ,day:'2-digit',month:'2-digit',year:'numeric'}).format(v);
+  const uhr=new Intl.DateTimeFormat('de-DE',{timeZone:TZ,hour:'2-digit',minute:'2-digit'}).format(d);
+  const wann=tag(d)===tag(heute)?'heute':tag(d)===tag(new Date(heute.getTime()-864e5))?'gestern':tag(d);
+  return '<span class="wissen-zuletzt">zuletzt eingearbeitet '+wann+', '+uhr+'</span>';
+}
 function leer(){
   return '<div class="wissen-leer"><h3>Noch kein Projektwissen</h3>'+
     '<p>So entsteht es: In einem Chat mit Claude sagen Sie «Ins Office übernehmen». Claude teilt, was im Chat erarbeitet wurde, '+
@@ -169,15 +178,25 @@ function entscheidungen(){
     (alt.length?'<details class="wissen-teil wissen-alt"><summary>Ersetzt oder verworfen ('+alt.length+')</summary>'+alt.map(x=>karte(x)).join('')+'</details>':'');
 }
 
-function seiteHtml(s,versionen,hierher){
-  const quellen=(s.metadata?.quellen||[]).map(id=>daten.beitraege.find(b=>b.id===id)).filter(Boolean);
-  const hinweise=daten.beitraege.filter(b=>!b.eingearbeitet_am&&b.seite&&norm(b.seite)===norm(s.title));
+// Die Seite selbst: Kopf und Text. Was zu ihr gehört (Inhalt, Entscheidungen, Herkunft, Verweise, Fassungen, Hinweise)
+// steht daneben (B2, 27.11.2026, wie im Entwurf: «Herkunft, Entscheidungen und Verweise neben dem Text»).
+function seiteHtml(s,versionen){
   const ziel=s.status==='superseded'&&s.metadata?.zusammengefuehrt_in?daten.seiten.find(x=>norm(x.title)===norm(s.metadata.zusammengefuehrt_in)):null;
   return (ziel?'<p class="wissen-hinweis-zeile">Diese Seite ist in <button type="button" class="wissen-verweis" data-wissen-id="'+esc(ziel.id)+'">'+esc(ziel.title)+'</button> aufgegangen.</p>':'')+
     '<header class="wissen-blatt-kopf"><h3>'+esc(s.title)+'</h3><p class="wissen-meta">Stand '+esc(zeit(s.updated_at))+
       (name(s.metadata?.aktualisiert_von)?' · '+esc(name(s.metadata.aktualisiert_von)):'')+
       (versionen.length?' · '+versionen.length+(versionen.length===1?' frühere Fassung':' frühere Fassungen'):'')+'</p></header>'+
-    '<div class="wissen-text">'+renderMarkdown(s.body)+'</div>'+
+    '<div class="wissen-text">'+renderMarkdown(s.body)+'</div>';
+}
+const STATUS={confirmed:'Beschlossen',proposed:'Wartet auf Bestätigung'};
+function kontextHtml(s,versionen,hierher){
+  const quellen=(s.metadata?.quellen||[]).map(id=>daten.beitraege.find(b=>b.id===id)).filter(Boolean);
+  const hinweise=daten.beitraege.filter(b=>!b.eingearbeitet_am&&b.seite&&norm(b.seite)===norm(s.title));
+  const ents=daten.entscheidungen.filter(e=>STATUS[e.status]&&norm(e.metadata?.seite)===norm(s.title));
+  return '<div class="wissen-inhalt-ort"></div>'+
+    (ents.length?'<section class="wissen-teil"><h4>Entscheidungen</h4><ul class="wissen-ent-liste">'+ents.map(e=>'<li><button type="button" class="wissen-verweis" data-wissen-ansicht="entscheidungen">'+esc(e.title)+'</button>'+
+      '<span class="wissen-status" data-status="'+esc(e.status)+'">'+STATUS[e.status]+'</span>'+
+      (e.status==='confirmed'?'<small>'+esc([datum(e.occurred_at||e.confirmed_at),name(e.metadata?.entschieden_von)].filter(Boolean).join(' · '))+'</small>':'')+'</li>').join('')+'</ul></section>':'')+
     (hinweise.length?'<section class="wissen-teil wissen-wartet"><h4>Offene Hinweise <span>'+hinweise.length+'</span></h4><ul class="wissen-zeilen">'+
       hinweise.map(b=>'<li><span class="wissen-zeit">'+esc(datum(b.created_at))+'</span><span><button type="button" class="wissen-verweis" data-wissen-beitrag="'+esc(b.id)+'">'+esc(b.titel)+'</button>'+
         (name(b.user_id)?' <small>· '+esc(name(b.user_id))+'</small>':'')+'</span></li>').join('')+
@@ -191,6 +210,15 @@ function seiteHtml(s,versionen,hierher){
         ' <button type="button" class="wissen-verweis" data-wissen-fassung="'+esc(v.id)+'">Ansehen</button></span></li>').join('')+'</ul></details>':'')+
     '<div class="wissen-aktion"><button type="button" data-wissen-hinweis="'+esc(s.title)+'">Hinweis geben</button></div>';
 }
+// «Auf dieser Seite»: die Überschriften des Textes, ab zwei. Knöpfe statt Anker (die Adresse gehört der App).
+function inhaltZeigen(blatt,kontext){
+  const ort=kontext.querySelector('.wissen-inhalt-ort'),h=[...blatt.querySelectorAll('.wissen-text :is(h3,h4)')];
+  if(!ort)return;
+  if(h.length<2){ort.remove();return}
+  h.forEach((x,i)=>{x.id='wissen-abschnitt-'+i});
+  ort.outerHTML='<section class="wissen-teil wissen-inhalt"><h4>Auf dieser Seite</h4><nav aria-label="Auf dieser Seite">'+
+    h.map((x,i)=>'<button type="button" class="wissen-abschnitt'+(x.tagName==='H4'?' tiefer':'')+'" data-wissen-abschnitt="'+i+'">'+esc(x.textContent)+'</button>').join('')+'</nav></section>';
+}
 
 function formular(art,seite){
   const titel=art==='korrektur'?'Hinweis zu «'+seite+'»':'Notiz teilen';
@@ -202,8 +230,10 @@ function formular(art,seite){
 }
 
 async function zeichne(ctx){
-  const {body}=ctx,blatt=body.querySelector('.wissen-blatt');
+  const {body}=ctx,blatt=body.querySelector('.wissen-blatt'),kontext=body.querySelector('.wissen-kontext');
   if(!blatt)return;
+  if(kontext)kontext.innerHTML='';
+  const oben=body.querySelector('[data-wissen-hinweis-oben]');if(oben)oben.hidden=true;
   if(zustand.ansicht==='suche'){blatt.innerHTML='<p class="wissen-leer-klein">Suche …</p>';await suche(ctx);return}
   if(zustand.ansicht==='entscheidungen'){blatt.innerHTML=entscheidungen();return}
   if(zustand.ansicht==='neu'){blatt.innerHTML=neu();return}
@@ -222,7 +252,9 @@ async function zeichne(ctx){
       .eq('metadata->>kind','wissensseite').eq('status','confirmed').ilike('body',muster).limit(40);
     const hierher=(r.data||[]).filter(x=>x.id!==id&&verweise(x.body).some(v=>norm(v)===norm(s.data.title)));
     if(zustand.seite!==id||!blatt.isConnected)return;
-    blatt.innerHTML=seiteHtml(s.data,v.data||[],hierher);
+    blatt.innerHTML=seiteHtml(s.data,v.data||[]);
+    if(kontext){kontext.innerHTML=kontextHtml(s.data,v.data||[],hierher);inhaltZeigen(blatt,kontext)}
+    if(oben){oben.hidden=false;oben.dataset.wissenHinweisOben=s.data.title}
     return;
   }
   blatt.innerHTML=leer();
@@ -298,8 +330,10 @@ function binden(ctx,wurzel){
     }
     if(t.dataset.wissenBeitrag){void beitragZeigen(ctx,t.dataset.wissenBeitrag);return}
     if(t.dataset.wissenFassung){void fassungZeigen(ctx,t.dataset.wissenFassung);return}
-    if(t.hasAttribute('data-wissen-hinweis')){
-      const ort=wurzel.querySelector('.wissen-aktion');if(ort)ort.innerHTML=formular('korrektur',t.dataset.wissenHinweis);ort?.querySelector('textarea')?.focus();return}
+    if(t.dataset.wissenAbschnitt){wurzel.querySelector('#wissen-abschnitt-'+t.dataset.wissenAbschnitt)?.scrollIntoView?.({block:'start',behavior:'smooth'});return}
+    if(t.hasAttribute('data-wissen-hinweis')||t.hasAttribute('data-wissen-hinweis-oben')){
+      const ort=wurzel.querySelector('.wissen-aktion');if(!ort)return;
+      ort.innerHTML=formular('korrektur',t.dataset.wissenHinweis||t.dataset.wissenHinweisOben);ort.scrollIntoView?.({block:'nearest'});ort.querySelector('textarea')?.focus();return}
     if(t.hasAttribute('data-wissen-notiz')){const ort=wurzel.querySelector('.wissen-notiz-ort');if(ort){ort.innerHTML=formular('notiz');ort.querySelector('input')?.focus()}return}
     if(t.hasAttribute('data-wissen-abbrechen')){const f=t.closest('form');if(f?.dataset.wissenFormular==='korrektur')f.parentElement.innerHTML='<button type="button" data-wissen-hinweis="'+esc(f.dataset.wissenZu||'')+'">Hinweis geben</button>';else if(f)f.remove();return}
     if(t.dataset.wissenBeschliessen){t.disabled=true;void pruefen(ctx,t.dataset.wissenBeschliessen,true);return}
@@ -345,12 +379,19 @@ async function render(ctx,{behalten=false}={}){
     zustand.ansicht=daten.seiten.length?'seite':(daten.protokoll.length||daten.beitraege.length?'neu':'leer');
     zustand.seite=daten.seiten[0]?.id||null;
   }
+  // Eine Werkzeugzeile (B2, 27.11.2026, wie im Entwurf): Suche, wann zuletzt eingearbeitet wurde, «Hinweis zu dieser
+  // Seite», «Notiz teilen» und «?» mit der Erklärung, die vorher über dem Wissen stand.
   body.innerHTML='<div class="wissen">'+
-    '<div class="wissen-kopf"><div><h2>Projektwissen</h2><p>Was im Projekt erarbeitet wird, für das ganze Team. Die Seiten schreibt die KI aus dem, was geteilt wird; Sie lesen, suchen und geben Hinweise.</p></div>'+
-      '<div class="wissen-werkzeuge"><input type="search" class="wissen-suche" placeholder="Im Projektwissen suchen" aria-label="Im Projektwissen suchen" value="'+esc(zustand.suche)+'">'+
-      '<button type="button" data-wissen-notiz>Notiz teilen</button></div></div>'+
+    '<div class="wissen-zeile" role="toolbar" aria-label="Projektwissen"><input type="search" class="wissen-suche" placeholder="Im Projektwissen suchen" aria-label="Im Projektwissen suchen" value="'+esc(zustand.suche)+'">'+
+      zuletzt()+'<span class="wissen-luecke"></span>'+
+      '<button type="button" class="wissen-leise" data-wissen-hinweis-oben hidden>Hinweis zu dieser Seite</button>'+
+      '<button type="button" data-wissen-notiz>Notiz teilen</button>'+
+      '<details class="wissen-hilfe"><summary aria-label="So entsteht das Projektwissen" title="So entsteht das Projektwissen">?</summary><div class="wissen-hilfe-text">'+
+        '<p>Was im Projekt erarbeitet wird, für das ganze Team. Die Seiten schreibt die KI aus dem, was geteilt wird; Sie lesen, suchen und geben Hinweise.</p>'+
+        '<p>So entsteht es: In einem Chat mit Claude sagen Sie «Ins Office übernehmen». Claude teilt, was im Chat erarbeitet wurde, und schreibt daraus Seiten, '+
+        'die hier für das ganze Projektteam stehen. Niemand muss etwas ordnen.</p><p>Notizen und Hinweise aus dem Team arbeitet die KI beim nächsten Mal ein.</p></div></details></div>'+
     '<div class="wissen-notiz-ort"></div>'+
-    '<div class="wissen-raster">'+navigation()+'<article class="wissen-blatt" aria-live="polite"></article></div></div>';
+    '<div class="wissen-raster">'+navigation()+'<article class="wissen-blatt" aria-live="polite"></article><aside class="wissen-kontext" aria-label="Zu dieser Seite"></aside></div></div>';
   binden(ctx,body.querySelector('.wissen'));
   await zeichne(ctx);
 }

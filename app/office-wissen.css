@@ -1,20 +1,52 @@
 /* TBA Office · Projektwissen (Reiter «Wissen» in Work). Nur Farben, Abstände und Radien aus den Tokens. */
-.wissen{max-width:1180px;margin:0 auto;padding:var(--m-space-5) var(--m-space-4) var(--m-space-7);color:var(--m-ink);font-family:var(--m-type)}
-.wissen-kopf{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--m-space-4);margin-bottom:var(--m-space-4)}
-.wissen-kopf h2{font-size:26px;letter-spacing:-.02em;margin:0 0 6px}
-.wissen-kopf p{margin:0;max-width:620px;color:var(--m-ink-soft);font-size:var(--m-size-body);line-height:var(--m-leading-body)}
-.wissen-werkzeuge{display:flex;gap:var(--m-space-2);align-items:center;flex-wrap:wrap}
-.wissen-suche{min-width:240px;font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--m-border);border-radius:var(--m-radius-control);background:var(--m-field);color:var(--m-ink)}
+.wissen{container:wissen/inline-size;max-width:1420px;margin:0 auto;padding:var(--m-space-3) var(--m-space-4) var(--m-space-7);color:var(--m-ink);font-family:var(--m-type)}
+/* Eine Werkzeugzeile (B2, 27.11.2026): Suche, zuletzt eingearbeitet, Hinweis, Notiz, «?» mit der Erklärung. */
+.wissen-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:var(--m-space-2);margin-bottom:var(--m-space-3)}
+.wissen-zuletzt{margin-left:6px;font-size:13px;color:var(--m-ink-soft);white-space:nowrap}
+.wissen-luecke{flex:1}
+.wissen-suche{width:300px;max-width:100%;font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--m-border);border-radius:var(--m-radius-control);background:var(--m-field);color:var(--m-ink)}
 .wissen-suche:focus{outline:none;border-color:var(--m-blue);box-shadow:0 0 0 3px var(--m-blue-ring)}
 .wissen button{font:inherit;cursor:pointer}
-.wissen-werkzeuge>button,.wissen-aktion>button,.wissen-knoepfe>button{font-size:14px;padding:8px 14px;border-radius:var(--m-radius-button);border:1px solid var(--m-blue-line);background:var(--m-surface);color:var(--m-blue)}
-.wissen-werkzeuge>button:hover,.wissen-aktion>button:hover,.wissen-knoepfe>button:hover{background:var(--m-blue-soft)}
+.wissen-zeile>button,.wissen-aktion>button,.wissen-knoepfe>button{font-size:14px;padding:8px 14px;border-radius:var(--m-radius-button);border:1px solid var(--m-blue-line);background:var(--m-surface);color:var(--m-blue)}
+.wissen-zeile>button:hover,.wissen-aktion>button:hover,.wissen-knoepfe>button:hover{background:var(--m-blue-soft)}
+.wissen-zeile>button.wissen-leise{border-color:transparent;background:transparent;color:var(--m-ink-soft)}
+.wissen-zeile>button.wissen-leise:hover{background:var(--m-fill);color:var(--m-ink)}
+.wissen-hilfe{position:relative}
+.wissen-hilfe>summary{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--m-border);border-radius:50%;list-style:none;cursor:pointer;
+  color:var(--m-ink-soft);font-size:14px;font-weight:650}
+.wissen-hilfe>summary::-webkit-details-marker{display:none}
+.wissen-hilfe>summary:hover,.wissen-hilfe[open]>summary{color:var(--m-link);border-color:var(--m-link)}
+.wissen-hilfe-text{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:min(420px,80vw);padding:var(--m-space-3) var(--m-space-4);
+  border:1px solid var(--m-border);border-radius:var(--m-radius-card);background:var(--m-surface-raised);font-size:14px;line-height:1.55;color:var(--m-ink)}
+.wissen-hilfe-text p{margin:0 0 var(--m-space-2)}
+.wissen-hilfe-text p:last-child{margin:0}
 .wissen-knoepfe>button.wissen-primaer{background:var(--m-blue);border-color:var(--m-blue);color:var(--m-on-blue)}
 .wissen-knoepfe>button.wissen-primaer:hover{background:var(--m-blue-hover)}
 .wissen button:focus-visible{outline:2px solid var(--m-focus);outline-offset:2px}
 .wissen button:disabled{opacity:.55;cursor:default}
 
-.wissen-raster{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:var(--m-space-5);align-items:start}
+/* Liste · Text · Kontext (B2): der Text bleibt lesbar schmal, daneben was zur Seite gehört. Ist die Leiste von Work
+   offen, steht die Liste der Seiten dort (work-lens.css) und hier entfällt sie. */
+.wissen-raster{display:grid;justify-content:center;gap:var(--m-space-5);align-items:start;
+  grid-template-columns:260px minmax(0,760px) 300px;grid-template-areas:"liste blatt kontext"}
+.wissen-raster:has(>.wissen-kontext:empty){grid-template-columns:260px minmax(0,1060px);grid-template-areas:"liste blatt"}
+.wissen-raster>.wissen-liste{grid-area:liste;min-width:0}
+.wissen-raster>.wissen-blatt{grid-area:blatt}
+.wissen-kontext{grid-area:kontext;min-width:0;display:flex;flex-direction:column;position:sticky;top:var(--m-space-3);max-height:calc(100vh - 140px);overflow:auto}
+.wissen-kontext:empty{display:none}
+.wissen-kontext>.wissen-teil:first-child{margin-top:0;padding-top:0;border-top:0}
+.wissen-kontext .wissen-zeilen li{grid-template-columns:minmax(0,1fr)}
+.wissen-kontext .wissen-zeit{font-size:12px}
+.wissen-inhalt nav{display:flex;flex-direction:column;gap:1px}
+.wissen-abschnitt{display:block;width:100%;padding:5px 8px;border:0;border-radius:8px;background:transparent;color:var(--m-link);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.wissen-abschnitt.tiefer{padding-left:20px;font-size:13px}
+.wissen-abschnitt:hover{background:var(--m-blue-soft)}
+.wissen-ent-liste{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--m-space-2)}
+.wissen-ent-liste li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:14px;line-height:1.45}
+.wissen-ent-liste li>button{flex:1 1 100%;text-align:left}
+.wissen-ent-liste small{font-size:12px;color:var(--m-ink-soft)}
+.wissen-status{display:inline-block;padding:1px 8px;border-radius:var(--m-radius-pill);font-size:12px;font-weight:600;background:var(--m-attention-soft);color:var(--m-attention)}
+.wissen-status[data-status="confirmed"]{background:var(--m-success-soft);color:var(--m-success)}
 .wissen-liste{position:sticky;top:var(--m-space-3);display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 180px);overflow:auto;padding-right:4px}
 .wissen-sonder{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;padding:9px 12px;border:0;border-radius:var(--m-radius-control);background:transparent;color:var(--m-ink);font-weight:600}
 .wissen-sonder:hover{background:var(--m-fill)}
@@ -94,13 +126,20 @@
 .wissen-modal .wissen-text{max-width:none}
 .wissen-modal .wissen-meta{margin-bottom:var(--m-space-2)}
 
+/* Gemessen an der Breite des Wissens (nicht des Fensters): reicht sie nicht für drei Spalten, steht der Kontext unter dem Text. */
+@container wissen (max-width:1140px){
+  .wissen-raster{grid-template-columns:220px minmax(0,1fr);grid-template-areas:"liste blatt" ". kontext"}
+  .wissen-raster:has(>.wissen-kontext:empty){grid-template-columns:220px minmax(0,1fr);grid-template-areas:"liste blatt"}
+  .wissen-kontext{position:static;max-height:none}
+}
 @media(max-width:860px){
   .wissen{padding:var(--m-space-4) var(--m-space-3) var(--m-space-6)}
-  .wissen-raster{grid-template-columns:1fr}
+  .wissen-raster,.wissen-raster:has(>.wissen-kontext:empty){grid-template-columns:minmax(0,1fr);grid-template-areas:"liste" "blatt" "kontext"}
+  .wissen-kontext{position:static;max-height:none}
   .wissen-liste{position:static;max-height:none}
   .wissen-seiten{max-height:260px;overflow:auto}
   .wissen-blatt{padding:var(--m-space-4)}
-  .wissen-suche{min-width:0;flex:1}
-  .wissen-werkzeuge{width:100%}
+  .wissen-suche{width:auto;flex:1 1 100%}
+  .wissen-zuletzt{margin-left:0}
   .wissen-zeilen li{grid-template-columns:1fr;gap:0}
 }

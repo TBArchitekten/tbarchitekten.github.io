@@ -166,13 +166,19 @@ test('Seite: Reiter neben Panorama, Liste ohne alte Seiten, sicheres Markdown, H
       link:[...t.querySelectorAll('a')].map(a=>[a.getAttribute('href'),a.target,a.rel]),js:/javascript:/.test(t.innerHTML.replace(/\[Nicht erlaubt\]\(javascript:alert\(1\)\)/,''))}});
     assert.deepEqual(md,{h4:'Entscheidung',unter:'Farbe der Fuge: zementgrau',reihen:2,zelle:'<b>offen</b>',fett:'Feinsteinzeug',
       skripte:0,b:0,boese:true,link:[['https://example.com/fliese','_blank','noopener noreferrer']],js:false});
-    const teile=await page.locator('.wissen-teil h4').allInnerTexts();
-    assert.deepEqual(teile.map(t=>t.replace(/\s+/g,' ')),['OFFENE HINWEISE 1','HERKUNFT','VERWEISE HIERHER']);
+    // Neben dem Text (B2, 27.11.2026): Entscheidungen der Seite, offene Hinweise, Herkunft, Verweise, frühere Fassungen.
+    const teile=await page.locator('.wissen-kontext .wissen-teil h4').allInnerTexts();
+    assert.deepEqual(teile.map(t=>t.replace(/\s+/g,' ')),['ENTSCHEIDUNGEN','OFFENE HINWEISE 1','HERKUNFT','VERWEISE HIERHER']);
+    assert.match(await text(page,'.wissen-kontext .wissen-ent-liste'),/Feinsteinzeug 60 × 60 in den Fluren\s*Wartet auf Bestätigung/);
     assert.match(await text(page,'.wissen-wartet'),/Hinweis zu «Bodenbelag Flure»\s*· Ana Muster/);
-    assert.match(await page.locator('.wissen-teil').nth(1).innerText(),/Chat: Bodenbeläge mit Claude\s*· Aus einem Chat · Gari Beispiel/);
-    assert.equal(await page.locator('.wissen-teil').nth(2).locator('button').innerText(),'Bäder');
+    const herkunft=page.locator('.wissen-kontext .wissen-teil',{has:page.locator('h4',{hasText:'Herkunft'})});
+    assert.match(await herkunft.innerText(),/Chat: Bodenbeläge mit Claude\s*· Aus einem Chat · Gari Beispiel/);
+    assert.equal(await page.locator('.wissen-kontext .wissen-teil',{has:page.locator('h4',{hasText:'Verweise hierher'})}).locator('button').innerText(),'Bäder');
+    // Eine Werkzeugzeile: Suche, wann zuletzt eingearbeitet wurde, Hinweis zu dieser Seite, Notiz, «?».
+    assert.match(await text(page,'.wissen-zeile'),/zuletzt eingearbeitet 25\.11\.2026, \d\d:\d\d[\s\S]*Hinweis zu dieser Seite[\s\S]*Notiz teilen/);
+    assert.equal(await page.locator('.wissen-zeile .wissen-hilfe summary').getAttribute('aria-label'),'So entsteht das Projektwissen');
     // Herkunft öffnet den Beitrag, die frühere Fassung ihren Text.
-    await page.locator('.wissen-teil').nth(1).locator('[data-wissen-beitrag="b1"]').click();
+    await herkunft.locator('[data-wissen-beitrag="b1"]').click();
     await page.locator('#modalRoot .wissen-modal').waitFor();
     assert.match(await text(page,'#modalRoot'),/Chat: Bodenbeläge mit Claude[\s\S]*Eingearbeitet in: Bodenbelag Flure[\s\S]*Im Chat erarbeitet: Feinsteinzeug 60 × 60/);
     await page.locator('.wissen-verlauf summary').click();
@@ -185,9 +191,16 @@ test('Seite: Reiter neben Panorama, Liste ohne alte Seiten, sicheres Markdown, H
     assert.equal(await page.locator('.wissen-eintrag.is-aktiv strong').innerText(),'Bäder');
     await page.locator('.wissen-text [data-wissen-seite="Bodenbelag Flure"]').click();
     await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Bodenbelag Flure');
-    // Zweispaltig am Schreibtisch.
-    const lage=await page.evaluate(()=>{const l=document.querySelector('.wissen-liste').getBoundingClientRect(),b=document.querySelector('.wissen-blatt').getBoundingClientRect();return l.right<=b.left&&Math.abs(l.top-b.top)<4});
-    assert.equal(lage,true);
+    // Am Schreibtisch: Liste und Text nebeneinander; der Kontext daneben, wenn das Wissen breit genug ist (über 1140 px),
+    // sonst unter dem Text (gemessen am Wissen, nicht am Fenster).
+    const lage=()=>page.evaluate(()=>{const r=s=>document.querySelector(s).getBoundingClientRect(),w=r('.wissen'),l=r('.wissen-liste'),b=r('.wissen-blatt'),k=r('.wissen-kontext');
+      return {breite:Math.round(w.width),nebeneinander:l.right<=b.left&&Math.abs(l.top-b.top)<4,kontext:b.right<=k.left&&Math.abs(k.top-b.top)<4?'daneben':k.top>=b.bottom-1&&Math.abs(k.left-b.left)<4?'darunter':'?'}});
+    const schmal=await lage();
+    assert.ok(schmal.breite<=1140,'schmal: '+schmal.breite);
+    assert.deepEqual([schmal.nebeneinander,schmal.kontext],[true,'darunter']);
+    await page.setViewportSize({width:1520,height:900});
+    await page.waitForFunction(()=>document.querySelector('.wissen').getBoundingClientRect().width>1140);
+    assert.deepEqual(await lage().then(x=>[x.nebeneinander,x.kontext]),[true,'daneben']);
     assert.deepEqual(await page.evaluate(()=>window.__writes),[],'kein direktes Schreiben');
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
@@ -214,14 +227,14 @@ test('Hinweis und Notiz gehen über die Funktion; die Projektleitung bestätigt 
     calls=await rpcs(page);
     assert.deepEqual([calls.length,calls.at(-1).args.p_art,calls.at(-1).args.p_titel,calls.at(-1).args.p_seite],[2,'notiz','Termin mit dem Fliesenleger',null]);
     // «Neu»: was auf die KI wartet, und was zuletzt geschah.
-    await page.locator('[data-wissen-ansicht="neu"]').click();
+    await page.locator('.wissen-liste [data-wissen-ansicht="neu"]').click();
     await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Neu im Projektwissen');
     assert.match(await text(page,'.wissen-wartet h4'),/WARTET AUF EINARBEITUNG\s*3/i);
     assert.match(await text(page,'.wissen-blatt'),/Termin mit dem Fliesenleger\s*· Notiz · Gari Beispiel/);
     assert.match(await text(page,'.wissen-blatt'),/Seite angelegt: Bodenbelag Flure/);
     // Entscheidungen: die offene bestätigen.
     assert.equal(await text(page,'[data-wissen-ansicht="entscheidungen"] .wissen-zahl'),'1 offen');
-    await page.locator('[data-wissen-ansicht="entscheidungen"]').click();
+    await page.locator('.wissen-liste [data-wissen-ansicht="entscheidungen"]').click();
     await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Entscheidungen');
     const vorher=await page.locator('.wissen-blatt .wissen-teil > h4, .wissen-blatt .wissen-teil > summary').allInnerTexts();
     assert.deepEqual(vorher.map(t=>t.replace(/\s+/g,' ').toUpperCase()),['ZUR BESTÄTIGUNG 1','BESCHLOSSEN 1','ERSETZT ODER VERWORFEN (2)']);
@@ -237,7 +250,7 @@ test('Hinweis und Notiz gehen über die Funktion; die Projektleitung bestätigt 
     calls=await rpcs(page);
     assert.deepEqual(calls.at(-1),{name:'office_wissen_entscheidung_pruefen',args:{p_id:'d1',p_beschliessen:true}});
     assert.match(await text(page,'.wissen-blatt .wissen-teil > h4'),/BESCHLOSSEN\s*2/i);
-    assert.equal(await page.locator('[data-wissen-ansicht="entscheidungen"] .wissen-zahl').count(),0);
+    assert.equal(await page.locator('.wissen-liste [data-wissen-ansicht="entscheidungen"] .wissen-zahl').count(),0);
     await page.locator('.wissen-alt summary').click();
     await page.locator('.wissen-alt [data-wissen-seite="Bäder"]').click();
     await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Bäder');
@@ -268,7 +281,7 @@ test('Ein Teammitglied ohne Projektleitung sieht Entscheidungen, bestätigt aber
   const {page,errors}=await oeffnen('ana');
   try{
     await page.locator('.wissen-blatt .wissen-text').waitFor();
-    await page.locator('[data-wissen-ansicht="entscheidungen"]').click();
+    await page.locator('.wissen-liste [data-wissen-ansicht="entscheidungen"]').click();
     await page.waitForFunction(()=>document.querySelector('.wissen-blatt h3')?.textContent==='Entscheidungen');
     assert.equal(await page.locator('[data-wissen-beschliessen],[data-wissen-verwerfen]').count(),0);
     assert.match(await text(page,'.wissen-entscheidung[data-status="proposed"]'),/Wartet auf die Projektleitung\./);

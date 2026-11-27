@@ -47,6 +47,13 @@
   .lens-work-fassung-neu .lens-work-punkt{width:auto;height:auto;border:0;border-radius:0;font-size:13px;line-height:1}
   .lens-work-fassung-neu{color:var(--m-ink-faint)}
   body.desk-enabled.minds-nav-collapsed .lens-work-fassungen{display:none}
+  /* Wissen: Neu, Entscheidungen (mit Zahl) und die Seiten in der Leiste; im Wissen selbst entfällt die Liste. */
+  body.desk-enabled[data-section="work"].lens-work-an:not(.minds-nav-collapsed) #workBody .wissen-liste{display:none!important}
+  body.desk-enabled[data-section="work"].lens-work-an:not(.minds-nav-collapsed) #workBody .wissen-raster{grid-template-columns:minmax(0,760px) 300px;grid-template-areas:"blatt kontext"}
+  body.desk-enabled[data-section="work"].lens-work-an:not(.minds-nav-collapsed) #workBody .wissen-raster:has(>.wissen-kontext:empty){grid-template-columns:minmax(0,1060px);grid-template-areas:"blatt"}
+  .lens-work-wissen{max-height:46vh;overflow:auto}
+  .lens-work-sonder{font-weight:600}
+  .lens-work-zahl{margin-left:auto;flex:none;padding:0 6px;border-radius:var(--m-radius-pill);background:var(--m-attention-soft);color:var(--m-attention);font-size:11px;font-weight:600;line-height:17px}
 
   /* Auf Symbole reduziert: Projektkürzel und Symbole, die Namen stehen im Tooltip. */
   body.desk-enabled.minds-nav-collapsed .lens-work-projekt{justify-content:center;padding:4px;border-color:transparent;background:transparent}
@@ -67,6 +74,13 @@
   .lens-work-menue button:hover{background:var(--m-fill)}
   .lens-work-menue button[aria-checked="true"]{background:var(--m-blue-soft);color:var(--m-blue);font-weight:600}
   .lens-work-menue p{margin:8px;color:var(--m-ink-soft);font-size:13px}
+}
+
+/* Wissen ohne Liste, schmal: der Kontext unter dem Text. */
+@container wissen (max-width:1110px){
+  body.desk-enabled[data-section="work"].lens-work-an:not(.minds-nav-collapsed) #workBody .wissen-raster,
+  body.desk-enabled[data-section="work"].lens-work-an:not(.minds-nav-collapsed) #workBody .wissen-raster:has(>.wissen-kontext:empty){
+    grid-template-columns:minmax(0,760px);grid-template-areas:"blatt" "kontext"}
 }
 
 /* Planner: Titel, Filter und Knöpfe in einer Leiste (auch auf dem iPhone, dort umbrechend). */
