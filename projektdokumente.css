@@ -284,19 +284,43 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
    Arbeitsfläche (Gari, 26.11.2026): volle Breite; ab 1181 px füllt sie das Fenster, Seitenliste, Bühne und Eigenschaften
    scrollen je für sich; Seitenliste und Eigenschaften lassen sich ausblenden; die Seite wird eingepasst oder gezoomt. */
 .pd-mappe-wrap{max-width:none}
-.mm{display:grid;grid-template-columns:220px minmax(0,1fr) 340px;gap:16px;align-items:start}
-.mm.ohne-seiten{grid-template-columns:minmax(0,1fr) 340px}
-.mm.ohne-rechts{grid-template-columns:220px minmax(0,1fr)}
+.mm{display:grid;grid-template-columns:168px minmax(0,1fr) 300px;gap:14px;align-items:start}
+.mm.ohne-seiten{grid-template-columns:minmax(0,1fr) 300px}
+.mm.ohne-rechts{grid-template-columns:168px minmax(0,1fr)}
 .mm.ohne-seiten.ohne-rechts{grid-template-columns:minmax(0,1fr)}
 .mm.ohne-seiten>.mm-nav,.mm.ohne-rechts>.mm-rechts{display:none}
-.mm-nav{padding:14px;display:grid;gap:10px;align-content:start}
-.mm-nav h2{font-size:16px;margin:0 4px}
-.mm-seitenliste{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:14px}
-.mm-seitenliste button{display:flex;gap:8px;width:100%;min-height:40px;align-items:center;padding:6px 10px;border:0;border-radius:var(--m-radius-control);background:transparent;text-align:left;cursor:pointer;line-height:1.3}
-.mm-seitenliste button:hover{background:var(--m-fill)}
-.mm-seitenliste .active button{background:var(--m-blue-soft);color:var(--m-blue-press);box-shadow:inset 0 0 0 1px var(--m-blue-line);font-weight:600}
-.mm-nr{color:var(--m-ink-faint);min-width:20px;font-variant-numeric:tabular-nums}
+/* Seiten als Bilder (B2, 27.11.2026): ein schmaler Streifen; der Knopf liegt über der ganzen Karte. */
+.mm-streifen{display:flex;flex-direction:column;gap:8px;min-width:0;align-content:start}
+.mm-streifen-kopf{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 0 6px}
+.mm-streifen-kopf h2{margin:0;font-size:12px;line-height:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--m-ink-soft)}
+.mm-plus{display:inline-flex}
+.mm-plus-knopf{min-width:34px;min-height:34px;padding:0;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--m-ink-soft);
+  font:inherit;font-size:20px;line-height:1;cursor:pointer}
+.mm-plus-knopf:hover{background:var(--m-fill);color:var(--m-ink)}
+.mm-plus-knopf[aria-expanded="true"]{background:var(--m-blue-soft);border-color:var(--m-blue-line);color:var(--m-blue-press)}
+.mm-plus-menue{position:fixed;z-index:40;display:flex;flex-direction:column;gap:2px;width:max-content;min-width:220px;max-width:340px;max-height:60vh;overflow:auto;
+  padding:6px;border:1px solid var(--m-border);border-radius:var(--m-radius-card);background:var(--m-surface-raised)}
+.mm-plus-menue[hidden]{display:none}
+.mm-plus-menue button{display:block;width:100%;min-height:32px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:var(--m-ink);
+  font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.mm-plus-menue button:hover{background:var(--m-fill)}
+.mm-seitenliste{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.mm-seitenliste li{position:relative;display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:10px}
+.mm-seitenliste li:hover{background:var(--m-fill)}
+.mm-seitenliste li.active{background:var(--m-blue-soft)}
+.mm-mini{display:block;pointer-events:none}
+.mm-mini .mm-seite{box-shadow:0 0 0 1px var(--m-border)}
+.mm-seitenliste .active .mm-mini .mm-seite{box-shadow:0 0 0 2px var(--m-blue)}
+.mm-seitenliste button{position:static;display:flex;gap:6px;align-items:baseline;width:100%;min-height:0;padding:0;border:0;background:transparent;
+  color:var(--m-ink);font:inherit;font-size:12px;line-height:16px;text-align:left;cursor:pointer}
+.mm-seitenliste button::after{content:'';position:absolute;inset:0;border-radius:10px}
+.mm-seitenliste button:focus-visible{outline:none}
+.mm-seitenliste button:focus-visible::after{box-shadow:0 0 0 2px var(--m-focus)}
+.mm-seitenliste .active button{color:var(--m-blue-press);font-weight:600}
+.mm-nr{color:var(--m-ink-faint);font-weight:700;font-variant-numeric:tabular-nums}
 .mm-seitenliste .active .mm-nr{color:var(--m-blue-press)}
+.mm-mini-marke{position:absolute;right:10px;top:10px;padding:1px 6px;border-radius:var(--m-radius-pill);background:var(--m-attention);color:var(--m-paper);
+  font-size:11px;line-height:16px;font-weight:700}
 .mm-mitte{min-width:0;display:flex;flex-direction:column;gap:10px}
 .mm-werkzeug{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 /* Höchstens zwei Zeilen (passt neben die Knöpfe): die Leiste wird nie höher und die Seite springt nicht. */
@@ -312,7 +336,14 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-uebersatz-liste{border-color:var(--m-error);color:var(--m-error)}
 .mm-neu{background:var(--m-attention-soft);color:var(--m-attention);border-radius:var(--m-radius-card);padding:10px 12px;display:grid;gap:8px;font-size:14px}
 .mm-rechts{display:grid;gap:14px;min-width:0;align-content:start}
-.mm-rechts>div:empty{display:none}
+/* Eigenschaften in Reitern (B2, 27.11.2026): Seite, Position, Mappe. */
+.mm-teile{display:flex;padding:2px;border-radius:10px;background:var(--m-fill)}
+.mm-teile button{flex:1;min-height:34px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:var(--m-ink-soft);font:inherit;font-size:13px;
+  font-weight:600;cursor:pointer}
+.mm-teile button[aria-pressed="true"]{background:var(--m-surface);color:var(--m-ink);box-shadow:0 1px 2px var(--m-hairline)}
+.mm-teil{display:none;gap:14px;min-width:0;align-content:start}
+.mm-rechts[data-teil="seite"]>[data-teil="seite"],.mm-rechts[data-teil="position"]>[data-teil="position"],.mm-rechts[data-teil="mappe"]>[data-teil="mappe"]{display:grid}
+.mm-teil>div:empty{display:none}
 .mm-rechts .card{padding:16px}
 .mm-rechts h2{font-size:17px}
 /* Ab 1000 px stehen Seiten, Bühne und Eigenschaften nebeneinander (B2, 27.11.2026: auch im Reiter von Work, der oft
@@ -494,18 +525,22 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-messen{position:fixed;left:-40000px;top:0;width:1587px;visibility:hidden;pointer-events:none}
 @media (max-width:760px){.mm-bild-raster{grid-template-columns:minmax(0,1fr)}}
 @media (min-width:1000px) and (max-width:1180px){
-  .mm{grid-template-columns:180px minmax(0,1fr) 290px}
-  .mm.ohne-seiten{grid-template-columns:minmax(0,1fr) 290px}
-  .mm.ohne-rechts{grid-template-columns:180px minmax(0,1fr)}
+  .mm{grid-template-columns:148px minmax(0,1fr) 280px}
+  .mm.ohne-seiten{grid-template-columns:minmax(0,1fr) 280px}
+  .mm.ohne-rechts{grid-template-columns:148px minmax(0,1fr)}
 }
 @media (max-width:999px){
-  .mm,.mm.ohne-seiten,.mm.ohne-rechts{grid-template-columns:200px minmax(0,1fr)}
+  .mm,.mm.ohne-seiten,.mm.ohne-rechts{grid-template-columns:148px minmax(0,1fr)}
   .mm.ohne-seiten.ohne-rechts{grid-template-columns:minmax(0,1fr)}
-  .mm-rechts{grid-column:1/-1;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));align-items:start}
+  .mm-rechts{grid-column:1/-1}
+  .mm-teil{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));align-items:start}
 }
+/* Schmal (iPhone): der Streifen läuft quer und scrollt in sich, die Seite scrollt nicht seitlich. */
 @media (max-width:760px){
   .mm,.mm.ohne-seiten,.mm.ohne-rechts{grid-template-columns:minmax(0,1fr)}
-  .mm-rechts{grid-template-columns:minmax(0,1fr)}
+  .mm-seitenliste{flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .mm-seitenliste li{flex:0 0 132px}
+  .mm-teil{grid-template-columns:minmax(0,1fr)}
 }
 @media print{
   html.mm-drucken .pd-wrap{max-width:none;margin:0;padding:0}
@@ -559,6 +594,11 @@ html.mm-praes-offen{overflow:hidden}
 /* Eine Werkzeugzeile je Reiter (B2, 27.11.2026): eine Zeile über der ganzen Mappe statt Überschrift, Unterzeile und
    zweiter Leiste; der Stand steht vor «Präsentieren», «PDF» und «Vorlegen», das Raster unter «•••». */
 .pd-mappe-wrap>.mm-zeile{margin:0 0 12px}
+/* Im Reiter: Meldungen schweben oben über der Bühne und gehen nach einigen Sekunden (die Mappe springt nicht). */
+.im-reiter .pd-mappe-wrap>.pd-meldung{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:45;width:max-content;
+  max-width:min(640px,calc(100% - 32px));margin:0;padding:10px 14px;border:1px solid var(--m-border);border-radius:var(--m-radius-card);
+  background:var(--m-surface-raised);box-shadow:0 8px 28px var(--m-hairline)}
+.im-reiter .pd-mappe-wrap>.pd-meldung.warn{border-color:var(--m-attention-soft);background:var(--m-attention-soft);color:var(--m-attention)}
 /* Ab 1000 px bricht die Zeile nie um (sonst springt die Seite, sobald etwa der Übersatz-Hinweis erscheint): nur die Info
    wird schmaler, ihr ganzer Text steht im Tooltip. */
 @media (min-width:1000px){.mm-zeile{flex-wrap:nowrap}.mm-zeile>*{flex-shrink:0}}

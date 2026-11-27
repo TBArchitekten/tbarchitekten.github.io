@@ -174,7 +174,7 @@ test('Werkzeug Mustermappe: Mappen je Projekt, nicht mehr im Projektstart; die M
   assert.match(js,/if\(neu\)history\.replaceState\(null,'',url\(\{werkzeug:ui\.werkzeug,projekt:pid\}\)\);/);
   assert.match(js,/if\(neu&&IM_REITER\)zeichne\('<div class="pd-wrap"><p class="meta">Neue Mustermappe …<\/p><\/div>',null\);else render\(\);/);
   const html=readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8');
-  assert.match(html,/projektdokumente\.css\?v=office12/);assert.match(html,/projektdokumente\.js\?v=office11/);
+  assert.match(html,/projektdokumente\.css\?v=office13/);assert.match(html,/projektdokumente\.js\?v=office12/);
 });
 
 // Gari, 26.11.2026: Layouts nach dem Erzeugen bearbeiten. Texte aus der Bibliothek nur für diese Mappe ändern (markiert,
@@ -271,7 +271,9 @@ test('Seite: Hinweise mit «zurücksetzen», Dialog «Bild ändern», eigene Bil
   const js=readFileSync(new URL('../projektdokumente.js',import.meta.url),'utf8');
   assert.match(js,/data-act="mm-zuruecksetzen" data-z="'\+z\.id\+'" data-o="'\+esc\(o\.id\)\+'" data-feld="'\+x\.feld\+'">'\+esc\(x\.name\)\+' zurücksetzen<\/button>/);
   // Seit 26.11.2026 rechts über den Eigenschaften (die Bühne füllt das Fenster).
-  assert.match(js,/'<div data-mm-hinweise>'\+mappeHinweise\(v,seite\)\+'<\/div><div data-mm-uebersatz><\/div><div data-mm-rahmen>'\+layoutKarte\(\)\+'<\/div>'\+mappeSeitenleiste\(v,inh,seite\)/);
+  // Seit B2 (27.11.2026) in Reitern: Hinweise, Übersatz, Rahmen und die Seite unter «Seite».
+  assert.match(js,/'<div class="mm-teil" data-teil="seite"><div data-mm-hinweise>'\+mappeHinweise\(v,seite\)\+'<\/div><div data-mm-uebersatz><\/div><div data-mm-rahmen>'\+layoutKarte\(\)\+'<\/div>'\+t\.seite\+'<\/div>'/);
+  assert.match(js,/return \{seite:karte,position,mappe:positionen\+angaben\+termin\+/);
   assert.match(js,/else if\(act==='mm-bild'&&z\)bildDialog\(z,el\.dataset\.o,el\.dataset\.i\);/);
   assert.match(js,/optionenPatch\(z,el\.dataset\.o,o=>M\.zuruecksetzen\(o,el\.dataset\.feld\)\);/);
   assert.match(js,/M\.fotoSetzen\(l,i,\{id:'m-'\+crypto\.randomUUID\(\),pfad,quelle:'mappe',name\}\)/);

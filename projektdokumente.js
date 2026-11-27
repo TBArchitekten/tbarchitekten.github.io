@@ -181,9 +181,13 @@ async function auffrischen(){
 
 // ---------- Speichern ----------
 function meldung(text,art='info'){ui.meldung=text;ui.meldungArt=art;zeigeMeldung()}
+// Im Reiter von Work schwebt die Meldung über der Mappe (sie verschiebt die Bühne nicht) und geht nach einigen Sekunden.
+let meldungUhr=null;
 function zeigeMeldung(){
   const el=root.querySelector('[data-meldung]');if(!el)return;
   el.className='pd-meldung'+(ui.meldung?' '+ui.meldungArt:'');el.textContent=ui.meldung||'';
+  clearTimeout(meldungUhr);
+  if(IM_REITER&&ui.meldung&&ui.ansicht==='mappe')meldungUhr=setTimeout(()=>{ui.meldung='';zeigeMeldung()},ui.meldungArt==='warn'?12000:6000);
 }
 const ungespeichert=()=>K.ARTEN.some(a=>zeilen[a].some(z=>z.timer||z.inFlight));
 function speicherText(){
@@ -1177,9 +1181,10 @@ const mm={offen:'',seite:null,produkte:new Map(),fotos:new Map(),urls:new Map(),
 // Prozent (100 % = A3 in Originalgröße), Raster ein oder aus, Seitenliste und Eigenschaften ein- und ausblenden.
 // Gemerkt je Gerät; ohne Speicher (privates Fenster) gilt die Grundeinstellung.
 function mmAnsichtLesen(){
-  const grund={zoom:'fit',raster:false,seiten:true,rechts:true};
+  const grund={zoom:'fit',raster:false,seiten:true,rechts:true,teil:'seite'};
   try{const x=JSON.parse(localStorage.getItem('tba-office.mustermappe.ansicht')||'null');
-    if(x&&typeof x==='object')return {zoom:x.zoom==='breite'||(typeof x.zoom==='number'&&x.zoom>=.2&&x.zoom<=4)?x.zoom:'fit',raster:!!x.raster,seiten:x.seiten!==false,rechts:x.rechts!==false}}catch{}
+    if(x&&typeof x==='object')return {zoom:x.zoom==='breite'||(typeof x.zoom==='number'&&x.zoom>=.2&&x.zoom<=4)?x.zoom:'fit',raster:!!x.raster,seiten:x.seiten!==false,rechts:x.rechts!==false,
+      teil:['seite','position','mappe'].includes(x.teil)?x.teil:'seite'}}catch{}
   return grund;
 }
 function mmAnsichtMerken(){try{localStorage.setItem('tba-office.mustermappe.ansicht',JSON.stringify(mm.ansicht))}catch{}}
@@ -1244,6 +1249,33 @@ function renderMappen(){
     '</div>';
   zeichne(html,fokus);
 }
+// Eine kleine Seite für den Streifen: wie im PDF gesetzt, Bilder erst beim Hinsehen geladen.
+function miniHtml(x,inh,j,n){return M.seiteHtml(x,inh,{nr:j+1,gesamt:n,modus:'druck',bild:bildUrl}).replace(/<img /g,'<img loading="lazy" decoding="async" ')}
+// Die kleine Seite der offenen Seite folgt der Bühne (nach Text, Rahmen oder Bild), ohne die Mappe neu zu zeichnen.
+function miniAuffrischen(){
+  const v=vorlageZeile();if(ui.ansicht!=='mappe'||!v||!istMappe(v))return;
+  const inh=mappeJetzt(v),j=inh.seiten.findIndex(x=>x.id===mm.seite),ort=root.querySelector('.mm-seitenliste li.active .mm-mini');
+  if(j>=0&&ort)ort.innerHTML=miniHtml(inh.seiten[j],inh,j,inh.seiten.length);
+}
+// Eigenschaften in Reitern (B2, 27.11.2026, wie im Entwurf): «Seite» (Hinweise, Übersatz, Rahmen, die Seite), «Position»
+// (die Position der Seite) und «Mappe» (Positionen, Angaben, Termin, Stände). Gemerkt wie Zoom und Raster.
+const MM_TEILE=[['seite','Seite'],['position','Position'],['mappe','Mappe']];
+function eigenschaften(v,inh,seite){
+  const t=mappeSeitenleiste(v,inh,seite),teil=mm.ansicht.teil;
+  return '<aside class="mm-rechts" data-teil="'+teil+'" aria-label="Eigenschaften"><div class="mm-teile" role="group" aria-label="Eigenschaften für">'+
+      MM_TEILE.map(([k,l])=>'<button type="button" data-act="mm-teil" data-teil="'+k+'" aria-pressed="'+(k===teil)+'">'+l+'</button>').join('')+'</div>'+
+    '<div class="mm-teil" data-teil="seite"><div data-mm-hinweise>'+mappeHinweise(v,seite)+'</div><div data-mm-uebersatz></div><div data-mm-rahmen>'+layoutKarte()+'</div>'+t.seite+'</div>'+
+    '<div class="mm-teil" data-teil="position">'+(t.position||'<section class="card"><h2>Position</h2><p class="meta">Diese Seite zeigt keine Position. Vergleichs- und '+
+      'Materialseiten gehören zu einer Position; alle Positionen stehen unter «Mappe».</p></section>')+'</div>'+
+    '<div class="mm-teil" data-teil="mappe">'+t.mappe+'</div></aside>';
+}
+function teilZeigen(teil){
+  if(!MM_TEILE.some(([k])=>k===teil))return;
+  if(mm.ansicht.teil!==teil){mm.ansicht.teil=teil;mmAnsichtMerken()}
+  const r=root.querySelector('.mm-rechts');if(!r||r.dataset.teil===teil)return;
+  r.dataset.teil=teil;r.scrollTop=0;
+  r.querySelectorAll('[data-act="mm-teil"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.teil===teil)));
+}
 function renderMappe(){
   const v=vorlageZeile();
   if(!v||!istMappe(v)){renderVorlage();return}
@@ -1257,15 +1289,26 @@ function renderMappe(){
     '<button type="button" class="btn btn-primary" data-act="vorlegen">'+(vorgelegt?'Erneut vorlegen':'Als vorgelegt markieren')+'</button>';
   const meta=esc('Vorlage zur Bemusterung'+(inh.termin?' am '+K.datumLang(inh.termin):''))+' · '+(vorgelegt?'vorgelegt am '+esc(K.datumLang(v.daten.vorgelegt_am)):'Entwurf')+
     ' · <span data-speicher>'+esc(speicherText())+'</span>';
-  const nav='<nav class="card mm-nav" aria-label="Seiten der Mappe"><h2>Seiten</h2><ol class="mm-seitenliste">'+seiten.map((x,j)=>{
-      const p=inh.punkte.find(q=>q.id===x.punkt),o=p?.optionen.find(q=>q.id===x.option),an=x.id===seite?.id;
-      return '<li class="'+(an?'active':'')+'"><button type="button" data-act="mm-seite" data-id="'+esc(x.id)+'"'+(an?' aria-current="page"':'')+'><span class="mm-nr">'+(j+1)+'</span><span>'+esc(M.seiteName(x,p,o))+'</span></button></li>';
-    }).join('')+'</ol>'+
-    '<label class="pd-feld"><span>Seite hinzufügen</span><select class="pd-in" data-act="mm-neue-seite"><option value="">wählen …</option>'+
-      '<option value="frei">Freie Seite · Bild oder PDF</option><option value="uebersicht">Übersicht</option><option value="deckblatt">Deckblatt</option>'+
-      inh.punkte.map(p=>'<option value="vergleich|'+esc(p.id)+'">'+esc((p.code||p.nr)+' · Vergleich')+'</option>'+
-        p.optionen.map(o=>'<option value="material|'+esc(p.id)+'|'+esc(o.id)+'">'+esc((p.code||p.nr)+' · '+o.id+' '+K.kurz(o.name,28)+' · Material')+'</option>').join('')).join('')+
-    '</select></label><button type="button" class="btn" data-act="mm-position-neu">Position hinzufügen</button></nav>';
+  // Seiten als Bilder (B2, 27.11.2026, wie im Entwurf): ein Streifen mit kleinen Seiten statt der Liste in Worten. Der
+  // Knopf liegt über der ganzen Karte (Nummer und Name sind seine Beschriftung); «+» fügt eine Seite oder eine Position
+  // hinzu, «neuer Stand» markiert Seiten, deren Produkt in der Bibliothek neuer ist.
+  const neuerStand=x=>{
+    if(!['vergleich','material'].includes(x.typ))return false;
+    const z=zeilen.entscheidungsliste.find(q=>q.id===x.punkt);
+    return !!z&&K.optionen(z.daten).some(o=>o.produkt_id&&(x.typ!=='material'||o.id===x.option)&&M.veraltet(o,mm.produkte.get(o.produkt_id)));
+  };
+  const hinzu=[['frei','Freie Seite · Bild oder PDF'],['uebersicht','Übersicht'],['deckblatt','Deckblatt']].concat(...inh.punkte.map(p=>
+    [['vergleich|'+p.id,(p.code||p.nr)+' · Vergleich']].concat(p.optionen.map(o=>['material|'+p.id+'|'+o.id,(p.code||p.nr)+' · '+o.id+' '+K.kurz(o.name,28)+' · Material']))));
+  const nav='<nav class="mm-nav mm-streifen" aria-label="Seiten der Mappe"><div class="mm-streifen-kopf"><h2>Seiten · '+seiten.length+'</h2>'+
+      '<span class="mm-plus"><button type="button" class="mm-plus-knopf" data-act="mm-plus" aria-haspopup="true" aria-expanded="false" aria-label="Seite oder Position hinzufügen" title="Seite oder Position hinzufügen">+</button>'+
+      '<span class="mm-plus-menue" role="group" aria-label="Hinzufügen" hidden><button type="button" data-act="mm-position-neu">Position hinzufügen …</button>'+
+      hinzu.map(([w,t])=>'<button type="button" data-act="mm-seite-neu" data-wert="'+esc(w)+'">'+esc(t)+'</button>').join('')+'</span></span></div>'+
+    '<ol class="mm-seitenliste">'+seiten.map((x,j)=>{
+      const p=inh.punkte.find(q=>q.id===x.punkt),o=p?.optionen.find(q=>q.id===x.option),an=x.id===seite?.id,neu=neuerStand(x);
+      return '<li class="'+(an?'active':'')+'"><span class="mm-mini" aria-hidden="true">'+miniHtml(x,inh,j,seiten.length)+'</span>'+
+        '<button type="button" data-act="mm-seite" data-id="'+esc(x.id)+'"'+(an?' aria-current="page"':'')+'><span class="mm-nr">'+(j+1)+'</span><span>'+esc(M.seiteName(x,p,o))+'</span>'+
+        (neu?'<span class="mm-mini-marke">neuer Stand</span>':'')+'</button></li>';
+    }).join('')+'</ol></nav>';
   const a=mm.ansicht,schalter=(act,t,an,titel)=>'<button type="button" class="btn mm-schalter" data-act="'+act+'" aria-pressed="'+(an?'true':'false')+'" title="'+esc(titel)+'">'+t+'</button>';
   const info='Seite '+(i+1)+' von '+seiten.length+' · A3 quer';
   // Im Reiter von Work (B2, 27.11.2026): eine Zeile über der ganzen Mappe statt Überschrift, Unterzeile und zweiter
@@ -1296,11 +1339,11 @@ function renderMappe(){
   const fokus=vorZeichnen();
   const html='<div class="pd-wrap pd-mappe-wrap'+(ui.detail?' mit-detail':'')+'">'+(IM_REITER?werkzeug+meldungHtml():kopf({zurueck:[url({werkzeug:'mustermappe',projekt:projekt.id}),'‹ Mustermappen'],
     kicker:'Mustermappe · '+projektName(),titel:inh.titel,meta,aktionen}))+
-    '<div class="mm'+(a.seiten?'':' ohne-seiten')+(a.rechts?'':' ohne-rechts')+'">'+nav+mitte+'<aside class="mm-rechts" aria-label="Eigenschaften">'+
-      '<div data-mm-hinweise>'+mappeHinweise(v,seite)+'</div><div data-mm-uebersatz></div><div data-mm-rahmen>'+layoutKarte()+'</div>'+mappeSeitenleiste(v,inh,seite)+'</aside></div>'+
+    '<div class="mm'+(a.seiten?'':' ohne-seiten')+(a.rechts?'':' ohne-rechts')+'">'+nav+mitte+eigenschaften(v,inh,seite)+'</div>'+
     '<div class="pd-druck mm-druck" aria-hidden="true">'+M.mappeHtml(inh,{modus:'druck',bild:bildUrl})+'</div>'+(ui.detail?detailPanel('entscheidungsliste'):'')+'</div>';
   zeichne(html,fokus);
   mmNachZeichnen();
+  if(IM_REITER&&ui.meldung)zeigeMeldung();
 }
 // Zoom: Einpassen (ganze Seite in der Bühne), Seitenbreite oder Prozent von A3 in Originalgröße (420 mm = 1587 px).
 const MM_A3=1587,MM_STUFEN=[.25,.33,.5,.67,.75,1,1.25,1.5,2,3];
@@ -1375,6 +1418,7 @@ function uebersatzPruefen(){
 // Ein Klick auf den Hinweis in der Leiste: Eigenschaften zeigen, den ersten Rahmen wählen, der nicht passt, und ihn in
 // den Blick holen.
 function uebersatzZeigen(){
+  teilZeigen('seite');
   if(!mm.ansicht.rechts){
     mm.ansicht.rechts=true;mmAnsichtMerken();root.querySelector('.mm')?.classList.remove('ohne-rechts');
     root.querySelector('[data-act="mm-rechts"]')?.setAttribute('aria-pressed','true');zoomAnwenden();
@@ -1383,19 +1427,26 @@ function uebersatzZeigen(){
   if(r){waehle(r.dataset.mmr);r.scrollIntoView({block:'nearest',inline:'nearest'})}
   root.querySelector('[data-mm-uebersatz]')?.scrollIntoView({block:'nearest'});
 }
-// «•••» im Reiter: seltene Befehle. Ein Klick daneben oder Esc schließt das Menü; ein Schalter darin lässt es offen.
-function mehrMenue(auf){
-  const m=root.querySelector('.mm-mehr-menue'),k=root.querySelector('[data-act="mm-mehr"]');if(!m||!k)return;
+// Kleine Menüs der Mappe: «•••» im Reiter (seltene Befehle) und «+» über dem Streifen (Seite oder Position hinzufügen).
+// Ein Klick daneben, Esc oder Scrollen schließt; ein Schalter darin lässt «•••» offen. «+» liegt im scrollenden Streifen
+// und steht deshalb fest im Fenster, unter seinem Knopf.
+function menue(name,auf){
+  const m=root.querySelector('.mm-'+name+'-menue'),k=root.querySelector('[data-act="mm-'+name+'"]');if(!m||!k)return;
   m.hidden=!auf;k.setAttribute('aria-expanded',String(!!auf));
-  if(auf)m.querySelector('button')?.focus();
+  if(!auf)return;
+  if(name==='plus'){const r=k.getBoundingClientRect();m.style.top=Math.round(r.bottom+6)+'px';m.style.left=Math.round(Math.max(8,Math.min(r.left,innerWidth-m.offsetWidth-8)))+'px'}
+  m.querySelector('button')?.focus();
 }
+const offenesMenue=()=>root.querySelector('.mm-mehr-menue:not([hidden]),.mm-plus-menue:not([hidden])');
 document.addEventListener('pointerdown',e=>{
-  if(root.querySelector('.mm-mehr-menue:not([hidden])')&&!e.target.closest?.('.mm-mehr'))mehrMenue(false);
+  const m=offenesMenue();if(m&&!e.target.closest?.('.mm-mehr,.mm-plus'))menue(m.matches('.mm-plus-menue')?'plus':'mehr',false);
 },true);
 document.addEventListener('keydown',e=>{
-  if(e.key!=='Escape'||!root.querySelector('.mm-mehr-menue:not([hidden])'))return;
-  e.preventDefault();e.stopPropagation();mehrMenue(false);root.querySelector('[data-act="mm-mehr"]')?.focus();
+  const m=offenesMenue();if(e.key!=='Escape'||!m)return;
+  const n=m.matches('.mm-plus-menue')?'plus':'mehr';
+  e.preventDefault();e.stopPropagation();menue(n,false);root.querySelector('[data-act="mm-'+n+'"]')?.focus();
 },true);
+document.addEventListener('scroll',e=>{if(!e.target.closest?.('.mm-plus-menue')&&root.querySelector('.mm-plus-menue:not([hidden])'))menue('plus',false)},true);
 // Was nur das Büro sieht: neuer Stand in der Bibliothek, Datenblatt, was im Datenblatt fehlt.
 function mappeHinweise(v,seite){
   const z=seite&&['vergleich','material'].includes(seite.typ)?zeilen.entscheidungsliste.find(x=>x.id===seite.punkt):null;
@@ -1518,7 +1569,7 @@ function mappeSeitenleiste(v,inh,seite){
   const termin=terminKarte(v);
   const staende=ui.staende===null?'<p class="meta">wird geladen …</p>':ui.staende.length?'<ul class="pd-staende">'+ui.staende.map(s=>'<li><button type="button" class="pd-link" data-act="stand" data-id="'+s.id+'">'+esc(s.bezeichnung)+'</button><span>'+esc([K.datumLang(String(s.created_at).slice(0,10)),name(s.created_by)].filter(Boolean).join(' · '))+'</span></li>').join('')+'</ul>'
     :'<p class="meta">Noch kein Stand. Beim Vorlegen wird der Stand festgehalten und bleibt unverändert.</p>';
-  return karte+position+positionen+angaben+termin+'<section class="card" data-staende><h2>Stände</h2>'+staende+'</section>';
+  return {seite:karte,position,mappe:positionen+angaben+termin+'<section class="card" data-staende><h2>Stände</h2>'+staende+'</section>'};
 }
 function neueMappeDialog(){
   dialog.innerHTML='<form method="dialog" class="pd-dlg"><h2>Neue Mustermappe</h2><p class="meta">Eine Mappe je Themenpaket. Die Positionen (Codes aus dem Plan) und ihre Kandidaten aus der Produktbibliothek kommen danach.</p>'+
@@ -1559,7 +1610,7 @@ async function positionAnlegen(v,{code,bezeichnung,strategie}){
   const seite={id:M.neueId(),typ:'vergleich',punkt:z.id};
   const t=vorher('Position '+code+' angelegt',[v]);
   v.daten={...v.daten,punkte:[...(v.daten.punkte||[]),z.id],seiten:[...M.seitenVon(v.daten),seite]};markiere(v);nachher(t);
-  mm.seite=seite.id;meldung('Position '+code+' angelegt; sie steht auch in der Entscheidungsliste.');render();
+  mm.seite=seite.id;mm.ansicht.teil='position';mmAnsichtMerken();meldung('Position '+code+' angelegt; sie steht auch in der Entscheidungsliste.');render();
 }
 function positionWeg(v,id){
   const z=zeileVon(id);
@@ -1842,7 +1893,9 @@ function nachher(t){
     }
     oben.um=jetzt;
   }else{vl.zurueck.push({text:t.text,gruppe:t.gruppe,seite:t.seite,um:jetzt,teile});if(vl.zurueck.length>VERLAUF_MAX)vl.zurueck.shift()}
-  vl.vor=[];verlaufKnoepfe();return true;
+  vl.vor=[];verlaufKnoepfe();
+  if(ui.ansicht==='mappe')requestAnimationFrame(miniAuffrischen);
+  return true;
 }
 function teilSetzen(daten,p,wert){
   const d={...daten};
@@ -1895,9 +1948,11 @@ const gleicheGeo=(a,b)=>!!a&&!!b&&a.c===b.c&&a.r===b.r&&a.w===b.w&&a.h===b.h;
 const zwischen=(x,a,b)=>Math.min(b,Math.max(a,x));
 function rahmenEl(key){return key?root.querySelector('.mm-buehne .mm-satz>.mm-r[data-mmr="'+CSS.escape(key)+'"]'):null}
 function geoSetzen(el,g){if(!el)return;el.style.gridColumn=g.c+' / span '+g.w;el.style.gridRow=g.r+' / span '+g.h;el.dataset.mmrG=geoText(g)}
-function waehle(key){
+function waehle(key,{zeigen=false}={}){
   const v=vorlageZeile(),seite=v&&istMappe(v)?mappeSeite(v):null;
   const neu=key&&seite?{seite:seite.id,key}:null;
+  // Ein angeklickter Rahmen (nicht das Schreiben darin): seine Eigenschaften stehen unter «Seite».
+  if(neu&&zeigen)teilZeigen('seite');
   if(gleich(neu,mm.auswahl))return;
   mm.auswahl=neu;ebeneZeichnen();layoutKarteNeu();
 }
@@ -2177,7 +2232,7 @@ async function mappeStandZeigen(st){
 // Etappe 2: was hier geändert wird, ist ein Schritt im Verlauf (Rückgängig); die Texte nennen ihn.
 const MM_SCHRITT={'mm-hoch':'Seite verschoben','mm-runter':'Seite verschoben','mm-seite-weg':'Seite entfernt','mm-material':'Materialseite angelegt',
   'mm-foto':'Foto gewählt','mm-bild-weg':'Bild entfernt','mm-zuruecksetzen':'Text zurückgesetzt','mm-uebernehmen':'Neuer Stand übernommen',
-  'mm-position-weg':'Position aus der Mappe genommen','mm-kandidat-weg':'Kandidat entfernt'};
+  'mm-position-weg':'Position aus der Mappe genommen','mm-kandidat-weg':'Kandidat entfernt','mm-seite-neu':'Seite hinzugefügt'};
 function mappeKlick(act,el){
   const v=vorlageZeile();if(!v||!istMappe(v))return;
   const t=MM_SCHRITT[act]?vorher(MM_SCHRITT[act],[v,...mappePunkte(v)]):null;
@@ -2185,11 +2240,14 @@ function mappeKlick(act,el){
 }
 function mappeKlickInnen(act,el,v){
   const z=el.dataset.z?zeileVon(el.dataset.z):null;
+  if(el.closest('.mm-plus-menue'))menue('plus',false);
   if(act==='mm-zurueck'||act==='mm-vor'){verlaufSchritt(act==='mm-zurueck'?-1:1);return}
   if(act.startsWith('mm-rahmen-')||act==='mm-layout-vorlage'){rahmenKlick(act,el.dataset.k);return}
   if(act==='mm-zs-ok'||act==='mm-zs-ab'){zuschnittEnde(act==='mm-zs-ok');return}
   if(act==='mm-zs-mitte'){if(mm.zuschnitt){mm.zuschnitt.a={x:50,y:50,z:1};zuschnittZeigen()}return}
-  if(act==='mm-mehr'){mehrMenue(el.closest('.mm-mehr')?.querySelector('.mm-mehr-menue')?.hidden);return}
+  if(act==='mm-mehr'||act==='mm-plus'){const n=act.slice(3);menue(n,!!root.querySelector('.mm-'+n+'-menue')?.hidden);return}
+  if(act==='mm-teil'){teilZeigen(el.dataset.teil);return}
+  if(act==='mm-seite-neu'){menue('plus',false);seiteNeu(v,el.dataset.wert);return}
   if(act==='mm-uebersatz'){uebersatzZeigen();return}
   if(act==='mm-seite'){mm.seite=el.dataset.id;mm.auswahl=null;render();root.querySelector('.mm-mitte')?.scrollIntoView({block:'nearest'})}
   else if(act==='mm-zoom-plus'||act==='mm-zoom-minus')zoomSchritt(act==='mm-zoom-plus'?1:-1);
@@ -2234,7 +2292,7 @@ function mappeKlickInnen(act,el,v){
     meldung((M.ANPASSUNG_NAME[el.dataset.feld]||'Text')+' von '+el.dataset.o+' wieder wie in der Produktbibliothek.');render();
   }
 }
-const MM_AENDERUNG={'mm-neue-seite':'Seite hinzugefügt','mm-zeige':'Anzeige auf der Seite geändert','mm-seite-option':'Kandidaten der Seite geändert',
+const MM_AENDERUNG={'mm-zeige':'Anzeige auf der Seite geändert','mm-seite-option':'Kandidaten der Seite geändert',
   'mm-material-option':'Variante der Seite geändert'};
 function mappeAenderung(el){
   const v=vorlageZeile();if(!v||!istMappe(v))return false;
@@ -2244,7 +2302,6 @@ function mappeAenderung(el){
 }
 function mappeAenderungInnen(el,v){
   const act=el.dataset.act;
-  if(act==='mm-neue-seite'){if(el.value)seiteNeu(v,el.value);return true}
   if(act==='mm-zoom'){const w=el.value;if(w==='fit'||w==='breite'){mm.ansicht.zoom=w;mmAnsichtMerken();zoomAnwenden()}else if(Number(w)>0)zoomAuf(Number(w));return true}
   if(act==='mm-kandidat'){const z=zeileVon(el.dataset.z);if(z&&el.value){const id=el.value;el.disabled=true;void sicher(()=>kandidatHinzu(v,z,id))}return true}
   const seite=mappeSeite(v);
@@ -2806,7 +2863,7 @@ root.addEventListener('keydown',e=>{
 function blattKlick(e){
   if(mm.klickSperre||mm.zuschnitt)return;
   const r=e.target.closest('.mm-satz>.mm-r[data-mmr]');
-  if(r){waehle(r.dataset.mmr);return}
+  if(r){waehle(r.dataset.mmr,{zeigen:!e.target.closest('.mm-ed')});return}
   if(!e.target.closest('.mm-rw'))waehle(null);
 }
 root.addEventListener('focusin',e=>{
