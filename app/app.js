@@ -330,8 +330,8 @@ function init(){
     if(WINDOW_SECTIONS.includes(section))show(section);
   });
   if(reviewId)setTimeout(()=>void handleReviewDeepLink(),0);
-  void markPresenceSeen();
   let calendarToday=today();
+  void markPresenceSeen();
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='visible'){
       // Über Mitternacht offen: stand der Kalender auf «heute», zeigt er beim nächsten Hinsehen den neuen Tag.
