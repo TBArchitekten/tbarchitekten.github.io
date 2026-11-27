@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; Browserprüfungen Wissen (10) lokal mit Chrome grün; Bildschirmfoto des Panoramas mit Beispieldaten.
 - Quedó pendiente o sin probar: die Abläufe «Besprechung nachbereiten» und «Phasenwechsel».
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (pendiente)
+- PR: #200
 
 ---
 
