@@ -61,7 +61,7 @@
   .status-stand strong{font-weight:700}
   .workspace{flex:1;min-height:0;display:flex;position:relative}
   .left{
-    width:var(--left-w);min-width:430px;max-width:1200px;background:#fff;border-right:1px solid var(--line-strong);
+    width:var(--left-w);min-width:300px;max-width:1200px;background:#fff;border-right:1px solid var(--line-strong);
     overflow:hidden;display:flex;flex-direction:column;position:relative;z-index:8
   }
   .splitter{position:absolute;left:calc(var(--left-w) - 3px);top:0;bottom:0;width:6px;cursor:col-resize;z-index:30}
@@ -77,6 +77,17 @@
     align-items:center;border-bottom:1px solid #edf0f3;font-size:12.5px;background:#fff
   }
   .row{width:100%;min-width:0}
+  /* Schmale Tabelle (Gari, 27.11.2026: die Balken sollen Platz bekommen). Je schmaler die Tabelle, desto weniger
+     Spalten: zuerst Fortschritt, dann Verantwortlich, dann Dauer, zuletzt Anfang und Ende; PSP und Vorgang bleiben.
+     Was ausgeblendet ist, steht im Dialog des Vorgangs. */
+  html[data-tp-spalten="1"] :is(.left-head,.row){grid-template-columns:54px minmax(0,1fr) 115px 92px 92px 70px}
+  html[data-tp-spalten="2"] :is(.left-head,.row){grid-template-columns:54px minmax(0,1fr) 92px 92px 70px}
+  html[data-tp-spalten="3"] :is(.left-head,.row){grid-template-columns:54px minmax(0,1fr) 92px 92px}
+  html[data-tp-spalten="4"] :is(.left-head,.row){grid-template-columns:54px minmax(0,1fr)}
+  html[data-tp-spalten="1"] :is(.left-head,.row)>:nth-child(7),
+  html[data-tp-spalten="2"] :is(.left-head,.row)>:is(:nth-child(3),:nth-child(7)),
+  html[data-tp-spalten="3"] :is(.left-head,.row)>:is(:nth-child(3),:nth-child(6),:nth-child(7)),
+  html[data-tp-spalten="4"] :is(.left-head,.row)>:nth-child(n+3){display:none}
   .row:hover{background:#f6f6f4}
   .row.group{background:#efefec;font-weight:700;border-bottom-color:#d8d8d4}
   .row.selected{background:#f0f0ee}
@@ -570,7 +581,7 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
       </div>
       <div class="left-scroll" id="leftScroll"></div>
     </section>
-    <div class="splitter" id="splitter"></div>
+    <div class="splitter" id="splitter" title="Ziehen: Tabelle breiter oder schmaler · Doppelklick: nur PSP und Vorgang"></div>
     <section class="timeline-wrap" id="timelineWrap">
       <div class="timeline-content" id="timelineContent">
         <div class="timeline-head" id="timelineHead">
@@ -1109,11 +1120,17 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
     localStorage.setItem(UI_KEY, JSON.stringify(uiState));
   }
 
+  // Breite der Tabelle: 300 bis 1200 px; darunter fallen Spalten weg (Stufe 0 bis 4, siehe CSS).
+  const TABELLE_MIN=300,TABELLE_MAX=1200;
+  function tabelleBreite(w){
+    const b=Math.round(Math.max(TABELLE_MIN,Math.min(TABELLE_MAX,Number(w)||925)));
+    document.documentElement.style.setProperty('--left-w',b+'px');
+    document.documentElement.dataset.tpSpalten=String(b>=860?0:b>=730?1:b>=620?2:b>=550?3:4);
+    return b;
+  }
   function applyUIState(){
     $('#linkMode').value=linkMode;
-    const minLeft=853;
-    const leftWidth=Math.max(minLeft, Number(uiState.leftWidth)||925);
-    document.documentElement.style.setProperty('--left-w', Math.min(1200,leftWidth)+'px');
+    tabelleBreite(uiState.leftWidth);
 
     const colors={...DEFAULT_COLORS,...(uiState.colors||{})};
     uiState.colors=colors;
@@ -2884,12 +2901,7 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
     e.preventDefault();
     const start=e.clientX;
     const startW=$('#leftPanel').getBoundingClientRect().width;
-    const move=ev=>{
-      const minW=853;
-      const w=Math.max(minW,Math.min(1200,startW+ev.clientX-start));
-      uiState.leftWidth=w;
-      document.documentElement.style.setProperty('--left-w',w+'px');
-    };
+    const move=ev=>{uiState.leftWidth=tabelleBreite(startW+ev.clientX-start)};
     const up=()=>{
       window.removeEventListener('pointermove',move);
       window.removeEventListener('pointerup',up);
@@ -2897,6 +2909,13 @@ html.wz-eine-zeile .app>.toolbar .statusbar>#pdfLinkSummary{order:4}
     };
     window.addEventListener('pointermove',move);
     window.addEventListener('pointerup',up);
+  };
+  // Doppelklick: nur PSP und Vorgang (die Balken bekommen den Platz) oder wieder so breit wie vorher.
+  $('#splitter').ondblclick=()=>{
+    const jetzt=Math.round($('#leftPanel').getBoundingClientRect().width);
+    if(jetzt>420){uiState.leftWidthBreit=jetzt;uiState.leftWidth=tabelleBreite(360)}
+    else uiState.leftWidth=tabelleBreite(uiState.leftWidthBreit||925);
+    saveUIState();
   };
 
   loadRemoteData().catch(error=>{console.error(error);document.body.innerHTML='<div class="empty">Terminplan konnte nicht geladen werden.</div>'});

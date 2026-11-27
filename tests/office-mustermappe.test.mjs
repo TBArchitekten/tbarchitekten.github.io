@@ -174,7 +174,7 @@ test('Werkzeug Mustermappe: Mappen je Projekt, nicht mehr im Projektstart; die M
   assert.match(js,/if\(neu\)history\.replaceState\(null,'',url\(\{werkzeug:ui\.werkzeug,projekt:pid\}\)\);/);
   assert.match(js,/if\(neu&&IM_REITER\)zeichne\('<div class="pd-wrap"><p class="meta">Neue Mustermappe …<\/p><\/div>',null\);else render\(\);/);
   const html=readFileSync(new URL('../projektdokumente.html',import.meta.url),'utf8');
-  assert.match(html,/projektdokumente\.css\?v=office15/);assert.match(html,/projektdokumente\.js\?v=office16/);
+  assert.match(html,/projektdokumente\.css\?v=office15/);assert.match(html,/projektdokumente\.js\?v=office17/);
 });
 
 // Gari, 26.11.2026: Layouts nach dem Erzeugen bearbeiten. Texte aus der Bibliothek nur für diese Mappe ändern (markiert,
@@ -367,7 +367,10 @@ test('Deckblatt: Titelbild aus dem Speicher der Mappe (optional), Titel unten li
 test('Arbeitsfläche und Blatt: Zoom, Schalter, Übersatz, Raster in mm, Arial, Text auf der Seite',()=>{
   const js=readFileSync(new URL('../projektdokumente.js',import.meta.url),'utf8');
   assert.match(js,/const MM_A3=1587,MM_STUFEN=\[\.25,\.33,\.5,\.67,\.75,1,1\.25,1\.5,2,3\];/);
-  assert.match(js,/try\{localStorage\.setItem\('tba-office\.mustermappe\.ansicht',JSON\.stringify\(mm\.ansicht\)\)\}catch\{\}/);
+  assert.match(js,/try\{localStorage\.setItem\('tba-office\.mustermappe\.ansicht',JSON\.stringify\(\{\.\.\.mm\.ansicht,v:2\}\)\)\}catch\{\}/);
+  // Eigenschaften zu Beginn aus (Gari, 27.11.2026); ältere Ansichten ohne v:2 beginnen einmal ohne.
+  assert.match(js,/const grund=\{zoom:'fit',raster:false,seiten:true,rechts:false,teil:'seite'\};/);
+  assert.match(js,/rechts:x\.v>=2&&x\.rechts===true/);
   assert.match(js,/if\(!\(e\.ctrlKey\|\|e\.metaKey\)\|\|ui\.ansicht!=='mappe'\|\|!e\.target\.closest\?\.\('\.mm-buehne'\)\)return;/);
   assert.match(js,/\},\{passive:false\}\);/);
   assert.match(js,/if\(ui\.ansicht==='mappe'&&el\.matches\('\.mm-ed'\)\)\{mappeEingabe\(el\);return\}/);

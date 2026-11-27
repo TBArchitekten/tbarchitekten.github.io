@@ -304,14 +304,33 @@ async function teilen(ctx,form){
   const titel=art==='korrektur'?'Hinweis zu «'+seite+'»':String(form.titel?.value||'').trim();
   if(!inhalt||!titel){ctx.setStatus?.('Bitte Titel und Text ausfüllen.');return}
   const knopf=form.querySelector('[type="submit"]');if(knopf)knopf.disabled=true;
-  const {error}=await ctx.sb.rpc('office_wissen_beitrag_teilen',{p_project:ctx.project.id,p_titel:titel.slice(0,200),p_inhalt:inhalt,p_art:art,p_quelle:null,p_seite:seite});
+  const {error}=await beitragTeilen(ctx.sb,{projekt:ctx.project.id,titel,inhalt,art,seite});
   if(error){if(knopf)knopf.disabled=false;ctx.setStatus?.('Das konnte nicht gespeichert werden.');return}
   ctx.setStatus?.(art==='korrektur'?'Danke, Ihr Hinweis ist gespeichert. Die KI arbeitet ihn beim nächsten Mal ein.':'Danke, Ihre Notiz ist gespeichert. Die KI arbeitet sie beim nächsten Mal ein.');
   await render(ctx,{behalten:true});
 }
 
+// Eine Stelle für Beiträge an das Wissen (Notiz, Hinweis zu einer Seite, Rückmeldung zu einer Entscheidung).
+function beitragTeilen(sb,{projekt,titel,inhalt,art,quelle=null,seite=null}){
+  return sb.rpc('office_wissen_beitrag_teilen',{p_project:projekt,p_titel:String(titel).slice(0,200),p_inhalt:inhalt,p_art:art,p_quelle:quelle,p_seite:seite});
+}
 // Bestätigen oder verwerfen, auch aus dem Panorama («Für dich»): die Funktion der Datenbank prüft, wer es darf.
 function entscheiden(sb,id,ja){return sb.rpc('office_wissen_entscheidung_pruefen',{p_id:id,p_beschliessen:!!ja})}
+// Rückmeldung zu einer vorgeschlagenen Entscheidung (Panorama, Gari, 27.11.2026). Ohne «verwerfen»: ein Hinweis an ihre
+// Seite, sie bleibt offen. Mit «verwerfen»: verworfen, und ein Grund, wenn es einen gibt, bleibt als Hinweis im Wissen,
+// damit niemand sie wieder vorschlägt. Die KI arbeitet Hinweise beim nächsten Mal ein.
+async function rueckmeldung(sb,{projekt,entscheidung,text='',verwerfen=false}){
+  const grund=String(text||'').trim();
+  if(verwerfen){
+    const r=await entscheiden(sb,entscheidung.id,false);
+    if(r.error||!grund)return r;
+  }else if(!grund)return {data:null,error:{message:'Bitte schreiben, was nicht stimmt.'}};
+  const titel=(verwerfen?'Verworfen: «':'Korrektur zu «')+entscheidung.title+'»';
+  const inhalt=grund+'\n\n'+(verwerfen?'Verworfen wurde die vorgeschlagene Entscheidung':'Es geht um die vorgeschlagene Entscheidung')+' «'+entscheidung.title+'»'+
+    (entscheidung.quelle?' (Quelle: '+entscheidung.quelle+')':'')+'.';
+  const b=await beitragTeilen(sb,{projekt,titel,inhalt,art:'korrektur',quelle:'Panorama',seite:entscheidung.seite||null});
+  return verwerfen&&!b.error?{data:'rejected',error:null}:b;
+}
 async function pruefen(ctx,id,ja){
   const {data,error}=await entscheiden(ctx.sb,id,ja);
   if(error){ctx.setStatus?.(error.message||'Das ging nicht.');return}
@@ -446,7 +465,7 @@ function vormerken(projektId,ziel){
   const ansicht=['seite','neu','entscheidungen'].includes(ziel?.ansicht)?ziel.ansicht:null;
   zustand={projekt:projektId,ansicht:ansicht==='seite'?null:ansicht,seite:null,suche:'',seiteTitel:ansicht==='seite'&&ziel?.seite?String(ziel.seite):null};
 }
-const api={render,renderMarkdown,verweise,datum,zeit,panorama,panoramaHtml,vormerken,entscheiden};
+const api={render,renderMarkdown,verweise,datum,zeit,panorama,panoramaHtml,vormerken,entscheiden,rueckmeldung};
 if(typeof module==='object'&&module.exports)module.exports=api;
 else root.TBA_OFFICE_WISSEN=api;
 })(typeof window!=='undefined'?window:globalThis);

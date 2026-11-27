@@ -123,3 +123,42 @@ test('Terminplan im Reiter: eine Werkzeugzeile, seltene Befehle unter «••�
     assert.deepEqual(fehler,[]);
   }finally{await ctx.close()}
 });
+
+// Gari, 27.11.2026: die Tabelle links ließ sich nicht schmaler als 853 px ziehen, die Balken waren kaum lesbar. Jetzt bis
+// 300 px; je schmaler, desto weniger Spalten (zuerst Fortschritt, zuletzt Anfang und Ende; PSP und Vorgang bleiben).
+// Doppelklick auf den Trenner: nur PSP und Vorgang, noch einmal: so breit wie vorher. Die Breite bleibt beim Neuladen.
+test('Terminplan: Tabelle schmal ziehen, Spalten fallen weg, Doppelklick schaltet um',async()=>{
+  const {ctx,page,fehler,rahmen}=await oeffne('/terminplan.html?id=tp-1');
+  try{
+    const f=page.frameLocator('#f');
+    await f.locator('.left-scroll .row').first().waitFor();
+    const lage=()=>rahmen().evaluate(()=>({breite:Math.round(document.querySelector('#leftPanel').getBoundingClientRect().width),
+      stufe:document.documentElement.dataset.tpSpalten,
+      kopf:[...document.querySelectorAll('.left-head>div')].filter(d=>d.offsetWidth).map(d=>d.textContent.trim()),
+      zeile:[...document.querySelector('.left-scroll .row').children].filter(d=>d.offsetWidth).length}));
+    const anfang=await lage();
+    assert.equal(anfang.stufe,'0');assert.equal(anfang.kopf.length,7);
+    // Ziehen: weit nach links, bis zum Minimum von 300 px.
+    const trenner=await f.locator('#splitter').boundingBox();
+    await page.mouse.move(trenner.x+3,trenner.y+200);await page.mouse.down();
+    await page.mouse.move(trenner.x-900,trenner.y+200,{steps:8});await page.mouse.up();
+    let jetzt=await lage();
+    assert.equal(jetzt.breite,300);assert.equal(jetzt.stufe,'4');
+    assert.deepEqual(jetzt.kopf,['PSP','Vorgang']);assert.equal(jetzt.zeile,2,'Zeilen wie der Kopf');
+    // Etwas breiter: Anfang und Ende kommen zurück.
+    const t2=await f.locator('#splitter').boundingBox();
+    await page.mouse.move(t2.x+3,t2.y+200);await page.mouse.down();await page.mouse.move(t2.x+290,t2.y+200,{steps:5});await page.mouse.up();
+    jetzt=await lage();
+    assert.equal(jetzt.stufe,'3');assert.deepEqual(jetzt.kopf,['PSP','Vorgang','Anfang','Ende']);
+    // Doppelklick: nur PSP und Vorgang; noch einmal: wie vorher. Neu laden behält die Breite.
+    await f.locator('#splitter').dblclick();
+    jetzt=await lage();assert.equal(jetzt.breite,360);assert.deepEqual(jetzt.kopf,['PSP','Vorgang']);
+    await f.locator('#splitter').dblclick();
+    jetzt=await lage();assert.equal(jetzt.stufe,'3');
+    const breite=jetzt.breite;
+    await rahmen().goto(rahmen().url());
+    await f.locator('.left-scroll .row').first().waitFor();
+    jetzt=await lage();assert.equal(jetzt.breite,breite,'nach dem Neuladen');
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close()}
+});

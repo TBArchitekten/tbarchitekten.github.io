@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Rückmeldungen:** Mustermappe: Eigenschaften zu Beginn aus (je Person einschaltbar). Terminplan: die Tabelle lässt sich bis 300 px schmal ziehen, Spalten fallen dabei weg; Doppelklick auf den Trenner zeigt nur PSP und Vorgang. Panorama: an einer vorgeschlagenen Entscheidung «Stimmt etwas nicht?» (Hinweis ans Wissen) und «Verwerfen …» mit Grund.
+
 **Stand 27.11.2026 · Claude · Work B2 (reduziert):** Ist die Seitenleiste auf Symbole reduziert, wählt man die Fassung (Terminplan, Kostenberechnung, Mappe) am Anfang der Werkzeugzeile («LPH 3 ▾», «Bodenbeläge ▾»); die Zeile über dem Werkzeug entfällt. Aufgeklappt steht die Wahl in der Seitenleiste.
 
 **Stand 27.11.2026 · Claude · Mustermappe:** Beim Übersatz nennt der Hinweis je Rahmen, wie viele Zeilen zu viel sind; «Rahmen vergrößern» vergrößert den Rahmen um die fehlenden Felder, «Mit Romy kürzen» schlägt einen Text in der passenden Länge vor (Dialog, nur «Übernehmen» ändert; beides rückgängig wie jeder Schritt).

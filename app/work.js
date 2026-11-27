@@ -424,10 +424,23 @@ function officeNextMilestone(state,today){
 }
 // Panorama im Office (B2, 27.11.2026): wie in Window «Für dich», Themen, Register und «Neu im Desktop», mit den Daten
 // des Office und in «Sie». Bestätigen dürfen nur Projektleitung und Admins, über die Funktion des Wissens.
+// Rückmeldung zu einer vorgeschlagenen Entscheidung (Gari, 27.11.2026): «Stimmt etwas nicht?» schickt einen Hinweis an
+// ihre Seite im Wissen, die Entscheidung bleibt offen; «Verwerfen …» fragt nach dem Grund (freiwillig), der im Wissen
+// bleibt. Verworfene Entscheidungen stehen im Wissen unter «Ersetzt oder verworfen»; gelöscht wird nichts.
+const cockpitHinweise=new Set();
+function cockpitRueckForm(r,art){
+  const id='rueck-'+art+'-'+r.id,verwerfen=art==='verwerfen';
+  return '<form class="cockpit-rueck" data-cockpit-rueck-form="'+esc(r.id)+'" data-art="'+art+'" hidden><label for="'+esc(id)+'">'+
+    (verwerfen?'Warum verwerfen? (freiwillig, bleibt im Projektwissen)':'Was stimmt nicht? Was ist richtig?')+'</label>'+
+    '<textarea id="'+esc(id)+'" rows="3"'+(verwerfen?'':' required')+'></textarea><div class="cockpit-actions"><button type="submit">'+(verwerfen?'Verwerfen':'Hinweis senden')+'</button>'+
+    '<button type="button" class="secondary" data-cockpit-rueck-zu>Abbrechen</button></div></form>';
+}
 function officeFuerDich(m){
   const leitung=!!m.wissen?.leitung,ents=leitung?m.pending.filter(r=>r.memory_type==='decision'):[];
-  const cards=ents.map(r=>'<article class="cockpit-card"><span class="cockpit-kind">Entscheidung'+(r.occurred_at?' · '+esc(cockpitShort(r.occurred_at)):'')+'</span><p>'+esc(r.title)+'</p>'+cockpitSource(r)+cockpitWhy(r)+
-    '<div class="cockpit-actions"><button type="button" data-wissen-pruefen="'+esc(r.id)+'" data-ja="1">Bestätigen</button><button type="button" class="secondary" data-wissen-pruefen="'+esc(r.id)+'" data-ja="0">Verwerfen</button></div></article>');
+  const cards=ents.map(r=>'<article class="cockpit-card" data-cockpit-entscheidung="'+esc(r.id)+'"><span class="cockpit-kind">Entscheidung'+(r.occurred_at?' · '+esc(cockpitShort(r.occurred_at)):'')+'</span><p>'+esc(r.title)+'</p>'+cockpitSource(r)+cockpitWhy(r)+
+    (cockpitHinweise.has(r.id)?'<small class="cockpit-hinweis-gesendet">Hinweis gesendet · wird eingearbeitet</small>':'<button type="button" class="cockpit-link cockpit-stimmt" data-cockpit-rueck="korrektur" data-id="'+esc(r.id)+'">Stimmt etwas nicht?</button>')+
+    cockpitRueckForm(r,'korrektur')+cockpitRueckForm(r,'verwerfen')+
+    '<div class="cockpit-actions" data-cockpit-knoepfe><button type="button" data-wissen-pruefen="'+esc(r.id)+'" data-ja="1">Bestätigen</button><button type="button" class="secondary" data-cockpit-rueck="verwerfen" data-id="'+esc(r.id)+'">Verwerfen …</button></div></article>');
   for(const t of m.overdue)cards.push('<article class="cockpit-card is-overdue"><span class="cockpit-kind">Überfällig · '+esc(cockpitIn(cockpitDayDiff(m.today,t.due_date)))+'</span><p>'+esc(t.title||'Ohne Titel')+'</p>'+(t.assignee?'<small>'+esc(t.assignee)+'</small>':'')+
     '<div class="cockpit-actions"><button type="button" class="secondary" data-work-edit-task="'+esc(t.id)+'">Aufgabe öffnen</button><button type="button" class="secondary" data-cockpit-done="'+esc(t.id)+'">Erledigt</button></div></article>');
   const head=[ents.length?ents.length+' zur Bestätigung':'',m.overdue.length?m.overdue.length+' überfällig':''].filter(Boolean).join(' · ');
@@ -510,6 +523,30 @@ async function renderOverview(){
   $$('[data-akte-undo]').forEach(button=>button.onclick=()=>{button.disabled=true;void undoSteckbrief(button.dataset.akteUndo)});
   $$('[data-cockpit-done]').forEach(button=>button.onclick=()=>{button.disabled=true;void completeTaskFromPanorama(button.dataset.cockpitDone)});
   $$('[data-cockpit-more]').forEach(button=>button.onclick=()=>{paraTiExpanded=!paraTiExpanded;void renderOverview()});
+  $$('[data-cockpit-rueck]').forEach(button=>button.onclick=()=>{
+    const karte=button.closest('.cockpit-card');if(!karte)return;
+    karte.querySelectorAll('[data-cockpit-rueck-form]').forEach(f=>{f.hidden=f.dataset.art!==button.dataset.cockpitRueck});
+    karte.querySelector('[data-cockpit-knoepfe]').hidden=true;karte.querySelector('.cockpit-stimmt')?.setAttribute('hidden','');
+    karte.querySelector('[data-cockpit-rueck-form]:not([hidden]) textarea')?.focus();
+  });
+  $$('[data-cockpit-rueck-zu]').forEach(button=>button.onclick=()=>{
+    const karte=button.closest('.cockpit-card');if(!karte)return;
+    karte.querySelectorAll('[data-cockpit-rueck-form]').forEach(f=>{f.hidden=true});
+    karte.querySelector('[data-cockpit-knoepfe]').hidden=false;karte.querySelector('.cockpit-stimmt')?.removeAttribute('hidden');
+  });
+  $$('[data-cockpit-rueck-form]').forEach(form=>form.onsubmit=async e=>{
+    e.preventDefault();
+    const modul=window.TBA_OFFICE_WISSEN,r=m.pending.find(x=>x.id===form.dataset.cockpitRueckForm);if(!modul?.rueckmeldung||!r)return;
+    const verwerfen=form.dataset.art==='verwerfen',text=form.querySelector('textarea').value.trim();
+    if(!verwerfen&&!text){form.querySelector('textarea').focus();return}
+    form.querySelectorAll('button').forEach(b=>b.disabled=true);
+    const {error}=await modul.rueckmeldung(sb,{projekt:projectId,text,verwerfen,
+      entscheidung:{id:r.id,title:r.title,seite:r.metadata?.seite||null,quelle:r.metadata?.quelle||''}});
+    if(error){setStatus(error.message||'Das ging nicht.');form.querySelectorAll('button').forEach(b=>b.disabled=false);return}
+    if(!verwerfen)cockpitHinweise.add(r.id);
+    setStatus(verwerfen?(text?'Entscheidung verworfen; der Grund steht im Projektwissen.':'Entscheidung verworfen.'):'Danke, Ihr Hinweis ist gespeichert. Die KI arbeitet ihn beim nächsten Mal ein.');
+    await renderOverview();
+  });
   $$('[data-wissen-pruefen]').forEach(button=>button.onclick=async()=>{
     const modul=window.TBA_OFFICE_WISSEN;if(!modul?.entscheiden)return;
     button.closest('.cockpit-actions')?.querySelectorAll('button').forEach(b=>b.disabled=true);
