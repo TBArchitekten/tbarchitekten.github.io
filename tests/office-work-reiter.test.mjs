@@ -33,7 +33,7 @@ test('Reiter: Terminplan und Kostenberechnung sind Ansichten von Work, mit eigen
   assert.match(projects,/if\(typeof onCreated==='function'\)\{window\.ISABELLA_APP\?\.closeModal\?\.\(\);onCreated\(data\.id\);return\}/);
   // Nur eine Kostenberechnung «anlegen» im Rahmen; abgebrochen meldet die Seite selbst.
   assert.match(work,/e\.origin!==location\.origin\|\|e\.data\?\.tbaOfficeTool!=='abgebrochen'/);
-  for(const v of ['work.js?v=office61','shell.js?v=office59','office-projects.js?v=office62','work-polish.css?v=7','work-buckets.css?v=4'])
+  for(const v of ['work.js?v=office61','shell.js?v=office60','office-projects.js?v=office62','work-polish.css?v=8','work-buckets.css?v=4'])
     assert.ok(index.includes(v),'Version fehlt: '+v);
 });
 
@@ -146,7 +146,7 @@ test('Projekte: Nummer und Name bearbeiten, nur Admin oder Projektleitung (wie d
 
 test('Abschnitte je Projekt: «+» am Ende der Reiter, für das ganze Team, Ausblenden löscht nichts (Gari, 25.11.2026)',()=>{
   // Der Knopf steht als letztes in der Reiterzeile, nach Threads; ohne Projekt verborgen.
-  assert.match(shell,/<button data-work-view="threads">Threads<\/button>\s*<button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" title="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden>\+<\/button>\s*<\/div>/);
+  assert.match(shell,/<button data-work-view="threads">Threads<\/button>\s*<button type="button" class="work-tab-plus" data-work-abschnitte aria-label="Abschnitt hinzufügen" title="Abschnitt hinzufügen" aria-haspopup="dialog" aria-expanded="false" hidden><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 3v10M3 8h10"\/><\/svg><\/button>\s*<\/div>/);
   // Wählbar sind genau diese fünf; Panorama, Desktop, Planner, Controlling und Threads bleiben immer.
   assert.match(work,/const OPTIONALE_ABSCHNITTE=\[\n \['terminplan','Terminplan',[^\n]*\n \['kosten','Kostenberechnung',[^\n]*\n \['mustermappe','Mustermappe',[^\n]*\n \['produkte','Produkte',[^\n]*\n \['hersteller','Hersteller',[^\n]*\n\];/);
   assert.doesNotMatch(work.slice(work.indexOf('const OPTIONALE_ABSCHNITTE'),work.indexOf('const OPTIONAL=')),/'controlling'/);
