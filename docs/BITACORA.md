@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; in Chromium (Attrappe der Tests): Abschnitte und Reiter gleich, Klick wählt den Abschnitt, Projektwahl, «+»-Menü neben der Leiste, im Kalender keine Abschnitte, reduziert nur Kürzel und Symbole, Planner in einer Zeile, iPhone unverändert; die bestehenden Browserprüfungen für Planner, Start und Terminplan-Reiter grün.
 - Quedó pendiente o sin probar: die nächsten Schritte von B2: eine Leiste auch in Terminplan, Kostenberechnung, Mustermappe und den übrigen Werkzeugen im Reiter; Mustermappe (Filmstreifen, Inspektor); Kontextspalte im Wissen; Panorama vervollständigen.
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: siehe unten
+- PR: #196
 
 ---
 
