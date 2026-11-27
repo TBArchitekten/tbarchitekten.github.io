@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; Browserprüfungen Mustermappe (10) lokal mit Chrome grün.
 - Quedó pendiente o sin probar: «Mit Romy kürzen».
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: (pendiente)
+- PR: #202
 
 ---
 
