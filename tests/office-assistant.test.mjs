@@ -81,8 +81,10 @@ test('Romy tools, model routing and streaming are connected on the server',()=>{
  for(const key of ['list_projects','list_tasks','list_calendar','list_files','read_text_file','propose_create_task','propose_create_event','reviewRomyProposal']){
    assert.ok(tools.includes(key),'missing tool '+key);
  }
- assert.ok(routing.includes('gpt-5.6-luna'));
- assert.ok(routing.includes('gpt-5.6-terra'));
+ assert.ok(routing.includes('FAST_MODEL="gpt-6.1-terra"'));
+ assert.ok(routing.includes('DEEP_MODEL="gpt-6.2-sol"'));
+ // Das Einordnen bleibt beim kleinen Modell, auch wenn das alltägliche Modell per Secret wechselt.
+ assert.ok(edge.includes('Deno.env.get("TBA_OFFICE_ASSISTANT_UTILITY_MODEL")||"gpt-6-luna"'));
  assert.ok(contract.includes('tool_capable'));
  assert.ok(!edge.includes('max_output_tokens'));
  assert.ok(!edge.includes('.limit(16)'));

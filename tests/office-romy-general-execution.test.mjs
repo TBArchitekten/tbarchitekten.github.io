@@ -10,7 +10,7 @@ test('Romy ports Window general_execution rather than inventing XLSX/PPTX makers
  const r=runtime();
  for(const needle of [
    'CAPABILITY_RUNTIME_VERSION="capability-runtime-v0.3.0"',
-   'GENERAL_EXECUTION_MODEL="gpt-6-astra"',
+   'GENERAL_EXECUTION_MODEL="gpt-6.2-sol"',
    'startGeneralExecution','retrieveGeneralExecution','cancelGeneralExecution',
    'type:"code_interpreter",container:{type:"auto",memory_limit:"4g"}',
    'model,background:true,store:true',

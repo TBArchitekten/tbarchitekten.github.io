@@ -1,5 +1,7 @@
 # TBA Office · Estado actual
 
+**Stand 27.11.2026 · Claude · Modelle:** Romy in den Threads: alltäglich `gpt-6.1-terra`, gründlich und beim Lesen von Dokumenten `gpt-6.2-sol`, Einordnen `gpt-6-luna`; Fähigkeiten und Aufträge `gpt-6.2-sol`; Werkzeuge `gpt-6.1-terra`. Romys Motor (Romy-Tab, Präsenz, Traum, Pflege) wechselt erst mit den Secrets `OPENAI_*_MODEL` (Bitácora 27.11.); bis dahin `gpt-5.6-luna` und `gpt-5.6-terra`.
+
 **Stand 27.11.2026 · Claude · Navigation:** Die Startseite (`index.html`) dient nur noch Anmeldung, Passwort und Administration; «Work» und «Tools» führen in die App. Unter Tools heißt die Verwaltung der Projekte «Projekte verwalten»; die Werkzeuge stehen nebeneinander.
 
 **Stand 27.11.2026 · Claude · Aufräumen:** Die KI-Werkzeuge speichern keine Anfrage mit Person mehr (Verbrauch nur in `office_ki_verbrauch`, ohne Person); der Verlauf der Zeitpläne (`cron.job_run_details`) wird jede Nacht auf 7 Tage gekürzt. Mitteilungen aufs iPhone: am 27.11. von Gari bestätigt, der Text erscheint entschlüsselt.

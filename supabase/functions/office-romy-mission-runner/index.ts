@@ -3,7 +3,8 @@ import {verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 // Office background checkpoints only. No projects/tasks/calendar/storage tools or external web search.
 const ORIGIN="https://tbarchitekten.github.io";
 const SECRET_HEADER="x-romy-runner-secret";
-const MODEL="gpt-6-astra";
+// GPT-6.2 Sol statt GPT-6 Astra (27.11.2026), wie Romys Fähigkeiten.
+const MODEL="gpt-6.2-sol";
 const respond=(status,data)=>new Response(JSON.stringify(data),{
  status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}
 });

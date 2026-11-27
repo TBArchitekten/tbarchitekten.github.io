@@ -19,6 +19,11 @@ test('Preise: Modelle, datierte Fassungen, unbekannte Modelle', () => {
   assert.equal(M.preisFuer('gpt-5.6-2026-09-01').id, 'gpt-5.6-sol');
   assert.equal(M.preisFuer('gpt-5.6-luna').id, 'gpt-5.6-luna');
   assert.equal(M.preisFuer('gpt-6.1-terrafirma'), null);
+  // Die Modelle seit 27.11.2026.
+  assert.deepEqual(M.preisFuer('gpt-6.2-sol'), {id: 'gpt-6.2-sol', input: 2, cached: 0.10, output: 10});
+  assert.equal(M.preisFuer('gpt-6-luna').output, 0.50);
+  assert.equal(M.preisFuer('gpt-6.2-astra').input, 8);
+  assert.equal(M.preisFuer('gpt-6-astra').input, 10);
   assert.equal(M.preisFuer('gpt-99'), null);
   assert.equal(M.preisFuer(''), null);
 });

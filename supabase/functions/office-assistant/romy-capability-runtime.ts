@@ -2,7 +2,8 @@ import {normalizeSkillTrace} from "./skill-registry.ts";
 import {verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 
 export const CAPABILITY_RUNTIME_VERSION="capability-runtime-v0.3.0";
-export const GENERAL_EXECUTION_MODEL="gpt-6-astra";
+// GPT-6.2 Sol statt GPT-6 Astra (27.11.2026): für Dateien und Auswertungen genügt Sol, zu einem Fünftel des Preises.
+export const GENERAL_EXECUTION_MODEL="gpt-6.2-sol";
 
 const KIND_BY_EXT:Record<string,{kind:string,mime:string}>={
   docx:{kind:"docx",mime:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
