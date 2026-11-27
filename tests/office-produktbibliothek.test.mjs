@@ -151,11 +151,11 @@ test('Migration: RLS mit Office-Helfern, nichts Destruktives, privater Speicher'
 
 test('Seite und Werkzeugkarte: eigene Seite, gleicher Client wie die Kostenberechnung',()=>{
   assert.match(seite,/<html lang="de">/);
-  assert.match(seite,/<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">/);
+  assert.match(seite,/<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office6">/);
   assert.match(seite,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   assert.match(seite,/<script src="\.\/office-config\.js\?v=1"><\/script>/);
   assert.match(seite,/<script src="\.\/shared\/supabase-client\.js\?v=office4"><\/script>/);
-  assert.match(seite,/<script src="\.\/produktbibliothek\.js\?v=office9"><\/script>/);
+  assert.match(seite,/<script src="\.\/produktbibliothek\.js\?v=office10"><\/script>/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(shell,/id="officeToolsProdukte" aria-label="Produktbibliothek öffnen"/);
   assert.match(shell,/<strong>Produktbibliothek<\/strong><small>Materialien einmal erfassen, in jedem Projekt verwenden/);

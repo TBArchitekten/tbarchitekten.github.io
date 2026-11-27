@@ -78,9 +78,9 @@ test('Import: einmaliger Schlüssel (nur Hash mit Ablauf), strenge Prüfung von 
 test('Seite: eigene Seite im Werkzeugkasten, gleicher Client und dieselbe Gestalt wie die Produktbibliothek',()=>{
   assert.match(seite,/<html lang="de">/);
   assert.match(seite,/<title>TBA Office · Herstellerkatalog<\/title>/);
-  assert.match(seite,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/herstellerkatalog\.css\?v=office2">/);
+  assert.match(seite,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office6">\n<link rel="stylesheet" href="\.\/herstellerkatalog\.css\?v=office2">/);
   assert.match(seite,/<script src="\.\/shared\/supabase-client\.js\?v=office4"><\/script>/);
-  assert.match(seite,/<script src="\.\/herstellerkatalog\.js\?v=office2"><\/script>/);
+  assert.match(seite,/<script src="\.\/herstellerkatalog\.js\?v=office3"><\/script>/);
   assert.match(seite,/<meta name="robots" content="noindex">/);
   assert.match(shell,/id="officeToolsHersteller" aria-label="Herstellerkatalog öffnen"/);
   assert.match(shell,/NAV_ICONS\.hersteller='<svg /);
@@ -103,7 +103,7 @@ test('Produktbibliothek: Karte und Produktblatt zeigen den Kontakt; Firma beim A
   assert.match(pb,/hersteller_id:herstellerIdBeim\(f\.get\('hersteller'\),e\)/,'Formular: Verknüpfung bleibt bei gleichem Namen');
   assert.match(pb,/const herstellerIdBeim=\(name,e\)=>herstellerIdFuer\(name\)\|\|\(e&&String\(name\|\|''\)\.trim\(\)===String\(e\.hersteller\|\|''\)\.trim\(\)\?e\.hersteller_id\|\|null:null\)/);
   assert.match(pb,/if\(ui\.hersteller\)liste=liste\.filter\(e=>e\.hersteller_id===ui\.hersteller\);/);
-  assert.match(read('produktbibliothek.html'),/produktbibliothek\.js\?v=office9/);
+  assert.match(read('produktbibliothek.html'),/produktbibliothek\.js\?v=office10/);
 });
 
 test('Licht und Dokumentarten: Prüfregeln ersetzt, alle bisherigen Werte bleiben, Seite, Leser und Import kennen sie',()=>{

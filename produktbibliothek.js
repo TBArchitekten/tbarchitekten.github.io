@@ -359,6 +359,11 @@ function kopfListe(){
       <p class="pb-intro">Was für dieses Projekt ausgewählt ist, nach Code: Stand im Projekt, Preis mit Herkunft und Datenblatt. Ausgewählt wird in der Produktbibliothek mit «Zu Projekt».</p></div>
       ${IM_REITER?'<div class="pb-actions"><a class="btn" href="./produktbibliothek.html" target="_top">Produktbibliothek öffnen</a></div>':''}</header>`;
 }
+// Eine Werkzeugzeile im Reiter von Work (B2, 27.11.2026): Erklärungen stehen hinter «?».
+function hilfe(saetze){
+  return '<details class="pb-hilfe"><summary title="Erklärung" aria-label="Erklärung">?</summary><div class="pb-hilfe-text">'+
+    saetze.filter(Boolean).map(t=>'<p>'+esc(t)+'</p>').join('')+'</div></details>';
+}
 function renderListe(){
   const zaehler=new Map();for(const e of daten.produkte)if((ui.archiv?e.archiviert:!e.archiviert)&&(!PROJEKT||imProjekt(e)))zaehler.set(e.kategorie,(zaehler.get(e.kategorie)||0)+1);
   const chips=[...KATEGORIEN.filter(([k])=>!PROJEKT||zaehler.get(k)).map(([k,mehr])=>[k,mehr+(zaehler.get(k)?' · '+zaehler.get(k):'')]),['alle','Alle']]
@@ -383,7 +388,8 @@ function renderListe(){
       </div>
       <div class="pb-pills" role="group" aria-label="Kategorie">${chips}</div>
     </section>
-    <div class="pb-banner info">${esc(hinweisText())}</div>
+    ${IM_REITER&&PROJEKT?hilfe(['Was für dieses Projekt ausgewählt ist, nach Code: Stand im Projekt, Preis mit Herkunft und Datenblatt. Ausgewählt wird in der Produktbibliothek mit «Zu Projekt».',hinweisText()])
+      :`<div class="pb-banner info">${esc(hinweisText())}</div>`}
     <p class="meta pb-zahl" data-zahl aria-live="polite"></p>
     <div data-ergebnis></div>
   </div>`;
@@ -402,8 +408,10 @@ function renderErgebnis(){
   const liste=gefiltert(),anzahl=root.querySelector('[data-zahl]');
   const fuer=ui.projekt!=='alle'?projekt(ui.projekt):null;
   const firma=ui.hersteller?daten.hersteller.find(h=>h.id===ui.hersteller):null;
-  if(anzahl)anzahl.textContent=liste.length+' '+(liste.length===1?'Eintrag':'Einträge')+(firma?' von '+firma.firma:'')+(fuer?' ausgewählt für '+projektName(fuer):'')+
+  // Im Reiter (B2) steht das Projekt schon links: kurz «38 Produkte», der volle Satz im Tooltip.
+  const satz=liste.length+' '+(liste.length===1?'Eintrag':'Einträge')+(firma?' von '+firma.firma:'')+(fuer?' ausgewählt für '+projektName(fuer):'')+
     (ui.kategorie!=='alle'?' · '+katName(ui.kategorie):'')+(KG_HINWEIS[ui.kategorie]?' · '+KG_HINWEIS[ui.kategorie]:'');
+  if(anzahl){anzahl.textContent=IM_REITER&&PROJEKT?liste.length+' '+(liste.length===1?'Eintrag':'Einträge'):satz;anzahl.title=satz}
   el.innerHTML=`${liste.length?'<div class="pb-grid">'+liste.map(karte).join('')+'</div>':
       (PROJEKT?'<div class="card pb-leer"><p>'+(daten.produkte.some(imProjekt)?'Nichts gefunden. Andere Kategorie oder weniger Suchbegriffe?':
         'Für dieses Projekt ist noch nichts ausgewählt.')+'</p><p class="meta">Ausgewählt wird in der Produktbibliothek: «Zu Projekt» auf der Karte eines Produkts.</p></div>':

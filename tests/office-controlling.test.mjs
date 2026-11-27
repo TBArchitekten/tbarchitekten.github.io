@@ -85,7 +85,7 @@ test('Übersicht nach Projektnummer (Gari, 25.11.2026): aufsteigend; im Projekt 
 
 test('Seite: Tokens zuerst, Kern vor der Seite, Marke im Rahmen, Anmeldung wie die anderen Werkzeuge',()=>{
   const html=read('controlling.html'),js=read('controlling.js');
-  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office5">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office7">/);
+  assert.match(html,/<link rel="stylesheet" href="\.\/shared\/minds-design-tokens\.css\?v=3">\n<link rel="stylesheet" href="\.\/produktbibliothek\.css\?v=office6">\n<link rel="stylesheet" href="\.\/controlling\.css\?v=office7">/);
   assert.match(html,/supabase-js@2\.57\.0\/dist\/umd\/supabase\.min\.js/);
   assert.ok(html.indexOf('controlling-kern.js?v=office7')<html.indexOf('controlling.js?v=office8'));
   assert.ok(html.includes("<script>if(window.self!==window.top)document.documentElement.classList.add('im-reiter')</script>"));
