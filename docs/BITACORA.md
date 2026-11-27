@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: SQL-Abnahme in der flüchtigen Datenbank der CI; Push: Antwort von APNs in `office_push_nachrichten.ergebnis` (200, mit `apns-id`).
 - Quedó pendiente o sin probar: ob die Testmitteilung den entschlüsselten Text zeigte oder nur «Neue Mitteilung» (sieht nur Gari auf dem iPhone).
 - Riesgos o decisiones que necesitan a Gari: keine.
-- PR: siehe unten
+- PR: #193
 
 ---
 
