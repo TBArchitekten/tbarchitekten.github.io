@@ -76,4 +76,36 @@ begin
   raise notice 'office_client_fehler acceptance ok';
 end
 $test$;
+
+-- Aufbewahrung (Migration office_client_fehler_aufbewahrung): was zuletzt vor mehr als 30 Tagen auftrat, wird gelöscht,
+-- alles Jüngere bleibt; aufrufen darf das nur die Datenbank selbst (Cron), nicht die App; der Cron-Job besteht einmal.
+do $aufbewahrung$
+declare
+  r text := ''; n int;
+  a constant uuid := 'f9100000-0000-4000-8000-00000000000a';
+  ua constant text := '{"sub":"f9100000-0000-4000-8000-00000000000a","role":"authenticated"}';
+  erwartet constant text := 'geloescht=1; alt=0; fast=1; heute=50; app=verweigert; cron=1; ';
+begin
+  insert into public.office_client_fehler(user_id, tag, fingerabdruck, seite, art, nachricht, erstes_mal, letztes_mal) values
+    (a, current_date - 31, md5('alt'), '/', 'fehler', 'alt', now() - interval '31 days', now() - interval '31 days'),
+    (a, current_date - 29, md5('fast'), '/', 'fehler', 'fast', now() - interval '29 days', now() - interval '29 days');
+  r := r || 'geloescht=' || private.office_client_fehler_aufraeumen() || '; ';
+  select count(*) into n from public.office_client_fehler where nachricht = 'alt'; r := r || 'alt=' || n || '; ';
+  select count(*) into n from public.office_client_fehler where nachricht = 'fast'; r := r || 'fast=' || n || '; ';
+  select count(*) into n from public.office_client_fehler where user_id = a and tag = (now() at time zone 'Europe/Berlin')::date;
+  r := r || 'heute=' || n || '; ';
+  perform set_config('request.jwt.claims', ua, true);
+  execute 'set local role authenticated';
+  begin perform private.office_client_fehler_aufraeumen(); r := r || 'app=erlaubt; ';
+  exception when insufficient_privilege then r := r || 'app=verweigert; '; end;
+  execute 'reset role';
+  if to_regclass('cron.job') is null then n := 1;
+  else select count(*) into n from cron.job where jobname = 'office_client_fehler_aufraeumen_v1'; end if;
+  r := r || 'cron=' || n || '; ';
+  if r <> erwartet then
+    raise exception 'office_client_fehler Aufbewahrung: erwartet [%] bekommen [%]', erwartet, r;
+  end if;
+  raise notice 'office_client_fehler Aufbewahrung ok';
+end
+$aufbewahrung$;
 rollback;
