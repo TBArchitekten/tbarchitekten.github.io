@@ -195,7 +195,7 @@
       .sort((a,b)=>a.start.localeCompare(b.start)||String(a.name||'').localeCompare(String(b.name||''),'de'))[0]||null;
   }
   // Window-style addresses: #kalender, #work, #project=<id>, #project=<id>/planner, #tools, #plans, #members.
-  const VIEWS=['kalender','work','project','tools','plans','members'];
+  const VIEWS=['kalender','work','project','tools','plans','members','kinutzung','systemstatus'];
   function viewFromHash(hash){
     const raw=String(hash||'').replace(/^#/,'');
     const [name,value]=raw.split('=');

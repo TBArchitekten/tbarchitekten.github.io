@@ -28,9 +28,11 @@
   function showOnly(name){for(const [k,el] of Object.entries(views))el.hidden=k!==name}
   // One view at a time; the sidebar marks its lens (Projekte holds the project pages, Tools the Muster).
   // Heute, Kalender and Work are Window's screens in ./app/.
-  const LENS_OF={work:'work',project:'work',tools:'tools',plans:'tools',members:null};
+  const LENS_OF={work:'work',project:'work',tools:'tools',plans:'tools',members:null,kinutzung:null,systemstatus:null};
+  // Administration: Mitglieder, KI-Nutzung und Systemstatus nur für Administratoren (die Datenbank prüft es noch einmal).
+  const ADMIN_VIEWS=['members','kinutzung','systemstatus'];
   function switchView(name,{id=null,push=true}={}){
-    if(name==='members'&&member?.role!=='admin')name='work';
+    if(ADMIN_VIEWS.includes(name)&&member?.role!=='admin')name='work';
     if(name==='project'&&!projects.some(p=>p.id===id))name='work';
     $$('.view').forEach(v=>v.hidden=true);
     $$('.lens-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===LENS_OF[name]));
@@ -38,6 +40,8 @@
     closeAccountMenu();
     if(name==='project'){currentProjectId=id;renderProjectPage()}
     if(name==='members')void loadMembers();
+    if(name==='kinutzung')void window.TBA_OFFICE_UEBERSICHT?.kiNutzung($('#kinutzungHost'),sb);
+    if(name==='systemstatus')void window.TBA_OFFICE_UEBERSICHT?.systemstatus($('#systemstatusHost'),sb);
     const hash=C.hashFor(name,id,null);
     if(push&&location.hash!==hash)history.pushState(null,'',hash);
     window.scrollTo(0,0);

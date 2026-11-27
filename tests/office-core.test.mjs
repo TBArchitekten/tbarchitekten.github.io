@@ -245,7 +245,9 @@ test('Window design: sidebar of views, Mitglieder in the account menu, one id pe
   // Projects open their page; the dialog preselects the project.
   assert.match(app,/card\.onclick=\(\)=>switchView\('project',\{id:p\.id\}\)/);
   assert.match(app,/\$\('#projectNewPlanBtn'\)\.onclick=\(\)=>openCreate\('LPH3',currentProjectId\)/);
-  assert.match(app,/if\(name==='members'&&member\?\.role!=='admin'\)name='work';/);
+  // Mitglieder, KI-Nutzung und Systemstatus nur für Administratoren (27.11.2026).
+  assert.match(app,/const ADMIN_VIEWS=\['members','kinutzung','systemstatus'\];/);
+  assert.match(app,/if\(ADMIN_VIEWS\.includes\(name\)&&member\?\.role!=='admin'\)name='work';/);
 });
 
 test('Window design: the editor uses the same chrome and returns to the Terminplan library',()=>{

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Titus Bernhard Architekten · Office</title>
   <link rel="stylesheet" href="./shared/minds-design-tokens.css?v=3">
-  <link rel="stylesheet" href="./style.css?v=office27">
+  <link rel="stylesheet" href="./style.css?v=office28">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
   <script src="./office-config.js?v=1"></script>
   <script src="./shared/supabase-client.js?v=office4"></script>
@@ -76,6 +76,8 @@
         </button>
         <div id="accountMenu" class="account-menu" role="menu" hidden>
           <button class="menu-item" type="button" role="menuitem" data-view="members" data-admin-only hidden>Mitglieder</button>
+          <button class="menu-item" type="button" role="menuitem" data-view="kinutzung" data-admin-only hidden>KI-Nutzung</button>
+          <button class="menu-item" type="button" role="menuitem" data-view="systemstatus" data-admin-only hidden>Systemstatus</button>
           <button id="changePasswordBtn" class="menu-item" type="button" role="menuitem">Passwort ändern</button>
           <button id="logoutBtn" class="menu-item is-danger" type="button" role="menuitem">Abmelden</button>
         </div>
@@ -197,6 +199,10 @@
           <div id="memberList" class="card row-list"></div>
         </section>
       </section>
+
+      <!-- Nur für Administratoren: Summen über eigene Funktionen der Datenbank, nie je Person (office-uebersicht.js). -->
+      <section id="kinutzungView" class="view view-wide" hidden><div id="kinutzungHost"></div></section>
+      <section id="systemstatusView" class="view" hidden><div id="systemstatusHost"></div></section>
     </main>
   </div>
 
@@ -261,7 +267,8 @@
   </dialog>
 
 
-  <script src="./office-core.js?v=5"></script>
-  <script src="./app.js?v=7"></script>
+  <script src="./office-core.js?v=6"></script>
+  <script src="./office-uebersicht.js?v=1"></script>
+  <script src="./app.js?v=8"></script>
 </body>
 </html>
