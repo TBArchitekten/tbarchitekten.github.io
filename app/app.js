@@ -3136,8 +3136,31 @@ function initVoice(){
   $('#focusClose').onclick=cancel;primary.onclick=stop;secondary.onclick=secondaryAction;
   // Same mic/Focus surface: close dictation before navigating to continuous Live.
   // The real link remains navigable without JavaScript and preserves the old flow.
-  const liveLink=$('#focusLiveLink');if(liveLink)liveLink.onclick=()=>{cancel();window.ISABELLA_VOICE_OUTPUT?.stop();};
+  // Live im Chat (V2, 28.11.2026, Gari: «V2: sí»): das Live-Gespräch öffnet über dem Chat statt auf einer eigenen Seite.
+  const liveLink=$('#focusLiveLink');if(liveLink)liveLink.onclick=e=>{cancel();window.ISABELLA_VOICE_OUTPUT?.stop();if(openLiveSheet())e.preventDefault()};
+  const liveClose=$('#liveSheetClose');if(liveClose)liveClose.onclick=closeLiveSheet;
 }
+// Live im Chat: die Live-Seite läuft in einem Rahmen über dem Chat. Was gesagt wird, speichert sie Zug um Zug in diesem
+// Chat (save_transcript); jeder gespeicherte Zug und das Ende des Gesprächs laden den Chat neu, so steht es sofort da.
+function openLiveSheet(){
+  const sheet=$('#liveSheet'),frame=$('#liveFrame');
+  if(!sheet||!frame)return false;
+  if(sheet.classList.contains('hidden')){frame.src='./live/?embed=1';sheet.classList.remove('hidden');document.body.classList.add('live-open')}
+  return true;
+}
+function liveChatNeuLaden(){void window.TBA_OFFICE_ENGINE_CHAT?.reconcile?.();void window.ISABELLA_SYNC_PULL_NOW?.()}
+function closeLiveSheet(){
+  const sheet=$('#liveSheet'),frame=$('#liveFrame');
+  if(!sheet||sheet.classList.contains('hidden'))return;
+  try{frame.contentWindow?.ISABELLA_LIVE_DIAGNOSTIC?.stop()}catch{}
+  frame.src='about:blank';sheet.classList.add('hidden');document.body.classList.remove('live-open');
+  liveChatNeuLaden();
+}
+window.addEventListener('message',e=>{
+  if(e.origin!==location.origin||e.data?.type!=='isabella-live')return;
+  const sheet=$('#liveSheet');if(sheet&&e.data.state)sheet.dataset.state=String(e.data.state);
+  if(e.data.event==='turn'||(e.data.event==='state'&&e.data.state==='idle'))liveChatNeuLaden();
+});
 function openFocus(){$('#focusMode').classList.remove('hidden');$('#focusStatus').textContent='Höre zu …';const t=$('#focusTranscript');if(t){t.value='';t.textContent='';t.readOnly=true}}function closeFocus(){$('#focusMode').classList.add('hidden');orb()}
 function startWeek(d){const x=new Date(d);const day=(x.getDay()+6)%7;return addDays(x,-day)} function weekNo(d){const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=x.getUTCDay()||7;x.setUTCDate(x.getUTCDate()+4-n);const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}
 function move(dir){let d=fromIso(state.date);if(state.view==='day')d=addDays(d,dir);else if(state.view==='week')d=addDays(d,dir*7);else d=new Date(d.getFullYear(),d.getMonth()+dir,1);state.date=iso(d);save();renderCalendar()}
