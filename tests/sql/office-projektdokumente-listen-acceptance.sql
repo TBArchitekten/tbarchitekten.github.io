@@ -1,4 +1,4 @@
--- Abnahme · weitere Listen der Projektdokumente (Migration 20261128_office_projektdokumente_weitere_listen), 28.11.2026.
+-- Abnahme · weitere Listen der Projektdokumente (Migration 20261128074445_office_projektdokumente_weitere_listen.sql), 28.11.2026.
 -- Erfundene Personen und Projekte; alles läuft in einer Transaktion, die am Ende zurückgerollt wird.
 -- Geprüft: die neuen Arten (Fachplanerbedarf, Schnittstellen, Fragenliste, Eingang und die der nächsten Schritte) lassen
 -- sich anlegen, eine unbekannte Art nicht; mehrere Zeilen auf einmal (Anlegen mit der Bürovorlage) bekommen ihre
