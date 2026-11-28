@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "321ea6a886afc3d2a36f74dc216e9461a0b036ed",
+  "source_sha": "38a5316b9252311ba330f8252d5e55b48aea1e7d",
   "mode": "engine",
   "files": [
     {
@@ -516,8 +516,8 @@
     {
       "source": "supabase/functions/isabella-chat/index.ts",
       "target": "supabase/functions/isabella-chat/index.ts",
-      "sha": "ba478421291054448440e00a60d5e5b3465e2f3e",
-      "bytes": 308292
+      "sha": "225bac19bd768a908b29f7903e4c2d3f2373970f",
+      "bytes": 311674
     },
     {
       "source": "supabase/functions/isabella-delivery-runner/index.ts",

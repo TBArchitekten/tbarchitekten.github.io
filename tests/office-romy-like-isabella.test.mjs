@@ -122,10 +122,11 @@ test('5 · The work radar: Fristen of two weeks, own Threads, own overdue tasks,
   assert.match(fn,/\.select\("role,content,created_at,metadata"\)/);
 });
 
-test('Work Threads show the same system lines and reopen after a review',()=>{
+test('Work Threads show the same system lines; a proposal opens the shared review',()=>{
   const work=read('app/work.js');
   assert.match(work,/if\(role==='assistant'&&m\.metadata\?\.author==='system'\)return `<article class="work-thread-message assistant is-event">/);
-  assert.match(work,/if\(activeThreadId===thread\.id\)await renderThreadConversation\(thread\.id\);else void renderThreadProposals\(thread\);/);
+  // Since 28.11.2026 the thread runs on the shared engine: its proposals open the same review as the chat.
+  assert.match(work,/if\(activeThreadId===thread\.id&&view==='threads'\)await renderThreads\(\);\n    if\(proposal&&!result\?\.incomplete\)window\.MINDS_PROPOSALS\?\.edit\?\.\(proposal\);/);
   assert.match(read('app/app.css'),/\.work-thread-message\.assistant\.is-event\{/);
 });
 

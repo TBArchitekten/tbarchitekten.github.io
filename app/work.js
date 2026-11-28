@@ -1867,7 +1867,7 @@ async function loadThreads(){
   if(error)throw error;threads=data||[];
   const ids=threads.map(x=>x.conversation_id).filter(Boolean);
   if(ids.length){
-    const {data:msgs}=await sb.from(OFFICE?'office_assistant_messages':'conversation_messages')
+    const {data:msgs}=await sb.from('conversation_messages')
       .select('conversation_id,role,content,created_at')
       .in('conversation_id',ids).in('role',['user','assistant'])
       .order('created_at',{ascending:false}).limit(240);
@@ -1891,7 +1891,7 @@ async function renderThreads(){
   activeThreadId=null;
   const body=$('#workBody');
   body.innerHTML=`<div class="work-threads">
-    <div class="work-desktop-toolbar"><div><strong>Threads</strong><p class="small">Private Gespräche mit Romy zu einem Thema. Nur du siehst sie; Romy kennt dabei das Projekt ${esc(project.name)}.</p></div><div class="work-thread-toolbar-actions">${archived.length?`<button data-work-archived>Archiviert · ${archived.length}</button>`:''}<button data-work-new-thread>＋ Thread</button></div></div>
+    <div class="work-desktop-toolbar"><div><strong>Threads</strong><p class="small">Private Gespräche mit Romy zu einem Thema. Nur Sie sehen sie; Romy kennt dabei das Projekt ${esc(project.name)}.</p></div><div class="work-thread-toolbar-actions">${archived.length?`<button data-work-archived>Archiviert · ${archived.length}</button>`:''}<button data-work-new-thread>＋ Thread</button></div></div>
     <div class="work-thread-list">${active.map(t=>{
       const preview=String(t.preview?.content||t.summary||'').trim();
       const at=t.last_activity_at||t.preview?.created_at||t.updated_at;
@@ -1922,7 +1922,7 @@ function openThreadEditor(thread=null){
 }
 async function saveThreadName(thread){
   const title=String($('#workThreadName')?.value||'').trim();
-  if(!title){threadError('Gib dem Thread einen Namen.');return}
+  if(!title){threadError('Geben Sie dem Thread einen Namen.');return}
   threadError('');
   if(thread){
     const {error}=await sb.rpc('minds_rename_work_thread',{p_thread_id:thread.id,p_title:title});
@@ -1974,8 +1974,8 @@ async function ensureThreadConversation(thread){
 }
 async function loadThreadMessages(thread){
   const cid=await ensureThreadConversation(thread);
-  const {data,error}=await sb.from(OFFICE?'office_assistant_messages':'conversation_messages')
-    .select(OFFICE?'id,role,content,created_at,metadata':'client_key,role,content,created_at,metadata')
+  const {data,error}=await sb.from('conversation_messages')
+    .select('client_key,role,content,created_at,metadata')
     .eq('conversation_id',cid).in('role',['user','assistant'])
     .order('created_at',{ascending:true}).limit(400);
   if(error)throw error;return data||[];
@@ -2013,7 +2013,7 @@ async function hydrateThreadArtifacts(root=document){
   await Promise.all([...files,...images].map(async node=>{
     try{
       const path=String(node.dataset.threadArtifact||node.dataset.threadArtifactImage||'');if(!path)return;
-      const {data}=await sb.storage.from(OFFICE?'office-romy-artifacts':'minds-artifacts').createSignedUrl(path,3600);if(!data?.signedUrl)return;
+      const {data}=await sb.storage.from('minds-artifacts').createSignedUrl(path,3600);if(!data?.signedUrl)return;
       if(node.matches('img')){
         node.src=data.signedUrl;
         const button=node.closest('[data-thread-artifact-preview]');
@@ -2062,7 +2062,7 @@ async function renderThreadConversation(id){
     const messages=await loadThreadMessages(thread);
     body.innerHTML=`<section class="work-thread-conversation">
       <header class="work-thread-head"><button data-thread-back class="text-btn">‹ Threads</button><div><strong>${esc(thread.title)}</strong><span>${esc(project.name)}</span></div>${OFFICE?'':`<a class="work-thread-claude" href="${esc(claudeContinueUrl(thread))}" target="_blank" rel="noopener" title="Abrir este tema en Claude con el conector Window">In Claude fortsetzen</a>`}<button data-thread-actions class="work-thread-head-more" aria-label="Thread-Optionen">•••</button></header>
-      ${themenblattMarkup(thread)}<div class="work-thread-log" id="workThreadLog">${messages.map(threadMessageMarkup).join('')||'<div class="work-thread-empty">Dieser Thread ist noch leer. Fang mit der ersten Frage an.</div>'}</div>
+      ${themenblattMarkup(thread)}<div class="work-thread-log" id="workThreadLog">${messages.map(threadMessageMarkup).join('')||'<div class="work-thread-empty">Dieser Thread ist noch leer. Stellen Sie die erste Frage.</div>'}</div>
       <div class="work-thread-compose-region"><div id="workThreadProgress" class="chat-activity work-thread-progress" role="status" aria-live="polite" data-phase="${esc(threadProgress.phase)}" ${threadProgress.id===thread.id&&threadProgress.label?'':'hidden'}>${threadProgress.id===thread.id?esc(threadProgress.label):''}</div><form class="work-thread-composer ${threadInFlight.has(thread.id)?'is-busy':''}" id="workThreadForm"><textarea id="workThreadInput" rows="1" placeholder="Romy fragen: ${esc(thread.title)} …"></textarea><button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form></div>
     </section>`;
     $('[data-thread-back]').onclick=()=>{activeThreadId=null;void renderThreads()};
@@ -2079,98 +2079,36 @@ async function renderThreadConversation(id){
       if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('#workThreadForm')?.requestSubmit()}
     });
     void hydrateThreadArtifacts(body);
-    if(OFFICE)void renderThreadProposals(thread);
     requestAnimationFrame(()=>{const log=$('#workThreadLog');if(log)log.scrollTop=log.scrollHeight});
   }catch(e){console.error(e);body.innerHTML='<div class="work-empty">Dieser Thread konnte nicht geöffnet werden.</div>'}
-}
-async function persistThreadMessage(conversationId,role,content,metadata={}){
-  const session=await getSession();if(!session)throw new Error('Nicht angemeldet');
-  const key=(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
-  const {error}=await sb.from('conversation_messages').insert({
-    user_id:session.user.id,conversation_id:conversationId,client_key:key,role,content:String(content||''),provisional:false,citations:[],
-    metadata:{...metadata,app:'work_thread',work_thread_id:activeThreadId,project_id:project.id}
-  });
-  if(error)throw error;
-  await sb.from('conversations').update({updated_at:new Date().toISOString()}).eq('id',conversationId);
-  return key;
-}
-// Office: the Thread is a Romy conversation. Romy stores the question and the answer itself
-// (office-assistant), so the page only sends and shows the stream.
-async function sendOfficeThreadMessage(thread,message,input){
-  try{
-    const cid=await ensureThreadConversation(thread);
-    setThreadProgress(thread.id,'thinking','Romy denkt nach …');
-    if(activeThreadId===thread.id&&view==='threads'){
-      const log=$('#workThreadLog');
-      if(log){log.querySelector('.work-thread-empty')?.remove();log.insertAdjacentHTML('beforeend',threadMessageMarkup({role:'user',content:message})+'<article class="work-thread-message assistant" id="workThreadLive"><div class="work-thread-message-copy"></div></article>');log.scrollTop=log.scrollHeight}
-    }
-    const result=await window.TBA_ROMY_TRANSPORT.send({
-      message,conversationId:cid,requestId:crypto.randomUUID(),attachments:[],
-      onDelta:(_delta,partial)=>{
-        setThreadProgress(thread.id,'thinking','Romy schreibt …');
-        const live=$('#workThreadLive .work-thread-message-copy');
-        if(live&&activeThreadId===thread.id){live.innerHTML=window.ISABELLA_APP?.formatMessageText?.(partial)||esc(partial).replace(/\n/g,'<br>');const log=$('#workThreadLog');if(log)log.scrollTop=log.scrollHeight}
-      }
-    });
-    await sb.from('minds_work_threads').update({last_activity_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',thread.id);
-    setThreadProgress(thread.id,'received',result?.reply?'':'Romy hat keine Textantwort gegeben.');
-    setStatus('');
-  }catch(e){
-    console.error(e);
-    setThreadProgress(thread.id,'error','Die Antwort ist unbestätigt. Prüfe den Verlauf, bevor du erneut sendest.');
-  }finally{
-    threadInFlight.delete(thread.id);
-    if(input)input.disabled=false;
-    if(activeThreadId===thread.id&&view==='threads')await renderThreads();
-  }
-}
-// Romy's proposals in a Thread (task, event, memory): confirm or discard them right here.
-async function renderThreadProposals(thread){
-  if(!thread.conversation_id)return;
-  const {data,error}=await sb.from('office_romy_proposals').select('id,kind,payload,status')
-    .eq('conversation_id',thread.conversation_id).eq('status','pending').order('created_at',{ascending:true});
-  const log=$('#workThreadLog');if(error||!log||activeThreadId!==thread.id)return;
-  log.querySelectorAll('.romy-pending-review').forEach(x=>x.remove());
-  for(const p of data||[]){
-    const d=p.payload||{},title=p.kind==='remember'?'Erinnerungsvorschlag':p.kind==='create_event'?'Terminvorschlag':'Aufgabenvorschlag';
-    const what=p.kind==='remember'?String(d.content||''):String(d.title||'')+' · '+(p.kind==='create_event'?[d.starts_at,d.ends_at].filter(Boolean).join(' – '):(d.due_date||'ohne Fälligkeit'));
-    log.insertAdjacentHTML('beforeend',`<div class="romy-pending-review" data-thread-proposal="${esc(p.id)}"><strong>${esc(title)}</strong><p>${esc(what)}</p><div class="romy-review-actions"><button type="button" data-proposal-decision="apply">Bestätigen</button><button type="button" data-proposal-decision="reject">Verwerfen</button></div></div>`);
-  }
-  log.querySelectorAll('[data-thread-proposal]').forEach(card=>card.querySelectorAll('[data-proposal-decision]').forEach(button=>button.onclick=async()=>{
-    card.querySelectorAll('button').forEach(b=>b.disabled=true);
-    const {data:result,error:actionError}=await sb.functions.invoke('office-assistant',{body:{action:'review_proposal',proposal_id:card.dataset.threadProposal,decision:button.dataset.proposalDecision}});
-    if(actionError||result?.error){setStatus('Der Vorschlag konnte nicht angewendet werden.');card.querySelectorAll('button').forEach(b=>b.disabled=false);return}
-    setStatus(button.dataset.proposalDecision==='apply'?'Vorschlag übernommen.':'Vorschlag verworfen.');
-    await window.ISABELLA_SYNC_PULL_NOW?.();
-    // The receipt is now in the conversation: reopen the thread so it shows (and Romy reads it).
-    if(activeThreadId===thread.id)await renderThreadConversation(thread.id);else void renderThreadProposals(thread);
-  }));
 }
 async function sendThreadMessage(thread,overrideMessage=null){
   if(threadInFlight.has(thread.id))return;
   const input=$('#workThreadInput'),message=String(overrideMessage??input?.value??'').trim();if(!message)return;
   threadInFlight.add(thread.id);
   if(input){input.disabled=true;if(overrideMessage===null)input.value=''}
-  if(OFFICE){await sendOfficeThreadMessage(thread,message,input);return}
-  setThreadProgress(thread.id,'sending','Enviando mensaje a MINDS…');
+  // Un solo motor (Gari, 28.11.2026): der Thread läuft auf demselben Motor wie der Chat mit Romy (isabella-chat).
+  // Frage und Antwort schreibt der Server in das Gespräch des Threads (der Browser darf im Office nur eigene Züge
+  // schreiben); die Seite schickt die Frage mit einer Anfrage-ID und lädt danach das Gespräch neu.
+  setThreadProgress(thread.id,'sending','Nachricht wird gesendet …');
   try{
-    const cid=await ensureThreadConversation(thread);
-    await persistThreadMessage(cid,'user',message);
-    setThreadProgress(thread.id,'saved','Mensaje guardado en MINDS.');
-    if(activeThreadId===thread.id&&view==='threads')await renderThreadConversation(thread.id);
-    setThreadProgress(thread.id,'thinking','Romy sieht sich den Projektkontext an…');
+    await ensureThreadConversation(thread);
+    if(activeThreadId===thread.id&&view==='threads'){
+      const log=$('#workThreadLog');
+      if(log){log.querySelector('.work-thread-empty')?.remove();log.insertAdjacentHTML('beforeend',threadMessageMarkup({role:'user',content:message}));log.scrollTop=log.scrollHeight}
+    }
+    setThreadProgress(thread.id,'thinking','Romy sieht sich den Projektkontext an …');
     const state=window.ISABELLA_APP?.getState?.()||{};
     const result=await window.ISABELLA_AI.ask(message,state,{
       workThread:{id:thread.id,project:project.name},
+      durableRequestId:crypto.randomUUID(),
       onProgress:event=>{if(event?.label)setThreadProgress(thread.id,'thinking',String(event.label))},
-      onTextDelta:()=>setThreadProgress(thread.id,'thinking','Romy schreibt…')
+      onTextDelta:()=>setThreadProgress(thread.id,'thinking','Romy schreibt …')
     });
     const reply=String(result?.reply||result?.streamed_text||'').trim();
-    setThreadProgress(thread.id,'saving','Antwort wird gespeichert…');
-    if(reply)await persistThreadMessage(cid,'assistant',reply,{sources:Array.isArray(result?.sources)?result.sources.slice(0,8):[],artifacts:Array.isArray(result?.artifacts)?result.artifacts.slice(0,8):[],incomplete_response:!!result?.incomplete,incomplete_reason:result?.incomplete_reason||null});
     const proposal=result?.proposal||(Array.isArray(result?.proposals)?result.proposals[0]:null);
     await sb.from('minds_work_threads').update({last_activity_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',thread.id);
-    setThreadProgress(thread.id,'received',result?.incomplete?'Teilantwort erhalten. Du kannst sie fortsetzen.':reply?'Antwort erhalten.':'Anfrage bearbeitet; es kam keine Textantwort.');
+    setThreadProgress(thread.id,'received',result?.incomplete?'Teilantwort erhalten. Sie können sie fortsetzen.':reply?'Antwort erhalten.':'Anfrage bearbeitet; es kam keine Textantwort.');
     setStatus('');
     if(activeThreadId===thread.id&&view==='threads')await renderThreads();
     if(proposal&&!result?.incomplete)window.MINDS_PROPOSALS?.edit?.(proposal);

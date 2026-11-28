@@ -28,18 +28,22 @@ test('Romy knows the project of a Thread; Threads stay out of Romy\'s chat list'
   assert.match(read('app/office-assistant.js'),/\.eq\('user_id',ownerId\)\.eq\('work_thread',false\)/);
 });
 
-test('Work shows Threads in the office; Romy answers and stores the messages itself', ()=>{
+test('Work shows Threads in the office; Romy answers on the shared engine, the server stores the messages', ()=>{
   const work=read('app/work.js'),shell=read('app/shell.js');
   assert.match(shell,/<button data-work-view="threads">Threads<\/button>/);
   // Seit dem 26.11.2026 öffnet «Wissen» im Office das Projektwissen (nicht mehr das Panorama).
   assert.match(work,/view=localStorage\.getItem\('minds-work-view'\)\|\|'overview'/);
   assert.match(work,/:view==='knowledge'\?\(OFFICE\?renderWissen\(\):renderKnowledge\(\)\)/);
-  assert.match(work,/if\(OFFICE\)\{await sendOfficeThreadMessage\(thread,message,input\);return\}/);
-  assert.match(work,/await window\.TBA_ROMY_TRANSPORT\.send\(\{\n      message,conversationId:cid,requestId:crypto\.randomUUID\(\),attachments:\[\],/);
-  assert.match(work,/sb\.from\(OFFICE\?'office_assistant_messages':'conversation_messages'\)/);
-  assert.match(work,/sb\.storage\.from\(OFFICE\?'office-romy-artifacts':'minds-artifacts'\)/);
-  assert.match(work,/action:'review_proposal',proposal_id:card\.dataset\.threadProposal/);
-  assert.match(work,/Private Gespräche mit Romy zu einem Thema\. Nur du siehst sie/);
+  // Un solo motor (28.11.2026): the thread runs on isabella-chat like the chat with Romy; the server writes the
+  // question and the answer into the thread's conversation, the page only sends with a request id and reloads.
+  assert.doesNotMatch(work,/sendOfficeThreadMessage|TBA_ROMY_TRANSPORT|office_assistant_messages|action:'review_proposal'|office-romy-artifacts/);
+  const send=work.slice(work.indexOf('async function sendThreadMessage'),work.indexOf('window.MINDS_WORK='));
+  assert.match(send,/await window\.ISABELLA_AI\.ask\(message,state,\{\n      workThread:\{id:thread\.id,project:project\.name\},\n      durableRequestId:crypto\.randomUUID\(\),/);
+  assert.doesNotMatch(send,/persistThreadMessage|from\('conversation_messages'\)\.insert/,'the browser writes nothing in the thread');
+  assert.match(work,/const \{data,error\}=await sb\.from\('conversation_messages'\)\n    \.select\('client_key,role,content,created_at,metadata'\)/);
+  assert.match(work,/sb\.storage\.from\('minds-artifacts'\)/);
+  assert.match(work,/Private Gespräche mit Romy zu einem Thema\. Nur Sie sehen sie/);
+  assert.match(work,/Geben Sie dem Thread einen Namen\./);
   const section=work.slice(work.indexOf('async function loadThreads'),work.indexOf('async function sendThreadMessage'));
   for(const es of ['Nuevo Thread','Renombrar','Archivar Thread','Todavía no hay Threads','Preguntar en'])
     assert.ok(!section.includes(es),es);

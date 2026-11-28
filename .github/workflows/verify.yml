@@ -136,6 +136,11 @@ jobs:
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < tests/sql/office-projektdokumente-listen-acceptance.sql
+      - name: Verify a Work thread's conversation lives in conversations, stays with its owner, and only the engine answers
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-threads-im-motor-acceptance.sql
       - name: Verify images of the sample folder are readable and uploadable by the project team only
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
