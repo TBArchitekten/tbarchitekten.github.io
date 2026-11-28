@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "38a5316b9252311ba330f8252d5e55b48aea1e7d",
+  "source_sha": "692dff46a6bcae37226476666930826f156124ff",
   "mode": "engine",
   "files": [
     {
@@ -66,8 +66,8 @@
     {
       "source": "supabase/functions/_shared/capability-runtime.ts",
       "target": "supabase/functions/_shared/capability-runtime.ts",
-      "sha": "bb663985f142a8daa032a786e8db85aaa9f7a132",
-      "bytes": 16350
+      "sha": "00f855e2e6d6cb99818450abccb0d709bd90412c",
+      "bytes": 16864
     },
     {
       "source": "supabase/functions/_shared/chat-delivery.mjs",

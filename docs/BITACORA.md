@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-28 · Ein Motor: Romys Fähigkeiten wieder mit GPT-6.2 Sol · Claude
+- Qué cambió y por qué: zweiter Unterschied zwischen Romys zwei Motoren. Garis Entscheidung vom 27.11. («no solo conmigo, haz el cambio para todos», #208) ließ Romys Fähigkeiten (Dateien, Auswertungen) im alten Motor mit `gpt-6.2-sol` laufen; im Motor aus Window, den Romy im Chat nutzt, stand `gpt-6-astra` fest (fünfmal so teuer). Jetzt entscheidet das Profil: Office `gpt-6.2-sol`, Window weiter `gpt-6-astra`; das Secret `OPENAI_CAPABILITY_MODEL` ginge vor (Window `692dff4`, minds #347).
+- Archivos: Motor aus Window synchronisiert (`supabase/functions/_shared/capability-runtime.ts`, Manifest).
+- Base de datos: ninguna.
+- Deploy de funciones: `isabella-capability-runner isabella-capability-runtime isabella-mission-runner`.
+- Cómo se probó: in Window 1292/1292 (neuer Test `capacidades-modelo`); hier `node --test` 598/598. Aufwand und Werkzeuge bleiben (`medium`, Code Interpreter); Sol kann beides (#208).
+- Quedó pendiente o sin probar: der nächste echte Auftrag, der eine Datei erzeugt.
+- Riesgos o decisiones que necesitan a Gari: ninguna.
+- PR: pendiente
+
 ### 2026-11-28 · Ein Motor: Romys Threads laufen auf dem Motor aus Window · Claude
 - Qué cambió y por qué: Gari (28.11., 10:30): «supongo que lo mejor es empezar ya a hacer solo un motor … confío en ti». Romy hatte im Office zwei Motoren: der Chat lief schon auf dem Motor aus Window (`isabella-chat`, byte-gleich), die Threads in Work noch auf dem älteren `office-assistant` mit eigenem Gedächtnis, eigenen Werkzeugen und Modellen. Jetzt laufen auch die Threads auf `isabella-chat`, wie in Window: (1) **Datenbank:** ein Thread gehört zu einem Gespräch in `conversations` (`app_scope` `work_thread`) statt zu `office_assistant_conversations`; `minds_ensure_work_thread_conversation` legt es wie in Window an, `minds_rename_work_thread` benennt es mit um. Vorher geprüft: 0 Threads, also geht keine Verknüpfung verloren. (2) **Motor** (Window `minds #346`, nur Profil `office`): der Browser darf im Office nur eigene Züge schreiben; deshalb schreibt der Server Frage und Antwort eines Thread-Zugs in das Gespräch des Threads, nur wenn es der Person gehört und der Bereich der des Threads ist, idempotent nach der Anfrage-ID — wie im Chat. (3) **Seite:** der Thread schickt die Frage mit dem gemeinsamen Client (`ISABELLA_AI.ask`, Anfrage-ID) und lädt danach das Gespräch neu; Vorschläge öffnen dieselbe Prüfung wie im Chat; Dateien aus `minds-artifacts`. Der alte Weg über `office-assistant` (Übertragung, eigene Vorschlagskarten) ist aus `work.js` entfernt. (4) Texte der Threads in «Sie» («Nur Sie sehen sie», «Geben Sie dem Thread einen Namen.», «Stellen Sie die erste Frage.», «Sie können sie fortsetzen»).
 - Archivos: `supabase/migrations/20261128100934_office_threads_im_motor.sql` (neu), Motor aus Window synchronisiert (Manifest), `app/work.js` (office69), `app/index.html`; Tests: `tests/sql/office-threads-im-motor-acceptance.sql` (neu, in `verify.yml`), `tests/office-threads.test.mjs`, `tests/office-romy-like-isabella.test.mjs`, Versionen in neun Tests.
