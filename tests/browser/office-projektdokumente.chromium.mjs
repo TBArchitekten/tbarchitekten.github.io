@@ -474,12 +474,96 @@ test('Ablauf «Besprechung nachbereiten»: beide Listen, Aufgaben, Fristen, Proj
   assert.deepEqual(fehler,[]);
 });
 
+// Weitere Listen (28.11.2026): mit den Zeilen der Bürovorlage anlegen, Termine aus dem Terminplan, in der Zelle führen,
+// die Fragen an eine Fachplanung als Excel, die Schnittstellenmatrix und der Eingang mit ihrem berechneten Stand.
+test('Weitere Listen: mit der Bürovorlage anlegen, Termine aus dem Terminplan, Excel je Fachplanung',async()=>{
+  const {ctx,page,fehler}=await oeffne();
+  await page.evaluate(()=>{const t=window.__fake.db.office_terminplan_instances[0].state.tasks;
+    t.push({id:'m00a',name:'M00A · Erforderliche Fachplaner beauftragt',type:'milestone',start:'2026-11-20'},
+      {id:'m01',name:'M01 · Vorläufige Planungsgrundlagen an beauftragte Fachplaner übermittelt',type:'milestone',start:'2026-12-04'},
+      {id:'m02',name:'M02 · Kick-off Fachplaner',type:'milestone',start:'2026-12-11'},
+      {id:'m03',name:'M03 · Zieltermin Fachplanungsbeiträge Arbeitsstand 01',type:'milestone',start:'2027-01-15'});window.__fake.sichern()});
+  const PID='22222222-2222-4222-8222-222222222222';
+  await page.goto(adresse('projektdokumente.html?projekt='+PID));
+  await page.locator('h1',{hasText:'Projektstart'}).waitFor();
+  const karte=page.locator('.pd-karte',{has:page.locator('h3',{hasText:/^Fragenliste$/})});
+  assert.match(await karte.textContent(),/Noch nicht angelegt\.[\s\S]*mit M01 04\.12\. · beantwortet bis M02 11\.12\./);
+  assert.equal(await page.locator('.pd-folgt-text').count(),3,'nur Planliste und die beiden Texte folgen noch');
+  // Fragenliste: die 85 Fragen der Vorlage, nummeriert in ihrer Reihenfolge.
+  await karte.locator('a',{hasText:'Anlegen'}).click();
+  await page.locator('h1',{hasText:'Fragenliste je Disziplin'}).waitFor();
+  await page.locator('[data-act="anlegen-vorlage"]',{hasText:'Mit den 85 Fragen der Bürovorlage anlegen'}).click();
+  await page.locator('td[data-k="frage"]').first().waitFor();
+  const fragen=await zeilenVon(page,'fragenliste');
+  assert.equal(fragen.length,85);
+  assert.deepEqual(fragen.slice(0,3).map(z=>z.nr+':'+z.daten.code),['1:ALLE-01','2:ALLE-02','3:ALLE-03']);
+  assert.match(await page.locator('.pd-head .meta').textContent(),/^85 Fragen · 85 offen · 0 beantwortet/);
+  // Für die Tragwerksplanung: ihre Fragen und die an alle; die Zahlen an den Filtern gelten dafür.
+  await page.locator('[data-act="disziplin"]').selectOption('TWP');
+  const twp=fragen.filter(z=>['ALLE','TWP'].includes(z.daten.disziplin)).length;
+  assert.equal(await page.locator('tr.pd-zeile').count(),twp);
+  assert.equal(await page.locator('[data-act="filter"][data-f="alle"]').textContent(),'Alle '+twp);
+  // Eine Antwort setzt die Frage auf «beantwortet», mit dem Datum von heute.
+  await page.locator('td[data-z="'+fragen[0].id+'"][data-k="antwort"]').click();
+  await page.locator('[data-edit][data-k="antwort"]').fill('Liegt bei, siehe Anlage');
+  await page.locator('[data-edit][data-k="antwort"]').press('Enter');
+  await gespeichert(page);
+  const erste=(await zeilenVon(page,'fragenliste'))[0].daten;
+  assert.equal(erste.status,'beantwortet');
+  assert.match(erste.beantwortet_am,/^\d{4}-\d{2}-\d{2}$/);
+  await page.keyboard.press('Escape');
+  const [dl]=await Promise.all([page.waitForEvent('download'),page.locator('.pd-actions [data-act="excel"]',{hasText:'Excel für TWP'}).click()]);
+  assert.match(dl.suggestedFilename(),/^T-01_Fragenliste_TWP_\d{4}-\d{2}-\d{2}\.xlsx$/);
+  const sheet=entpacke(fs.readFileSync(await dl.path()))['xl/worksheets/sheet1.xml'];
+  assert.ok(sheet.includes('<t xml:space="preserve">gebraucht bis</t>')&&sheet.includes('<t xml:space="preserve">Datum</t>'));
+  assert.ok(sheet.includes('<c r="I7" s="3"><v>46367</v></c>'),'M02 am 11.12.2026 als Datum neben dem Meilenstein');
+  assert.ok(!sheet.includes('HLS-01'),'nur die Fragen an die TWP und an alle');
+  // Schnittstellen: ELT wirkt bei der Beleuchtung nur mit, dann plant eine Stelle und die Zuständigkeit ist eindeutig.
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste=schnittstellen'));
+  await page.locator('[data-act="anlegen-vorlage"]').click();
+  await page.locator('tr.pd-gruppe',{hasText:'B · Themen und Bauteile'}).waitFor();
+  assert.equal(await page.locator('tr.pd-gruppe').count(),3);
+  assert.equal(await page.locator('[data-act="filter"][data-f="klaeren"]').textContent(),'Zuständigkeit klären 2');
+  const licht=(await zeilenVon(page,'schnittstellen')).find(z=>z.daten.thema==='Beleuchtung und Lichtkonzept');
+  await page.locator('td[data-z="'+licht.id+'"][data-k="z_elt"]').click();
+  await page.locator('select[data-edit][data-k="z_elt"]').selectOption('M');
+  await page.keyboard.press('Escape');
+  await gespeichert(page);
+  assert.equal(await page.locator('td[data-z="'+licht.id+'"][data-k="eindeutig"]').textContent(),'eindeutig');
+  assert.equal(await page.locator('[data-act="filter"][data-f="klaeren"]').textContent(),'Zuständigkeit klären 1');
+  // Eingang: Arbeitsstand 01 der TWP eingegangen, dann wartet der Endstand.
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste=eingang'));
+  await page.locator('[data-act="anlegen-vorlage"]').click();
+  const twpEingang=(await zeilenVon(page,'eingang')).find(z=>z.daten.disziplin==='TWP');
+  await page.locator('td[data-z="'+twpEingang.id+'"][data-k="erwartet01"]').waitFor();
+  assert.equal(await page.locator('td[data-z="'+twpEingang.id+'"][data-k="erwartet01"]').textContent(),'M03 15.01.2027');
+  await page.locator('td[data-z="'+twpEingang.id+'"][data-k="eingang01"]').click();
+  await page.locator('[data-edit][data-k="eingang01"]').fill('10.01.2027');
+  await page.locator('[data-edit][data-k="eingang01"]').press('Enter');
+  await gespeichert(page);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('td[data-z="'+twpEingang.id+'"][data-k="stand"]').textContent(),'Endstand ausstehend');
+  // Fachplanerbedarf: «beauftragt? ja» setzt den Status.
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste=fachplanerbedarf'));
+  await page.locator('[data-act="anlegen-vorlage"]').click();
+  const tw=(await zeilenVon(page,'fachplanerbedarf'))[0];
+  await page.locator('td[data-z="'+tw.id+'"][data-k="beauftragt"]').click();
+  await page.locator('select[data-edit][data-k="beauftragt"]').selectOption('ja');
+  await page.keyboard.press('Escape');
+  await gespeichert(page);
+  assert.equal((await zeilenVon(page,'fachplanerbedarf'))[0].daten.status,'beauftragt');
+  await foto(page,'7-fachplanerbedarf');
+  assert.deepEqual(fehler,[]);
+  await ctx.close();
+});
+
 test('iPhone: Übersicht, Liste und Vorlage ohne Querscrollen der Seite',async()=>{
   const {ctx,page,fehler}=await oeffne();
   await page.setViewportSize({width:390,height:844});
   for(const ziel of ['projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222',
     'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=klaerungsliste',
-    'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=entscheidungsliste']){
+    'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=entscheidungsliste',
+    'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=schnittstellen']){
     await page.goto(adresse(ziel));
     await page.locator('h1').waitFor();
     await page.waitForTimeout(150);

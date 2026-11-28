@@ -18,11 +18,17 @@
    Produkt im Projekt frei.
    Mustermappe als eigenes Werkzeug (25.11.2026, Gari): ?werkzeug=mustermappe zeigt je Projekt die Mappen (Tools ›
    Mustermappe), nicht mehr eine Karte im Projektstart. Als Reiter in Work läuft die Seite in einem Rahmen: ohne
-   Rücksprung in die App, mit TBA_OFFICE_TOOL (Revision der Mappe, Speichern auf Zuruf) und ?neu=1 zum Anlegen. */
+   Rücksprung in die App, mit TBA_OFFICE_TOOL (Revision der Mappe, Speichern auf Zuruf) und ?neu=1 zum Anlegen.
+   Weitere Listen (28.11.2026, Gari: die Listen des Projektstarts im Projekt bearbeiten wie die Entscheidungsliste, statt
+   ein Excel herunterzuladen): Fachplanerbedarf, Schnittstellen, Fragenliste und Eingang, gleich bearbeitet (Zelle,
+   Filter, Details mit Verlauf, Excel). Angelegt werden sie mit den Zeilen der Bürovorlage (projektdokumente-vorlagen.js)
+   oder leer; danach gehören sie dem Projekt. Termine als Meilenstein: das Datum kommt aus dem Terminplan des Projekts. */
 (()=>{
 'use strict';
 const K=window.TBA_PROJEKTDOKUMENTE,X=window.TBA_PROJEKTDOKUMENTE_EXPORT,OFFICE=window.TBA_OFFICE_CONFIG;
 const Z=window.TBA_PROJEKTDOKUMENTE_ZAHLEN,R=window.TBA_KOSTEN_RECHNEN,P=window.TBA_KOSTEN_POOL;
+// Vorbelegung der weiteren Listen aus der Bürovorlage.
+const V=window.TBA_PD_VORLAGEN||{};
 const sb=window.MINDS_SUPABASE||(window.supabase&&OFFICE?window.supabase.createClient(OFFICE.url,OFFICE.key,
   {auth:{storageKey:OFFICE.storageKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}):null);
 const inApp=!!window.WINDOW_NATIVE?.available;
@@ -35,12 +41,33 @@ const gleich=(a,b)=>JSON.stringify(a??'')===JSON.stringify(b??'');
 const ZEILE='id,dokument_id,nr,daten,server_revision,created_by,updated_by,created_at,updated_at,quelle';
 const DOK='id,art,owner_id,meta,server_revision,updated_at';
 const LETZTES='tba.office.projektdokumente.projekt';
-const LISTEN=['klaerungsliste','entscheidungsliste'];
-// Kompakte Ansicht wie im Entwurf: 8 Spalten je Liste (die Entscheidungsliste mit der Spalte «Vorlage»).
+const LISTEN=['klaerungsliste','entscheidungsliste',...K.WEITERE];
+// Romy liest und schlägt vor für diese beiden Listen (office-dokumente-ai).
+const MIT_ROMY=['klaerungsliste','entscheidungsliste'];
+// Kompakte Ansicht wie im Entwurf: 8 Spalten je Liste (die Entscheidungsliste mit der Spalte «Vorlage»). Die weiteren
+// Listen: die im Kern als kompakt markierten Spalten.
 const KOMPAKT={klaerungsliste:['nr','disziplinen','ort','sachverhalt','verantwortlich','frist','status','ag'],
-  entscheidungsliste:['nr','thema','frage','optionen','bis','status','entscheidung','_vorlage']};
+  entscheidungsliste:['nr','thema','frage','optionen','bis','status','entscheidung','_vorlage'],
+  ...Object.fromEntries(K.WEITERE.map(a=>[a,K.SPALTEN[a].filter(sp=>sp.kompakt).map(sp=>sp.key)]))};
 const VORLAGE_SPALTE={key:'_vorlage',kopf:'Vorlage',typ:'vorlage'};
-const NEU_FELD={klaerungsliste:'sachverhalt',entscheidungsliste:'thema'};
+// Die neue Zeile: Feld, das eingetippt wird, die Spalte dafür (im Eingang steht die Disziplin in der ersten Spalte) und der Hinweis.
+const NEU_FELD={klaerungsliste:'sachverhalt',entscheidungsliste:'thema',fachplanerbedarf:'disziplin',schnittstellen:'thema',fragenliste:'frage',eingang:'disziplin'};
+const NEU_SPALTE={eingang:'nr'};
+const NEU_TEXT={klaerungsliste:'Sachverhalt',entscheidungsliste:'Thema',fachplanerbedarf:'Disziplin',schnittstellen:'Thema oder Bauteil',fragenliste:'Frage',eingang:'Disziplin (z. B. GEO)'};
+const NEU_KNOPF={klaerungsliste:'Zeile',entscheidungsliste:'Entscheidung',fachplanerbedarf:'Disziplin',schnittstellen:'Schnittstelle',fragenliste:'Frage',eingang:'Disziplin'};
+// Was die Bürovorlage in einer Liste vorbereitet hat (Text der Karte «Anlegen») und wann die Liste im Ablauf dran ist.
+const VORLAGE_TEXT={
+  fachplanerbedarf:'je Disziplin das Leistungsbild, wann sie in der Regel erforderlich ist, und ein Vorschlag für den Umfang in LPH 3',
+  schnittstellen:'Grundlagen, Themen und Bauteile, Zuarbeit: je Thema ein Vorschlag, wer plant, koordiniert, mitwirkt und Angaben liefert, dazu Lieferung und Format',
+  fragenliste:'je Disziplin die Fragen für das Paket der Planungsgrundlagen (M01) und den Kick-off (M02), mit Zweck, Grundlage und Termin',
+  eingang:'je Disziplin der Lieferumfang für Arbeitsstand 01 (M03) und Endstand (M07), als Vorschlag für den Kick-off'};
+const WANN={fachplanerbedarf:[['Entscheidung bis','M00A']],schnittstellen:[['v0 mit','M01'],['v1 im Kick-off','M02']],
+  fragenliste:[['mit','M01'],['beantwortet bis','M02']],eingang:[['Arbeitsstand 01','M03'],['Endstand','M07']]};
+const HINWEIS={
+  fachplanerbedarf:'Entscheidungshilfe für den Auftraggeber: je Disziplin «erforderlich?», die Begründung für das Projekt und die Empfehlung des Büros. Die Beauftragung ist Sache des Auftraggebers.',
+  schnittstellen:K.LEGENDE.map(([k,t])=>k+' '+t).join(' · '),
+  fragenliste:'Fragen ohne Bezug zum Projekt auf «entfällt» setzen, nicht löschen. Zum Versand an eine Fachplanung nach Disziplin filtern: die Liste zeigt dann ihre Fragen und die an alle.',
+  eingang:'Erwartet werden die Beiträge zu den Meilensteinen des Terminplans (M03 und M07); «Stand» ergibt sich aus Eingang, Vollständigkeit und Rückmeldung.'};
 
 let nutzer=null,mitglied=null,mitglieder=[],projekte=[],team=[];
 let projekt=null,dokumente={},zeilen=leer(),aufgaben=new Map(),geladenUm=0;
@@ -51,7 +78,7 @@ const VORSCHLAG='id,dokument_id,zeile_id,art,daten,fundstelle,begruendung,quelle
 const romy={bereit:false};
 let vorschlaege=[];
 const offene=art=>vorschlaege.filter(v=>artVon(v.dokument_id)===art);
-function leer(){return {klaerungsliste:[],entscheidungsliste:[],entscheidungsvorlagen:[]}}
+function leer(){return Object.fromEntries(K.ARTEN.map(a=>[a,[]]))}
 const heute=()=>K.heuteIso();
 const name=id=>mitglieder.find(m=>m.user_id===id)?.display_name||'';
 const meinName=()=>mitglied?.display_name||name(nutzer?.id)||'';
@@ -137,12 +164,28 @@ async function route(){
   }
 }
 async function ladeProjekt(){
-  dokumente={};zeilen=leer();aufgaben=new Map();
+  dokumente={};zeilen=leer();aufgaben=new Map();K.setzeTermine({});termineDa=false;
   const {data:docs,error}=await sb.from('office_projektdokumente').select(DOK).eq('project_id',projekt.id);
   if(error)throw error;
   for(const d of docs||[])dokumente[d.art]=d;
-  await ladeZeilen();
+  await Promise.all([ladeZeilen(),ladeTermine()]);
   try{localStorage.setItem(LETZTES,projekt.id)}catch{}
+}
+// Daten der Meilensteine (M00 … M11) aus dem Terminplan des Projekts: der Plan der LPH 3 zuerst, sonst der zuletzt
+// geänderte. Nur gelesen; geändert wird ein Termin im Terminplan.
+let termineDa=false;
+async function ladeTermine(){
+  const {data,error}=await sb.from('office_terminplan_instances').select('phase,state,updated_at').eq('project_id',projekt.id)
+    .eq('is_archived',false).order('updated_at',{ascending:false}).limit(10);
+  if(error){console.warn('Terminplan',error);return}
+  const liste={};
+  const plaene=[...(data||[])].sort((a,b)=>Number(b.phase==='LPH3')-Number(a.phase==='LPH3'));
+  for(const p of plaene)for(const t of Array.isArray(p.state?.tasks)?p.state.tasks:[]){
+    if(t?.type!=='milestone')continue;
+    const m=/^(M\d{2}[A-Z]?)(?![A-Za-z0-9])/.exec(String(t.name||'').trim()),tag=String(t.start||'').slice(0,10);
+    if(m&&K.gueltigIso(tag)&&!(m[1] in liste))liste[m[1]]=tag;
+  }
+  K.setzeTermine(liste);termineDa=Object.keys(liste).length>0;
 }
 function lokal(r){return {...r,daten:kopie(r.daten),basis:kopie(r.daten),rev:r.server_revision}}
 async function ladeZeilen(){
@@ -178,7 +221,7 @@ async function auffrischen(){
   try{
     const {data:docs}=await sb.from('office_projektdokumente').select(DOK).eq('project_id',projekt.id);
     for(const d of docs||[])dokumente[d.art]=d;
-    await ladeZeilen();
+    await Promise.all([ladeZeilen(),ladeTermine()]);
     // Nicht mitten im Ziehen oder Zuschneiden einer Mustermappe neu zeichnen.
     if(!ui.edit&&!mm.zug&&!mm.zuschnitt)render();
   }catch(e){console.warn('Auffrischen',e)}
@@ -224,10 +267,10 @@ async function speichere(z,{vorschlagId=null}={}){
         // Jemand anderes hat die Zeile inzwischen gespeichert: Felder zusammenführen und neu versuchen.
         const {data:srv,error:e2}=await sb.from('office_projektdokument_zeilen').select(ZEILE).eq('id',z.id).maybeSingle();
         if(e2)throw e2;
-        if(!srv){zeilen[art]=zeilen[art].filter(x=>x!==z);meldung(K.DOKUMENTE[art].zeile+' '+K.nummer(art,z.nr)+' wurde inzwischen gelöscht.','warn');render();break}
+        if(!srv){zeilen[art]=zeilen[art].filter(x=>x!==z);meldung(K.DOKUMENTE[art].zeile+' '+K.nummer(art,z.nr,z.daten)+' wurde inzwischen gelöscht.','warn');render();break}
         const m=K.zusammenfuehren(z.basis,z.daten,srv.daten||{});
         z.daten=m.daten;z.basis=kopie(srv.daten);z.rev=srv.server_revision;
-        if(m.kollisionen.length)meldung(K.nummer(art,z.nr)+': '+m.kollisionen.map(k=>'«'+K.feldName(art,k)+'»').join(', ')+' wurde gleichzeitig von '+(name(srv.updated_by)||'jemand anderem')+' geändert; deine Eingabe gilt.','warn');
+        if(m.kollisionen.length)meldung(K.nummer(art,z.nr,z.daten)+': '+m.kollisionen.map(k=>'«'+K.feldName(art,k)+'»').join(', ')+' wurde gleichzeitig von '+(name(srv.updated_by)||'jemand anderem')+' geändert; deine Eingabe gilt.','warn');
       }
     }catch(e){console.error('Speichern',e);speicher.fehler=e?.message||'Verbindung';meldung('Nicht gespeichert: '+speicher.fehler,'warn')}
     finally{
@@ -252,6 +295,24 @@ async function sichereDokument(art){
   const {data:da}=await sb.from('office_projektdokumente').select(DOK).eq('project_id',projekt.id).eq('art',art).maybeSingle();
   if(da){dokumente[art]=da;return da}
   throw new Error(projekt.status!=='aktiv'?'Im archivierten Projekt entstehen keine neuen Dokumente.':'Das Dokument konnte nicht angelegt werden.');
+}
+// Eine weitere Liste anlegen: mit den Zeilen der Bürovorlage (in einem Schritt, die Datenbank nummeriert in dieser
+// Reihenfolge) oder leer. Hat die Liste inzwischen Zeilen (jemand anderes war schneller), bleibt es bei denen.
+async function anlegen(art,{vorlage=false}={}){
+  const dok=await sichereDokument(art);
+  if(vorlage){
+    const {data:da,error:e1}=await sb.from('office_projektdokument_zeilen').select('id').eq('dokument_id',dok.id).limit(1);
+    if(e1)throw e1;
+    if(da&&da.length){await ladeZeilen();meldung('Die Liste hat inzwischen schon Zeilen; die Vorlage wurde nicht noch einmal eingefügt.','warn');render();return}
+    const reihen=(V[art]||[]).map(d=>({dokument_id:dok.id,daten:kopie(d)}));
+    if(reihen.length){
+      const {data,error}=await sb.from('office_projektdokument_zeilen').insert(reihen).select(ZEILE);
+      if(error)throw error;
+      zeilen[art]=(data||[]).map(lokal).sort((a,b)=>a.nr-b.nr);
+    }
+    meldung(K.DOKUMENTE[art].kurz+' mit '+reihen.length+' '+(reihen.length===1?K.DOKUMENTE[art].zeile:K.DOKUMENTE[art].zeilen)+' der Bürovorlage angelegt.');
+  }
+  render();
 }
 async function neueZeile(art,daten,{vorschlagId=null}={}){
   const dok=await sichereDokument(art);
@@ -281,6 +342,20 @@ function setze(art,z,key,wert){
     if(wert==='Entscheidungspunkt')d.ag='ja';
   }
   if(art==='entscheidungsliste'&&key==='status'&&wert==='vorgelegt'&&!d.vorgelegt_am)d.vorgelegt_am=heute();
+  // Weitere Listen: was man in der Vorlage von Hand mitändern würde.
+  if(art==='fragenliste'){
+    if(key==='status'&&wert==='beantwortet'&&!d.beantwortet_am)d.beantwortet_am=heute();
+    if(key==='antwort'&&String(wert||'').trim()&&!String(z.daten.antwort||'').trim()&&d.status==='offen'){d.status='beantwortet';if(!d.beantwortet_am)d.beantwortet_am=heute()}
+    if(key==='disziplin'&&wert&&!String(d.code||'').trim())d.code=K.naechsterCode(zeilen.fragenliste,wert);
+  }
+  if(art==='fachplanerbedarf'){
+    if(key==='beauftragt'&&wert==='ja')d.status='beauftragt';
+    if(key==='beauftragt'&&wert==='angefragt'&&d.status==='offen')d.status='angefragt';
+    if(key==='status'&&wert==='beauftragt')d.beauftragt='ja';
+    if(key==='erforderlich'&&wert==='nein'&&d.status==='offen')d.status='entfällt';
+  }
+  // Nach der Abstimmung (v1) ist jede Änderung an Zuständigkeit oder Lieferung eine Änderung des abgestimmten Stands.
+  if(art==='schnittstellen'&&d.status==='v1 abgestimmt'&&/^(z_|liefert$|format$|lieferung)/.test(key))d.status='geändert';
   const p=K.pruefe(art,d);
   if(p){meldung(p,'warn');return false}
   z.daten=d;markiere(z);return true;
@@ -444,7 +519,7 @@ function ablaufPanel(){
 async function ablaufTeilen(){
   const a=ui.ablauf;if(!a)return;
   await alleSpeichern();
-  const zeile=(art,z)=>'- '+K.nummer(art,z.nr)+' · '+[art==='klaerungsliste'?z.daten.sachverhalt||z.daten.ort:z.daten.thema||z.daten.frage,
+  const zeile=(art,z)=>'- '+K.nummer(art,z.nr,z.daten)+' · '+[art==='klaerungsliste'?z.daten.sachverhalt||z.daten.ort:z.daten.thema||z.daten.frage,
     art==='klaerungsliste'?z.daten.verantwortlich:'',z.daten.frist?'bis '+K.datumLang(z.daten.frist):'',z.daten.status].map(x=>String(x||'').trim()).filter(Boolean).join(' · ');
   const kl=ablaufZeilen('klaerungsliste'),en=ablaufZeilen('entscheidungsliste');
   const inhalt=['Besprechung: '+a.quelle+' (nachbereitet am '+K.datumLang(heute())+').',a.texte.length?'Romy: '+a.texte.join(' '):'',
@@ -460,14 +535,18 @@ function renderUebersicht(){
   const projektwahl='<label class="pd-projekt"><span>Projekt</span><select data-act="projekt">'+projekte.filter(p=>p.status==='aktiv'&&darf(p)).map(p=>
     '<option value="'+esc(p.id)+'"'+(p.id===projekt.id?' selected':'')+'>'+esc(p.number+' · '+p.name)+'</option>').join('')+'</select></label>';
   const karte=(art,code,zahlen,extra)=>{
-    const da=!!dokumente[art];
+    const da=!!dokumente[art],ohne=K.WEITERE.includes(art)&&!zeilen[art].length;
     const vs=offene(art),quellen=[...new Set(vs.map(v=>v.quelle).filter(Boolean))];
     return '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>'+esc(K.DOKUMENTE[art].kurz)+(art==='klaerungsliste'?' · Koordination':'')+'</h3><span class="pd-code">'+esc(code)+'</span></div>'+
-      '<p class="pd-karte-zahl">'+(da?esc(K.zusammenfassung(art,zahlen)):'Noch nicht angelegt.')+'</p>'+
+      '<p class="pd-karte-zahl">'+(da&&!ohne?esc(K.zusammenfassung(art,zahlen)):da?'Noch leer.':'Noch nicht angelegt.')+'</p>'+
       (vs.length?'<p class="pd-romy-hinweis">Romy: '+vs.length+(vs.length===1?' Vorschlag':' Vorschläge')+(quellen.length?' aus '+quellen.map(q=>'«'+esc(q)+'»').join(', '):'')+'</p>':'')+(extra||'')+
       '<div class="pd-karte-aktionen"><a class="btn btn-primary" href="'+esc(url({projekt:projekt.id,liste:art}))+'" data-nav>'+(da?'Öffnen':'Anlegen')+'</a>'+
-      (da?'<button type="button" class="btn" data-act="excel" data-art="'+art+'">Excel</button>':'')+'</div></article>';
+      (da&&!ohne?'<button type="button" class="btn" data-act="excel" data-art="'+art+'">Excel</button>':'')+'</div></article>';
   };
+  // Wann die Liste im Ablauf dran ist, mit dem Datum aus dem Terminplan.
+  const wann=art=>'<p class="pd-wann">'+(WANN[art]||[]).map(([t,c])=>esc(t)+' '+'<span class="pd-ms" title="'+esc(K.meilensteinName(c))+'">'+esc(c)+'</span>'+
+    (K.terminVon(c)?' '+esc(K.datumKurz(K.terminVon(c))):'')).join(' · ')+'</p>';
+  const weitere=K.WEITERE.map(art=>{const zz=K.zaehle(art,zeilen[art]);return karte(art,K.DOKUMENTE[art].code,zz,wann(art))}).join('');
   const folgt=(titel,code,text)=>'<article class="card pd-karte pd-folgt"><div class="pd-karte-kopf"><h3>'+esc(titel)+'</h3><span class="pd-code">'+esc(code)+'</span></div>'+
     '<p class="meta">'+esc(text)+'</p><p class="pd-folgt-text">Noch nicht gebaut</p></article>';
   const vorlagenListe=vorlagen.length?'<ul class="pd-vorlagen">'+vorlagen.map(v=>{
@@ -490,8 +569,8 @@ function renderUebersicht(){
     '<section class="pd-abschnitt"><h2>Listen</h2><p class="meta">bearbeiten wie im Büro-Excel · jede Spalte mit Typ · Ausgabe als Excel</p><div class="pd-grid">'+
     karte('klaerungsliste','L3.KLA',zk,zk.aufgaben?'<p class="meta">'+zk.aufgaben+(zk.aufgaben===1?' Punkt als Aufgabe':' Punkte als Aufgabe')+' im Planner</p>':'')+
     karte('entscheidungsliste','L3.ENV · L3.A3',ze,warten.length?'<p class="pd-hinweis">'+warten.length+(warten.length===1?' Entscheidungspunkt aus der Klärungsliste wartet':' Entscheidungspunkte aus der Klärungsliste warten')+'</p>':'')+
+    weitere+
     folgt('Planliste','L3.PLI','Planliste, Dokumente, Ausgaben, Verteiler, Austausch, Ablage')+
-    folgt('Fachplanerbedarf und Schnittstellen','Koordination','Fachplanerbedarf, Schnittstellenmatrix mit der Legende der ByAK, Fragen je Disziplin, Eingang der Rückmeldungen')+
     '</div></section>'+
     '<section class="pd-abschnitt"><h2>Texte</h2><p class="meta">feste Abschnitte, Daten des Projekts schon eingesetzt · Ausgabe als Word oder PDF</p><div class="pd-grid">'+
     '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Entscheidungsvorlagen</h3><span class="pd-code">L3.ENV.1</span></div>'+vorlagenListe+
@@ -524,10 +603,39 @@ function kopfText(art,sp){
   return sp.kurz||sp.kopf;
 }
 const STATUS_KLASSE={'offen':'offen','in Klärung':'klaerung','gelöst':'ok','Vorbehalt':'att','Entscheidungspunkt':'ag','entfällt':'mute',
-  'vorbereitet':'offen','vorgelegt':'klaerung','entschieden':'ok','vertagt':'att'};
+  'vorbereitet':'offen','vorgelegt':'klaerung','entschieden':'ok','vertagt':'att',
+  'beantwortet':'ok','Termin vereinbart':'klaerung','angefragt':'klaerung','Angebot liegt vor':'klaerung','empfohlen':'ag','beauftragt':'ok',
+  'v0 Vorschlag':'offen','offen – Kick-off':'att','v1 abgestimmt':'ok','geändert':'att'};
+// Auswahlwerte der weiteren Listen als Marke: ja/nein, beauftragt, Rückmeldung.
+const WERT_KLASSE={erforderlich:{ja:'klaerung','prüfen':'att'},beauftragt:{ja:'ok',angefragt:'klaerung'},vollstaendig:{ja:'ok',nein:'att'},
+  rueckmeldung:{'stimmt überein':'ok','Vorbehalt':'att','ausstehend':'offen'}};
+// Farbe eines Felds der Schnittstellenmatrix wie in der Vorlage: das erste von ? G B K F M V, das vorkommt.
+function zKlasse(v){const t=String(v||'').toUpperCase();for(const c of '?GBKFMV')if(t.includes(c))return c==='?'?'q':c.toLowerCase();return ''}
+function standKlasse(t){return t==='bestätigt'||t==='eindeutig'?'st-ok':/überfällig$/.test(t)?'chip-err':/^(Vorbehalt|offen|keine|mehrere)|unvollständig$/.test(t)?'st-att':t==='Rückmeldung ausstehend'?'st-klaerung':'st-offen'}
 function zellInhalt(art,z,sp){
   const d=z.daten,k=sp.key;
-  if(k==='nr')return '<span class="pd-nr">'+esc(K.nummer(art,z.nr))+'</span>';
+  if(k==='nr')return '<span class="pd-nr">'+esc(K.nummer(art,z.nr,z.daten))+'</span>';
+  if(sp.typ==='meilenstein'){
+    const v=String(d[k]||'').trim();if(!v)return '';
+    const code=K.istMeilenstein(v)?v:'',iso=K.terminVon(v);
+    const ueber=!!iso&&K.ueberfaellig(art,d)&&K.faelligAm(art,d)===iso;
+    return (code?'<span class="pd-ms" title="'+esc(K.meilensteinName(code)||'Meilenstein')+(iso?'':' · ohne Datum im Terminplan')+'">'+esc(code)+'</span>':'')+
+      (iso?(code?' ':'')+esc(K.datumKurz(iso)):'')+(ueber?' <span class="chip chip-err">überfällig</span>':'');
+  }
+  if(sp.typ==='zustaendigkeit'){const v=String(d[k]||'').trim();return v?'<span class="pd-z pd-z-'+zKlasse(v)+'">'+esc(v)+'</span>':''}
+  if(art==='schnittstellen'&&k==='eindeutig'){const t=K.zustaendigkeit(d);return !t?'':t==='–'?'<span class="pd-mute">–</span>':'<span class="chip '+standKlasse(t)+'">'+esc(t)+'</span>'}
+  if(art==='eingang'&&k==='stand'){const t=K.eingangStand(d);return t?'<span class="chip '+standKlasse(t)+'">'+esc(t)+'</span>':''}
+  if(WERT_KLASSE[k]&&K.WEITERE.includes(art)&&d[k]){const c=WERT_KLASSE[k][d[k]];return c?'<span class="chip st-'+c+'">'+esc(d[k])+'</span>':'<span class="pd-mute">'+esc(d[k])+'</span>'}
+  if(art==='fachplanerbedarf'&&k==='disziplin'&&!ui.alleSpalten)
+    return '<span title="'+esc(d.regel?'In der Regel erforderlich, wenn: '+d.regel:'')+'">'+esc(d.disziplin)+'</span>'+(d.kuerzel&&d.kuerzel!=='–'?' <span class="pd-ms">'+esc(d.kuerzel)+'</span>':'')+
+      (d.leistungsbild?'<span class="pd-unter">'+esc(d.leistungsbild)+'</span>':'');
+  // Eingang ohne eigenes Büro: das Büro aus dem Fachplanerbedarf (gleiches Kürzel), grau, bis jemand eines einträgt.
+  if(art==='eingang'&&k==='buero'&&!String(d.buero||'').trim()){
+    const f=zeilen.fachplanerbedarf.find(x=>x.daten.kuerzel===d.disziplin&&String(x.daten.buero||'').trim());
+    return f?'<span class="pd-mute" title="aus dem Fachplanerbedarf">'+esc(f.daten.buero)+'</span>':'';
+  }
+  if(art==='fragenliste'&&k==='frage'&&!ui.alleSpalten&&d.wer&&d.wer!==K.WER_FRAGT[0])return esc(d.frage)+'<span class="pd-unter">'+esc(d.wer)+'</span>';
+  if(art==='schnittstellen'&&k==='thema'&&!ui.alleSpalten&&d.kg&&d.kg!=='–')return esc(d.thema)+'<span class="pd-unter">KG '+esc(d.kg)+'</span>';
   if(k==='_vorlage'){
     const v=d.vorlage_id&&zeilen.entscheidungsvorlagen.find(x=>x.id===d.vorlage_id);
     return v?'<a href="'+esc(url({projekt:projekt.id,vorlage:v.id}))+'" data-nav>'+esc(K.nummer('entscheidungsvorlagen',v.nr))+' öffnen</a>'
@@ -580,25 +688,59 @@ function editor(art,z,sp){
   if(sp.typ==='datum')return '<input'+a+' value="'+esc(K.datumLang(v))+'" placeholder="TT.MM." inputmode="numeric" autocomplete="off">';
   if(sp.typ==='auswahl')return '<select'+a+'><option value=""></option>'+sp.werte.map(w=>'<option'+(w===v?' selected':'')+'>'+esc(w)+'</option>').join('')+'</select>';
   if(sp.typ==='mehrfach')return '<input'+a+' value="'+esc(Array.isArray(v)?v.join(', '):'')+'" placeholder="z. B. TWP, HLS" autocomplete="off" list="pdDisziplinen">';
+  if(sp.typ==='meilenstein')return '<input'+a+' value="'+esc(terminEingabe(v))+'" placeholder="M03 oder TT.MM." autocomplete="off" list="pdMeilensteine">';
+  if(sp.typ==='zustaendigkeit')return '<select'+a+' aria-label="'+esc(sp.kopf)+'"><option value=""></option>'+sp.werte.map(w=>'<option'+(w===v?' selected':'')+' title="'+esc(K.LEGENDE.find(l=>l[0]===w)?.[1]||'')+'">'+esc(w)+'</option>').join('')+'</select>';
   return '<input'+a+' value="'+esc(v)+'" autocomplete="off">';
 }
-const BEARBEITBAR=['text','lang','datum','auswahl','mehrfach'];
+// Termin zum Bearbeiten: der Code oder das Datum, wie man es eintippt.
+const terminEingabe=v=>K.istMeilenstein(v)?String(v).trim():K.datumLang(v)||String(v??'');
+function meilensteinListe(){
+  return '<datalist id="pdMeilensteine">'+K.MEILENSTEINE.map(([c,t])=>{const d=K.terminVon(c);return '<option value="'+c+'">'+esc(t+(d?' · '+K.datumLang(d):''))+'</option>'}).join('')+'</datalist>';
+}
+const BEARBEITBAR=['text','lang','datum','auswahl','mehrfach','meilenstein','zustaendigkeit'];
+// Disziplinen für den Filter: in der Schnittstellenmatrix die Spalten der Matrix, sonst die Liste der Vorlage ohne «alle».
+function disziplinWahl(art){
+  const liste=art==='schnittstellen'?K.MATRIX.map(m=>[m[2],m[1]]):K.DISZIPLINEN.filter(d=>d[0]!=='ALLE');
+  return '<label class="pd-sel"><span>Disziplin</span><select data-act="disziplin"><option value="">alle</option>'+liste.map(([c,l])=>'<option value="'+c+'"'+(ui.disziplin===c?' selected':'')+' title="'+esc(l)+'">'+c+'</option>').join('')+'</select></label>';
+}
+// Leere weitere Liste: anlegen mit den Zeilen der Bürovorlage oder leer beginnen.
+function anlegenPanel(art){
+  const n=(V[art]||[]).length,doc=K.DOKUMENTE[art];
+  return '<section class="card pd-anlegen"><h2>'+(dokumente[art]?esc(doc.kurz)+' ist noch leer':esc(doc.kurz)+' anlegen')+'</h2>'+
+    (n?'<p>Die Bürovorlage hat '+n+' '+esc(n===1?doc.zeile:doc.zeilen)+' vorbereitet: '+esc(VORLAGE_TEXT[art]||'')+'. Danach gehört die Liste dem Projekt: ändern, ergänzen, auf «entfällt» setzen.</p>':'')+
+    '<div class="pd-karte-aktionen">'+(n?'<button type="button" class="btn btn-primary" data-act="anlegen-vorlage">Mit '+(n===1?'der':'den')+' '+n+' '+esc(n===1?doc.zeile:doc.zeilen)+' der Bürovorlage '+(dokumente[art]?'füllen':'anlegen')+'</button>':'')+
+    (dokumente[art]?'':'<button type="button" class="btn" data-act="anlegen-leer">Leer anlegen</button>')+'</div></section>';
+}
+// Schnittstellen: nach Gruppen (Reihenfolge des ersten Auftretens), Zeilen ohne Gruppe am Ende unter «Weitere».
+function nachGruppen(alle,sicht){
+  const reihe=[];for(const z of alle){const g=String(z.daten.gruppe||'');if(!reihe.includes(g))reihe.push(g)}
+  reihe.sort((a,b)=>(a===''?1:0)-(b===''?1:0));
+  const rang=new Map(reihe.map((g,i)=>[g,i]));
+  return [...sicht].sort((a,b)=>rang.get(String(a.daten.gruppe||''))-rang.get(String(b.daten.gruppe||''))||a.nr-b.nr);
+}
 function renderListe(){
-  const art=ui.art,doc=K.DOKUMENTE[art],alle=zeilen[art];
-  const zahlen=K.zaehle(art,alle),fz=K.zaehleFilter(art,alle);
-  const sicht=K.filtere(art,alle,{filter:ui.filter,disziplin:ui.disziplin,suche:ui.suche});
+  const art=ui.art,doc=K.DOKUMENTE[art],alle=zeilen[art],weitere=K.WEITERE.includes(art),mitRomy=romy.bereit&&MIT_ROMY.includes(art);
+  // Die Zahlen an den Filtern gelten für die gewählte Disziplin (die Fragen an die TWP: wie viele offen, wie viele überfällig).
+  const zahlen=K.zaehle(art,alle),fz=K.zaehleFilter(art,ui.disziplin?K.filtere(art,alle,{disziplin:ui.disziplin}):alle);
+  let sicht=K.filtere(art,alle,{filter:ui.filter,disziplin:ui.disziplin,suche:ui.suche});
+  if(art==='schnittstellen')sicht=nachGruppen(alle,sicht);
   const spalten=spaltenFuer(art);
   const runde=art==='klaerungsliste'?(dokumente[art]?.meta?.runde||'01'):'';
   const meta=(runde?'Runde '+esc(runde)+' · ':'')+esc(K.zusammenfassung(art,zahlen))+' · <span data-speicher>'+esc(speicherText())+'</span>';
-  const aktionen='<button type="button" class="btn btn-primary" data-act="neu">+ '+(art==='klaerungsliste'?'Zeile':'Entscheidung')+'</button>'+
-    (romy.bereit?'<button type="button" class="btn btn-romy" data-act="romy">Romy fragen</button>':'')+
+  // Die Fragenliste für eine Fachplanung: Excel mit ihren Fragen und denen an alle.
+  const excelText=art==='fragenliste'&&ui.disziplin?'Excel für '+ui.disziplin:'Excel';
+  const aktionen='<button type="button" class="btn btn-primary" data-act="neu">+ '+esc(NEU_KNOPF[art]||'Zeile')+'</button>'+
+    (mitRomy?'<button type="button" class="btn btn-romy" data-act="romy">Romy fragen</button>':'')+
     '<button type="button" class="btn" data-act="spalten" aria-pressed="'+ui.alleSpalten+'">'+(ui.alleSpalten?'Kompakt':'Alle Spalten')+'</button>'+
-    '<button type="button" class="btn" data-act="excel" data-art="'+art+'">Excel</button>';
+    (alle.length||!weitere?'<button type="button" class="btn" data-act="excel" data-art="'+art+'">'+esc(excelText)+'</button>':'');
   const filter='<div class="pd-filter">'+K.FILTER[art].map(([k,l])=>'<button type="button" class="chip" data-act="filter" data-f="'+esc(k)+'" aria-pressed="'+(ui.filter===k)+'">'+esc(l)+' '+fz[k]+'</button>').join('')+
-    (art==='klaerungsliste'?'<label class="pd-sel"><span>Disziplin</span><select data-act="disziplin"><option value="">alle</option>'+K.DISZIPLINEN.filter(d=>d[0]!=='ALLE').map(([c,l])=>'<option value="'+c+'"'+(ui.disziplin===c?' selected':'')+' title="'+esc(l)+'">'+c+'</option>').join('')+'</select></label>'
-      +'<label class="pd-sel"><span>Runde</span><select data-act="runde">'+K.RUNDEN.map(r=>'<option'+(r===runde?' selected':'')+'>'+r+'</option>').join('')+'</select></label>':'')+
+    (K.MIT_DISZIPLIN.includes(art)?disziplinWahl(art):'')+
+    (art==='klaerungsliste'?'<label class="pd-sel"><span>Runde</span><select data-act="runde">'+K.RUNDEN.map(r=>'<option'+(r===runde?' selected':'')+'>'+r+'</option>').join('')+'</select></label>':'')+
     '<input type="search" class="pd-suche" id="pd-suche" data-act="suche" placeholder="Suchen" value="'+esc(ui.suche)+'" aria-label="In der Liste suchen"></div>';
   let banner=romyBanner(art);
+  if(HINWEIS[art])banner+='<p class="pd-listenhinweis'+(art==='schnittstellen'?' pd-legende':'')+'">'+esc(HINWEIS[art])+'</p>';
+  if(weitere&&!termineDa&&K.SPALTEN[art].some(sp=>sp.typ==='meilenstein'))
+    banner+='<p class="pd-listenhinweis">Im Terminplan des Projekts stehen noch keine Meilensteine M00 … M11; die Termine bleiben bis dahin ohne Datum. Ein Datum lässt sich auch direkt eintragen.</p>';
   if(art==='entscheidungsliste'){
     const warten=K.wartendeEntscheidungspunkte(zeilen.klaerungsliste,zeilen.entscheidungsliste).filter(z=>!ui.spaeter.has(z.id));
     const naechste=K.nummer('entscheidungsliste',(alle.reduce((m,z)=>Math.max(m,z.nr),0))+1);
@@ -606,29 +748,38 @@ function renderListe(){
       '<div class="pd-banner-actions"><button type="button" class="btn" data-act="ep-uebernehmen" data-z="'+z.id+'">Als '+esc(naechste)+' übernehmen</button><button type="button" class="btn btn-quiet" data-act="ep-spaeter" data-z="'+z.id+'">Später</button></div></div>').join('');
   }
   const auswahl=[...ui.auswahl].map(id=>alle.find(z=>z.id===id)).filter(Boolean);
-  const leiste=auswahl.length?'<div class="pd-auswahl" role="region" aria-label="Auswahl"><strong>'+auswahl.length+(auswahl.length===1?' Zeile':' Zeilen')+' ausgewählt</strong>'+
-    (art==='klaerungsliste'?'<button type="button" class="btn" data-act="aufgaben">Aufgaben im Planner anlegen</button><button type="button" class="btn" data-act="in-entscheidungen">In die Entscheidungsliste</button>'
-      :'<button type="button" class="btn" data-act="vorlage-auswahl">Vorlage aus der Auswahl</button>')+
-    (romy.bereit?'<span class="pd-auswahl-romy">Romy:</span>'+(art==='klaerungsliste'?'<button type="button" class="btn" data-act="romy-fachplaner">Frage an die Fachplaner formulieren</button><button type="button" class="btn" data-act="romy-fristen">Fristen mit dem Terminplan prüfen</button>'
+  const eigene=art==='klaerungsliste'?'<button type="button" class="btn" data-act="aufgaben">Aufgaben im Planner anlegen</button><button type="button" class="btn" data-act="in-entscheidungen">In die Entscheidungsliste</button>'
+    :art==='entscheidungsliste'?'<button type="button" class="btn" data-act="vorlage-auswahl">Vorlage aus der Auswahl</button>'
+    :art==='fragenliste'?'<button type="button" class="btn" data-act="fragen-kopieren">Für die Mail kopieren</button>':'';
+  const leiste=auswahl.length?'<div class="pd-auswahl" role="region" aria-label="Auswahl"><strong>'+auswahl.length+(auswahl.length===1?' Zeile':' Zeilen')+' ausgewählt</strong>'+eigene+
+    (mitRomy?'<span class="pd-auswahl-romy">Romy:</span>'+(art==='klaerungsliste'?'<button type="button" class="btn" data-act="romy-fachplaner">Frage an die Fachplaner formulieren</button><button type="button" class="btn" data-act="romy-fristen">Fristen mit dem Terminplan prüfen</button>'
       :'<button type="button" class="btn" data-act="romy-bestaetigung">Bestätigung als Mail entwerfen</button>')+'<button type="button" class="btn" data-act="romy-frage">Frage stellen …</button>':'')+
     '<button type="button" class="btn btn-quiet" data-act="auswahl-weg">Auswahl aufheben</button></div>':'';
   const kopfzeile='<tr><th class="pd-check"><input type="checkbox" data-act="alle" aria-label="Alle auswählen"'+(sicht.length&&sicht.every(z=>ui.auswahl.has(z.id))?' checked':'')+'></th>'+
-    spalten.map(sp=>'<th class="pd-t-'+sp.typ+'" scope="col">'+esc(kopfText(art,sp))+'</th>').join('')+'</tr>';
+    spalten.map(sp=>'<th class="pd-t-'+sp.typ+'" scope="col"'+(sp.typ==='zustaendigkeit'?' title="'+esc(sp.kopf)+'"':'')+'>'+esc(kopfText(art,sp))+'</th>').join('')+'</tr>';
+  let gruppe=null;
   const reihen=sicht.map(z=>{
     const d=z.daten;
     const kl=['pd-zeile'];if(K.erledigt(art,d))kl.push('pd-erledigt');if(ui.detail===z.id)kl.push('pd-aktiv');if(K.ueberfaellig(art,d))kl.push('pd-ueber');
-    return '<tr class="'+kl.join(' ')+'" data-zeile="'+z.id+'"><td class="pd-check"><input type="checkbox" data-act="waehle" data-z="'+z.id+'" aria-label="Zeile '+esc(K.nummer(art,z.nr))+' auswählen"'+(ui.auswahl.has(z.id)?' checked':'')+'></td>'+
+    const g=art==='schnittstellen'?String(d.gruppe||''):null;
+    const kopfG=g!==null&&g!==gruppe?'<tr class="pd-gruppe"><th colspan="'+(spalten.length+1)+'" scope="rowgroup">'+esc(g||'Weitere')+'</th></tr>':'';
+    gruppe=g;
+    return kopfG+'<tr class="'+kl.join(' ')+'" data-zeile="'+z.id+'"><td class="pd-check"><input type="checkbox" data-act="waehle" data-z="'+z.id+'" aria-label="Zeile '+esc(K.nummer(art,z.nr,z.daten))+' auswählen"'+(ui.auswahl.has(z.id)?' checked':'')+'></td>'+
       spalten.map(sp=>zelle(art,z,sp,geaendert(art,z).has(sp.key))).join('')+'</tr>'+aenderungsZeilen(art,z,spalten.length);
   }).join('')+neueVorschlaege(art,spalten);
-  const neuIndex=spalten.findIndex(sp=>sp.key===NEU_FELD[art]);
-  const neuZeile='<tr class="pd-neu"><td class="pd-check"></td>'+spalten.map((sp,i)=>i===neuIndex?'<td class="pd-c" colspan="'+(spalten.length-i)+'"><input class="pd-in pd-neu-in" data-neu placeholder="Neue Zeile: '+(art==='klaerungsliste'?'Sachverhalt':'Thema')+' eintippen, Enter legt sie an und springt in die nächste Spalte" aria-label="Neue Zeile"></td>':i<neuIndex?'<td class="pd-c">'+(i===0?'<span class="pd-mute">'+esc(K.nummer(art,(alle.reduce((m,z)=>Math.max(m,z.nr),0))+1))+'</span>':'')+'</td>':'').join('')+'</tr>';
+  const neuIndex=spalten.findIndex(sp=>sp.key===(NEU_SPALTE[art]||NEU_FELD[art]));
+  const naechsteNr=K.nummer(art,(alle.reduce((m,z)=>Math.max(m,z.nr),0))+1);
+  const neuZeile='<tr class="pd-neu"><td class="pd-check"></td>'+spalten.map((sp,i)=>i===neuIndex?'<td class="pd-c" colspan="'+(spalten.length-i)+'"><input class="pd-in pd-neu-in" data-neu placeholder="Neue Zeile: '+esc(NEU_TEXT[art]||'Thema')+' eintippen, Enter legt sie an und springt in die nächste Spalte" aria-label="Neue Zeile"></td>':i<neuIndex?'<td class="pd-c">'+(i===0&&!['fragenliste','eingang'].includes(art)?'<span class="pd-mute">'+esc(naechsteNr)+'</span>':'')+'</td>':'').join('')+'</tr>';
   const fuss='<p class="meta pd-fuss">'+(ui.alleSpalten?'Alle '+(spalten.length)+' Spalten wie in der Bürovorlage.':'Kompakt: '+KOMPAKT[art].filter(k=>k!=='_vorlage').length+' von '+K.SPALTEN[art].length+' Spalten. «Alle Spalten» zeigt alle Spalten der Bürovorlage.')+
-    ' Klick in eine Zelle bearbeitet sie; Enter oder Tab springt weiter, Esc bricht ab. Die Nummer öffnet die Details.'+(sicht.length<alle.length?' Gefiltert: '+sicht.length+' von '+alle.length+'.':'')+'</p>';
+    ' Klick in eine Zelle bearbeitet sie; Enter oder Tab springt weiter, Esc bricht ab. '+(art==='eingang'?'Die Disziplin':'Die Nummer')+' öffnet die Details.'+(sicht.length<alle.length?' Gefiltert: '+sicht.length+' von '+alle.length+'.':'')+'</p>';
+  const tabelle=weitere&&!alle.length?anlegenPanel(art)+(dokumente[art]?'<div class="pd-tabelle-wrap pd-tabelle-leer"><table class="pd-tabelle"><thead>'+kopfzeile+'</thead><tbody>'+neuZeile+'</tbody></table></div>':'')
+    :'<div class="pd-tabelle-wrap"><table class="pd-tabelle'+(ui.alleSpalten?' pd-alle':'')+(art==='schnittstellen'?' pd-matrix':'')+'"><thead>'+kopfzeile+'</thead><tbody>'+reihen+neuZeile+'</tbody></table></div>'+fuss;
   const fokus=vorZeichnen();
   const html='<div class="pd-wrap pd-liste-wrap'+(ui.detail?' mit-detail':'')+'">'+kopf({zurueck:[url({projekt:projekt.id}),IM_REITER?'‹ Listen':'‹ Projektstart'],kicker:IM_REITER?'Listen':'Projektstart · '+projektName(),titel:doc.titel,meta,aktionen})+
-    filter+banner+leiste+
-    '<div class="pd-tabelle-wrap"><table class="pd-tabelle'+(ui.alleSpalten?' pd-alle':'')+'"><thead>'+kopfzeile+'</thead><tbody>'+reihen+neuZeile+'</tbody></table></div>'+fuss+
+    (alle.length||!weitere?filter:'')+banner+leiste+tabelle+
     '<datalist id="pdDisziplinen">'+K.DISZIPLINEN.map(([c,l])=>'<option value="'+c+'">'+esc(l)+'</option>').join('')+'</datalist>'+
+    (K.SPALTEN[art].some(sp=>sp.typ==='meilenstein')?meilensteinListe():'')+
+    (art==='schnittstellen'?'<datalist id="pdGruppen">'+[...new Set(alle.map(z=>String(z.daten.gruppe||'')).filter(Boolean))].map(g=>'<option value="'+esc(g)+'"></option>').join('')+'</datalist>':'')+
     (ui.detail?detailPanel(art):'')+'</div>';
   zeichne(html,fokus);
 }
@@ -641,6 +792,7 @@ function naechsteZelle(art,z,key,richtung=1){
 }
 function lies(art,sp,roh){
   if(sp.typ==='datum'){const iso=K.leseDatum(roh);if(iso===null){meldung('Datum bitte als TT.MM. oder TT.MM.JJJJ eingeben.','warn');return {ok:false}}return {ok:true,wert:iso}}
+  if(sp.typ==='meilenstein'){const t=K.leseTermin(roh);if(t===null){meldung('Termin bitte als Meilenstein (z. B. M03) oder als Datum TT.MM. eingeben.','warn');return {ok:false}}return {ok:true,wert:t}}
   if(sp.typ==='mehrfach'){
     const codes=[...new Set(String(roh).split(/[\s,;/]+/).map(x=>x.trim().toUpperCase()).filter(Boolean))];
     const fremd=codes.filter(c=>!sp.werte.includes(c));
@@ -679,7 +831,11 @@ function feldEingabe(art,z,key,{typ,werte,lang=false,label=null,hinweis=''}={}){
   let input;
   if(t==='lang')input='<textarea class="pd-in"'+a+' rows="3">'+esc(v)+'</textarea>';
   else if(t==='datum')input='<input class="pd-in"'+a+' value="'+esc(K.datumLang(v))+'" placeholder="TT.MM.JJJJ" data-typ="datum" autocomplete="off">';
-  else if(t==='auswahl'||t==='janein'){const w=werte||sp?.werte||[];input='<select class="pd-in"'+a+'><option value=""></option>'+w.map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select>'}
+  else if(t==='meilenstein')input='<input class="pd-in"'+a+' value="'+esc(terminEingabe(v))+'" placeholder="M03 oder TT.MM.JJJJ" data-typ="meilenstein" list="pdMeilensteine" autocomplete="off">';
+  else if(t==='berechnet')input='<p class="pd-berechnet" id="f-'+key+'">'+esc(K.zellText(art,key,z.daten,{nr:z.nr})||'–')+'</p>';
+  else if(t==='zustaendigkeit')input='<select class="pd-in"'+a+'><option value=""></option>'+(sp?.werte||[]).map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select>';
+  else if(t==='auswahl'||t==='janein'){const w=werte||sp?.werte||[];input='<select class="pd-in"'+a+'><option value=""></option>'+w.map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('')+(v&&!w.includes(v)?'<option selected>'+esc(v)+'</option>':'')+'</select>'}
+  else if(t==='liste')input='<input class="pd-in"'+a+' value="'+esc(v)+'" list="'+esc(werte)+'" autocomplete="off">';
   else if(t==='mehrfach'){
     const gew=Array.isArray(v)?v:[];
     input='<div class="pd-codes" role="group" aria-label="'+esc(label||K.feldName(art,key))+'">'+(sp?.werte||[]).map(c=>'<button type="button" class="chip" data-act="code" data-z="'+z.id+'" data-feld="'+key+'" data-code="'+c+'" aria-pressed="'+gew.includes(c)+'" title="'+esc(K.DISZIPLINEN.find(d=>d[0]===c)?.[1]||'')+'">'+c+'</button>').join('')+'</div>';
@@ -703,7 +859,16 @@ function detailPanel(art){
   const z=zeilen[art].find(x=>x.id===ui.detail);if(!z)return '';
   const d=z.daten;
   let felder='';
-  if(art==='klaerungsliste'){
+  if(K.WEITERE.includes(art)){
+    // Alle Spalten der Vorlage als Felder; dazu, was nicht als Spalte steht (Code der Frage, Disziplin im Eingang, Gruppe).
+    const vorne=art==='fragenliste'?[feldEingabe(art,z,'code',{label:'Nr (Code der Frage)',hinweis:'Vergeben mit der Disziplin, z. B. TWP-07.'})]
+      :art==='eingang'?[feldEingabe(art,z,'disziplin',{typ:'auswahl',werte:K.DISZIPLINEN.map(x=>x[0])})]
+      :art==='schnittstellen'?[feldEingabe(art,z,'gruppe',{typ:'liste',werte:'pdGruppen',label:'Gruppe',hinweis:'z. B. «B · Themen und Bauteile»; ohne Gruppe steht die Zeile unter «Weitere».'})]:[];
+    const matrix=art==='schnittstellen'?'<div class="pd-feld"><label>Zuständigkeit</label><div class="pd-matrix-felder">'+K.MATRIX.map(([k,kopf])=>'<label class="pd-ofeld"><span>'+esc(kopf)+'</span>'+
+      '<select class="pd-in" data-feld="'+k+'" data-z="'+z.id+'" id="f-'+k+'"><option value=""></option>'+K.ZUSTAENDIGKEIT.map(x=>'<option'+(x===d[k]?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>').join('')+
+      '</div><p class="meta">'+esc(HINWEIS.schnittstellen)+'</p></div>':'';
+    felder=vorne.join('')+K.SPALTEN[art].filter(sp=>sp.key!=='nr'&&sp.typ!=='zustaendigkeit').map(sp=>sp.key==='eindeutig'?matrix+feldEingabe(art,z,sp.key):feldEingabe(art,z,sp.key)).join('');
+  }else if(art==='klaerungsliste'){
     felder=['runde','erfasst_am','disziplinen','ort','plan','sachverhalt','loesung','verantwortlich','frist','status','ag','folgen','erledigt_am','protokoll'].map(k=>feldEingabe(art,z,k)).join('');
   }else{
     felder=feldEingabe(art,z,'thema')+feldEingabe(art,z,'herkunft')+feldEingabe(art,z,'anlass',{lang:true,label:'Anlass · Sachverhalt'})+feldEingabe(art,z,'frage')+
@@ -720,7 +885,8 @@ function detailPanel(art){
       '<p class="meta">«entschieden» setzt nur, wer im Projektteam ist, mit Datum und Entscheider; Romy trägt nie eine Entscheidung ein.</p></div>';
   }
   const verknuepft=[];
-  if(art==='klaerungsliste'){
+  if(K.WEITERE.includes(art)){}
+  else if(art==='klaerungsliste'){
     if(d.aufgabe_id){const a=aufgaben.get(d.aufgabe_id);verknuepft.push('<li>Aufgabe im Planner: <a href="./app/#section=work&amp;project='+esc(projekt.id)+'">'+esc(a?.title||'öffnen')+'</a>'+(a?.due_date?' · bis '+esc(K.datumKurz(a.due_date)):'')+(a?.completed_at?' · erledigt':'')+'</li>')}
     else verknuepft.push('<li><button type="button" class="pd-link" data-act="aufgabe" data-z="'+z.id+'">Aufgabe im Planner anlegen</button>'+(d.verantwortlich&&d.frist?'':' <span class="meta">(mit Verantwortlichem und Frist am besten)</span>')+'</li>');
     const e=d.entscheidung_id&&zeilen.entscheidungsliste.find(x=>x.id===d.entscheidung_id);
@@ -733,9 +899,9 @@ function detailPanel(art){
     verknuepft.push(v?'<li>Vorlage <a href="'+esc(url({projekt:projekt.id,vorlage:v.id}))+'" data-nav>'+esc(K.nummer('entscheidungsvorlagen',v.nr))+' öffnen</a></li>':'<li><button type="button" class="pd-link" data-act="vorlage-anlegen" data-z="'+z.id+'">Vorlage anlegen</button></li>');
   }
   if(d.fundstelle)verknuepft.push('<li>Fundstelle: '+esc(d.fundstelle)+'</li>');
-  return '<aside class="pd-detail" aria-label="Details"><div class="pd-detail-kopf"><h2>'+esc(K.DOKUMENTE[art].zeile)+' '+esc(K.nummer(art,z.nr))+' · Details</h2><button type="button" class="pd-x" data-act="detail-zu" aria-label="Details schließen">×</button></div>'+
-    '<div class="pd-detail-inhalt">'+felder+'<h3>Verknüpft</h3><ul class="pd-verknuepft">'+verknuepft.join('')+'</ul>'+
-    (romy.bereit?'<h3>Romy</h3><div class="pd-feld"><label for="r-frage">Frage zu dieser Zeile</label><textarea class="pd-in" id="r-frage" rows="2" placeholder="z. B. Was ändert sich in der Kostenberechnung, wenn der Unterzug deckengleich wird?"></textarea>'+
+  return '<aside class="pd-detail" aria-label="Details"><div class="pd-detail-kopf"><h2>'+esc(K.DOKUMENTE[art].zeile)+' '+esc(K.nummer(art,z.nr,z.daten))+' · Details</h2><button type="button" class="pd-x" data-act="detail-zu" aria-label="Details schließen">×</button></div>'+
+    '<div class="pd-detail-inhalt">'+felder+(verknuepft.length?'<h3>Verknüpft</h3><ul class="pd-verknuepft">'+verknuepft.join('')+'</ul>':'')+
+    (romy.bereit&&MIT_ROMY.includes(art)?'<h3>Romy</h3><div class="pd-feld"><label for="r-frage">Frage zu dieser Zeile</label><textarea class="pd-in" id="r-frage" rows="2" placeholder="z. B. Was ändert sich in der Kostenberechnung, wenn der Unterzug deckengleich wird?"></textarea>'+
       '<button type="button" class="btn btn-romy" data-act="romy-frage-zeile" data-z="'+z.id+'">Romy zu dieser Zeile fragen</button></div>':'')+
     '<h3>Verlauf</h3><div data-verlauf>'+verlaufHtml(art,z)+'</div>'+
     '<div class="pd-detail-fuss"><button type="button" class="btn btn-danger" data-act="loeschen" data-z="'+z.id+'">'+esc(K.DOKUMENTE[art].zeile)+' löschen</button></div></div></aside>';
@@ -1115,8 +1281,23 @@ function laden(datei,bytes,typ){
 const dateiName=t=>t.normalize('NFKD').replace(/[̀-ͯ]/g,'').replace(/ß/g,'ss').replace(/[^\w.-]+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
 async function excel(art){
   await alleSpeichern();
-  const blatt=X.listenBlatt(K,art,zeilen[art],{projekt:projektName()});
-  laden(dateiName(projekt.number+'_'+K.DOKUMENTE[art].kurz+'_'+heute())+'.xlsx',X.xlsx(blatt),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  // Die Fragenliste für eine Fachplanung (Filter «Disziplin»): ihre Fragen und die an alle, wie in der Vorlage zum Versand.
+  const fuer=art==='fragenliste'&&ui.ansicht==='liste'&&ui.art===art&&ui.disziplin?ui.disziplin:'';
+  const liste=fuer?K.filtere(art,zeilen[art],{disziplin:fuer}):zeilen[art];
+  const blatt=X.listenBlatt(K,art,liste,{projekt:projektName()+(fuer?' · Fragen an '+fuer:'')});
+  laden(dateiName(projekt.number+'_'+K.DOKUMENTE[art].kurz+(fuer?'_'+fuer:'')+'_'+heute())+'.xlsx',X.xlsx(blatt),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+// Ausgewählte Fragen als Text für eine Mail an die Fachplanung, je Zeile Code, Thema, Frage und Termin.
+async function fragenKopieren(liste){
+  if(!liste.length)return;
+  const text=[...liste].sort((a,b)=>a.nr-b.nr).map(z=>{const d=z.daten;
+    return K.nummer('fragenliste',z.nr,d)+' · '+(d.thema?d.thema+': ':'')+String(d.frage||'').trim()+(d.bis?' (gebraucht bis '+K.terminText(d.bis,heute(),{lang:true})+')':'')}).join('\n');
+  try{await navigator.clipboard.writeText(text);meldung(liste.length+(liste.length===1?' Frage':' Fragen')+' kopiert; in die Mail einfügen.')}
+  catch{
+    dialog.innerHTML='<form method="dialog" class="pd-dlg"><h2>Fragen für die Mail</h2><p class="meta">Markieren und kopieren.</p><textarea class="pd-in" rows="12" readonly>'+esc(text)+'</textarea>'+
+      '<div class="pd-dlg-aktionen"><button class="btn btn-primary">Schließen</button></div></form>';
+    dialog.showModal();dialog.querySelector('textarea')?.select();
+  }
 }
 
 // ---------- Entscheidungsvorlage ----------
@@ -2788,7 +2969,7 @@ function romyBanner(art){
 }
 function aenderungsZeilen(art,z,breite){
   return offene(art).filter(v=>v.art==='aenderung'&&v.zeile_id===z.id).map(v=>'<tr class="pd-vorschlag pd-vs-aenderung" data-vorschlag="'+esc(v.id)+'"><td class="pd-check"></td>'+
-    '<td class="pd-c" colspan="'+breite+'"><strong>Romy schlägt für '+esc(K.nummer(art,z.nr))+' vor:</strong> '+esc(K.aenderungText(art,z.daten,v.daten))+
+    '<td class="pd-c" colspan="'+breite+'"><strong>Romy schlägt für '+esc(K.nummer(art,z.nr,z.daten))+' vor:</strong> '+esc(K.aenderungText(art,z.daten,v.daten))+
     (v.begruendung?'<span class="pd-unter">'+esc(v.begruendung)+'</span>':'')+'<span class="pd-unter">Fundstelle: '+esc(v.fundstelle)+'</span>'+vsKnoepfe(v)+'</td></tr>').join('');
 }
 function neueVorschlaege(art,spalten){
@@ -2919,6 +3100,9 @@ root.addEventListener('click',e=>{
   if(act==='filter'){ui.filter=el.dataset.f;renderListe()}
   else if(act==='spalten'){ui.alleSpalten=!ui.alleSpalten;renderListe()}
   else if(act==='excel')void sicher(()=>excel(el.dataset.art));
+  else if(act==='anlegen-vorlage'){el.disabled=true;void sicher(()=>anlegen(art,{vorlage:true}))}
+  else if(act==='anlegen-leer'){el.disabled=true;void sicher(()=>anlegen(art))}
+  else if(act==='fragen-kopieren')void sicher(()=>fragenKopieren([...ui.auswahl].map(zeileVon).filter(Boolean)));
   else if(act==='neu'){const i=root.querySelector('[data-neu]');if(i){i.focus();i.scrollIntoView({block:'nearest'})}}
   else if(act==='waehle'){if(el.checked)ui.auswahl.add(el.dataset.z);else ui.auswahl.delete(el.dataset.z);renderListe()}
   else if(act==='alle'){const sicht=K.filtere(art,zeilen[art],{filter:ui.filter,disziplin:ui.disziplin,suche:ui.suche});ui.auswahl=el.checked?new Set(sicht.map(z=>z.id)):new Set();renderListe()}
@@ -3054,9 +3238,11 @@ root.addEventListener('keydown',e=>{
     e.preventDefault();const text=el.value.trim();if(!text)return;el.disabled=true;
     void sicher(async()=>{
       const art=ui.art,dok=await sichereDokument(art);
-      const d={...K.leereZeile(art,{runde:dok?.meta?.runde||''}),[NEU_FELD[art]]:text};
+      const wert=art==='eingang'?text.toUpperCase():text;
+      const d={...K.leereZeile(art,{runde:dok?.meta?.runde||''}),[NEU_FELD[art]]:wert};
       const z=await neueZeile(art,d);
-      ui.edit={z:z.id,k:naechsteZelle(art,z,NEU_FELD[art],1)||NEU_FELD[art]};renderListe();
+      const spalte=NEU_SPALTE[art]||NEU_FELD[art];
+      ui.edit={z:z.id,k:naechsteZelle(art,z,spalte,1)||spalte};renderListe();
     });
     return;
   }
@@ -3209,6 +3395,8 @@ function feldAusPanel(el){
   const key=el.dataset.feld;
   let wert=el.value;
   if(el.dataset.typ==='datum'){const iso=K.leseDatum(wert);if(iso===null){meldung('Datum bitte als TT.MM.JJJJ eingeben.','warn');return false}wert=iso}
+  if(el.dataset.typ==='meilenstein'){const t=K.leseTermin(wert);if(t===null){meldung('Termin bitte als Meilenstein (z. B. M03) oder als Datum TT.MM.JJJJ eingeben.','warn');return false}wert=t}
+  if(art==='eingang'&&key==='disziplin')wert=String(wert||'').trim().toUpperCase();
   if(art==='entscheidungsliste'&&key==='status'&&wert==='entschieden'&&z.daten.status!=='entschieden'){el.value=z.daten.status||'';entscheidungDialog(z);return false}
   if(gleich(z.daten[key],wert))return false;
   if(!setze(art,z,key,wert)){el.value=z.daten[key]??'';return false}
@@ -3248,14 +3436,14 @@ async function punktWeg(id){
 }
 async function loeschen(z){
   if(!z)return;const art=artVon(z.dokument_id);
-  if(!window.confirm(K.DOKUMENTE[art].zeile+' '+K.nummer(art,z.nr)+' wirklich löschen? Im Verlauf bleibt sie sichtbar.'))return;
+  if(!window.confirm(K.DOKUMENTE[art].zeile+' '+K.nummer(art,z.nr,z.daten)+' wirklich löschen? Im Verlauf bleibt sie sichtbar.'))return;
   if(z.timer){clearTimeout(z.timer);z.timer=null}
   const {error}=await sb.from('office_projektdokument_zeilen').delete().eq('id',z.id);
   if(error)throw error;
   zeilen[art]=zeilen[art].filter(x=>x!==z);
   for(const k of zeilen.klaerungsliste)if(k.daten.entscheidung_id===z.id){const d={...k.daten};delete d.entscheidung_id;k.daten=d;markiere(k)}
   for(const v of zeilen.entscheidungsvorlagen)if((v.daten.punkte||[]).includes(z.id)){v.daten={...v.daten,punkte:v.daten.punkte.filter(x=>x!==z.id)};markiere(v)}
-  ui.detail=null;ui.auswahl.delete(z.id);meldung(K.DOKUMENTE[art].zeile+' '+K.nummer(art,z.nr)+' gelöscht.');render();
+  ui.detail=null;ui.auswahl.delete(z.id);meldung(K.DOKUMENTE[art].zeile+' '+K.nummer(art,z.nr,z.daten)+' gelöscht.');render();
 }
 window.addEventListener('beforeunload',e=>{
   if(ungespeichert()){void alleSpeichern();e.preventDefault();e.returnValue=''}

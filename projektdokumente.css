@@ -646,3 +646,32 @@ html.mm-praes-offen{overflow:hidden}
   color:var(--m-error);font:inherit;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer}
 .mm-pille:hover{border-color:var(--m-error-fill);color:var(--m-error-fill)}
 .mm-pille[hidden]{display:none}
+
+/* Weitere Listen der Bürovorlage (28.11.2026): Fachplanerbedarf, Schnittstellen, Fragenliste, Eingang. Termine als
+   Meilenstein (Code fett, Datum daneben), die Matrix der Zuständigkeiten mit den Farben der Vorlage (? rot, G blau,
+   B violett, K blau hell, F gelb, M grau, V grün), Gruppenzeilen, Hinweis unter dem Filter. Nur Farben der Tokens. */
+.pd-ms{font-weight:600;color:var(--m-ink);font-variant-numeric:tabular-nums}
+.pd-wann{margin:0;font-size:13px;color:var(--pd-meta)}
+.pd-listenhinweis{margin:0 0 12px;font-size:13px;color:var(--pd-meta);max-width:980px;line-height:1.5}
+.pd-legende{font-size:12px}
+.pd-anlegen{padding:18px 20px;margin:0 0 14px;max-width:860px}
+.pd-anlegen h2{margin:0 0 6px}
+.pd-anlegen p{margin:0 0 6px;font-size:14px;color:var(--pd-muted);line-height:1.5}
+.pd-tabelle-leer{min-height:0}
+th.pd-t-meilenstein,td.pd-t-meilenstein{width:118px;white-space:nowrap}
+th.pd-t-zustaendigkeit,td.pd-t-zustaendigkeit{width:46px;min-width:46px;text-align:center;padding-left:4px;padding-right:4px}
+th.pd-t-zustaendigkeit{font-size:11px}
+td.pd-t-zustaendigkeit .pd-in{min-width:58px;padding:4px}
+th.pd-t-berechnet,td.pd-t-berechnet{min-width:120px}
+.pd-z{display:inline-flex;align-items:center;justify-content:center;min-width:26px;padding:3px 6px;border-radius:6px;font-size:12px;font-weight:600;line-height:1.2;background:var(--m-fill);color:var(--m-ink)}
+.pd-z-q{background:var(--m-error-soft);color:var(--m-error)}
+.pd-z-g{background:var(--m-information-soft);color:var(--m-information)}
+.pd-z-b{background:var(--m-decision-soft);color:var(--m-decision)}
+.pd-z-k{background:var(--m-blue-soft);color:var(--m-blue)}
+.pd-z-f{background:var(--m-attention-soft);color:var(--m-attention)}
+.pd-z-m{background:var(--m-fill);color:var(--m-ink-soft)}
+.pd-z-v{background:var(--m-success-soft);color:var(--m-success)}
+.pd-gruppe th{position:static;background:var(--m-surface);color:var(--m-ink);font-size:13px;font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid var(--pd-line)}
+.pd-berechnet{margin:0;font-size:14px;color:var(--m-ink)}
+.pd-matrix-felder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:760px){.pd-matrix-felder{grid-template-columns:repeat(3,minmax(0,1fr))}}

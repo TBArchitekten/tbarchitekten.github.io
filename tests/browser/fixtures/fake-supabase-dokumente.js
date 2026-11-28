@@ -104,7 +104,8 @@
             r.status='offen';r.created_by=UID;r.entschieden_von=null;r.entschieden_am=null;
           }
           if(table==='office_projektdokument_zeilen'){
-            r.nr=zeilen.filter(z=>z.dokument_id===r.dokument_id).reduce((m,z)=>Math.max(m,z.nr),0)+1;
+            // Wie der Trigger: auch die Zeilen, die dieselbe Anweisung schon eingefügt hat, zählen (mehrere Zeilen auf einmal).
+            r.nr=[...zeilen,...neu].filter(z=>z.dokument_id===r.dokument_id).reduce((m,z)=>Math.max(m,z.nr),0)+1;
             r.server_revision=1;r.quelle=r.vorschlag_id?'romy':'hand';r.created_by=UID;r.updated_by=null;
             const f=regeln(r);if(f)return {data:null,error:{message:f}};
           }
