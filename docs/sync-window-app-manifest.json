@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "d45775c5d3a286d3b415645df088d24f97234887",
+  "source_sha": "6ca4bc297eeae9f5da31b2012f859c9e84bfc1fb",
   "mode": "app",
   "files": [
     {
@@ -36,14 +36,14 @@
     {
       "source": "apps/isabella/live/live.css",
       "target": "app/live/live.css",
-      "sha": "422a03b8e8d5d44b9c3dc0f83c0be5aacf65d9b4",
-      "bytes": 4591
+      "sha": "a6c25fe7adbd89ad9717e3ce34792731caae12d1",
+      "bytes": 6229
     },
     {
       "source": "apps/isabella/live/live.js",
       "target": "app/live/live.js",
-      "sha": "73f2f0ffc25b4e596239d8347f71e810c2fc22dd",
-      "bytes": 24063
+      "sha": "9ce8c8ee7b49e0e11a8515d25768025b4ae371d2",
+      "bytes": 24657
     },
     {
       "source": "apps/isabella/live/transcript.js",
