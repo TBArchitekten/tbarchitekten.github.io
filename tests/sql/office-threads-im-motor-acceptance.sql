@@ -1,4 +1,4 @@
--- Abnahme · Threads auf dem Motor (Migration 20261128120000_office_threads_im_motor.sql), 28.11.2026.
+-- Abnahme · Threads auf dem Motor (Migration 20261128100934_office_threads_im_motor.sql), 28.11.2026.
 -- Erfundene Personen und Projekte; alles in einer Transaktion, die am Ende zurückgerollt wird.
 -- A = Mitglied mit Thread, C = anderes Mitglied. Geprüft: das Gespräch eines Threads liegt in conversations
 -- (app_scope work_thread), gehört A, entsteht nur einmal, wird mit umbenannt; C kommt nicht heran; ein Thread
