@@ -10,9 +10,9 @@
   const mq = window.matchMedia('(min-width: 950px)');
   if (!M || !screen || !sidebar) return;
   const KEY = 'isabella-adaptive-desk-v1';
-  // Im Office ist «Romy» nur das Gespräch (27.11.2026, Gari: Kalender, Heute und Arbeitsplan daneben waren «la vista
-  // vieja»; Heute und Kalender haben eigene Ansichten). Der Schreibtisch bleibt für die Seitenleiste und ihr Einklappen.
-  const PANELS = ['chat'];
+  // Im Office bleibt der Schreibtisch: Romy mit Kalender, Heute und Arbeitsplan daneben (Gari, 28.11.2026: «se me hacía
+  // mucho más práctica … como tipo Dashboard y así me ahorraba estar cambiando tanto de páginas»). Am 27.11. war er
+  // für einen Abend auf das Gespräch allein reduziert, aus einem Missverständnis.
   const LABELS = {chat:'Assistent',calendar:'Kalender',today:'Heute',plan:'Arbeitsplan'};
   const ICONS = {chat:'◇',calendar:'▦',today:'☷',plan:'▤'};
 
@@ -135,14 +135,12 @@
   const layout = () => {
     if (!shell) return;
     if (prefs.focus !== 'calendar' || prefs.minimized.includes('calendar')) releaseTime();
-    // Gespeicherte Einstellungen können Panels nennen, die es hier nicht gibt.
-    prefs.minimized = prefs.minimized.filter(k => PANELS.includes(k));
-    let visible = PANELS.filter(k => !prefs.minimized.includes(k));
-    if (!visible.length) {prefs.minimized=[];visible=[...PANELS];}
+    let visible = M.PANELS.filter(k => !prefs.minimized.includes(k));
+    if (!visible.length) {prefs.minimized=[];visible=[...M.PANELS];}
     if (!visible.includes(prefs.focus)) prefs.focus = visible.includes('chat') ? 'chat' : visible[0];
     const other = ['chat',...prefs.order].filter((key,i,arr) => key !== prefs.focus && visible.includes(key) && arr.indexOf(key) === i);
     const chatParentBefore = parts.chat.parentElement;
-    for (const key of PANELS) {
+    for (const key of M.PANELS) {
       const holder = key === prefs.focus ? stage : prefs.minimized.includes(key) ? parking : rail;
       if (parts[key].parentElement !== holder) holder.append(parts[key]);
       parts[key].classList.toggle('desk-panel-primary',key===prefs.focus);
@@ -422,8 +420,7 @@
       '<button type="button" data-desk-open-time>Tiempo '+deskIcon('arrow')+'</button></div>';
   };
   const render = () => {
-    // Nur das Gespräch: es gibt nichts daneben zu zeichnen.
-    if (!shell || !app() || PANELS.length < 2) return;
+    if (!shell || !app()) return;
     const state = app().getState();
     if(prefs.planMode==='week'){
       refreshPersonNames(state);
@@ -471,9 +468,9 @@
       return;
     }
     if (mini && parts[mini]) {
-      if (PANELS.filter(k=>!prefs.minimized.includes(k)).length<=1) return;
+      if (M.PANELS.filter(k=>!prefs.minimized.includes(k)).length<=1) return;
       prefs.minimized=[...prefs.minimized,mini];
-      if (mini===prefs.focus) prefs.focus = PANELS.find(k=>!prefs.minimized.includes(k)) || 'chat';
+      if (mini===prefs.focus) prefs.focus = M.PANELS.find(k=>!prefs.minimized.includes(k)) || 'chat';
       layout();return;
     }
     if (restore && parts[restore]) {prefs.minimized=prefs.minimized.filter(k=>k!==restore);layout();return;}
@@ -548,7 +545,7 @@
     originalScroll=q(screen,':scope > .assistant-scroll');
     originalComposer=q(screen,':scope > .composer-wrap');
     if (!originalScroll || !originalComposer || !app()) return;
-    shell = elt('div','desk-shell' + (PANELS.length < 2 ? ' desk-shell--allein' : ''));
+    shell = elt('div','desk-shell');
     const layoutBox = elt('div','desk-layout');
     stage = elt('div','desk-stage');
     rail = elt('div','desk-rail');
@@ -564,7 +561,7 @@
     dock.setAttribute('aria-label','Minimierte Ansichten');
     layoutBox.append(stage,splitter,rail);
     shell.append(layoutBox,dock,parking);
-    parts=Object.fromEntries(PANELS.map(k=>[k,panel(k)]));
+    parts=Object.fromEntries(M.PANELS.map(k=>[k,panel(k)]));
     parts.chat.append(originalScroll,originalComposer);
     screen.append(shell);
     navButton = elt('button','desk-nav-collapse','‹');

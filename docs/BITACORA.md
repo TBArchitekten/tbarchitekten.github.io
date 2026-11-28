@@ -17,6 +17,16 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-28 · Romy: der Schreibtisch ist zurück · Claude
+- Qué cambió y por qué: Gari (28.11., 08:03): «La página de inicio, la que cambiaste que ahora solo aparece el chat, se me hacía mucho más práctica como estaba antes … esa era como la página donde yo podía ver todo como tipo Dashboard y así me ahorraba estar cambiando tanto de páginas.» Am 27.11. (#214) hatte ich seine «vista vieja» als diesen Schreibtisch verstanden und ihn auf das Gespräch allein reduziert; das war ein Missverständnis. `app/dashboard.js` und `app/office-assistant.css` sind wieder wie vor #214 (Romy mit Kalender, Heute und Arbeitsplan), mit einem Kommentar zur Entscheidung und einem Test, der den Schreibtisch mit allen vier Feldern verlangt. Die übrigen Teile von #214 (Administration in der App, Startseite nur Anmeldung) bleiben.
+- Archivos: `app/dashboard.js` (office44), `app/office-assistant.css` (office10), `app/index.html`; Tests: `tests/office-kalender-heute.test.mjs`, Versionen in `tests/office-assistant.test.mjs`.
+- Base de datos: ninguna.
+- Deploy de funciones: ninguno.
+- Cómo se probó: `node --test` grün; Chromium mit Fake-Supabase: Romy mit Kalender, Heute und Arbeitsplan.
+- Quedó pendiente o sin probar: —
+- Riesgos o decisiones que necesitan a Gari: ninguna.
+- PR: #217
+
 ### 2026-11-27 · Work: Reiter «Listen» · Claude
 - Qué cambió y por qué: Gari (27.11., 15:50, Punkt 14, und 18:23: «1. listen», «hazlo»): die Listen und Texte des Projekts gehören in Work, wie der Terminplan; das Muster bleibt unter Werkzeuge. Neuer Reiter «Listen» neben dem Planner, eine Seite je Projekt (`projektdokumente.html?projekt=` im Rahmen, Werkzeug `listen` in `WORK_TOOLS`, immer da wie das Controlling, Symbol in der Seitenleiste). Im Rahmen zeigt die Seite keinen eigenen Kopf, keine Projektwahl und keinen Rückweg; Unterseiten führen «‹ Listen» zurück. «Besprechung nachbereiten» im Panorama öffnet jetzt im Reiter (vorher ein neues Browserfenster) mit seinem Dialog; ist die Seite schon offen, wird vorher gespeichert, was aussteht. Karten für noch Fehlendes sagen «Noch nicht gebaut» statt «folgt nach dem ersten Schritt».
 - Archivos: `app/work.js` (office68), `app/shell.js` (office66), `app/work-lens.js` (v5), `app/index.html`, `projektdokumente.js` (office18), `projektdokumente.html`; Tests: `tests/office-work-reiter.test.mjs` und die Versionen in weiteren.
