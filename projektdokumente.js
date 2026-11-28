@@ -22,7 +22,9 @@
    Weitere Listen (28.11.2026, Gari: die Listen des Projektstarts im Projekt bearbeiten wie die Entscheidungsliste, statt
    ein Excel herunterzuladen): Fachplanerbedarf, Schnittstellen, Fragenliste und Eingang, gleich bearbeitet (Zelle,
    Filter, Details mit Verlauf, Excel). Angelegt werden sie mit den Zeilen der Bürovorlage (projektdokumente-vorlagen.js)
-   oder leer; danach gehören sie dem Projekt. Termine als Meilenstein: das Datum kommt aus dem Terminplan des Projekts. */
+   oder leer; danach gehören sie dem Projekt. Termine als Meilenstein: das Datum kommt aus dem Terminplan des Projekts.
+   Zweiter Teil (28.11.2026): Planliste (Plannummer aus dem Kürzel des Projekts, je Ausgabe der ausgegebene Index),
+   Dokumente, Ausgaben, Verteiler, Austausch, Ablage. Die Spalten «Ausgabe n» zeigen Datum und Anlass der Ausgabe Nr n. */
 (()=>{
 'use strict';
 const K=window.TBA_PROJEKTDOKUMENTE,X=window.TBA_PROJEKTDOKUMENTE_EXPORT,OFFICE=window.TBA_OFFICE_CONFIG;
@@ -51,23 +53,41 @@ const KOMPAKT={klaerungsliste:['nr','disziplinen','ort','sachverhalt','verantwor
   ...Object.fromEntries(K.WEITERE.map(a=>[a,K.SPALTEN[a].filter(sp=>sp.kompakt).map(sp=>sp.key)]))};
 const VORLAGE_SPALTE={key:'_vorlage',kopf:'Vorlage',typ:'vorlage'};
 // Die neue Zeile: Feld, das eingetippt wird, die Spalte dafür (im Eingang steht die Disziplin in der ersten Spalte) und der Hinweis.
-const NEU_FELD={klaerungsliste:'sachverhalt',entscheidungsliste:'thema',fachplanerbedarf:'disziplin',schnittstellen:'thema',fragenliste:'frage',eingang:'disziplin'};
-const NEU_SPALTE={eingang:'nr'};
-const NEU_TEXT={klaerungsliste:'Sachverhalt',entscheidungsliste:'Thema',fachplanerbedarf:'Disziplin',schnittstellen:'Thema oder Bauteil',fragenliste:'Frage',eingang:'Disziplin (z. B. GEO)'};
-const NEU_KNOPF={klaerungsliste:'Zeile',entscheidungsliste:'Entscheidung',fachplanerbedarf:'Disziplin',schnittstellen:'Schnittstelle',fragenliste:'Frage',eingang:'Disziplin'};
+const NEU_FELD={klaerungsliste:'sachverhalt',entscheidungsliste:'thema',fachplanerbedarf:'disziplin',schnittstellen:'thema',fragenliste:'frage',eingang:'disziplin',
+  planliste:'titel',dokumente:'ergebnis',ausgaben:'anlass',verteiler:'empfaenger',austausch:'fachplanung',ablage:'ordner'};
+const NEU_SPALTE={eingang:'nr',verteiler:'nr',austausch:'nr',ablage:'nr'};
+const NEU_TEXT={klaerungsliste:'Sachverhalt',entscheidungsliste:'Thema',fachplanerbedarf:'Disziplin',schnittstellen:'Thema oder Bauteil',fragenliste:'Frage',eingang:'Disziplin (z. B. GEO)',
+  planliste:'Plantitel',dokumente:'Ergebnis',ausgaben:'Anlass',verteiler:'Empfänger',austausch:'Fachplanung',ablage:'Ordner'};
+const NEU_KNOPF={klaerungsliste:'Zeile',entscheidungsliste:'Entscheidung',fachplanerbedarf:'Disziplin',schnittstellen:'Schnittstelle',fragenliste:'Frage',eingang:'Disziplin',
+  planliste:'Plan',dokumente:'Ergebnis',ausgaben:'Ausgabe',verteiler:'Empfänger',austausch:'Fachplanung',ablage:'Ordner'};
 // Was die Bürovorlage in einer Liste vorbereitet hat (Text der Karte «Anlegen») und wann die Liste im Ablauf dran ist.
 const VORLAGE_TEXT={
   fachplanerbedarf:'je Disziplin das Leistungsbild, wann sie in der Regel erforderlich ist, und ein Vorschlag für den Umfang in LPH 3',
   schnittstellen:'Grundlagen, Themen und Bauteile, Zuarbeit: je Thema ein Vorschlag, wer plant, koordiniert, mitwirkt und Angaben liefert, dazu Lieferung und Format',
   fragenliste:'je Disziplin die Fragen für das Paket der Planungsgrundlagen (M01) und den Kick-off (M02), mit Zweck, Grundlage und Termin',
-  eingang:'je Disziplin der Lieferumfang für Arbeitsstand 01 (M03) und Endstand (M07), als Vorschlag für den Kick-off'};
+  eingang:'je Disziplin der Lieferumfang für Arbeitsstand 01 (M03) und Endstand (M07), als Vorschlag für den Kick-off',
+  planliste:'Lageplan, Grundrisse je Ebene, Schnitte, Ansichten und Themenpläne einer typischen LPH 3, mit Maßstab',
+  dokumente:'die Ergebnisse der LPH 3 aus der Aufgabenbibliothek, ohne Pläne, mit ihren Zuständen',
+  ausgaben:'die üblichen Ausgaben der LPH 3, vom Paket an die Fachplaner (M01) bis zur Entwurfsdokumentation (M10)',
+  verteiler:'je Empfänger das Format jeder Ausgabe, als Vorschlag nach dem Muster-Terminplan',
+  austausch:'je Fachplanung eine Zeile, die Architektur als Bezug für alle schon ausgefüllt',
+  ablage:'die Ordner des Projekts mit Inhalt und Regel, und ob sie ins Office gehören'};
+// Was eine Liste ohne Meilenstein auf der Karte sagt.
+const UNTER={planliste:'je Ausgabe der ausgegebene Index',dokumente:'Stand, Index und Ablageort je Ergebnis',ausgaben:'Versandnachweis: Datum, Empfänger, Formate',
+  verteiler:'wer erhält was in welchem Format',austausch:'Format, Nullpunkt, Layer je Fachplanung · im Kick-off (M02)',ablage:'Ordner des Projekts und was ins Office gehört'};
 const WANN={fachplanerbedarf:[['Entscheidung bis','M00A']],schnittstellen:[['v0 mit','M01'],['v1 im Kick-off','M02']],
   fragenliste:[['mit','M01'],['beantwortet bis','M02']],eingang:[['Arbeitsstand 01','M03'],['Endstand','M07']]};
 const HINWEIS={
   fachplanerbedarf:'Entscheidungshilfe für den Auftraggeber: je Disziplin «erforderlich?», die Begründung für das Projekt und die Empfehlung des Büros. Die Beauftragung ist Sache des Auftraggebers.',
   schnittstellen:K.LEGENDE.map(([k,t])=>k+' '+t).join(' · '),
   fragenliste:'Fragen ohne Bezug zum Projekt auf «entfällt» setzen, nicht löschen. Zum Versand an eine Fachplanung nach Disziplin filtern: die Liste zeigt dann ihre Fragen und die an alle.',
-  eingang:'Erwartet werden die Beiträge zu den Meilensteinen des Terminplans (M03 und M07); «Stand» ergibt sich aus Eingang, Vollständigkeit und Rückmeldung.'};
+  eingang:'Erwartet werden die Beiträge zu den Meilensteinen des Terminplans (M03 und M07); «Stand» ergibt sich aus Eingang, Vollständigkeit und Rückmeldung.',
+  planliste:'Die Plannummer entsteht aus dem Kürzel des Projekts, der Leistungsphase, Planart, Geschoss und laufender Nummer; eine eigene Nummer in der Zeile gilt vor. Ein Index wird vergeben, sobald ein Plan das Büro verlässt. Nicht benötigte Pläne auf «entfällt» setzen.',
+  dokumente:'«aktueller Stand» wählt einen der Zustände laut Bibliothek oder einen eigenen Text.',
+  ausgaben:'Eine Ausgabe wird nachträglich nicht verändert. Datum und Anlass erscheinen über den Spalten «Ausgabe» der Planliste und des Verteilers.',
+  verteiler:'Die Spalten sind die Ausgaben 1 bis 8 der Liste «Ausgaben».',
+  austausch:'Im Kick-off festlegen (Fragenliste ALLE-05); «vereinbart am», sobald es gilt.',
+  ablage:'«ins Office»: was im Schreibtisch des Projekts liegt, kann Romy lesen. Vertragliches und Honorar gehören nicht hinein.'};
 
 let nutzer=null,mitglied=null,mitglieder=[],projekte=[],team=[];
 let projekt=null,dokumente={},zeilen=leer(),aufgaben=new Map(),geladenUm=0;
@@ -189,6 +209,7 @@ async function ladeTermine(){
 }
 function lokal(r){return {...r,daten:kopie(r.daten),basis:kopie(r.daten),rev:r.server_revision}}
 async function ladeZeilen(){
+  K.setzePlanschluessel(dokumente.planliste?.meta||{});
   const ids=Object.values(dokumente).map(d=>d.id);
   geladenUm=Date.now();
   if(!ids.length){vorschlaege=[];return}
@@ -327,7 +348,7 @@ async function setzeMeta(art,patch){
   for(let i=0;i<2;i++){
     const {data,error}=await sb.from('office_projektdokumente').update({meta:{...(d.meta||{}),...patch}}).eq('id',d.id).eq('server_revision',d.server_revision).select(DOK);
     if(error)throw error;
-    if(data&&data.length){dokumente[art]=data[0];return}
+    if(data&&data.length){dokumente[art]=data[0];if(art==='planliste')K.setzePlanschluessel(data[0].meta||{});return}
     const {data:neu}=await sb.from('office_projektdokumente').select(DOK).eq('id',d.id).maybeSingle();
     if(neu)Object.assign(d,neu);
   }
@@ -354,6 +375,8 @@ function setze(art,z,key,wert){
     if(key==='status'&&wert==='beauftragt')d.beauftragt='ja';
     if(key==='erforderlich'&&wert==='nein'&&d.status==='offen')d.status='entfällt';
   }
+  // Ein neuer Index bekommt das Datum von heute (änderbar).
+  if(art==='planliste'&&key==='index'&&String(wert||'').trim()&&String(wert).trim()!==String(z.daten.index||'').trim())d.indexdatum=heute();
   // Nach der Abstimmung (v1) ist jede Änderung an Zuständigkeit oder Lieferung eine Änderung des abgestimmten Stands.
   if(art==='schnittstellen'&&d.status==='v1 abgestimmt'&&/^(z_|liefert$|format$|lieferung)/.test(key))d.status='geändert';
   const p=K.pruefe(art,d);
@@ -546,7 +569,7 @@ function renderUebersicht(){
   // Wann die Liste im Ablauf dran ist, mit dem Datum aus dem Terminplan.
   const wann=art=>'<p class="pd-wann">'+(WANN[art]||[]).map(([t,c])=>esc(t)+' '+'<span class="pd-ms" title="'+esc(K.meilensteinName(c))+'">'+esc(c)+'</span>'+
     (K.terminVon(c)?' '+esc(K.datumKurz(K.terminVon(c))):'')).join(' · ')+'</p>';
-  const weitere=K.WEITERE.map(art=>{const zz=K.zaehle(art,zeilen[art]);return karte(art,K.DOKUMENTE[art].code,zz,wann(art))}).join('');
+  const weitere=arten=>arten.map(art=>{const zz=K.zaehle(art,zeilen[art]);return karte(art,K.DOKUMENTE[art].code,zz,WANN[art]?wann(art):'<p class="pd-wann">'+esc(UNTER[art]||'')+'</p>')}).join('');
   const folgt=(titel,code,text)=>'<article class="card pd-karte pd-folgt"><div class="pd-karte-kopf"><h3>'+esc(titel)+'</h3><span class="pd-code">'+esc(code)+'</span></div>'+
     '<p class="meta">'+esc(text)+'</p><p class="pd-folgt-text">Noch nicht gebaut</p></article>';
   const vorlagenListe=vorlagen.length?'<ul class="pd-vorlagen">'+vorlagen.map(v=>{
@@ -566,11 +589,12 @@ function renderUebersicht(){
       'jede mit Fundstelle. Danach: Aufgaben im Planner, Fristen gegen den Terminplan, das Ergebnis ins Projektwissen.</p>'+
       '<div class="pd-karte-aktionen">'+(romy.bereit?'<button type="button" class="btn btn-primary" data-act="ablauf-besprechung">Protokoll lesen …</button>':'<span class="meta">Romy ist gerade nicht erreichbar.</span>')+'</div></article>'+
       '</div></section>')+
-    '<section class="pd-abschnitt"><h2>Listen</h2><p class="meta">bearbeiten wie im Büro-Excel · jede Spalte mit Typ · Ausgabe als Excel</p><div class="pd-grid">'+
+    '<section class="pd-abschnitt"><h2>Listen</h2><p class="meta">bearbeiten wie im Büro-Excel · jede Spalte mit Typ · Ausgabe als Excel</p>'+
+    '<h3 class="pd-gruppe-titel">Koordination und Entscheidungen</h3><div class="pd-grid">'+
     karte('klaerungsliste','L3.KLA',zk,zk.aufgaben?'<p class="meta">'+zk.aufgaben+(zk.aufgaben===1?' Punkt als Aufgabe':' Punkte als Aufgabe')+' im Planner</p>':'')+
     karte('entscheidungsliste','L3.ENV · L3.A3',ze,warten.length?'<p class="pd-hinweis">'+warten.length+(warten.length===1?' Entscheidungspunkt aus der Klärungsliste wartet':' Entscheidungspunkte aus der Klärungsliste warten')+'</p>':'')+
-    weitere+
-    folgt('Planliste','L3.PLI','Planliste, Dokumente, Ausgaben, Verteiler, Austausch, Ablage')+
+    '</div><h3 class="pd-gruppe-titel">Fachplaner</h3><div class="pd-grid">'+weitere(['fachplanerbedarf','schnittstellen','fragenliste','eingang'])+
+    '</div><h3 class="pd-gruppe-titel">Pläne und Dokumente</h3><div class="pd-grid">'+weitere(['planliste','dokumente','ausgaben','verteiler','austausch','ablage'])+
     '</div></section>'+
     '<section class="pd-abschnitt"><h2>Texte</h2><p class="meta">feste Abschnitte, Daten des Projekts schon eingesetzt · Ausgabe als Word oder PDF</p><div class="pd-grid">'+
     '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Entscheidungsvorlagen</h3><span class="pd-code">L3.ENV.1</span></div>'+vorlagenListe+
@@ -594,7 +618,28 @@ function renderUebersicht(){
 function spaltenFuer(art){
   const alle=K.SPALTEN[art].concat(art==='entscheidungsliste'?[VORLAGE_SPALTE]:[]);
   if(ui.alleSpalten)return alle;
+  // Planliste kompakt: dazu die Spalten der Ausgaben, die es gibt oder in denen schon ein Index steht.
+  if(art==='planliste')return KOMPAKT[art].map(k=>alle.find(sp=>sp.key===k))
+    .concat(alle.filter(sp=>sp.typ==='ausgabe'&&(ausgabeNr(sp.ausgabe)||zeilen.planliste.some(z=>String(z.daten[sp.key]||'').trim()))));
   return KOMPAKT[art].map(k=>alle.find(sp=>sp.key===k));
+}
+// Vorgabe für «Index eintragen in»: die zuletzt ausgegebene Ausgabe (mit dem spätesten Datum), sonst die erste.
+function letzteAusgabe(){
+  const mit=zeilen.ausgaben.filter(z=>K.gueltigIso(z.daten.datum)&&z.nr<=K.AUSGABEN_PLANLISTE).sort((a,b)=>b.daten.datum.localeCompare(a.daten.datum)||b.nr-a.nr);
+  return mit[0]?.nr||1;
+}
+// Die Ausgabe Nr n der Liste «Ausgaben» (Kopf der Spalten «Ausgabe n» in Planliste und Verteiler).
+const ausgabeNr=n=>zeilen.ausgaben.find(z=>Number(z.nr)===Number(n))||null;
+function ausgabeKopf(sp){
+  const a=ausgabeNr(sp.ausgabe)?.daten;
+  const wann=a?(K.gueltigIso(a.datum)?K.datumKurz(a.datum):'geplant'):'';
+  return '<span title="'+esc(a?.anlass||'Noch keine Ausgabe '+sp.ausgabe+' in der Liste «Ausgaben»')+'">'+esc(ui.alleSpalten?sp.kopf:'Ausgabe '+sp.ausgabe)+
+    (wann?'<span class="pd-unter">'+esc(wann)+'</span>':'')+'</span>';
+}
+// In einer Ausgabe ohne eigenen Eintrag: die Pläne mit dem Index, der laut Planliste in diese Ausgabe ging.
+function planeInAusgabe(nr){
+  const key='a'+nr;
+  return zeilen.planliste.filter(z=>String(z.daten[key]||'').trim()).sort((a,b)=>a.nr-b.nr).map(z=>K.plannummer(z.daten)+' '+String(z.daten[key]).trim()).join(', ');
 }
 function kopfText(art,sp){
   if(ui.alleSpalten)return sp.kopf;
@@ -623,6 +668,13 @@ function zellInhalt(art,z,sp){
       (iso?(code?' ':'')+esc(K.datumKurz(iso)):'')+(ueber?' <span class="chip chip-err">überfällig</span>':'');
   }
   if(sp.typ==='zustaendigkeit'){const v=String(d[k]||'').trim();return v?'<span class="pd-z pd-z-'+zKlasse(v)+'">'+esc(v)+'</span>':''}
+  if(sp.typ==='plannummer'){const eigen=String(d.plannummer||'').trim();return eigen?'<span class="pd-nr">'+esc(eigen)+'</span>':'<span class="pd-planr" title="aus dem Planschlüssel">'+esc(K.plannummerAus(d))+'</span>'}
+  if(sp.typ==='ausgabe'){const v=String(d[k]||'').trim();return !v?'':v==='–'?'<span class="pd-mute">–</span>':esc(v)}
+  if(art==='ausgaben'&&k==='datum'&&!K.gueltigIso(d.datum)){
+    const c=/^(M\d{2}[A-Z]?)(?![A-Za-z0-9])/.exec(String(d.meilenstein||'').trim())?.[1],t=c&&K.terminVon(c);
+    return t?'<span class="pd-mute" title="geplant laut Terminplan">'+esc(c+' · '+K.datumKurz(t))+'</span>':'';
+  }
+  if(art==='ausgaben'&&k==='inhalt'&&!String(d.inhalt||'').trim()){const p=planeInAusgabe(z.nr);return p?'<span class="pd-mute" title="aus der Planliste">'+esc(p)+'</span>':''}
   if(art==='schnittstellen'&&k==='eindeutig'){const t=K.zustaendigkeit(d);return !t?'':t==='–'?'<span class="pd-mute">–</span>':'<span class="chip '+standKlasse(t)+'">'+esc(t)+'</span>'}
   if(art==='eingang'&&k==='stand'){const t=K.eingangStand(d);return t?'<span class="chip '+standKlasse(t)+'">'+esc(t)+'</span>':''}
   if(WERT_KLASSE[k]&&K.WEITERE.includes(art)&&d[k]){const c=WERT_KLASSE[k][d[k]];return c?'<span class="chip st-'+c+'">'+esc(d[k])+'</span>':'<span class="pd-mute">'+esc(d[k])+'</span>'}
@@ -690,6 +742,11 @@ function editor(art,z,sp){
   if(sp.typ==='mehrfach')return '<input'+a+' value="'+esc(Array.isArray(v)?v.join(', '):'')+'" placeholder="z. B. TWP, HLS" autocomplete="off" list="pdDisziplinen">';
   if(sp.typ==='meilenstein')return '<input'+a+' value="'+esc(terminEingabe(v))+'" placeholder="M03 oder TT.MM." autocomplete="off" list="pdMeilensteine">';
   if(sp.typ==='zustaendigkeit')return '<select'+a+' aria-label="'+esc(sp.kopf)+'"><option value=""></option>'+sp.werte.map(w=>'<option'+(w===v?' selected':'')+' title="'+esc(K.LEGENDE.find(l=>l[0]===w)?.[1]||'')+'">'+esc(w)+'</option>').join('')+'</select>';
+  if(sp.typ==='ausgabe'&&sp.werte)return '<select'+a+' aria-label="'+esc(sp.kopf)+'"><option value=""></option>'+sp.werte.map(w=>'<option'+(w===v?' selected':'')+'>'+esc(w)+'</option>').join('')+'</select>';
+  if(sp.typ==='ausgabe')return '<input'+a+' value="'+esc(v)+'" placeholder="'+esc(z.daten.index||'Index')+'" autocomplete="off">';
+  if(sp.typ==='plannummer')return '<input'+a+' value="'+esc(v)+'" placeholder="'+esc(K.plannummerAus(z.daten))+'" autocomplete="off" title="leer: aus dem Planschlüssel">';
+  if(sp.vorschlaege)return '<input'+a+' value="'+esc(v)+'" autocomplete="off" list="pdV-'+esc(z.id)+'"><datalist id="pdV-'+esc(z.id)+'">'+
+    String(z.daten[sp.vorschlaege]||'').split(/\s+·\s+/).map(x=>x.trim()).filter(x=>x&&x!=='–').map(x=>'<option value="'+esc(x)+'"></option>').join('')+'</datalist>';
   return '<input'+a+' value="'+esc(v)+'" autocomplete="off">';
 }
 // Termin zum Bearbeiten: der Code oder das Datum, wie man es eintippt.
@@ -697,11 +754,11 @@ const terminEingabe=v=>K.istMeilenstein(v)?String(v).trim():K.datumLang(v)||Stri
 function meilensteinListe(){
   return '<datalist id="pdMeilensteine">'+K.MEILENSTEINE.map(([c,t])=>{const d=K.terminVon(c);return '<option value="'+c+'">'+esc(t+(d?' · '+K.datumLang(d):''))+'</option>'}).join('')+'</datalist>';
 }
-const BEARBEITBAR=['text','lang','datum','auswahl','mehrfach','meilenstein','zustaendigkeit'];
+const BEARBEITBAR=['text','lang','datum','auswahl','mehrfach','meilenstein','zustaendigkeit','ausgabe','plannummer'];
 // Disziplinen für den Filter: in der Schnittstellenmatrix die Spalten der Matrix, sonst die Liste der Vorlage ohne «alle».
 function disziplinWahl(art){
-  const liste=art==='schnittstellen'?K.MATRIX.map(m=>[m[2],m[1]]):K.DISZIPLINEN.filter(d=>d[0]!=='ALLE');
-  return '<label class="pd-sel"><span>Disziplin</span><select data-act="disziplin"><option value="">alle</option>'+liste.map(([c,l])=>'<option value="'+c+'"'+(ui.disziplin===c?' selected':'')+' title="'+esc(l)+'">'+c+'</option>').join('')+'</select></label>';
+  const liste=art==='schnittstellen'?K.MATRIX.map(m=>[m[2],m[1]]):art==='planliste'?K.PLANARTEN:K.DISZIPLINEN.filter(d=>d[0]!=='ALLE');
+  return '<label class="pd-sel"><span>'+(art==='planliste'?'Planart':'Disziplin')+'</span><select data-act="disziplin"><option value="">alle</option>'+liste.map(([c,l])=>'<option value="'+c+'"'+(ui.disziplin===c?' selected':'')+' title="'+esc(l)+'">'+c+'</option>').join('')+'</select></label>';
 }
 // Leere weitere Liste: anlegen mit den Zeilen der Bürovorlage oder leer beginnen.
 function anlegenPanel(art){
@@ -736,6 +793,7 @@ function renderListe(){
   const filter='<div class="pd-filter">'+K.FILTER[art].map(([k,l])=>'<button type="button" class="chip" data-act="filter" data-f="'+esc(k)+'" aria-pressed="'+(ui.filter===k)+'">'+esc(l)+' '+fz[k]+'</button>').join('')+
     (K.MIT_DISZIPLIN.includes(art)?disziplinWahl(art):'')+
     (art==='klaerungsliste'?'<label class="pd-sel"><span>Runde</span><select data-act="runde">'+K.RUNDEN.map(r=>'<option'+(r===runde?' selected':'')+'>'+r+'</option>').join('')+'</select></label>':'')+
+    (art==='planliste'?'<label class="pd-sel" title="Projektkürzel für die Plannummer, z. B. drei Buchstaben wie im Büro üblich"><span>Kürzel</span><input class="pd-in pd-kuerzel" data-act="kuerzel" value="'+esc(K.planschluessel().kuerzel)+'" placeholder="z. B. ABC" maxlength="12" autocomplete="off"></label>':'')+
     '<input type="search" class="pd-suche" id="pd-suche" data-act="suche" placeholder="Suchen" value="'+esc(ui.suche)+'" aria-label="In der Liste suchen"></div>';
   let banner=romyBanner(art);
   if(HINWEIS[art])banner+='<p class="pd-listenhinweis'+(art==='schnittstellen'?' pd-legende':'')+'">'+esc(HINWEIS[art])+'</p>';
@@ -750,13 +808,15 @@ function renderListe(){
   const auswahl=[...ui.auswahl].map(id=>alle.find(z=>z.id===id)).filter(Boolean);
   const eigene=art==='klaerungsliste'?'<button type="button" class="btn" data-act="aufgaben">Aufgaben im Planner anlegen</button><button type="button" class="btn" data-act="in-entscheidungen">In die Entscheidungsliste</button>'
     :art==='entscheidungsliste'?'<button type="button" class="btn" data-act="vorlage-auswahl">Vorlage aus der Auswahl</button>'
-    :art==='fragenliste'?'<button type="button" class="btn" data-act="fragen-kopieren">Für die Mail kopieren</button>':'';
+    :art==='fragenliste'?'<button type="button" class="btn" data-act="fragen-kopieren">Für die Mail kopieren</button>'
+    :art==='planliste'?'<label class="pd-sel"><span>Index eintragen in</span><select data-act="ausgabe-ziel">'+Array.from({length:K.AUSGABEN_PLANLISTE},(_,i)=>{const a=ausgabeNr(i+1)?.daten;
+      return '<option value="'+(i+1)+'"'+((ui.ausgabeZiel||letzteAusgabe())===i+1?' selected':'')+'>Ausgabe '+(i+1)+(a?.anlass?' · '+esc(K.kurz(a.anlass,40)):'')+'</option>'}).join('')+'</select></label><button type="button" class="btn" data-act="index-eintragen">Aktuellen Index eintragen</button>':'';
   const leiste=auswahl.length?'<div class="pd-auswahl" role="region" aria-label="Auswahl"><strong>'+auswahl.length+(auswahl.length===1?' Zeile':' Zeilen')+' ausgewählt</strong>'+eigene+
     (mitRomy?'<span class="pd-auswahl-romy">Romy:</span>'+(art==='klaerungsliste'?'<button type="button" class="btn" data-act="romy-fachplaner">Frage an die Fachplaner formulieren</button><button type="button" class="btn" data-act="romy-fristen">Fristen mit dem Terminplan prüfen</button>'
       :'<button type="button" class="btn" data-act="romy-bestaetigung">Bestätigung als Mail entwerfen</button>')+'<button type="button" class="btn" data-act="romy-frage">Frage stellen …</button>':'')+
     '<button type="button" class="btn btn-quiet" data-act="auswahl-weg">Auswahl aufheben</button></div>':'';
   const kopfzeile='<tr><th class="pd-check"><input type="checkbox" data-act="alle" aria-label="Alle auswählen"'+(sicht.length&&sicht.every(z=>ui.auswahl.has(z.id))?' checked':'')+'></th>'+
-    spalten.map(sp=>'<th class="pd-t-'+sp.typ+'" scope="col"'+(sp.typ==='zustaendigkeit'?' title="'+esc(sp.kopf)+'"':'')+'>'+esc(kopfText(art,sp))+'</th>').join('')+'</tr>';
+    spalten.map(sp=>'<th class="pd-t-'+sp.typ+'" scope="col"'+(sp.typ==='zustaendigkeit'?' title="'+esc(sp.kopf)+'"':'')+'>'+(sp.typ==='ausgabe'?ausgabeKopf(sp):esc(kopfText(art,sp)))+'</th>').join('')+'</tr>';
   let gruppe=null;
   const reihen=sicht.map(z=>{
     const d=z.daten;
@@ -836,13 +896,16 @@ function feldEingabe(art,z,key,{typ,werte,lang=false,label=null,hinweis=''}={}){
   else if(t==='zustaendigkeit')input='<select class="pd-in"'+a+'><option value=""></option>'+(sp?.werte||[]).map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select>';
   else if(t==='auswahl'||t==='janein'){const w=werte||sp?.werte||[];input='<select class="pd-in"'+a+'><option value=""></option>'+w.map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('')+(v&&!w.includes(v)?'<option selected>'+esc(v)+'</option>':'')+'</select>'}
   else if(t==='liste')input='<input class="pd-in"'+a+' value="'+esc(v)+'" list="'+esc(werte)+'" autocomplete="off">';
+  else if(t==='ausgabe'&&sp?.werte)input='<select class="pd-in"'+a+'><option value=""></option>'+sp.werte.map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select>';
+  else if(t==='plannummer')input='<input class="pd-in"'+a+' value="'+esc(v)+'" placeholder="'+esc(K.plannummerAus(z.daten))+'" autocomplete="off">';
   else if(t==='mehrfach'){
     const gew=Array.isArray(v)?v:[];
     input='<div class="pd-codes" role="group" aria-label="'+esc(label||K.feldName(art,key))+'">'+(sp?.werte||[]).map(c=>'<button type="button" class="chip" data-act="code" data-z="'+z.id+'" data-feld="'+key+'" data-code="'+c+'" aria-pressed="'+gew.includes(c)+'" title="'+esc(K.DISZIPLINEN.find(d=>d[0]===c)?.[1]||'')+'">'+c+'</button>').join('')+'</div>';
   }
   else input='<input class="pd-in"'+a+' value="'+esc(v)+'" autocomplete="off">';
   const romy=Array.isArray(z.daten._romy)&&z.daten._romy.includes(key);
-  return '<div class="pd-feld'+(romy?' pd-romy':'')+'"><label for="f-'+key+'">'+esc(label||sp?.kopf||K.feldName(art,key))+(romy?' <span class="pd-r">R</span>':'')+'</label>'+input+(hinweis?'<p class="meta">'+esc(hinweis)+'</p>':'')+'</div>';
+  const titel=sp?.typ==='ausgabe'&&ausgabeNr(sp.ausgabe)?.daten?.anlass?sp.kopf+' · '+ausgabeNr(sp.ausgabe).daten.anlass:sp?.kopf;
+  return '<div class="pd-feld'+(romy?' pd-romy':'')+'"><label for="f-'+key+'">'+esc(label||titel||K.feldName(art,key))+(romy?' <span class="pd-r">R</span>':'')+'</label>'+input+(hinweis?'<p class="meta">'+esc(hinweis)+'</p>':'')+'</div>';
 }
 function optionenEditor(z){
   const opts=K.optionen(z.daten);
@@ -863,7 +926,11 @@ function detailPanel(art){
     // Alle Spalten der Vorlage als Felder; dazu, was nicht als Spalte steht (Code der Frage, Disziplin im Eingang, Gruppe).
     const vorne=art==='fragenliste'?[feldEingabe(art,z,'code',{label:'Nr (Code der Frage)',hinweis:'Vergeben mit der Disziplin, z. B. TWP-07.'})]
       :art==='eingang'?[feldEingabe(art,z,'disziplin',{typ:'auswahl',werte:K.DISZIPLINEN.map(x=>x[0])})]
-      :art==='schnittstellen'?[feldEingabe(art,z,'gruppe',{typ:'liste',werte:'pdGruppen',label:'Gruppe',hinweis:'z. B. «B · Themen und Bauteile»; ohne Gruppe steht die Zeile unter «Weitere».'})]:[];
+      :art==='schnittstellen'?[feldEingabe(art,z,'gruppe',{typ:'liste',werte:'pdGruppen',label:'Gruppe',hinweis:'z. B. «B · Themen und Bauteile»; ohne Gruppe steht die Zeile unter «Weitere».'})]
+      :art==='dokumente'?[feldEingabe(art,z,'code',{label:'Code'})]
+      :art==='verteiler'?[feldEingabe(art,z,'empfaenger',{label:'Empfänger'})]
+      :art==='austausch'?[feldEingabe(art,z,'fachplanung',{label:'Fachplanung'})]
+      :art==='ablage'?[feldEingabe(art,z,'ordner',{label:'Ordner'})]:[];
     const matrix=art==='schnittstellen'?'<div class="pd-feld"><label>Zuständigkeit</label><div class="pd-matrix-felder">'+K.MATRIX.map(([k,kopf])=>'<label class="pd-ofeld"><span>'+esc(kopf)+'</span>'+
       '<select class="pd-in" data-feld="'+k+'" data-z="'+z.id+'" id="f-'+k+'"><option value=""></option>'+K.ZUSTAENDIGKEIT.map(x=>'<option'+(x===d[k]?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>').join('')+
       '</div><p class="meta">'+esc(HINWEIS.schnittstellen)+'</p></div>':'';
@@ -1284,8 +1351,15 @@ async function excel(art){
   // Die Fragenliste für eine Fachplanung (Filter «Disziplin»): ihre Fragen und die an alle, wie in der Vorlage zum Versand.
   const fuer=art==='fragenliste'&&ui.ansicht==='liste'&&ui.art===art&&ui.disziplin?ui.disziplin:'';
   const liste=fuer?K.filtere(art,zeilen[art],{disziplin:fuer}):zeilen[art];
-  const blatt=X.listenBlatt(K,art,liste,{projekt:projektName()+(fuer?' · Fragen an '+fuer:'')});
+  const blatt=X.listenBlatt(K,art,liste,{projekt:projektName()+(fuer?' · Fragen an '+fuer:''),ausgaben:zeilen.ausgaben});
   laden(dateiName(projekt.number+'_'+K.DOKUMENTE[art].kurz+(fuer?'_'+fuer:'')+'_'+heute())+'.xlsx',X.xlsx(blatt),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+// Planliste: für die ausgewählten Pläne den aktuellen Index in die Spalte der Ausgabe eintragen (was mit ihr hinausging).
+function indexEintragen(liste,n){
+  const key='a'+n;let k=0;const ohne=[];
+  for(const z of liste){const i=String(z.daten.index||'').trim();if(!i){ohne.push(K.plannummer(z.daten));continue}if(setze('planliste',z,key,i))k++}
+  meldung(k+(k===1?' Plan':' Pläne')+' in Ausgabe '+n+' eingetragen.'+(ohne.length?' Ohne Index: '+ohne.join(', ')+'.':''),ohne.length?'warn':'info');
+  renderListe();
 }
 // Ausgewählte Fragen als Text für eine Mail an die Fachplanung, je Zeile Code, Thema, Frage und Termin.
 async function fragenKopieren(liste){
@@ -3103,6 +3177,7 @@ root.addEventListener('click',e=>{
   else if(act==='anlegen-vorlage'){el.disabled=true;void sicher(()=>anlegen(art,{vorlage:true}))}
   else if(act==='anlegen-leer'){el.disabled=true;void sicher(()=>anlegen(art))}
   else if(act==='fragen-kopieren')void sicher(()=>fragenKopieren([...ui.auswahl].map(zeileVon).filter(Boolean)));
+  else if(act==='index-eintragen')indexEintragen([...ui.auswahl].map(zeileVon).filter(Boolean),Number(root.querySelector('[data-act="ausgabe-ziel"]')?.value)||1);
   else if(act==='neu'){const i=root.querySelector('[data-neu]');if(i){i.focus();i.scrollIntoView({block:'nearest'})}}
   else if(act==='waehle'){if(el.checked)ui.auswahl.add(el.dataset.z);else ui.auswahl.delete(el.dataset.z);renderListe()}
   else if(act==='alle'){const sicht=K.filtere(art,zeilen[art],{filter:ui.filter,disziplin:ui.disziplin,suche:ui.suche});ui.auswahl=el.checked?new Set(sicht.map(z=>z.id)):new Set();renderListe()}
@@ -3164,6 +3239,8 @@ root.addEventListener('change',e=>{
   const el=e.target;
   if(el.matches('[data-act="projekt"]')){ui.meldung='';gehe({werkzeug:ui.ansicht==='mappen'?ui.werkzeug:'',projekt:el.value});return}
   if(el.matches('[data-act="disziplin"]')){ui.disziplin=el.value;renderListe();return}
+  if(el.matches('[data-act="ausgabe-ziel"]')){ui.ausgabeZiel=Number(el.value)||1;return}
+  if(el.matches('[data-act="kuerzel"]')){const k=el.value.trim();void sicher(async()=>{await sichereDokument('planliste');await setzeMeta('planliste',{kuerzel:k});renderListe()});return}
   if(el.matches('[data-act="runde"]')){void sicher(async()=>{await sichereDokument('klaerungsliste');await setzeMeta('klaerungsliste',{runde:el.value});renderListe()});return}
   if(el.matches('[data-act="punkt-neu"]')){if(el.value)void sicher(()=>punktNeu(el.value));return}
   if(ui.ansicht==='mappe'&&el.matches('[data-act^="mm-"],[data-mmfeld]')&&mappeAenderung(el))return;

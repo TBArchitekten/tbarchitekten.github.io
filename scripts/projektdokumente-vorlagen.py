@@ -2,11 +2,12 @@
 """TBA Office · Vorbelegung der Projektlisten aus den Bürovorlagen LPH 3 (28.11.2026, Claude, Auftrag Gari: die Listen
 des Projektstarts im Projekt bearbeiten wie die Entscheidungsliste, statt ein Excel herunterzuladen).
 
-Liest muster/lph3/LPH3_3_Koordination.xlsx und schreibt projektdokumente-vorlagen.js: die Zeilen, mit denen eine Liste
-im Projekt angelegt wird (Fragenliste, Fachplanerbedarf, Schnittstellen, Eingang). Nur Werte, keine Formeln: was die
-Vorlage aus dem Blatt «Projekt» rechnet, rechnet die Liste im Office selbst (Termine aus den Meilensteinen des
-Terminplans, «Zuständigkeit eindeutig?», «Stand»). Wo eine Formel einen Text aus den Projektparametern zusammensetzt,
-steht hier die allgemeine Regel, die die Formel anwendet.
+Liest muster/lph3/LPH3_3_Koordination.xlsx und LPH3_2_Planliste.xlsx und schreibt projektdokumente-vorlagen.js: die
+Zeilen, mit denen eine Liste im Projekt angelegt wird (Fragenliste, Fachplanerbedarf, Schnittstellen, Eingang; Planliste,
+Dokumente, Ausgaben, Verteiler, Austausch, Ablage). Nur Werte, keine Formeln: was die Vorlage aus anderen Blättern
+rechnet, rechnet die Liste im Office selbst (Termine aus den Meilensteinen des Terminplans, «Zuständigkeit eindeutig?»,
+«Stand», die Plannummer aus dem Planschlüssel). Wo eine Formel einen Text aus den Projektparametern zusammensetzt, steht
+hier die allgemeine Regel, die die Formel anwendet.
 
 Aufruf: python3 scripts/projektdokumente-vorlagen.py  (aus dem Wurzelverzeichnis des Repos)
 """
@@ -16,6 +17,7 @@ import openpyxl
 
 ROOT = Path(__file__).resolve().parent.parent
 KOORD = ROOT / 'muster/lph3/LPH3_3_Koordination.xlsx'
+PLAN = ROOT / 'muster/lph3/LPH3_2_Planliste.xlsx'
 ZIEL = ROOT / 'projektdokumente-vorlagen.js'
 
 
@@ -127,17 +129,73 @@ def eingang(wb):
     return zeilen
 
 
+def zeilen_aus(ws, spalten, pflicht, erste=7):
+    """Zeilen eines Blatts ab Zeile 7: je Spalte (Nummer) ein Feld; nur Zeilen, in denen das Pflichtfeld steht."""
+    out = []
+    for r in range(erste, ws.max_row + 1):
+        z = {key: wert(ws.cell(r, c).value) for c, key in spalten.items()}
+        if not z[pflicht]:
+            continue
+        out.append(z)
+    return out
+
+
+def planliste(wb):
+    ws = wb['Planliste']
+    # Die Plannummer (Spalte B) ist eine Formel aus dem Planschlüssel; die Liste rechnet sie selbst.
+    # Nur Zeilen mit Planart; darunter steht ein Hinweis zur Vorlage.
+    zeilen = zeilen_aus(ws, {3: 'planart', 4: 'geschoss', 5: 'lfd', 6: 'titel', 7: 'massstab', 8: 'format', 9: 'zustaendig', 10: 'status',
+                             11: 'index', 13: 'aenderung', 14: 'bemerkung'}, 'planart')
+    for z in zeilen:
+        z['status'] = z['status'] or 'in Bearbeitung'
+    return zeilen
+
+
+def dokumente(wb):
+    return zeilen_aus(wb['Dokumente'], {1: 'code', 2: 'ergebnis', 3: 'zustaende', 4: 'erzeugt', 5: 'format', 6: 'zustaendig', 7: 'stand',
+                                        8: 'index', 9: 'ablageort', 10: 'bemerkung'}, 'code')
+
+
+def ausgaben(wb):
+    ws = wb['Ausgaben']
+    # Nur nummerierte Zeilen mit Anlass; darunter steht ein Hinweis zur Vorlage.
+    return [z for r, z in ((r, {key: wert(ws.cell(r, c).value) for c, key in {3: 'anlass', 4: 'meilenstein', 5: 'empfaenger', 6: 'formate',
+            7: 'inhalt', 8: 'versandweg', 9: 'nachweis', 10: 'bemerkung'}.items()}) for r in range(7, ws.max_row + 1))
+            if z['anlass'] and isinstance(ws.cell(r, 1).value, (int, float))]
+
+
+def verteiler(wb):
+    ws = wb['Verteiler']
+    spalten = {1: 'empfaenger', 2: 'buero', **{3 + i: 'a' + str(i + 1) for i in range(8)}}
+    # Nur die Empfänger; darunter steht ein Hinweis zur Vorlage (eine Zeile ohne Ausgaben).
+    return [z for z in zeilen_aus(ws, spalten, 'empfaenger') if any(z['a' + str(i + 1)] for i in range(8))]
+
+
+def austausch(wb):
+    return zeilen_aus(wb['Austausch'], {1: 'fachplanung', 2: 'dateiformat', 3: 'version', 4: 'nullpunkt', 5: 'hoehe', 6: 'struktur',
+                                        7: 'einheiten', 8: 'weg', 10: 'bemerkung'}, 'fachplanung')
+
+
+def ablage(wb):
+    # Nur Zeilen mit einer Angabe «ins Office»; darunter steht ein Hinweis zur Vorlage.
+    return [z for z in zeilen_aus(wb['Ablage'], {1: 'ordner', 2: 'inhalt', 3: 'regel', 4: 'office', 5: 'bemerkung'}, 'ordner') if z['office']]
+
+
 def main():
     wb = openpyxl.load_workbook(KOORD)
+    pl = openpyxl.load_workbook(PLAN)
     daten = {'fragenliste': fragenliste(wb), 'fachplanerbedarf': fachplanerbedarf(wb),
-             'schnittstellen': schnittstellen(wb), 'eingang': eingang(wb)}
+             'schnittstellen': schnittstellen(wb), 'eingang': eingang(wb),
+             'planliste': planliste(pl), 'dokumente': dokumente(pl), 'ausgaben': ausgaben(pl), 'verteiler': verteiler(pl),
+             'austausch': austausch(pl), 'ablage': ablage(pl)}
     for art, z in daten.items():
         for zeile in z:
             for k, v in zeile.items():
                 if isinstance(v, str) and v.startswith('='):
                     sys.exit('Formel in ' + art + '.' + k)
     kopf = ('/* TBA Office · Vorbelegung der Projektlisten aus den Bürovorlagen LPH 3. Erzeugt von\n'
-            '   scripts/projektdokumente-vorlagen.py aus muster/lph3/LPH3_3_Koordination.xlsx; nicht von Hand ändern.\n'
+            '   scripts/projektdokumente-vorlagen.py aus muster/lph3/LPH3_3_Koordination.xlsx und LPH3_2_Planliste.xlsx;\n'
+            '   nicht von Hand ändern.\n'
             '   Eine Liste im Projekt wird auf Wunsch mit diesen Zeilen angelegt; danach gehört sie dem Projekt. */\n')
     teile = []
     for art, z in daten.items():

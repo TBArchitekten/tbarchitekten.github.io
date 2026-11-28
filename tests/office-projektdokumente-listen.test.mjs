@@ -1,4 +1,5 @@
-// Projektstart · weitere Listen der Bürovorlage (28.11.2026): Fachplanerbedarf, Schnittstellen, Fragenliste, Eingang.
+// Projektstart · weitere Listen der Bürovorlage (28.11.2026): Fachplanerbedarf, Schnittstellen, Fragenliste, Eingang;
+// zweiter Teil Planliste, Dokumente, Ausgaben, Verteiler, Austausch, Ablage.
 // Gari: die Listen des Projektstarts im Projekt bearbeiten wie die Entscheidungsliste, statt ein Excel herunterzuladen,
 // das kein lebendes Dokument ist. Geprüft ohne Netz:
 // Spalten und Auswahllisten wie in scripts/muster-lph3/build_xlsx.py, die Vorbelegung aus der Bürovorlage, Termine als
@@ -16,16 +17,28 @@ const HEUTE='2026-11-28';
 const zeile=(id,nr,daten)=>({id,nr,daten});
 const TERMINE={M00:'2026-11-10',M00A:'2026-11-20',M01:'2026-12-04',M02:'2026-12-11',M03:'2027-01-15',M07:'2027-02-26'};
 
-// Kopf und Breiten eines Blatts aus build_xlsx.py.
-function blatt(marke){
-  const py=read('scripts/muster-lph3/build_xlsx.py');
-  const block=py.slice(py.indexOf(marke));
-  const m=/heads = \[([\s\S]*?)\]\n\s*header\(ws, 6, heads, \[([^\]]*)\]/.exec(block);
-  return {koepfe:JSON.parse('['+m[1]+']'),breiten:JSON.parse('['+m[2]+']')};
+// Kopf (Zeile 6) und Spaltenbreiten eines Blatts der Bürovorlage, gelesen aus der Datei in muster/lph3.
+async function blatt(datei,name){
+  const b=readFileSync(new URL('../muster/lph3/'+datei,import.meta.url));
+  const zip=await I.zipDateien(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength));
+  const wb=await zip.text('xl/workbook.xml'),rels=await zip.text('xl/_rels/workbook.xml.rels');
+  const rid=new RegExp('<sheet\\b[^>]*name="'+name+'"[^>]*r:id="([^"]+)"').exec(wb)[1];
+  const rel=[...rels.matchAll(/<Relationship\b([^>]*)\/?>/g)].map(m=>m[1]).find(a=>a.includes('Id="'+rid+'"'));
+  const xml=await zip.text(/Target="\/?(?:xl\/)?([^"]+)"/.exec(rel)[1].replace(/^/,'xl/'));
+  const kopf=I.zeilenAusBlatt(xml,I.geteilteTexte(await zip.text('xl/sharedStrings.xml'))).find(z=>z.nr===6);
+  const breiten=[];
+  for(const m of xml.matchAll(/<col\b([^>]*)\/>/g)){
+    const a=k=>Number(new RegExp('\\b'+k+'="([^"]+)"').exec(m[1])?.[1]);
+    for(let i=a('min');i<=a('max');i++)breiten[i-1]=a('width');
+  }
+  return {koepfe:[...kopf].filter((x,i)=>i<kopf.length&&x!==''),breiten:breiten.slice(0,kopf.length)};
 }
-const MARKEN={fachplanerbedarf:'# ───────── Fachplanerbedarf',schnittstellen:'# ───────── Schnittstellen',fragenliste:'# ───────── Fragenliste',eingang:'# ───────── Eingang'};
+const BLAETTER={fachplanerbedarf:['LPH3_3_Koordination.xlsx','Fachplanerbedarf'],schnittstellen:['LPH3_3_Koordination.xlsx','Schnittstellen'],
+  fragenliste:['LPH3_3_Koordination.xlsx','Fragenliste'],eingang:['LPH3_3_Koordination.xlsx','Eingang'],planliste:['LPH3_2_Planliste.xlsx','Planliste'],
+  dokumente:['LPH3_2_Planliste.xlsx','Dokumente'],ausgaben:['LPH3_2_Planliste.xlsx','Ausgaben'],verteiler:['LPH3_2_Planliste.xlsx','Verteiler'],
+  austausch:['LPH3_2_Planliste.xlsx','Austausch'],ablage:['LPH3_2_Planliste.xlsx','Ablage']};
 
-test('Spalten und Auswahllisten sind die der Bürovorlage; Excel hat genau ihre Spalten',()=>{
+test('Spalten und Auswahllisten sind die der Bürovorlage; Excel hat genau ihre Spalten',async()=>{
   const py=read('scripts/muster-lph3/build_xlsx.py');
   const liste=name=>JSON.parse(new RegExp('"'+name.replace(/[/?]/g,'\\$&')+'": (\\[[^\\]]*\\])').exec(py)[1]);
   assert.deepEqual(K.ZUSTAENDIGKEIT,liste('Zuständigkeit'));
@@ -36,8 +49,14 @@ test('Spalten und Auswahllisten sind die der Bürovorlage; Excel hat genau ihre 
   assert.deepEqual(K.STATUS_FRAGE,liste('Status Frage'));
   assert.deepEqual(K.WER_FRAGT,liste('Wer fragt'));
   assert.deepEqual(K.BESTAETIGUNG,liste('Bestätigung'));
+  assert.deepEqual(K.PLANARTEN.map(p=>p[0]),liste('Planart'));
+  assert.deepEqual(K.STATUS_PLAN,liste('Status Plan'));
+  assert.deepEqual(K.UEBERGABE,liste('Übergabe'));
+  assert.deepEqual(K.FORMATE,JSON.parse(/"Format": (\[[^\]]*\])/.exec(py.slice(py.indexOf('"Planart"')))[1]));
+  assert.deepEqual(Object.keys(BLAETTER),K.WEITERE);
   for(const art of K.WEITERE){
-    const b=blatt(MARKEN[art]);
+    const b=await blatt(...BLAETTER[art]);
+    assert.equal(b.koepfe.length,b.breiten.length,art);
     // Im Office steht ein Termin in einer Spalte (Meilenstein oder Datum); die Vorlage hat dazu die Spalte «Datum».
     const ohneDatum=b.koepfe.map((k,i)=>[k,b.breiten[i]]).filter(([k],i)=>!(k==='Datum'&&K.SPALTEN[art].some(sp=>sp.datumSpalte&&sp.kopf===b.koepfe[i-1])));
     assert.deepEqual(K.SPALTEN[art].map(sp=>sp.kopf),ohneDatum.map(x=>x[0]),art);
@@ -46,6 +65,7 @@ test('Spalten und Auswahllisten sind die der Bürovorlage; Excel hat genau ihre 
     assert.deepEqual(x.koepfe,b.koepfe,'Excel '+art);
     assert.deepEqual(x.breiten,b.breiten,'Excel '+art);
     assert.ok(K.FELDER[art].length>=K.SPALTEN[art].length-2,art);
+    assert.ok(K.SPALTEN[art].every(sp=>sp.key==='nr'||sp.typ==='berechnet'||K.FELDER[art].includes(sp.key)),'jede Spalte ist ein Feld: '+art);
     assert.ok(K.DOKUMENTE[art].titel&&K.DOKUMENTE[art].untertitel,art);
   }
   // Die Meilensteine sind die des Blatts «Projekt».
@@ -54,7 +74,9 @@ test('Spalten und Auswahllisten sind die der Bürovorlage; Excel hat genau ihre 
 });
 
 test('Vorbelegung aus der Bürovorlage, ohne Fußnoten und ohne Formeln',()=>{
-  assert.deepEqual(Object.fromEntries(Object.entries(V).map(([k,v])=>[k,v.length])),{fragenliste:85,fachplanerbedarf:12,schnittstellen:25,eingang:6});
+  assert.deepEqual(Object.fromEntries(Object.entries(V).map(([k,v])=>[k,v.length])),
+    {fragenliste:85,fachplanerbedarf:12,schnittstellen:25,eingang:6,planliste:18,dokumente:23,ausgaben:8,verteiler:9,austausch:8,ablage:12});
+  for(const art of K.WEITERE)for(const z of V[art])for(const k of Object.keys(z))assert.ok(K.FELDER[art].includes(k)||k==='eindeutig','Feld '+art+'.'+k);
   const js=read('projektdokumente-vorlagen.js');
   assert.match(js,/Erzeugt von\n {3}scripts\/projektdokumente-vorlagen\.py/);
   assert.doesNotMatch(js,/"=/,'keine Formel aus der Vorlage');
@@ -72,6 +94,12 @@ test('Vorbelegung aus der Bürovorlage, ohne Fußnoten und ohne Formeln',()=>{
   }
   assert.deepEqual(V.eingang.map(z=>z.disziplin),['TWP','HLS','ELT','BPH','BRS','FRA']);
   for(const z of V.eingang){assert.equal(z.erwartet01,'M03');assert.equal(z.erwartet_end,'M07')}
+  // Planliste: Planart und Status aus den Auswahllisten, keine Fußnote; Verteiler je Ausgabe ein Format.
+  for(const z of V.planliste){assert.ok(K.PLANARTEN.some(p=>p[0]===z.planart),z.titel);assert.ok(K.STATUS_PLAN.includes(z.status),z.titel)}
+  assert.ok(!V.planliste.some(z=>/Vorschlag für eine typische/.test(z.titel)),'die Fußnote ist keine Zeile');
+  assert.ok(!V.ausgaben.some(z=>/ersten zehn Ausgaben/.test(z.anlass)),'die Fußnote ist keine Zeile');
+  for(const z of V.verteiler)for(let i=1;i<=K.AUSGABEN_VERTEILER;i++)assert.ok(K.UEBERGABE.includes(z['a'+i]),z.empfaenger+' a'+i);
+  assert.deepEqual(V.ablage.map(z=>z.office).filter(x=>x==='nein').length,2);
   // Grundlagen und Zuarbeit prüft die Vorlage nicht auf «eindeutig» (dort steht «–»).
   assert.deepEqual(V.schnittstellen.filter(z=>z.eindeutig==='–').map(z=>z.gruppe[0]).join(''),'AAACCCC');
 });
@@ -183,6 +211,64 @@ test('Excel im Aufbau der Vorlage: Termin mit Datum daneben, Gruppen, Auswahllis
   K.setzeTermine({});
 });
 
+test('Planliste: Plannummer aus dem Planschlüssel, Ausgaben als Spalten, Zählen',async()=>{
+  K.setzePlanschluessel({});
+  const p=V.planliste.map((d,i)=>zeile('p'+i,i+1,d));
+  // Wie die Formel der Vorlage: Kürzel – LPH – Planart – Geschoss – lfd. Nr (zweistellig); ohne Geschoss bei «–».
+  assert.equal(K.plannummer(p[0].daten),'(Kürzel)-3-LP-01');
+  assert.equal(K.plannummer(p[2].daten),'(Kürzel)-3-GR-EG-01');
+  K.setzePlanschluessel({kuerzel:'ABC',trenn:'_'});
+  assert.equal(K.plannummer(p[2].daten),'ABC_3_GR_EG_01');
+  assert.equal(K.plannummer({...p[2].daten,plannummer:'A-100'}),'A-100','eine eigene Nummer gilt vor');
+  assert.equal(K.plannummer({...p[2].daten,titel:''}),'','ohne Plantitel keine Nummer');
+  assert.equal(K.plannummer({...p[2].daten,lfd:'12'}),'ABC_3_GR_EG_12');
+  K.setzePlanschluessel({kuerzel:'ABC'});
+  assert.deepEqual(K.planschluessel(),{kuerzel:'ABC',lph:'3',trenn:'-'});
+  const q=[zeile('a',1,{...p[2].daten,status:'Arbeitsstand 01',index:'A',a1:'A'}),zeile('b',2,{...p[3].daten,status:'entfällt'}),zeile('c',3,p[4].daten)];
+  assert.equal(K.zusammenfassung('planliste',K.zaehle('planliste',q,HEUTE)),'2 Pläne · 1 in Bearbeitung · 1 Arbeitsstand 01 · 1 schon ausgegeben · 1 ersetzt oder entfallen');
+  assert.deepEqual(K.zaehleFilter('planliste',q,HEUTE),{alle:3,'in Bearbeitung':1,'Teilstand (vorläufig)':0,'Arbeitsstand 01':1,'Stand 02':0,'Endstand LPH 3':0,nie_ausgegeben:1,weg:1});
+  assert.equal(K.erledigt('planliste',q[1].daten),true,'entfällt ist grau');
+  assert.deepEqual(K.filtere('planliste',p,{disziplin:'AN'}).map(z=>z.daten.titel),['Ansicht Nord','Ansicht Ost','Ansicht Süd','Ansicht West'],'Filter nach Planart');
+  assert.equal(K.zellText('planliste','plannummer',q[0].daten,{nr:1}),'ABC-3-GR-EG-01');
+  // Excel: Datum und Anlass der Ausgaben über den Spalten, die Plannummer gerechnet, der Index je Ausgabe.
+  const aus=[zeile('x',1,{...V.ausgaben[0],datum:'2026-12-04'}),zeile('y',2,V.ausgaben[1])];
+  const bl=X.listenBlatt(K,'planliste',q,{heute:HEUTE,ausgaben:aus});
+  assert.deepEqual(bl.ueberKopf[4],[[13,'Datum der Ausgabe →'],[14,{datum:K.excelTag('2026-12-04')}]]);
+  assert.deepEqual(bl.ueberKopf[5],[[13,'Anlass →'],[14,V.ausgaben[0].anlass],[15,V.ausgaben[1].anlass]]);
+  assert.deepEqual(bl.zeilen[0].slice(0,3),[1,'ABC-3-GR-EG-01','GR']);
+  assert.equal(bl.zeilen[0][14],'A');
+  assert.deepEqual(bl.auswahl.map(a=>a.spalte),['C','H','J']);
+  const b=X.xlsx(bl,new Date('2026-11-28T08:00:00Z'));
+  const gelesen=(await I.leseXlsxBlaetter(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength)))[0].zeilen;
+  assert.equal(gelesen.find(z=>z.nr===5)[14],V.ausgaben[0].anlass);
+  assert.equal(gelesen.find(z=>z.nr===4)[13],'Datum der Ausgabe →');
+  const vt=X.listenBlatt(K,'verteiler',V.verteiler.map((d,i)=>zeile('v'+i,i+1,d)),{heute:HEUTE,ausgaben:aus});
+  assert.deepEqual(vt.ueberKopf[5],[[2,V.ausgaben[0].anlass],[3,V.ausgaben[1].anlass]]);
+  assert.deepEqual(vt.auswahl.map(a=>a.spalte),['C','D','E','F','G','H','I','J']);
+  K.setzePlanschluessel({});
+});
+
+test('Dokumente, Ausgaben, Verteiler, Austausch, Ablage: Name der Zeile, Zählen, Filtern',()=>{
+  const z=a=>V[a].map((d,i)=>zeile(a+i,i+1,d));
+  assert.equal(K.nummer('dokumente',1,V.dokumente[0]),'PSV');
+  assert.equal(K.nummer('verteiler',1,V.verteiler[0]),'Auftraggeber');
+  assert.equal(K.nummer('austausch',1,V.austausch[0]),'Architektur (Bezug für alle)');
+  assert.equal(K.nummer('ablage',1,V.ablage[0]),'01_Grundlagen');
+  assert.equal(K.nummer('ausgaben',3,V.ausgaben[2]),'3');
+  const d=z('dokumente');d[0].daten={...d[0].daten,stand:'1: Vermerk mit Projektparametern'};
+  assert.equal(K.zusammenfassung('dokumente',K.zaehle('dokumente',d,HEUTE)),'23 Ergebnisse · 1 mit Stand · 22 noch ohne');
+  const a=z('ausgaben');a[0].daten={...a[0].daten,datum:'2026-11-20'};a[1].daten={...a[1].daten,datum:'2026-12-20'};
+  assert.equal(K.zusammenfassung('ausgaben',K.zaehle('ausgaben',a,HEUTE)),'8 Ausgaben · 1 ausgegeben · 7 geplant','ein späteres Datum ist geplant');
+  assert.deepEqual(K.filtere('ausgaben',a,{filter:'ausgegeben',heute:HEUTE}).map(x=>x.nr),[1]);
+  assert.equal(K.zusammenfassung('verteiler',K.zaehle('verteiler',z('verteiler'),HEUTE)),'9 Empfänger · 8 Ausgaben als Spalten');
+  const t=z('austausch');t[0].daten={...t[0].daten,vereinbart_am:'2026-12-11'};
+  assert.equal(K.zusammenfassung('austausch',K.zaehle('austausch',t,HEUTE)),'8 Fachplanungen · 1 vereinbart · 7 noch offen');
+  assert.equal(K.zusammenfassung('ablage',K.zaehle('ablage',z('ablage'),HEUTE)),'12 Ordner · 10 ins Office · 2 nicht ins Office');
+  assert.deepEqual(K.filtere('ablage',z('ablage'),{filter:'nicht_ins_office'}).map(x=>x.daten.ordner),['02_Planung_Architektur/Arbeitsstand','10_Vertrag_Honorar']);
+  for(const art of ['dokumente','ausgaben','verteiler','austausch','ablage'])assert.ok(z(art).every(x=>!K.ueberfaellig(art,x.daten,HEUTE)&&!K.erledigt(art,x.daten)),art);
+  assert.deepEqual(K.leereZeile('ablage'),{ordner:'',inhalt:'',regel:'',office:'ja'});
+});
+
 test('Migration: nur die Prüfregel der Art, erweitert; nichts gelöscht, Rechte unverändert',()=>{
   const datei=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(f=>/_office_projektdokumente_weitere_listen\.sql$/.test(f));
   assert.ok(datei,'Migration fehlt');
@@ -211,6 +297,11 @@ test('Seite: Vorbelegung geladen, alle Listen bearbeitbar, Romy nur bei Klärung
   assert.match(js,/from\('office_terminplan_instances'\)\.select\('phase,state,updated_at'\)\.eq\('project_id',projekt\.id\)/);
   assert.match(js,/K\.setzeTermine\(liste\)/);
   assert.ok(!js.includes("folgt('Fachplanerbedarf und Schnittstellen'"),'keine Karte «Noch nicht gebaut» mehr für die Koordination');
+  assert.ok(!js.includes("folgt('Planliste'"),'keine Karte «Noch nicht gebaut» mehr für die Planliste');
+  // Planliste: das Kürzel steht beim Dokument; «Aktuellen Index eintragen» schreibt den Index in die Spalte der Ausgabe.
+  assert.match(js,/setzeMeta\('planliste',\{kuerzel:k\}\)/);
+  assert.match(js,/function indexEintragen\(liste,n\)\{\n  const key='a'\+n;/);
+  assert.match(js,/X\.listenBlatt\(K,art,liste,\{projekt:[^}]*,ausgaben:zeilen\.ausgaben\}\)/);
   for(const name of ['projektdokumente-vorlagen.js','scripts/projektdokumente-vorlagen.py','tests/sql/office-projektdokumente-listen-acceptance.sql']){
     const txt=read(name);
     assert.ok(!/Bernried|Schwarz/.test(txt),name+' nennt ein Projekt');
