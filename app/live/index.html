@@ -26,13 +26,13 @@
     <audio id="liveAudio" class="live-audio" autoplay playsinline controls aria-label="Audioausgabe von Romy"></audio>
     <button id="liveUnlock" class="live-unlock hidden" type="button">Lautsprecher aktivieren</button>
     <div class="live-captions" aria-label="Vorläufige Spracherkennung">
-      <div><span>Du</span><p id="liveInput">—</p>
+      <div><span>Sie</span><p id="liveInput">—</p>
         <button id="liveConsult" class="live-consult hidden" type="button">Romy fragen</button>
       </div>
       <div><span>Romy</span><p id="liveOutput">—</p></div>
     </div>
     <section id="liveMindsReview" class="live-minds-review hidden" aria-label="Geprüfte Rückfrage an Romy">
-      <label for="liveMindsText">Prüfe, was Romy verstanden hat. Erst deine Freigabe sendet es an den Hauptchat.</label>
+      <label for="liveMindsText">Bitte prüfen, was Romy verstanden hat. Erst Ihre Freigabe sendet es an den Hauptchat.</label>
       <textarea id="liveMindsText" rows="2" maxlength="2000" placeholder="Text prüfen oder korrigieren"></textarea>
       <div class="live-minds-actions">
         <button id="liveMindsSend" type="button">Romy fragen</button>
@@ -55,7 +55,7 @@
         <option value="cedar">Cedar</option>
         <option value="sage">Sage</option>
       </select>
-      <p id="liveVoiceHint">Wähle vor Beginn eine vorhandene Stimme. Die persönliche Originalstimme von Isabella ist im Office nicht verfügbar.</p>
+      <p id="liveVoiceHint">Die Stimme vor Beginn des Gesprächs wählen.</p>
       <p id="liveOriginalNote" class="hidden"></p>
     </div>
     <label><input type="checkbox" id="liveManualReview" checked> Transkript vor der Übergabe an den Hauptchat prüfen</label>
@@ -63,7 +63,7 @@
       <button id="liveStart" type="button" class="primary">Gespräch starten</button>
       <button id="liveStop" type="button" class="secondary" disabled>Beenden</button>
     </div>
-    <p class="live-disclaimer">Romy speichert deine bestätigten Sprachtranskripte in deinem eigenen Office-Chat. Ausgaben der Sprach-KI sind kein verifiziertes Ergebnis. Aktionen und Vorschläge werden im Hauptchat geprüft. Die Audioverbindung ist auf 90 Sekunden begrenzt.</p>
+    <p class="live-disclaimer">Romy speichert Ihre bestätigten Sprachtranskripte in Ihrem eigenen Office-Chat; der Ton wird nicht gespeichert. Ausgaben der Sprach-KI sind kein verifiziertes Ergebnis; Aktionen und Vorschläge werden im Hauptchat geprüft. Das Gespräch läuft, bis Sie «Beenden» wählen, und endet nach 2 Minuten ohne Gespräch von selbst.</p>
   </footer>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
@@ -73,6 +73,6 @@
 <script src="../turn-integrity.js?v=romy4"></script>
 <script src="./canonical.js?v=romy6"></script>
 <script src="./transcript.js?v=romy6"></script>
-<script src="./live.js?v=romy7"></script>
+<script src="./live.js?v=romy8"></script>
 </body>
 </html>

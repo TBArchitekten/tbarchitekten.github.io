@@ -3134,10 +3134,9 @@ function initVoice(){
   };
   $('#micButton').onclick=()=>{if(window.ISABELLA_VOICE_OUTPUT?.isSpeaking()){window.ISABELLA_VOICE_OUTPUT.stop();return;}void start()};
   $('#focusClose').onclick=cancel;primary.onclick=stop;secondary.onclick=secondaryAction;
-  // Same mic/Focus surface: close dictation before navigating to continuous Live.
-  // The real link remains navigable without JavaScript and preserves the old flow.
-  // Live im Chat (V2, 28.11.2026, Gari: «V2: sí»): das Live-Gespräch öffnet über dem Chat statt auf einer eigenen Seite.
-  const liveLink=$('#focusLiveLink');if(liveLink)liveLink.onclick=e=>{cancel();window.ISABELLA_VOICE_OUTPUT?.stop();if(openLiveSheet())e.preventDefault()};
+  // Zwei Knöpfe wie bei Claude (Gari, 28.11.2026): das Mikrofon diktiert, die Schallwelle daneben öffnet das
+  // Live-Gespräch im Blatt über dem Chat (V2). Ohne Blatt öffnet sie Live auf einer eigenen Seite.
+  const liveButton=$('#liveButton');if(liveButton)liveButton.onclick=()=>{window.ISABELLA_VOICE_OUTPUT?.stop();if(!openLiveSheet())location.href='./live/'};
   const liveClose=$('#liveSheetClose');if(liveClose)liveClose.onclick=closeLiveSheet;
 }
 // Live im Chat: die Live-Seite läuft in einem Rahmen über dem Chat. Was gesagt wird, speichert sie Zug um Zug in diesem

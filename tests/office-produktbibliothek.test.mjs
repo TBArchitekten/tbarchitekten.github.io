@@ -161,7 +161,7 @@ test('Seite und Werkzeugkarte: eigene Seite, gleicher Client wie die Kostenberec
   assert.match(shell,/<strong>Produktbibliothek<\/strong><small>Materialien einmal erfassen, in jedem Projekt verwenden/);
   assert.match(shell,/NAV_ICONS\.produkte='<svg /);
   assert.match(projekte,/getElementById\('officeToolsProdukte'\)\?\.addEventListener\('click',\(\)=>\{\s*window\.location\.href='\.\.\/produktbibliothek\.html';/);
-  assert.match(index,/\.\/shell\.js\?v=office67/);
+  assert.match(index,/\.\/shell\.js\?v=office68/);
   assert.match(index,/\.\/office-projects\.js\?v=office62/);
   // Client: Bucket, Leser-Version, nur geprüfte Antworten, nur eigener Pfad.
   assert.match(ui,/BUCKET='office-produkte',FUNKTION='office-produkt-ai',LESER_VERSION='office-produkt-ai-v1'/);
