@@ -2,7 +2,9 @@
    Ohne Bibliothek: .xlsx und .docx sind ZIP-Archive mit XML. Gespeichert wird unkomprimiert (Methode 0), das lesen
    Excel, Word, LibreOffice und kosten-import.js. Rein und ohne DOM, im Browser und in Node prüfbar.
    Excel im Aufbau der Bürovorlage (Titel, Projektzeile, Kopf in Zeile 6, Daten ab Zeile 7, «überfällig» als Formel mit
-   dem Wert von heute, Auswahllisten, Filter, fixierte Spalten). Word im Aufbau der Entscheidungsvorlage, A4, Arial 11 pt. */
+   dem Wert von heute, Auswahllisten, Filter, fixierte Spalten). Word im Aufbau der Entscheidungsvorlage, A4, Arial 11 pt.
+   Weitere Listen (28.11.2026): ein Termin steht wie in der Vorlage als Meilenstein mit der Spalte «Datum» daneben, das
+   Datum aus dem Terminplan des Projekts; die Schnittstellenmatrix mit den Gruppenzeilen und der Legende. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -236,7 +238,9 @@ function docx({titel,bloecke,fusszeile=''},jetzt=new Date()){
 
 // ---------- Listen der Bürovorlage ----------
 // Aus Spalten und Zeilen eines Projektdokuments (TBA_PROJEKTDOKUMENTE) das Blatt wie in LPH3_3_Koordination.xlsx.
+const FIXIERT={klaerungsliste:6,entscheidungsliste:3,fachplanerbedarf:2,schnittstellen:2,fragenliste:4,eingang:1};
 function listenBlatt(K,art,zeilen,{projekt='',heute=K.heuteIso()}={}){
+  if(K.WEITERE&&K.WEITERE.includes(art))return weitereListe(K,art,zeilen,{projekt,heute});
   const spalten=K.SPALTEN[art],doc=K.DOKUMENTE[art];
   const ref=key=>K.SPALTEN[art].findIndex(x=>x.key===key);
   const sortiert=[...zeilen].sort((a,b)=>a.nr-b.nr);
@@ -263,7 +267,54 @@ function listenBlatt(K,art,zeilen,{projekt='',heute=K.heuteIso()}={}){
   return {name:doc.kurz,titel:doc.titel,untertitel:doc.untertitel,projekt,
     hinweis:'Stand '+K.datumLang(heute)+': '+K.zusammenfassung(art,z),
     koepfe:spalten.map(sp=>sp.kopf),breiten:spalten.map(sp=>sp.breite),zeilen:werte,
-    fixiert:art==='klaerungsliste'?{spalten:6,zeilen:6}:{spalten:3,zeilen:6},auswahl,bedingt};
+    fixiert:{spalten:FIXIERT[art]||0,zeilen:6},auswahl,bedingt};
+}
+// Fachplanerbedarf, Schnittstellen, Fragenliste und Eingang: Spalten der Vorlage; ein Termin mit «datumSpalte» wird zu
+// zwei Spalten (Meilenstein und Datum), sonst steht das Datum selbst. Berechnete Spalten mit ihrem Wert von heute.
+function weitereListe(K,art,zeilen,{projekt,heute}){
+  const doc=K.DOKUMENTE[art],spalten=[];
+  for(const sp of K.SPALTEN[art]){
+    spalten.push({sp,teil:'wert',kopf:sp.kopf,breite:sp.breite});
+    if(sp.typ==='meilenstein'&&sp.datumSpalte)spalten.push({sp,teil:'datum',kopf:'Datum',breite:11});
+  }
+  const zahlNr=['fachplanerbedarf','schnittstellen'].includes(art);
+  const wert=(c,z)=>{
+    const sp=c.sp,d=z.daten||{},v=String(d[sp.key]??'').trim();
+    if(sp.key==='nr')return zahlNr?z.nr:K.nummer(art,z.nr,d);
+    if(sp.typ==='datum')return {datum:K.excelTag(d[sp.key])};
+    if(sp.typ==='meilenstein'){
+      const code=K.istMeilenstein(v)?v:'',iso=K.terminVon(v);
+      if(c.teil==='wert'&&sp.datumSpalte)return code;
+      if(!v)return '';
+      if(iso)return {datum:K.excelTag(iso)};
+      return sp.datumSpalte?K.terminFehlt(v):code+' (Datum fehlt)';
+    }
+    return K.zellText(art,sp.key,d,{nr:z.nr,heute});
+  };
+  let sortiert=[...zeilen].sort((a,b)=>a.nr-b.nr);
+  const werte=[];
+  if(art==='schnittstellen'){
+    // Gruppen in der Reihenfolge ihres ersten Auftretens, Zeilen ohne Gruppe am Ende, wie im Blatt der Vorlage.
+    const reihe=[];for(const z of sortiert){const g=String(z.daten?.gruppe||'');if(!reihe.includes(g))reihe.push(g)}
+    reihe.sort((a,b)=>(a===''?1:0)-(b===''?1:0));
+    for(const g of reihe){
+      werte.push([g||'Weitere']);
+      for(const z of sortiert.filter(x=>String(x.daten?.gruppe||'')===g))werte.push(spalten.map(c=>wert(c,z)));
+    }
+  }else for(const z of sortiert)werte.push(spalten.map(c=>wert(c,z)));
+  const auswahl=[];
+  spalten.forEach((c,i)=>{
+    if(c.teil!=='wert')return;
+    if(['auswahl','zustaendigkeit'].includes(c.sp.typ)&&Array.isArray(c.sp.werte))auswahl.push({spalte:spalte(i),werte:c.sp.werte});
+    // Meilenstein mit eigener Datumsspalte: Auswahl der Codes wie in der Vorlage.
+    if(c.sp.typ==='meilenstein'&&c.sp.datumSpalte)auswahl.push({spalte:spalte(i),werte:K.MEILENSTEINE.map(m=>m[0])});
+  });
+  const z=K.zaehle(art,zeilen,heute);
+  const legende=art==='schnittstellen'?' · '+K.LEGENDE.map(([k,t])=>k+' '+t).join(' · '):'';
+  return {name:doc.kurz,titel:doc.titel,untertitel:doc.untertitel,projekt,
+    hinweis:'Stand '+K.datumLang(heute)+': '+K.zusammenfassung(art,z)+legende,
+    koepfe:spalten.map(c=>c.kopf),breiten:spalten.map(c=>c.breite),zeilen:werte,
+    fixiert:{spalten:FIXIERT[art]||0,zeilen:6},auswahl,bedingt:[]};
 }
 
 return Object.freeze({crc32,zip,xlsx,docx,listenBlatt,spalte});
