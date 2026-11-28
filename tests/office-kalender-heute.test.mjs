@@ -15,6 +15,16 @@ test('Kalender: jeder Start beginnt mit heute, in Schreibtisch und Kalender',()=
   assert.match(app,/const base=\{[^}]*date:today\(\)/,'ohne gespeicherten Zustand ohnehin heute');
 });
 
+test('Romy: der Schreibtisch bleibt, mit Kalender, Heute und Arbeitsplan daneben',()=>{
+  // Gari, 28.11.2026: «se me hacía mucho más práctica … como tipo Dashboard». Am 27.11. war er für einen Abend auf das
+  // Gespräch allein reduziert worden; das darf nicht wiederkommen, ohne dass Gari es will.
+  const dash=read('app/dashboard.js'),css=read('app/office-assistant.css');
+  assert.match(dash,/parts=Object\.fromEntries\(M\.PANELS\.map\(k=>\[k,panel\(k\)\]\)\);/);
+  assert.match(read('app/dashboard-model.js'),/const PANELS = \['chat', 'calendar', 'today', 'plan'\];/);
+  assert.doesNotMatch(dash,/desk-shell--allein|const PANELS = \['chat'\]/);
+  assert.doesNotMatch(css,/desk-shell--allein/);
+});
+
 test('Kalender: über Mitternacht offen rückt «heute» nach, ein bewusst gewählter Tag bleibt',()=>{
   const dash=read('app/dashboard.js'),app=read('app/app.js');
   assert.match(dash,/const wasToday = prefs\.selectedDate === todayKey;\n    todayKey = now;\n    if \(!wasToday\) return;\n    prefs\.selectedDate = now;remember\(\);\n    app\(\)\?\.selectCalendarDate\?\.\(now\);scheduleRender\(\);/);
@@ -29,5 +39,5 @@ test('Reiter «+»: gezeichnetes Kreuz, Kreis ausdrücklich mittig',()=>{
   assert.match(css,/\.work-tab-plus svg\{display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round\}/);
   // Neue Fassungen werden geladen.
   const index=read('app/index.html');
-  for(const v of ['./work-polish.css?v=8','./shell.js?v=office66','./app.js?v=office61','./dashboard.js?v=office43'])assert.ok(index.includes(v),v);
+  for(const v of ['./work-polish.css?v=8','./shell.js?v=office66','./app.js?v=office61','./dashboard.js?v=office44'])assert.ok(index.includes(v),v);
 });
