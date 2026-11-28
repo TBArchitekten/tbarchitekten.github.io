@@ -326,24 +326,24 @@ test('Excel im Aufbau der Bürovorlage',async()=>{
   await ctx.close();
 });
 
-test('Romy: Vorschläge mit Fundstelle, nichts ändert sich ohne «Übernehmen», nie eine Entscheidung',async()=>{
+test('KI: Vorschläge mit Fundstelle, nichts ändert sich ohne «Übernehmen», nie eine Entscheidung',async()=>{
   const {ctx,page,fehler}=await oeffne();
   await page.goto(adresse('projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=klaerungsliste'));
-  await page.locator('[data-act="romy"]',{hasText:'Romy fragen'}).waitFor();
+  await page.locator('[data-act="romy"]',{hasText:'KI fragen'}).waitFor();
   const vorher=(await zeilenVon(page,'klaerungsliste')).length;
   await page.locator('[data-act="romy"]').click();
   await page.locator('dialog[open] h2',{hasText:'Vorschläge aus einem Dokument'}).waitFor();
   await page.locator('dialog input[name="quelle"]').fill('Protokoll Koordination 02');
   await page.locator('dialog textarea[name="text"]').fill('TOP 3: Unterzug … TOP 4: Aussparung Steigschacht … TOP 7: Wärmepumpe …');
   await page.locator('dialog button[type="submit"]').click();
-  await page.locator('.pd-banner.romy',{hasText:'Romy hat in «Protokoll Koordination 02» 3 Vorschläge gemacht.'}).waitFor();
+  await page.locator('.pd-banner.romy',{hasText:'Die KI hat in «Protokoll Koordination 02» 3 Vorschläge gemacht.'}).waitFor();
   assert.match(await page.locator('.pd-romy-antwort').innerText(),/zwei neue Klärungen[\s\S]*TOP 9 betrifft die Bemusterung/);
   assert.equal((await zeilenVon(page,'klaerungsliste')).length,vorher,'ein Vorschlag ändert die Liste nicht');
   assert.equal((await db(page,'office_projektdokument_vorschlaege')).filter(v=>v.status==='offen').length,3);
   const neue=page.locator('tr.pd-vorschlag:not(.pd-vs-aenderung)');
   assert.equal(await neue.count(),2);
   assert.match(await neue.first().innerText(),/Aussparung für den Steigschacht[\s\S]*Fundstelle: Protokoll Koordination 02, S\. 2, TOP 4/);
-  assert.match(await page.locator('tr.pd-vs-aenderung').innerText(),/Romy schlägt für 1 vor: Frist: 05\.12\. → 08\.12\./);
+  assert.match(await page.locator('tr.pd-vs-aenderung').innerText(),/Die KI schlägt für 1 vor: Frist: 05\.12\. → 08\.12\./);
   await foto(page,'7-romy-vorschlaege');
   // Übernehmen: neue Zeile mit «R», Herkunft «romy»; Verwerfen: nichts.
   await neue.first().locator('[data-act="vs-ja"]').click();
@@ -367,7 +367,7 @@ test('Romy: Vorschläge mit Fundstelle, nichts ändert sich ohne «Übernehmen»
   assert.equal(await page.locator('.pd-banner.romy').count(),0);
   // Verlauf: woher der Wert kam und wer ihn übernommen hat.
   await page.locator('td[data-k="nr"]').first().click();
-  await page.locator('.pd-verlauf li',{hasText:'Vorschlag von Romy (Protokoll Koordination 02, S. 2, TOP 3), übernommen von Test Leitung'}).waitFor();
+  await page.locator('.pd-verlauf li',{hasText:'Vorschlag von der KI (Protokoll Koordination 02, S. 2, TOP 3), übernommen von Test Leitung'}).waitFor();
   await page.locator('[data-act="detail-zu"]').click();
   // Fristen mit dem Terminplan prüfen: ein Vorschlag mit Fundstelle im Terminplan.
   await page.locator('input[data-act="waehle"]').first().check();
@@ -432,7 +432,7 @@ test('Ablauf «Besprechung nachbereiten»: beide Listen, Aufgaben, Fristen, Proj
   await page.locator('dialog button[type="submit"]').click();
   const panel=page.locator('.pd-ablauf');
   await panel.waitFor();
-  assert.match(await panel.innerText(),/Protokoll Jour fixe 05[\s\S]*Romy: Im Protokoll stehen zwei neue Klärungen[\s\S]*Eine Frage an den Auftraggeber/);
+  assert.match(await panel.innerText(),/Protokoll Jour fixe 05[\s\S]*KI: Im Protokoll stehen zwei neue Klärungen[\s\S]*Eine Frage an den Auftraggeber/);
   const gelesen=(await page.evaluate(()=>window.__fake.anfragen)).filter(a=>a.body.action==='vorschlaege'&&a.body.quelle===Q);
   assert.equal(gelesen.length,2,'einmal je Liste');
   const schritte=panel.locator('.pd-ablauf-schritt');

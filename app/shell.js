@@ -21,6 +21,10 @@ NAV_ICONS.mappe='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 NAV_ICONS.controlling='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 14 4-4 4 4 5-5"/></svg>';
 // Kostenberechnung: Rechner, im Strich der übrigen Symbole.
 NAV_ICONS.kosten='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>';
+// Each member names the assistant (Gari, 28.11.2026); «KI-Assistent» until they do. The first paint already uses the
+// copy on this device (assistant-i18n.js); the marked elements follow a new name (office-personal.js).
+const shellKI=t=>{try{if(typeof window.MINDS_ASSISTANT_TEXT==='function')return String(window.MINDS_ASSISTANT_TEXT(t))}catch{}
+  return String(t).replace(/\{(name|Wer|wer|wem|wen)\}/g,(_,k)=>({name:'KI-Assistent',Wer:'Der KI-Assistent',wer:'der KI-Assistent',wem:'dem KI-Assistenten',wen:'den KI-Assistenten'})[k])};
 // Only «Zu bestätigen» carries a number; the web and the iPhone show the same count.
 const bandejaBadge='<span class="nav-badge hidden" data-bandeja-badge aria-hidden="true"></span>';
 
@@ -33,7 +37,7 @@ document.body.innerHTML = `
 
   <nav id="desktopLenses" class="desktop-lenses" aria-label="Office">
     <div class="lenses-heading">ANSICHTEN</div>
-    <button class="lens-nav-item" data-nav="assistant" aria-label="Romy"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.assistant}</span><span class="lens-copy"><strong>Romy</strong><small>Persönliche Assistentin</small></span></button>
+    <button class="lens-nav-item" data-nav="assistant" aria-label="${shellKI('{name}')}" data-assistant-aria="{name}"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.assistant}</span><span class="lens-copy"><strong data-assistant-name>${shellKI('{name}')}</strong><small>Persönliche Assistenz</small></span></button>
     <button class="lens-nav-item active" data-nav="feed" aria-label="Heute"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.feed}</span><span class="lens-copy"><strong>Heute</strong><small>Ihr Tag</small></span></button>
     <button class="lens-nav-item" data-nav="calendar" aria-label="Kalender"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.calendar}</span><span class="lens-copy"><strong>Kalender</strong><small>Termine und Aufgaben</small></span></button>
     <button class="lens-nav-item" data-nav="work" aria-label="Work"><span class="lens-glyph" aria-hidden="true">${NAV_ICONS.work}</span><span class="lens-copy"><strong>Work</strong><small>Projekte</small></span></button>
@@ -59,7 +63,7 @@ document.body.innerHTML = `
           <input id="chatImageInput" class="hidden" type="file" accept="image/*,.pdf,.txt,.md,.csv,.json,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.eml" multiple>
           <button id="micButton" class="mic" aria-label="Diktieren" title="Diktieren"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg></button>
           <button id="liveButton" class="mic mic-live" type="button" aria-label="Live sprechen" title="Live sprechen"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M4 10v4M8 6.5v11M12 3.5v17M16 6.5v11M20 10v4"/></svg></button>
-          <textarea id="chatInput" rows="1" placeholder="Nachricht an Romy …"></textarea>
+          <textarea id="chatInput" rows="1" placeholder="${shellKI('Nachricht an {wen} …')}" data-assistant-placeholder="Nachricht an {wen} …"></textarea>
           <button id="sendButton" class="send" aria-label="Senden" title="Nachricht senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
         </div>
       </div>
@@ -86,7 +90,7 @@ document.body.innerHTML = `
       <div class="surface-scroll bandeja-scroll">
         <div class="pull-refresh-indicator" data-pull-indicator="bandeja" aria-hidden="true"><span>Zum Aktualisieren ziehen</span></div>
         <header class="bandeja-head">
-          <div><h1>Eingang</h1><p>Was Romy vorschlägt — für wenn du Zeit hast.</p></div>
+          <div><h1>Eingang</h1><p data-assistant-text="Was {wer} vorschlägt — für wenn du Zeit hast.">${shellKI('Was {wer} vorschlägt — für wenn du Zeit hast.')}</p></div>
           <span class="minds-menu-slot" data-menu-slot="bandeja"></span>
         </header>
         <div class="bandeja-tabs" role="tablist" aria-label="Ansicht des Eingangs">
@@ -271,7 +275,7 @@ document.body.innerHTML = `
   </section>
 
   <nav id="mainNav" class="main-nav" aria-label="MINDS">
-    <button class="main-nav-item" data-nav="assistant" aria-label="Romy"><span class="nav-icon">${NAV_ICONS.assistant}</span></button>
+    <button class="main-nav-item" data-nav="assistant" aria-label="${shellKI('{name}')}" data-assistant-aria="{name}"><span class="nav-icon">${NAV_ICONS.assistant}</span></button>
     <button class="main-nav-item active" data-nav="feed" aria-label="Heute"><span class="nav-icon">${NAV_ICONS.feed}</span></button>
     <button class="main-nav-item" data-nav="calendar" aria-label="Kalender"><span class="nav-icon">${NAV_ICONS.calendar}</span></button>
     <button class="main-nav-item" data-nav="work" aria-label="Work"><span class="nav-icon">${NAV_ICONS.work}</span></button>
@@ -281,8 +285,8 @@ document.body.innerHTML = `
 
   <div id="drawerBackdrop" class="backdrop hidden"></div>
   <aside id="drawer" class="drawer hidden"><div class="drawer-head"><div><div class="eyebrow">TBA OFFICE</div><div class="drawer-title">Mehr</div></div><button id="closeDrawer" class="round">×</button></div><a class="drawer-link" id="officeProjectsDrawer" href="#section=projects">Projekte verwalten</a><a class="drawer-link" href="#section=mitglieder" data-office-verwaltung="mitglieder" data-office-admin hidden>Mitglieder</a><a class="drawer-link" href="#section=kinutzung" data-office-verwaltung="kinutzung" data-office-admin hidden>KI-Nutzung</a><a class="drawer-link" href="#section=systemstatus" data-office-verwaltung="systemstatus" data-office-admin hidden>Systemstatus</a><button data-action="new">Neu anlegen</button><button data-action="tasks">Aufgaben</button><a class="drawer-link" href="../#password" data-office-verwaltung="passwort">Passwort ändern</a><button id="officeSwitchAccount" type="button" hidden>Zu Persönlich wechseln</button><button id="officeSignOut">Abmelden</button><button id="authButton" hidden>Synchronisieren</button><button id="refreshViewAction" data-action="refreshview" class="hidden">Ansicht aktualisieren</button><div class="office-hidden-actions" hidden><button data-shell-nav="readings">Lecturas</button><button data-shell-nav="thoughts">Thoughts</button><button data-action="memory"></button><button data-action="assistantprefs"></button><button data-action="push"></button><button data-action="permissions"></button><button data-action="reviews"></button><button data-action="routines"></button><button data-action="intents"></button><button data-action="continuity"></button><button data-action="skills"></button><button data-action="doctor"></button><button data-action="feedprefs"></button><button data-action="artifacts"></button><button data-action="aiusage"></button></div><div id="syncStatus" class="drawer-note">Verbinde mit dem Office …</div><div id="currentBuildInfo" class="drawer-note">TBA Office · auf Basis von Window</div></aside>
-  <div id="focusMode" class="focus hidden" role="dialog" aria-modal="true"><div class="focus-head"><div class="focus-name">Romy</div><button id="focusClose" class="round">×</button></div><div class="focus-center"><div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="focusStatus" class="focus-status">Höre zu …</div><textarea id="focusTranscript" class="focus-transcript" rows="5" readonly placeholder="Hier erscheint die Transkription."></textarea></div><label class="focus-voice-option"><input id="focusSpeakReply" type="checkbox"><span>Antwort anhören</span></label><div class="focus-actions"><button id="focusKeyboard">Abbrechen</button><button id="focusStop" class="dark">Stopp</button></div></div>
-  <div id="liveSheet" class="live-sheet hidden" role="dialog" aria-modal="false" aria-label="Live-Gespräch mit Romy"><div class="live-sheet-head"><span class="live-sheet-title">Live · Romy</span><button id="liveSheetClose" class="round" type="button" aria-label="Live-Gespräch schließen">×</button></div><iframe id="liveFrame" class="live-frame" title="Live-Gespräch mit Romy" allow="microphone; autoplay"></iframe></div>
+  <div id="focusMode" class="focus hidden" role="dialog" aria-modal="true"><div class="focus-head"><div class="focus-name" data-assistant-name>${shellKI('{name}')}</div><button id="focusClose" class="round">×</button></div><div class="focus-center"><div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="focusStatus" class="focus-status">Höre zu …</div><textarea id="focusTranscript" class="focus-transcript" rows="5" readonly placeholder="Hier erscheint die Transkription."></textarea></div><label class="focus-voice-option"><input id="focusSpeakReply" type="checkbox"><span>Antwort anhören</span></label><div class="focus-actions"><button id="focusKeyboard">Abbrechen</button><button id="focusStop" class="dark">Stopp</button></div></div>
+  <div id="liveSheet" class="live-sheet hidden" role="dialog" aria-modal="false" aria-label="${shellKI('Live-Gespräch mit {wem}')}" data-assistant-aria="Live-Gespräch mit {wem}"><div class="live-sheet-head"><span class="live-sheet-title" data-assistant-text="Live · {name}">${shellKI('Live · {name}')}</span><button id="liveSheetClose" class="round" type="button" aria-label="Live-Gespräch schließen">×</button></div><iframe id="liveFrame" class="live-frame" title="${shellKI('Live-Gespräch mit {wem}')}" data-assistant-title="Live-Gespräch mit {wem}" allow="microphone; autoplay"></iframe></div>
   <div id="modalBackdrop" class="backdrop hidden"></div><div id="modal" class="modal hidden"><div class="modal-head"><div id="modalTitle" class="modal-title"></div><button id="closeModal" class="round">×</button></div><div id="modalBody"></div></div>
 </div>`;
 

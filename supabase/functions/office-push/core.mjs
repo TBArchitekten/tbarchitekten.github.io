@@ -1,9 +1,11 @@
-// TBA Office · Versand von Romys Mitteilungen über APNs (27.11.2026, Claude, auf Wunsch von Gari). Reine Hilfsfunktionen
+// TBA Office · Versand der Mitteilungen des Assistenten über APNs (27.11.2026, Claude, auf Wunsch von Gari). Reine Hilfsfunktionen
 // ohne Netz und ohne Deno, damit sie in Node getestet werden: Anbieter-Token (JWT, ES256), Verschlüsselung für das
 // iPhone (AES-256-GCM, wie CryptoKit «combined»), die Anfrage an APNs und was eine Antwort bedeutet.
 // Apple sieht nur OEFFENTLICH; den eigentlichen Text entschlüsselt die Mitteilungserweiterung der Window-App.
+// Seit dem 28.11.2026 gibt jede Person ihrem Assistenten einen eigenen Namen: der steht nur im verschlüsselten Titel
+// (die Warteschlange trägt ihn ein); Apple sieht «TBA Office», ohne Namen.
 export const APNS_HOSTS = {production: "https://api.push.apple.com", development: "https://api.sandbox.push.apple.com"};
-export const OEFFENTLICH = {title: "Romy", body: "Neue Mitteilung"};
+export const OEFFENTLICH = {title: "TBA Office", body: "Neue Mitteilung"};
 export const MAX_VERSUCHE = 6;
 // Apple: ein neues Anbieter-Token höchstens alle 20 Minuten, gültig bis 60 Minuten. Wir erneuern nach 40.
 export const JWT_MINUTEN = 40;
@@ -64,7 +66,7 @@ export async function versiegeln(schluesselB64, nachricht, nonce = crypto.getRan
 
 // Was die App nach dem Entschlüsseln zeigt: Titel, Text, wohin ein Tippen führt, Art und Kennung.
 export function inhalt(m) {
-  return {t: String(m.titel || "Romy").slice(0, 80), b: String(m.text || "").slice(0, 600), z: m.ziel || "romy", k: m.art, i: m.id};
+  return {t: String(m.titel || "KI-Assistent").slice(0, 80), b: String(m.text || "").slice(0, 600), z: m.ziel || "romy", k: m.art, i: m.id};
 }
 
 export function anfrage({geraet, jwt, nachricht, versiegelt}) {

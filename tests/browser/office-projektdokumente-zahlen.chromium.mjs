@@ -84,7 +84,7 @@ test('Zahlen aus dem Office, Romy «Zahlen holen», Vorlage mit Belegen und Frei
 
     // B: Romy holt Zahlen; nur echte Verweise gelten, nichts ändert sich vor «Übernehmen».
     await page.locator('[data-act="romy-zahlen"]').click();
-    await page.locator('.pd-meldung',{hasText:'Romy schlägt Zahlen für 1 Variante vor'}).waitFor();
+    await page.locator('.pd-meldung',{hasText:'Die KI schlägt Zahlen für 1 Variante vor'}).waitFor();
     const anfrage=(await page.evaluate(()=>window.__fake.anfragen)).find(x=>x.body.action==='zahlen');
     assert.equal(anfrage.body.kostenstand,'2026-Q4');
     assert.ok(anfrage.body.kandidaten.pool.some(x=>/Naturstein/.test(x.bezeichnung))&&anfrage.body.kandidaten.kobe.length>0);

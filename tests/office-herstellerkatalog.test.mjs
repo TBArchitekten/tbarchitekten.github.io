@@ -103,7 +103,7 @@ test('Produktbibliothek: Karte und Produktblatt zeigen den Kontakt; Firma beim A
   assert.match(pb,/hersteller_id:herstellerIdBeim\(f\.get\('hersteller'\),e\)/,'Formular: Verknüpfung bleibt bei gleichem Namen');
   assert.match(pb,/const herstellerIdBeim=\(name,e\)=>herstellerIdFuer\(name\)\|\|\(e&&String\(name\|\|''\)\.trim\(\)===String\(e\.hersteller\|\|''\)\.trim\(\)\?e\.hersteller_id\|\|null:null\)/);
   assert.match(pb,/if\(ui\.hersteller\)liste=liste\.filter\(e=>e\.hersteller_id===ui\.hersteller\);/);
-  assert.match(read('produktbibliothek.html'),/produktbibliothek\.js\?v=office10/);
+  assert.match(read('produktbibliothek.html'),/produktbibliothek\.js\?v=office11/);
 });
 
 test('Licht und Dokumentarten: Prüfregeln ersetzt, alle bisherigen Werte bleiben, Seite, Leser und Import kennen sie',()=>{

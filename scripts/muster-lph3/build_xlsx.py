@@ -3,7 +3,7 @@
 
 Aufruf aus dem Repo:  python3 scripts/muster-lph3/build_xlsx.py
 Schreibt muster/lph3/LPH3_3_Koordination.xlsx und muster/lph3/LPH3_2_Planliste.xlsx.
-Danach Formelwerte berechnen (LibreOffice), damit Vorschau und Romy Werte sehen:
+Danach Formelwerte berechnen (LibreOffice), damit Vorschau und die KI Werte sehen:
   python3 <xlsx-skill>/scripts/recalc.py muster/lph3/LPH3_3_Koordination.xlsx
 
 Inhalt und Fundstellen: Aufgabenbibliothek LPH 3 v0.3.4 (app/data/muster-planner-lph3-v0.3.json),
@@ -750,8 +750,8 @@ def koordination():
     put(ws, f"B{r}", "Grenze der Koordination", font=F_SEC, border=False); r += 1
     put(ws, f"C{r}", "«Eine fachliche Kontrolle der Inhalte fachfremder Planungen kann und muss der Architekt nicht leisten.» (ByAK-Merkblatt M08, 01/2021). Die Klärungsliste prüft Schnittstellen – Geometrie, Platz, Abhängigkeiten, Termine –, nicht die Richtigkeit fremder Berechnungen.")
     ws.merge_cells(f"C{r}:D{r}"); ws.row_dimensions[r].height = 40; r += 2
-    put(ws, f"B{r}", "Für Romy", font=F_SEC, border=False); r += 1
-    put(ws, f"C{r}", "Die ausgefüllte Mappe im Schreibtisch des Projekts ablegen (Work). Romy liest Excel-Dateien und kann daraus offene Fragen, überfällige Punkte und anstehende Entscheidungen nennen. Ansprechpartner mit Firma und Rolle genügen; private Daten gehören nicht hinein.")
+    put(ws, f"B{r}", "Für die KI", font=F_SEC, border=False); r += 1
+    put(ws, f"C{r}", "Die ausgefüllte Mappe im Schreibtisch des Projekts ablegen (Work). Die KI liest Excel-Dateien und kann daraus offene Fragen, überfällige Punkte und anstehende Entscheidungen nennen. Ansprechpartner mit Firma und Rolle genügen; private Daten gehören nicht hinein.")
     ws.merge_cells(f"C{r}:D{r}"); ws.row_dimensions[r].height = 40; r += 2
     quellen_rows(ws, r)
     page(ws, None, landscape=False)
@@ -986,7 +986,7 @@ def planliste():
     # Ablage
     ws = abl
     title(ws, "Ablagestruktur des Projekts", "L3.PLI.1-04 · Eingang und Ausgang, Fachplaner, Behörden, Protokolle · Vorschlag, bis der Bürostandard ihn ersetzt", 5)
-    header(ws, 6, ["Ordner", "Inhalt", "Regel", "ins Office (Romy liest mit)?", "Bemerkung"], [30, 46, 46, 16, 30])
+    header(ws, 6, ["Ordner", "Inhalt", "Regel", "ins Office (die KI liest mit)?", "Bemerkung"], [30, 46, 46, 16, 30])
     ablage = [
         ("01_Grundlagen", "Was von außen kommt: Vermessung, Baugrund, Bestand, Bebauungsplan, Satzungen, Raumprogramm", "Original unverändert ablegen; Eingangsdatum im Dateinamen", "ja"),
         ("02_Planung_Architektur/Arbeitsstand", "Laufende Planung (CAD, Arbeitsdateien)", "Nur intern; nicht versenden", "nein"),
@@ -1007,7 +1007,7 @@ def planliste():
         put(ws, f"C{r}", regel, font=F_PROP, fill=FILL_IN); put(ws, f"D{r}", office, font=F_PROP, fill=FILL_IN, align=WRAPC)
         put(ws, f"E{r}", None, fill=FILL_IN); ws.row_dimensions[r].height = 30; r += 1
     dv_list(ws, L["ja/nein"], f"D7:D{r-1}", strict=True)
-    put(ws, f"A{r+1}", "«ins Office»: was im Schreibtisch des Projekts liegt, kann Romy lesen und daraus Fristen, Entscheidungen und offene Punkte vorschlagen. Vertragliches und Honorar gehören nicht hinein (projektstart.html, Kapitel 1).", font=F_SUB, border=False)
+    put(ws, f"A{r+1}", "«ins Office»: was im Schreibtisch des Projekts liegt, kann die KI lesen und daraus Fristen, Entscheidungen und offene Punkte vorschlagen. Vertragliches und Honorar gehören nicht hinein (projektstart.html, Kapitel 1).", font=F_SUB, border=False)
     page(ws, "6:6")
 
     wb.properties.creator = "TBA Office"; wb.properties.title = "Planliste LPH 3 · Bürovorlage"

@@ -1,7 +1,7 @@
 /* TBA Office · Produktbibliothek (23.11.2026, Claude; Entwurf von Gari am 23.11.2026 freigegeben).
    Gari wünschte eine Bibliothek wie bei Programa, aber für Materialien, zuerst Bodenbeläge: einmal erfassen, in jedem
    Projekt verwenden. Ansichten nach dem Entwurf: Bibliothek (Karten mit Preis und Herkunft), Produktblatt (Merkmale mit
-   Seite im Datenblatt, Dokumente, Preise, Verwendung in Projekten), Datenblatt prüfen und übernehmen (Romy liest, die
+   Seite im Datenblatt, Dokumente, Preise, Verwendung in Projekten), Datenblatt prüfen und übernehmen (die KI liest, die
    Person prüft; gespeichert wird erst dann) und von Hand anlegen. Jeder Preis trägt Art, Stand und Quelle; ein Ansatz,
    der in mehreren alten Kostenberechnungen gleich steht, zählt als eine Quelle. Daten: office_produkte und Nachbarn
    (Migration 20261123180000), Dateien im privaten Bucket «office-produkte», Leser: Edge Function office-produkt-ai.
@@ -417,7 +417,7 @@ function renderErgebnis(){
         'Für dieses Projekt ist noch nichts ausgewählt.')+'</p><p class="meta">Ausgewählt wird in der Produktbibliothek: «Zu Projekt» auf der Karte eines Produkts.</p></div>':
       '<div class="card pb-leer"><p>'+(fuer?'Für dieses Projekt ist hier noch nichts ausgewählt. «Zu Projekt» auf einer Karte wählt aus.':
         daten.produkte.length?'Nichts gefunden. Andere Kategorie oder weniger Suchbegriffe?':'Die Bibliothek ist noch leer.')+'</p>'+
-      '<p class="meta">Am schnellsten mit einem Herstellerdatenblatt: Romy liest es, du prüfst, die Bibliothek übernimmt.</p></div>')}`;
+      '<p class="meta">Am schnellsten mit einem Herstellerdatenblatt: Die KI liest es, du prüfst, die Bibliothek übernimmt.</p></div>')}`;
   el.querySelectorAll('[data-zu-projekt]').forEach(b=>b.addEventListener('click',()=>zuProjekt(daten.produkte.find(e=>e.id===b.dataset.zuProjekt))));
 }
 function karte(e){
@@ -470,14 +470,14 @@ function renderProdukt(e){
         ${e.beschreibung?'<section class="card pb-box"><p>'+esc(e.beschreibung)+'</p></section>':''}
         ${herstellerBox(e)}
         <section class="card pb-box"><h2 class="pb-h2">Dokumente</h2>
-          ${doks.length?'<ul class="pb-doks">'+doks.map(d=>`<li><span><b>${esc(DOKARTEN[d.art]||d.art)}</b><br><span class="meta">${esc(d.name)}${d.seiten?' · '+d.seiten+' S.':''}${d.gelesen_am?' · von Romy gelesen':''}</span></span>
-            <span class="pb-dok-aktionen">${d.mime_type==='application/pdf'&&!d.gelesen_am&&d.size_bytes<=MAX_LESEN?'<button type="button" class="btn btn-quiet" data-dok-lesen="'+esc(d.id)+'">Romy lesen lassen</button>':''}<button type="button" class="btn btn-quiet" data-oeffnen="${esc(d.id)}">Öffnen</button>${d.created_by===nutzer.id||mitglied.role==='admin'?'<button type="button" class="btn btn-quiet btn-danger" data-dok-weg="'+esc(d.id)+'">Entfernen</button>':''}</span></li>`).join('')+'</ul>':'<p class="meta">Noch kein Dokument.</p>'}
+          ${doks.length?'<ul class="pb-doks">'+doks.map(d=>`<li><span><b>${esc(DOKARTEN[d.art]||d.art)}</b><br><span class="meta">${esc(d.name)}${d.seiten?' · '+d.seiten+' S.':''}${d.gelesen_am?' · von der KI gelesen':''}</span></span>
+            <span class="pb-dok-aktionen">${d.mime_type==='application/pdf'&&!d.gelesen_am&&d.size_bytes<=MAX_LESEN?'<button type="button" class="btn btn-quiet" data-dok-lesen="'+esc(d.id)+'">Von der KI lesen lassen</button>':''}<button type="button" class="btn btn-quiet" data-oeffnen="${esc(d.id)}">Öffnen</button>${d.created_by===nutzer.id||mitglied.role==='admin'?'<button type="button" class="btn btn-quiet btn-danger" data-dok-weg="'+esc(d.id)+'">Entfernen</button>':''}</span></li>`).join('')+'</ul>':'<p class="meta">Noch kein Dokument.</p>'}
           <div class="pb-dok-neu">
             <label class="meta" for="pbDokArt">Art</label>
             <select id="pbDokArt" class="pb-input">${Object.entries(DOKARTEN).map(([k,t])=>'<option value="'+k+'"'+(k===(datenblatt?'preisliste':'datenblatt')?' selected':'')+'>'+esc(t)+'</option>').join('')}</select>
             <label class="btn">Dokument hochladen<input type="file" id="pbDokDatei" class="pb-datei" accept=".pdf,.jpg,.jpeg,.png,.webp"></label>
           </div>
-          <p class="meta">Ein Dokument kann Romy danach lesen; neue Angaben und Preise kommen erst nach deiner Prüfung dazu.</p>
+          <p class="meta">Ein Dokument kann die KI danach lesen; neue Angaben und Preise kommen erst nach deiner Prüfung dazu.</p>
         </section>
       </div>
       <div class="pb-main">
@@ -686,14 +686,14 @@ function zeigeLeser(){
   root.innerHTML=`<div class="pb-wrap">
     <a class="pb-back" href="./produktbibliothek.html">‹ Produktbibliothek</a>
     <header class="pb-head"><div class="pb-head-text"><p class="kicker">Produktbibliothek · Datenblatt</p><h1>Herstellerdatenblatt hochladen</h1>
-      <p class="pb-intro">Romy liest das Dokument und schlägt vor, was die Bibliothek übernehmen kann. Nichts wird gespeichert, bevor du prüfst; jede Angabe nennt ihre Seite, was fehlt, steht als fehlend da.</p></div></header>
+      <p class="pb-intro">Die KI liest das Dokument und schlägt vor, was die Bibliothek übernehmen kann. Nichts wird gespeichert, bevor du prüfst; jede Angabe nennt ihre Seite, was fehlt, steht als fehlend da.</p></div></header>
     <div class="pb-banner" data-meldung hidden></div>
     <section class="card pb-box pb-wahl">
       <div class="pb-felder">
         <label>Kategorie<select id="pbLeserKat" class="pb-input">${KATEGORIEN.map(([k,,eins])=>'<option value="'+k+'"'+(k===leser.kategorie?' selected':'')+'>'+esc(eins)+'</option>').join('')}</select></label>
-        <label class="breit">Datei (PDF oder Bild, für Romy bis 8 MB)<input type="file" id="pbLeserDatei" class="pb-input" accept=".pdf,.jpg,.jpeg,.png,.webp"></label>
+        <label class="breit">Datei (PDF oder Bild, für die KI bis 8 MB)<input type="file" id="pbLeserDatei" class="pb-input" accept=".pdf,.jpg,.jpeg,.png,.webp"></label>
       </div>
-      <div class="pb-actions"><button type="button" class="btn btn-primary" data-lesen disabled>Romy lesen lassen</button>
+      <div class="pb-actions"><button type="button" class="btn btn-primary" data-lesen disabled>Von der KI lesen lassen</button>
         <button type="button" class="btn" data-ohne-lesen disabled>Ohne Lesen von Hand übernehmen</button></div>
     </section>
   </div>`;
@@ -703,7 +703,7 @@ function zeigeLeser(){
     const f=datei.files?.[0]||null;leser.datei=f;
     if(f&&!MIMES.includes(f.type)){meldung('Bitte ein PDF oder Bild (JPG, PNG, WebP).','warn');lesen.disabled=ohne.disabled=true;return}
     if(f&&f.size>MAX_DATEI){meldung('Die Datei ist größer als 25 MB.','warn');lesen.disabled=ohne.disabled=true;return}
-    meldung(f&&f.size>MAX_LESEN?'Größer als 8 MB: Romy kann es nicht lesen, du kannst es aber von Hand übernehmen.':'',f&&f.size>MAX_LESEN?'warn':'info');
+    meldung(f&&f.size>MAX_LESEN?'Größer als 8 MB: Die KI kann es nicht lesen, du kannst es aber von Hand übernehmen.':'',f&&f.size>MAX_LESEN?'warn':'info');
     lesen.disabled=!f||f.size>MAX_LESEN;ohne.disabled=!f;
   });
   lesen.addEventListener('click',()=>void lassLesen());
@@ -728,7 +728,7 @@ async function frageLeser(datei,kategorie){
 async function lassLesen(){
   if(!leser.datei)return;
   root.querySelectorAll('button').forEach(b=>b.disabled=true);
-  meldung('Romy liest «'+leser.datei.name+'» … das dauert meist unter einer Minute.','info');
+  meldung('Die KI liest «'+leser.datei.name+'» … das dauert meist unter einer Minute.','info');
   try{
     leser.ergebnis=await frageLeser(leser.datei,leser.kategorie);
     if(!leser.ergebnis.produkt.kategorie)leser.ergebnis.produkt.kategorie=leser.kategorie;
@@ -742,11 +742,11 @@ async function lassLesen(){
 // Ein Dokument, das schon in der Bibliothek liegt, nachträglich lesen: neue Angaben und Preise kommen zum Eintrag dazu.
 async function bestehendesLesen(e,dokId){
   const d=daten.dokumente.find(x=>x.id===dokId);if(!d)return;
-  meldung('Romy liest «'+d.name+'» …','info');
+  meldung('Die KI liest «'+d.name+'» …','info');
   try{
     const {data,error}=await sb.storage.from(BUCKET).download(d.storage_path);
     if(error||!data)throw Error('Das Dokument ist gerade nicht erreichbar.');
-    if(data.size>MAX_LESEN)throw Error('Größer als 8 MB: Romy kann es nicht lesen.');
+    if(data.size>MAX_LESEN)throw Error('Größer als 8 MB: Die KI kann es nicht lesen.');
     const datei=new File([data],d.name,{type:d.mime_type});
     leser.datei=datei;leser.kategorie=e.kategorie;leser.ziel=e;leser.dokId=d.id;
     leser.ergebnis=await frageLeser(datei,e.kategorie);
@@ -765,7 +765,7 @@ function renderPruefen(){
   root.innerHTML=`<div class="pb-wrap">
     <a class="pb-back" href="${ziel?'./produktbibliothek.html?id='+esc(ziel.id):'./produktbibliothek.html'}">‹ ${ziel?esc(ziel.name):'Produktbibliothek'}</a>
     <header class="pb-head"><div class="pb-head-text"><p class="kicker">Produktbibliothek · Datenblatt</p>
-      <h1>${r.text?'Romy hat das Dokument gelesen':'Dokument von Hand übernehmen'}</h1>
+      <h1>${r.text?'Die KI hat das Dokument gelesen':'Dokument von Hand übernehmen'}</h1>
       <p class="pb-intro">${esc(r.text||'Trag ein, was die Bibliothek übernehmen soll. Gespeichert wird erst mit «Prüfen und übernehmen».')}</p></div></header>
     <div class="pb-banner" data-meldung hidden></div>
     ${r.erkannt===false?'<div class="pb-banner warn">Das sieht nicht nach einem Herstellerdokument aus. Du kannst es trotzdem von Hand übernehmen.</div>':''}

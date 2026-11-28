@@ -3,7 +3,7 @@ import {verbrauchSchreiben} from "../_office/ki-verbrauch.mjs";
 // Office background checkpoints only. No projects/tasks/calendar/storage tools or external web search.
 const ORIGIN="https://tbarchitekten.github.io";
 const SECRET_HEADER="x-romy-runner-secret";
-// GPT-6.2 Sol statt GPT-6 Astra (27.11.2026), wie Romys Fähigkeiten.
+// GPT-6.2 Sol statt GPT-6 Astra (27.11.2026), wie die Fähigkeiten des Assistenten.
 const MODEL="gpt-6.2-sol";
 const respond=(status,data)=>new Response(JSON.stringify(data),{
  status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}
@@ -31,7 +31,7 @@ function nextWake(value){
 }
 async function runCheckpoint(m,apiKey,admin=null){
  const prompt=[
-  "You are Romy's bounded persistent work checkpoint. This is a PRIVATE, read-only, user-approved work objective.",
+  "You are the TBA Office assistant's bounded persistent work checkpoint. This is a PRIVATE, read-only, user-approved work objective.",
   "Never simulate actions or claim to have accessed a project, document, calendar, email, website, or employee data.",
   "No tools or external actions are available. Work only on the explicitly approved objective and the previous checkpoint summary.",
   "Do not fabricate evidence or facts. State missing data and ask the employee if necessary.",

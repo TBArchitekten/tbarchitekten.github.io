@@ -5,7 +5,7 @@
    gleichzeitiger Bearbeitung und der Inhalt einer Entscheidungsvorlage (Aufbau wie LPH3_5_Entscheidungsvorlage.docx).
    Gelernt von Programmen mit KI (Recherche vom 24.11.2026): Spalten mit Typ und berechneten Werten (Google Tables),
    Vorschläge mit Fundstelle, die erst gelten, wenn jemand sie übernimmt (Canvas, Tiptap), Verlauf je Zeile (Copilot).
-   Romy schlägt nie eine Entscheidung vor; das prüft auch die Datenbank.
+   Die KI schlägt nie eine Entscheidung vor; das prüft auch die Datenbank.
    Seit dem zweiten Schritt (24.11.2026): Varianten mit Produkt, Kennwert und Menge aus dem Office, jede Zahl mit Fundstelle
    für das Büro und Beleg für das Dokument; ein Vorschlag ändert an den Varianten nur, was er nennt (optionenZusammen).
    Weitere Listen der Bürovorlage (28.11.2026, Gari: die Listen des Projektstarts im Projekt bearbeiten wie die
@@ -30,7 +30,7 @@ const RUNDEN=['01','02','03'];
 const STATUS_KLAERUNG=['offen','in Klärung','gelöst','Vorbehalt','Entscheidungspunkt','entfällt'];
 const STATUS_ENTSCHEIDUNG=['vorbereitet','vorgelegt','entschieden','vertagt','entfällt'];
 const JA_NEIN=['ja','nein'];
-// Felder, die nur jemand aus dem Projektteam setzt, nie ein Vorschlag von Romy (wie die Prüfung in der Datenbank).
+// Felder, die nur jemand aus dem Projektteam setzt, nie ein Vorschlag von der KI (wie die Prüfung in der Datenbank).
 const NUR_VON_HAND=['entschieden_am','entscheidung','entscheider','bestaetigt_am'];
 // Auswahllisten der weiteren Listen, wie im Blatt «Listen» der Bürovorlage.
 const ZUSTAENDIGKEIT=['V','G','B','K','M','F','?','G/K','K/G','G/F','M/F','V/F','–'];
@@ -216,7 +216,7 @@ const SPALTEN={
     {key:'nr',kopf:'Ordner',typ:'nr',kompakt:true,breite:30},
     {key:'inhalt',kopf:'Inhalt',typ:'lang',kompakt:true,breite:46},
     {key:'regel',kopf:'Regel',typ:'lang',kompakt:true,breite:46},
-    {key:'office',kopf:'ins Office (Romy liest mit)?',kurz:'ins Office?',typ:'auswahl',werte:JA_NEIN,kompakt:true,breite:16},
+    {key:'office',kopf:'ins Office (die KI liest mit)?',kurz:'ins Office?',typ:'auswahl',werte:JA_NEIN,kompakt:true,breite:16},
     {key:'bemerkung',kopf:'Bemerkung',typ:'lang',kompakt:true,breite:30}
   ],
   eingang:[
@@ -763,7 +763,7 @@ function geaenderteFelder(basis,lokal){
   const keys=new Set([...Object.keys(basis||{}),...Object.keys(lokal||{})]);
   return [...keys].filter(k=>!gleich(basis?.[k],lokal?.[k]));
 }
-// Vorschläge von Romy dürfen keine Entscheidung enthalten.
+// Vorschläge von der KI dürfen keine Entscheidung enthalten.
 function vorschlagErlaubt(daten){
   const d=daten||{};
   if(NUR_VON_HAND.some(k=>k in d))return false;
@@ -784,7 +784,7 @@ function pruefe(art,d){
   return '';
 }
 
-// ---------- Vorschläge von Romy ----------
+// ---------- Vorschläge von der KI ----------
 // Wortweiser Vergleich für «grün eingefügt, rot gestrichen» (längste gemeinsame Teilfolge der Wörter).
 function wortDiff(alt,neu){
   const a=s(alt).split(/(\s+)/).filter(x=>x!==''),b=s(neu).split(/(\s+)/).filter(x=>x!=='');

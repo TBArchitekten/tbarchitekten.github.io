@@ -53,7 +53,7 @@ test('die drei Stufen sagen, was sie freischalten',()=>{
     assert.ok(seite.includes(was),'fehlt in Stufe 1: '+was);
   // Jede Zeile sagt auch, wohin es im Office gehört — sonst ist die Liste nicht benutzbar.
   assert.ok((seite.match(/<th[^>]*>Wohin im Office<\/th>/g)||[]).length===3,'nicht jede Stufe sagt, wohin');
-  assert.match(seite,/Was Romy nicht braucht und nicht bekommen soll/);
+  assert.match(seite,/Was die KI nicht braucht und nicht bekommen soll/);
 });
 
 test('jede Vorlage ist verlinkt und als Office-Datei vorhanden',()=>{

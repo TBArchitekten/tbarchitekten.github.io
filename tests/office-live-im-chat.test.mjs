@@ -10,8 +10,8 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('das Blatt im Chat: Rahmen mit Mikrofon, Schließen; Live hat einen eigenen Knopf neben dem Mikrofon',()=>{
   const shell=read('app/shell.js');
-  assert.match(shell,/<div id="liveSheet" class="live-sheet hidden" role="dialog" aria-modal="false" aria-label="Live-Gespräch mit Romy">/);
-  assert.match(shell,/<iframe id="liveFrame" class="live-frame" title="Live-Gespräch mit Romy" allow="microphone; autoplay"><\/iframe>/);
+  assert.match(shell,/<div id="liveSheet" class="live-sheet hidden" role="dialog" aria-modal="false" aria-label="\$\{shellKI\('Live-Gespräch mit \{wem\}'\)\}" data-assistant-aria="Live-Gespräch mit \{wem\}">/);
+  assert.match(shell,/<iframe id="liveFrame" class="live-frame" title="\$\{shellKI\('Live-Gespräch mit \{wem\}'\)\}" data-assistant-title="Live-Gespräch mit \{wem\}" allow="microphone; autoplay"><\/iframe>/);
   assert.match(shell,/id="liveSheetClose"[^>]*aria-label="Live-Gespräch schließen"/);
   // Wie bei Claude (Gari, 28.11.2026): das Mikrofon diktiert, die Schallwelle daneben spricht live; kein Link im Diktat.
   assert.match(shell,/id="micButton" class="mic" aria-label="Diktieren"[^>]*>[\s\S]*?<\/button>\s*<button id="liveButton" class="mic mic-live" type="button" aria-label="Live sprechen"/);
@@ -32,7 +32,7 @@ test('öffnen, schließen, neu laden: der Chat zeigt jeden gespeicherten Zug sof
 test('Live-Seite im Rahmen kompakt; Farben des Blatts aus den Tokens',()=>{
   const page=read('app/live/index.html'),live=read('app/live/live.js'),css=read('app/voice-output.css');
   assert.match(page,/<script>if\(window\.self!==window\.top\)document\.documentElement\.classList\.add\('live-embedded'\)<\/script>/);
-  assert.match(page,/\.\/live\.js\?v=romy8/);assert.match(page,/\.\/live\.css\?v=romy7/);
+  assert.match(page,/\.\/live\.js\?v=romy9/);assert.match(page,/\.\/live\.css\?v=romy7/);
   assert.match(live,/window\.parent\.postMessage\(\{type:"isabella-live",event,\.\.\.extra\},window\.location\.origin\)/);
   // Im Office speichert Live nur das Gesagte der Person, nie die ungeprüfte Sprachausgabe als Antwort von Romy.
   assert.match(live,/if\(OFFICE_LIVE&&turn\.author==='isabella'\)return;/);
@@ -41,19 +41,23 @@ test('Live-Seite im Rahmen kompakt; Farben des Blatts aus den Tokens',()=>{
   assert.doesNotMatch(blatt,/#[0-9a-f]{3,8}\b/i,'keine eigenen Farben');
   assert.match(blatt,/background:var\(--m-paper\);border:1px solid var\(--m-border\)/);
   const index=read('app/index.html');
-  for(const v of ['./voice-output.css?v=office4','./shell.js?v=office68','./app.js?v=office63'])assert.ok(index.includes(v),v);
+  for(const v of ['./voice-output.css?v=office4','./shell.js?v=office69','./app.js?v=office64'])assert.ok(index.includes(v),v);
 });
 
 // Wie bei Claude (Gari, 28.11.2026): keine feste Dauer mehr; nach 2 Minuten ohne Gespräch endet Live von selbst,
-// weil jede Sekunde bezahlt wird. Die Seite sagt es in «Sie».
-test('Live ohne feste Dauer: endet nach 2 Minuten Stille; die Seite spricht «Sie»',()=>{
+// weil jede Sekunde bezahlt wird. Die Seite tutet (Gari, 28.11.2026: «Quiero que tutee, es más natural»).
+test('Live ohne feste Dauer: endet nach 2 Minuten Stille; die Seite spricht «du» und nennt den Assistenten beim Namen',()=>{
   const page=read('app/live/index.html'),live=read('app/live/live.js');
   assert.doesNotMatch(live,/MAX_DURATION_MS|90000/);
   assert.match(live,/IDLE_MS=120000/);
   assert.match(live,/Nach 2 Minuten ohne Gespräch beendet\./);
-  assert.match(page,/Das Gespräch läuft, bis Sie «Beenden» wählen, und endet nach 2 Minuten ohne Gespräch von selbst\./);
+  assert.match(page,/Das Gespräch läuft, bis du «Beenden» wählst, und endet nach 2 Minuten ohne Gespräch von selbst\./);
   assert.doesNotMatch(page,/90 Sekunden/);
   const sichtbar=page.replace(/<script[\s\S]*?<\/script>/g,'');
-  assert.doesNotMatch(sichtbar,/\b(du|dein|deine|deinem|deiner|dich|dir)\b|>Du<|Prüfe|Wähle/,'Office spricht «Sie»');
+  assert.doesNotMatch(sichtbar,/\b(Sie|Ihre|Ihren|Ihrem|Ihrer|Ihnen)\b/,'Live spricht «du»');
+  assert.match(sichtbar,/<span>Du<\/span>/);
+  assert.doesNotMatch(sichtbar,/\bRomys?\b/);
+  assert.match(page,/<h1 id="live-title" data-assistant-name>KI-Assistent<\/h1>/);
+  assert.match(page,/<script src="\.\.\/assistant-i18n\.js\?v=office2"><\/script>/,'der Name auch auf der eigenen Seite');
   assert.doesNotMatch(live,/Bitte sprich\b/);
 });

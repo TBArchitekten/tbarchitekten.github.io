@@ -6,6 +6,9 @@
 if(window.APP_PROFILE!=='office'||window.APP_CHAT_RUNTIME==='legacy')return;
 const sb=window.MINDS_SUPABASE,app=()=>window.ISABELLA_APP;
 if(!sb)return;
+// The name the member gave the assistant (28.11.2026), «KI-Assistent» until they do (assistant-i18n.js).
+const KI=t=>{try{if(typeof window.MINDS_ASSISTANT_TEXT==='function')return String(window.MINDS_ASSISTANT_TEXT(t))}catch{}
+  return String(t).replace(/\{(name|Wer|wer|wem|wen)\}/g,(_,k)=>({name:'KI-Assistent',Wer:'Der KI-Assistent',wer:'der KI-Assistent',wem:'dem KI-Assistenten',wen:'den KI-Assistenten'})[k])};
 let ownerId=null,activeId=null,serial=0,loading=false;
 const status=(value='')=>{
   let box=document.getElementById('officeAssistantStatus');
@@ -63,7 +66,7 @@ async function reconcile(){
     if(token!==serial)return false;
     if(!owner){
       ownerId=null;activeId=null;app()?.setOfficeMessages?.([]);
-      status('Bitte im Office anmelden, um Romy zu nutzen.');
+      status(KI('Melde dich bitte im Office an, um {wen} zu nutzen.'));
       return false;
     }
     if(ownerId!==owner){ownerId=owner;activeId=null;app()?.setOfficeMessages?.([])}
@@ -95,11 +98,11 @@ async function reconcile(){
   }finally{loading=false}
 }
 async function startNew(){
-  if(!ownerId){status('Bitte erst im Office anmelden.');return false}
+  if(!ownerId){status('Melde dich bitte zuerst im Office an.');return false}
   const {data,error}=await sb.from('conversations').insert({
     user_id:ownerId,origin_kind:'global',app_scope:'isabella',
-    origin_anchor:{type:'assistant',id:'isabella',label:'Romy'},
-    title:'Romy',mode:'memory',metadata:{app:'romy'}
+    origin_anchor:{type:'assistant',id:'isabella',label:KI('{name}')},
+    title:KI('{name}'),mode:'memory',metadata:{app:'romy'}
   }).select('id').single();
   if(error||!data?.id){status('Neues Gespräch konnte nicht erstellt werden.');return false}
   activeId=data.id;app()?.setOfficeMessages?.([]);status('');
@@ -118,7 +121,7 @@ async function openHistory(){
   });body.appendChild(button);
   for(const c of data||[]){
     const row=node('div',null,'office-assistant-history-row');
-    const open=node('button',c.title||'Romy','office-assistant-history-open');
+    const open=node('button',c.title||KI('{name}'),'office-assistant-history-open');
     open.type='button';
     if(activeId===c.id)open.setAttribute('aria-current','true');
     open.addEventListener('click',async()=>{

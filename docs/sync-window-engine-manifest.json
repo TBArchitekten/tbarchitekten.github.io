@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "692dff46a6bcae37226476666930826f156124ff",
+  "source_sha": "c5e60dc9e55a29b7b4124f48995573c6baf48afd",
   "mode": "engine",
   "files": [
     {
@@ -12,8 +12,8 @@
     {
       "source": "supabase/functions/_shared/akte-pflege.mjs",
       "target": "supabase/functions/_shared/akte-pflege.mjs",
-      "sha": "462e411f945e56a4b6d137740a82056ee4ac7b8f",
-      "bytes": 25788
+      "sha": "77674b12d4f81aac00725b49a5d9282694a91c86",
+      "bytes": 25785
     },
     {
       "source": "supabase/functions/_shared/akte-skills.mjs",
@@ -24,14 +24,14 @@
     {
       "source": "supabase/functions/_shared/assistant-profile.mjs",
       "target": "supabase/functions/_shared/assistant-profile.mjs",
-      "sha": "77ee71e3b9bf79a21b5f01b4fae06601b2dccf7e",
-      "bytes": 6654
+      "sha": "7e7cef4e17e2914bb66646e62d6c2f9f25bfe295",
+      "bytes": 9785
     },
     {
       "source": "supabase/functions/_shared/assistant-voice.mjs",
       "target": "supabase/functions/_shared/assistant-voice.mjs",
-      "sha": "7215e38b3184c65d556258a0f7d394a7961db8ce",
-      "bytes": 6893
+      "sha": "ded737cd1d81f781da4451235276bffead94e2df",
+      "bytes": 6890
     },
     {
       "source": "supabase/functions/_shared/browser-continuation.mjs",
@@ -156,8 +156,8 @@
     {
       "source": "supabase/functions/_shared/isabella-dream.mjs",
       "target": "supabase/functions/_shared/isabella-dream.mjs",
-      "sha": "67f9ae86dd40b7d959f3161e31a81721e4f50627",
-      "bytes": 28338
+      "sha": "49329317d7ad81a537cba1e76676f53070a184cf",
+      "bytes": 28963
     },
     {
       "source": "supabase/functions/_shared/isabella-followups.mjs",
@@ -168,8 +168,8 @@
     {
       "source": "supabase/functions/_shared/isabella-presence.mjs",
       "target": "supabase/functions/_shared/isabella-presence.mjs",
-      "sha": "f36d7f48a35a14122a57ae97f29f7e47f8d6a91d",
-      "bytes": 33062
+      "sha": "ded05fb9b08c76e0b765f16722d3d39f588a3d5a",
+      "bytes": 33200
     },
     {
       "source": "supabase/functions/_shared/isabella-radar.mjs",
@@ -198,8 +198,8 @@
     {
       "source": "supabase/functions/_shared/live-context.mjs",
       "target": "supabase/functions/_shared/live-context.mjs",
-      "sha": "3a9ad50969059a1e118bea613b44802a3e316e17",
-      "bytes": 8718
+      "sha": "fb021d3fb642dd0ceba226d79e7f1871ec7ebaeb",
+      "bytes": 8800
     },
     {
       "source": "supabase/functions/_shared/local-agenda.mjs",
@@ -240,14 +240,14 @@
     {
       "source": "supabase/functions/_shared/office-live-contract.mjs",
       "target": "supabase/functions/_shared/office-live-contract.mjs",
-      "sha": "dd859b8c5e7eab9b41e154da648d02f789d66d70",
-      "bytes": 1888
+      "sha": "d72fbabae6861cb478073edee6c6c7e634b301e7",
+      "bytes": 1998
     },
     {
       "source": "supabase/functions/_shared/office-live-policy.mjs",
       "target": "supabase/functions/_shared/office-live-policy.mjs",
-      "sha": "3fb74ebb7421289956e61eb5341cd50f18ae041d",
-      "bytes": 1944
+      "sha": "0ab949da11903012e753b8273f9a1c271d2f4ce8",
+      "bytes": 2168
     },
     {
       "source": "supabase/functions/_shared/office-terminplan.mjs",
@@ -516,8 +516,8 @@
     {
       "source": "supabase/functions/isabella-chat/index.ts",
       "target": "supabase/functions/isabella-chat/index.ts",
-      "sha": "225bac19bd768a908b29f7903e4c2d3f2373970f",
-      "bytes": 311674
+      "sha": "6c77f82d7699f40ea2b7b3ed67f193e9a84efa07",
+      "bytes": 312094
     },
     {
       "source": "supabase/functions/isabella-delivery-runner/index.ts",
@@ -540,8 +540,8 @@
     {
       "source": "supabase/functions/isabella-live-session/index.ts",
       "target": "supabase/functions/isabella-live-session/index.ts",
-      "sha": "873769f651fe53827881490cf1bc4e659c6c0088",
-      "bytes": 11560
+      "sha": "f30dd648a3d1ec9e98f66b486215611609c8a045",
+      "bytes": 11682
     },
     {
       "source": "supabase/functions/isabella-mission-runner/index.ts",
@@ -564,8 +564,8 @@
     {
       "source": "supabase/functions/isabella-routine-runner/index.ts",
       "target": "supabase/functions/isabella-routine-runner/index.ts",
-      "sha": "56abc6b19c7b951b421ff5131f9070accb203310",
-      "bytes": 21576
+      "sha": "6c20e99bcc205f2995605d3162d1a4cf36b8e41c",
+      "bytes": 21738
     },
     {
       "source": "supabase/functions/isabella-runtime-mcp/index.ts",

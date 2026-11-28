@@ -1,6 +1,6 @@
 /* TBA Office · Projektstart · Dokumente des Projekts (24.11.2026). Gleiche Sprache wie Werkzeuge und Kostenberechnung:
    Systemschrift, weiße Karten mit 17 px Radius, Hauptaktion blau, Links blau (24.11.2026: alle Farben aus
-   shared/minds-design-tokens.css). Von Romy Vorgeschlagenes ist blau gestrichelt mit «R», wie im Assistenten
+   shared/minds-design-tokens.css). Von der KI Vorgeschlagenes ist blau gestrichelt mit «KI» (bis 28.11.2026 «R»), wie im Assistenten
    von Terminplan und Kostenberechnung; überfällig rot; Entscheidungspunkte des Auftraggebers violett. */
 :root{
   /* Alle Werte kommen aus shared/minds-design-tokens.css; die kurzen Namen bleiben, damit die Regeln gleich lesen. */
@@ -125,7 +125,7 @@ textarea.pd-in{resize:vertical;min-height:64px}
 .pd-neu-in{border-style:dashed;background:transparent}
 .pd-fuss{margin-top:10px}
 .pd-romy{outline:1.5px dashed var(--pd-romy-line);outline-offset:-3px;background:var(--pd-romy-bg)}
-.pd-r{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:5px;background:var(--pd-romy-bg);color:var(--pd-romy);font-size:10px;font-weight:700;margin-left:6px;vertical-align:1px}
+.pd-r{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:16px;height:16px;padding:0 3px;border-radius:5px;background:var(--pd-romy-bg);color:var(--pd-romy);font-size:10px;font-weight:700;margin-left:6px;vertical-align:1px}
 td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 
 /* Details */
@@ -232,7 +232,7 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
   .pd-druck p:where(:not(.mm-seite *)){margin:0 0 6pt}
 }
 
-/* Romy: Vorschläge blau getönt (bis 24.11.2026 grün), mit Fundstelle; erst «Übernehmen» ändert etwas (24.11.2026, #146) */
+/* KI: Vorschläge blau getönt (bis 24.11.2026 grün), mit Fundstelle; erst «Übernehmen» ändert etwas (24.11.2026, #146) */
 .btn-romy{border-color:var(--pd-romy-line);background:var(--pd-romy-bg);color:var(--pd-romy)}
 .btn-romy:hover{border-color:var(--m-blue);color:var(--pd-romy)}
 .pd-banner.romy{background:var(--pd-romy-bg);color:var(--m-information)}
@@ -352,7 +352,7 @@ td .pd-r{position:absolute;top:4px;right:4px;margin:0}
 .mm-ue{display:grid;gap:6px}
 .mm-ue+.mm-ue{padding-top:8px;border-top:1px solid var(--m-border-soft)}
 .mm-ue-pdf{color:var(--m-ink-soft);font-size:13px}
-/* «Mit Romy kürzen»: Vorschlag im Dialog, Hinweise von Romy darüber, der bisherige Text zum Vergleich darunter. */
+/* «Mit der KI kürzen»: Vorschlag im Dialog, Hinweise von der KI darüber, der bisherige Text zum Vergleich darunter. */
 .pd-kuerzen textarea{min-height:9em;resize:vertical}
 .pd-kuerzen-warn{margin:0;padding:8px 12px 8px 28px;border-radius:8px;background:var(--m-attention-soft);color:var(--m-attention);font-size:14px}
 .pd-kuerzen-bisher p{margin:6px 0 0;white-space:pre-wrap;color:var(--m-ink-soft);font-size:14px}

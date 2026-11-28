@@ -7,7 +7,8 @@ test('All five mobile tabs share the Window navigation order in the app; the sta
   // Seit dem 27.11.2026 ist die Startseite nur die Anmeldung: eine Navigation gibt es nur noch in der App.
   const index=read('index.html');
   const shell=read('app/shell.js');
-  const expected=['Romy','Heute','Kalender','Work','Tools'];
+  // The assistant's tab carries the name each member gives it (28.11.2026).
+  const expected=["${shellKI('{name}')}",'Heute','Kalender','Work','Tools'];
   const inside=shell.slice(shell.indexOf('<nav id="mainNav"'),shell.indexOf('</nav>',shell.indexOf('<nav id="mainNav"')));
   const appLinks=expected.map(label=>inside.indexOf('aria-label="'+label+'"'));
   assert.ok(appLinks.every(x=>x>=0));

@@ -174,7 +174,7 @@ test('Chromium: Office chat sends to isabella-chat in Office only, with Romy and
     assert.equal(result.requests.length,1);
     assert.equal(result.requests[0].url,'https://office.fixture.invalid/functions/v1/isabella-chat');
     const context=result.requests[0].body.context.reply_context;
-    assert.match(context,/Alex/);assert.match(context,/Romy/);
+    assert.match(context,/Alex/);assert.match(context,/KI-Assistent/);
     assert.doesNotMatch(context,/\bGari\b|\bIsabella\b/);
   }finally{await page.close()}
 });

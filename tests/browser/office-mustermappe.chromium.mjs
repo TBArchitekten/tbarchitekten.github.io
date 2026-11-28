@@ -515,7 +515,7 @@ test('Übersatz: «Rahmen vergrößern» um die fehlenden Felder, rückgängig w
 // Wie im Entwurf: «Mit Romy kürzen» neben «Rahmen vergrößern». Der Client misst, wie viele Zeichen in den Rahmen
 // passen, Romy schlägt den kürzeren Text vor, der Dialog zeigt ihn zum Ändern; erst «Übernehmen» setzt ihn (ein Schritt
 // im Verlauf), danach passt der Rahmen. «Verwerfen» lässt alles, wie es war.
-test('Übersatz: «Mit Romy kürzen» schlägt vor, nur «Übernehmen» ändert, rückgängig wie jeder Schritt',async()=>{
+test('Übersatz: «Mit der KI kürzen» schlägt vor, nur «Übernehmen» ändert, rückgängig wie jeder Schritt',async()=>{
   const ctx=await browser.newContext({viewport:{width:1440,height:1000},deviceScaleFactor:1});await mitEigenschaften(ctx);
   const page=await ctx.newPage();const fehler=[];page.on('pageerror',e=>fehler.push(e.message));
   await page.route(/cdn\.jsdelivr\.net\/npm\/@supabase/,r=>r.fulfill({contentType:'text/javascript',body:fake}));
@@ -534,13 +534,13 @@ test('Übersatz: «Mit Romy kürzen» schlägt vor, nur «Übernehmen» ändert,
     for(let k=0;k<6;k++){await page.keyboard.type('Welcher Waschtisch passt in Bad '+k+' zur Armatur und zum Spiegel?');await page.keyboard.press('Enter')}
     await page.locator('[data-mm-pille]').click();
     const eintrag=page.locator('.mm-uebersatz-liste .mm-ue[aria-label="Kopf"]');
-    const knopf=eintrag.locator('[data-act="mm-kuerzen"]',{hasText:'Mit Romy kürzen'});
+    const knopf=eintrag.locator('[data-act="mm-kuerzen"]',{hasText:'Mit der KI kürzen'});
     await knopf.waitFor();
     const lang=(await frage.innerText()).trim();
     // Verwerfen: nichts ändert sich.
     await knopf.click();
     const dlg=page.locator('#pdDialog .pd-kuerzen');await dlg.waitFor();
-    assert.equal(await dlg.locator('h2').innerText(),'Mit Romy kürzen · «Kopf»');
+    assert.equal(await dlg.locator('h2').innerText(),'Mit der KI kürzen · «Kopf»');
     const anfrage=(await page.evaluate(()=>window.__fake.anfragen)).filter(a=>a.body.action==='kuerzen').at(-1).body;
     const mappe=(await zeilen(page,'entscheidungsvorlagen')).find(v=>v.daten.form==='mustermappe');
     assert.equal(anfrage.zeile_id,mappe.id);assert.equal(anfrage.dokument_id,mappe.dokument_id);

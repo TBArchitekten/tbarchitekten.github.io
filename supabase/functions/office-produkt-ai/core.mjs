@@ -1,5 +1,5 @@
 /* TBA Office · Datenblatt-Leser der Produktbibliothek (23.11.2026, Claude; Entwurf von Gari am 23.11.2026 freigegeben).
-   Romy liest ein Herstellerdokument (PDF oder Bild) und schlägt vor, was die Bibliothek übernehmen kann: Produkt,
+   Die KI liest ein Herstellerdokument (PDF oder Bild) und schlägt vor, was die Bibliothek übernehmen kann: Produkt,
    Merkmale je mit der Seite, auf der sie stehen, was das Dokument nicht nennt, und Preise mit Art, Stand und Seite.
    Rein, ohne Netz und ohne Schreibrechte: geschrieben wird nur im Client nach «Prüfen und übernehmen».
    Nichts wird geraten: was nicht im Dokument steht, kommt unter «fehlend», nie als Wert. */
@@ -15,7 +15,7 @@ export const FELDER_BODENBELAG=Object.freeze(["Format","Stärke","Nutzschicht","
   "Rutschhemmung","Fußbodenheizung","Emissionen","Nutzungsklasse"]);
 const s=(t,n)=>String(t??"").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,"").replace(/\s+/g," ").trim().slice(0,n);
 export function validKategorie(k){return KATEGORIEN.includes(k)}
-// Bekannte Familien der Bibliothek, damit Romy eine vorhandene wählt statt eine neue zu erfinden.
+// Bekannte Familien der Bibliothek, damit die KI eine vorhandene wählt statt eine neue zu erfinden.
 export function pruefeFamilien(liste){
   const raus=[],gesehen=new Set();
   for(const f of Array.isArray(liste)?liste:[]){

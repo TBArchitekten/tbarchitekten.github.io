@@ -78,7 +78,7 @@ test('der Text reist verschlüsselt: Nonce ‖ Geheimtext ‖ Tag, wie CryptoKit
   await assert.rejects(core.versiegeln('kein base64 !!', nachricht), /device_key_invalid/);
 });
 
-test('die Anfrage an APNs: Apple sieht nur «Romy · Neue Mitteilung»', async () => {
+test('die Anfrage an APNs: Apple sieht nur «TBA Office · Neue Mitteilung»', async () => {
   const text = 'Der Jour fixe Bernried beginnt in 30 Minuten.';
   const geraet = {apns_token: 'ab'.repeat(32), umgebung: 'production', bundle_id: 'com.example.window'};
   const nachricht = {id: '11111111-2222-4333-8444-555555555555', art: 'hinweis', titel: 'Romy', text, gueltig_bis: '2026-11-27T10:00:00Z'};
@@ -92,7 +92,7 @@ test('die Anfrage an APNs: Apple sieht nur «Romy · Neue Mitteilung»', async (
   assert.equal(r.headers['apns-expiration'], String(Date.UTC(2026, 10, 27, 10, 0, 0) / 1000));
   assert.equal(r.headers['apns-collapse-id'], nachricht.id);
   const body = JSON.parse(r.body);
-  assert.deepEqual(body.aps.alert, {title: 'Romy', body: 'Neue Mitteilung'});
+  assert.deepEqual(body.aps.alert, {title: 'TBA Office', body: 'Neue Mitteilung'});
   assert.equal(body.aps['mutable-content'], 1, 'sonst entschlüsselt die Erweiterung nicht');
   assert.equal(body.aps['thread-id'], 'romy');
   assert.equal(body.o, 1, 'ein Tippen öffnet das Office');
@@ -203,4 +203,23 @@ test('Migration: der Auslöser nimmt nur Romys eigene Nachrichten und dringende 
   assert.match(s, /where s\.key='office_push' and length\(s\.value\)>0\s+and exists \(select 1 from public\.office_push_nachrichten n/);
   assert.match(s, /set value = replace\(gen_random_uuid\(\)::text \|\| gen_random_uuid\(\)::text, '-', ''\)\s+where key = 'office_push' and length\(value\) = 0/);
   assert.match(s, /to_regprocedure\('net\.http_post\(text,jsonb,jsonb,jsonb,integer\)'\) is null then\s+return;/);
+});
+
+// Seit dem 28.11.2026 gibt jede Person ihrem Assistenten einen eigenen Namen (Gari: «a todos por default
+// KI-Assistent y que cada quien pueda escoger el suyo»). Der Name steht nur im verschlüsselten Titel.
+const nameSql = readFileSync(new URL('../supabase/migrations/20261128121522_office_push_eigener_name.sql', import.meta.url), 'utf8');
+test('der Titel ist der Name, den die Person ihrem Assistenten gibt; Apple sieht nur «TBA Office»', async () => {
+  assert.deepEqual(core.OEFFENTLICH, {title: 'TBA Office', body: 'Neue Mitteilung'});
+  assert.equal(core.inhalt({id: 'x', art: 'romy', titel: 'Samantha', text: 'Hallo.'}).t, 'Samantha');
+  assert.equal(core.inhalt({id: 'x', art: 'romy', text: 'Hallo.'}).t, 'KI-Assistent');
+  const s = nameSql.replace(/^\s*--.*$/gm, '');
+  assert.match(s, /create or replace function private\.office_assistent_name\(p_user uuid\)/);
+  assert.match(s, /where p\.user_id = p_user and p\.preference_key = 'assistant_name'/, 'nur die eigene Einstellung');
+  assert.match(s, /where length\(x\.n\) between 1 and 40 and x\.n ~ '\^\[\[:alpha:\]\]\[\[:alpha:\]\[:digit:\]'' \.-\]\*\$'/, 'wie der Motor');
+  assert.match(s, /\), 'KI-Assistent'\)/);
+  assert.match(s, /revoke all on function private\.office_assistent_name\(uuid\) from public, anon, authenticated;/);
+  assert.match(s, /values \(new\.user_id, v_art, private\.office_assistent_name\(new\.user_id\), v_text,/);
+  assert.match(s, /values \(v_uid, 'test', private\.office_assistent_name\(v_uid\),\s+'Testmitteilung: Die Mitteilungen deines Assistenten kommen auf diesem iPhone an\.'/);
+  assert.doesNotMatch(s, /'Romy'/);
+  assert.doesNotMatch(s, /\b(drop|delete|truncate|alter table|create trigger)\b/i, 'nur Funktionen');
 });

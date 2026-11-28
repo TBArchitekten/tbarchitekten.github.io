@@ -21,11 +21,11 @@ test('Pinned Window engine is byte-identical to the 101 Git blobs in its committ
 test('Office profile uses individual first name, strips Window-only tools, retains identical Window branch',()=>{
   const raw='Eres Isabella y trabajas con Gari en Window.';
   const windowProfile=resolveAssistantProfile('window'),office=resolveAssistantProfile('office');
-  assert.equal(windowProfile.id,'window');assert.equal(office.assistant_name,'Romy');
+  assert.equal(windowProfile.id,'window');assert.equal(office.assistant_name,'KI-Assistent');
   assert.equal(profileFirstName('Alex Beispiel'),'Alex');
   assert.equal(profileInstructions(raw,'window'),raw);
   const profiled=profileInstructions(raw,'office','Alex Beispiel');
-  assert.match(profiled,/Romy/);assert.match(profiled,/Alex/);
+  assert.match(profiled,/KI-Assistent/);assert.match(profiled,/Alex/);
   assert.match(profiled,/alemán/);assert.doesNotMatch(profiled,/Gari|Isabella/);
   const tools=[
     {type:'function',name:'search_calendar',description:'Consulta las tareas de Gari'},

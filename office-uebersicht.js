@@ -11,7 +11,7 @@
 (function(root){
 'use strict';
 
-// ── Preise · USD je 1 Mio. Tokens, Standard. Modelle, die auch Romys Motor kennt (credit-model.mjs), hält ein Test gleich.
+// ── Preise · USD je 1 Mio. Tokens, Standard. Modelle, die auch der Motor des Assistenten kennt (credit-model.mjs), hält ein Test gleich.
 const PREISE_STAND='2026-11-27';
 // Seit 27.11.2026 arbeitet das Office mit GPT-6.1 Terra (Chat, Werkzeuge), GPT-6.2 Sol (gründliche Züge, Fähigkeiten)
 // und GPT-6 Luna (Hintergrund, Einordnen). Die älteren Modelle bleiben für die Summen der letzten Wochen.
@@ -26,7 +26,7 @@ const PREISE=[
   {id:'gpt-5.6-sol',input:4,cached:0.40,output:20},
   {id:'text-embedding-3-small',input:0.02,cached:0.02,output:0}
 ];
-// Werkzeuge kosten je Aufruf: Websuche 10 $ je 1000, ein Container (Romys Dateien) 0,03 $ je Sitzung.
+// Werkzeuge kosten je Aufruf: Websuche 10 $ je 1000, ein Container (Dateien des Assistenten) 0,03 $ je Sitzung.
 const WEBSUCHE_USD=0.01,CONTAINER_USD=0.03;
 // Über 272 000 Eingabe-Tokens berechnet OpenAI die ganze Anfrage mit doppelter Eingabe und 1,5-facher Ausgabe.
 const LANG_INPUT=272000;
@@ -155,23 +155,23 @@ function zusammenfassen(daten,ist=null){
 // ── Texte ──
 const FUNKTIONEN={
   'office:kosten':'Kostenberechnung','office:dokumente':'Projektdokumente','office:produkte':'Produktbibliothek',
-  'office:terminplan':'Terminplan','office:romy_chat':'Romy in Threads','office:romy_faehigkeit':'Romy · Dateien erzeugen',
-  'office:romy_gedaechtnis':'Romy · Suche im Gedächtnis','office:romy_auftrag':'Romy · Aufträge',
-  'romy:isabella_chat':'Romy · Chat','romy:isabella_presence':'Romy · meldet sich von selbst',
-  'romy:isabella_dream':'Romy · nächtliche Pflege','romy:decision_router':'Romy · Einordnen',
-  'romy:memory_flush':'Romy · Gedächtnis sichern','romy:routine':'Romy · Routinen','romy:akte_pflege':'Romy · Akte-Pflege',
-  'romy:isabella_embedding':'Romy · Gedächtnis','romy:isabella_background':'Romy · im Hintergrund',
-  'romy:work_file_read':'Romy · Dateien lesen'
+  'office:terminplan':'Terminplan','office:romy_chat':'Assistent in Threads','office:romy_faehigkeit':'Assistent · Dateien erzeugen',
+  'office:romy_gedaechtnis':'Assistent · Suche im Gedächtnis','office:romy_auftrag':'Assistent · Aufträge',
+  'romy:isabella_chat':'Assistent · Chat','romy:isabella_presence':'Assistent · meldet sich von selbst',
+  'romy:isabella_dream':'Assistent · nächtliche Pflege','romy:decision_router':'Assistent · Einordnen',
+  'romy:memory_flush':'Assistent · Gedächtnis sichern','romy:routine':'Assistent · Routinen','romy:akte_pflege':'Assistent · Akte-Pflege',
+  'romy:isabella_embedding':'Assistent · Gedächtnis','romy:isabella_background':'Assistent · im Hintergrund',
+  'romy:work_file_read':'Assistent · Dateien lesen'
 };
 function funktionName(schluessel){
   if(FUNKTIONEN[schluessel])return FUNKTIONEN[schluessel];
   const [quelle,name]=String(schluessel).split(':');
-  return (quelle==='romy'?'Romy · ':'')+String(name||schluessel).replace(/_/g,' ');
+  return (quelle==='romy'?'Assistent · ':'')+String(name||schluessel).replace(/_/g,' ');
 }
 const ZEITPLAENE={
-  office_push_v1:'Mitteilungen aufs iPhone',office_romy_capability_runner_v1:'Romy · Dateien erzeugen',
-  office_romy_chat_runner_v1:'Romy · Chat im Hintergrund',office_romy_heartbeat_15m_v1:'Romys Heartbeat',
-  office_romy_mission_runner_v1:'Romy · Aufträge',office_romy_routine_runner_v1:'Romy · Routinen',
+  office_push_v1:'Mitteilungen aufs iPhone',office_romy_capability_runner_v1:'Assistent · Dateien erzeugen',
+  office_romy_chat_runner_v1:'Assistent · Chat im Hintergrund',office_romy_heartbeat_15m_v1:'Heartbeat des Assistenten',
+  office_romy_mission_runner_v1:'Assistent · Aufträge',office_romy_routine_runner_v1:'Assistent · Routinen',
   office_romy_work_ingest_runner_v1:'Work · Dateien einlesen',office_client_fehler_aufraeumen_v1:'Fehler aus dem Browser aufräumen'
 };
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -281,7 +281,7 @@ function guthabenKarte(s){
   return `<section class="card ki-karte ki-guthaben">
         <p class="eyebrow">Guthaben bei OpenAI</p>
         ${kopf}
-        <p class="ki-sub ki-regel">Bei 0 $ hält OpenAI alle Anfragen an, auch Romy und Window, solange die automatische Aufladung aus ist. Das Monatslimit ist nur eine Obergrenze.</p>
+        <p class="ki-sub ki-regel">Bei 0 $ hält OpenAI alle Anfragen an, auch den Assistenten und Window, solange die automatische Aufladung aus ist. Das Monatslimit ist nur eine Obergrenze.</p>
         <form class="ki-form" data-ki-guthaben-form>
           <label>Guthaben laut OpenAI (USD)<input name="betrag" type="number" min="0" step="0.01" inputmode="decimal" required></label>
           <label>Warnen ab (Tage)<input name="warnen" type="number" min="1" max="60" step="1" value="${esc(g?g.warnen:7)}"></label>
@@ -333,7 +333,7 @@ function kiNutzungHtml(daten,ist=null){
         <div class="card">${projektZeilen?`<table class="ki-liste"><thead><tr><th>Projekt</th><th class="zahl">Aufrufe</th><th class="zahl">Kosten</th></tr></thead><tbody>${projektZeilen}</tbody></table>`:'<p class="muted ki-leer-text">Noch kein Verbrauch der Werkzeuge.</p>'}</div>
       </section>
     </div>
-    <p class="muted ki-fuss">Schätzung nach den Listenpreisen von OpenAI (Stand ${esc(datumLang(s.preiseStand))}), mit Websuchen (0,01 $ je Suche) und Containern für Romys Dateien (0,03 $). Romys Chat, Präsenz und nächtliche Pflege gehören zu keinem Projekt. Was außerhalb des Office über dasselbe OpenAI-Konto läuft (Window), zählt im Guthaben und im Monatslimit nur über die Ablesungen oder den Admin-Schlüssel mit.${s.ohnePreis.aufrufe?' '+esc(ganz.format(s.ohnePreis.aufrufe))+' Aufrufe ohne bekannten Preis ('+esc(s.ohnePreis.modelle.join(', '))+') sind nur mit ihren Werkzeugen gezählt.':''}</p>`;
+    <p class="muted ki-fuss">Schätzung nach den Listenpreisen von OpenAI (Stand ${esc(datumLang(s.preiseStand))}), mit Websuchen (0,01 $ je Suche) und Containern für die Dateien des Assistenten (0,03 $). Chat, Präsenz und nächtliche Pflege des Assistenten gehören zu keinem Projekt. Was außerhalb des Office über dasselbe OpenAI-Konto läuft (Window), zählt im Guthaben und im Monatslimit nur über die Ablesungen oder den Admin-Schlüssel mit.${s.ohnePreis.aufrufe?' '+esc(ganz.format(s.ohnePreis.aufrufe))+' Aufrufe ohne bekannten Preis ('+esc(s.ohnePreis.modelle.join(', '))+') sind nur mit ihren Werkzeugen gezählt.':''}</p>`;
 }
 // Tatsächliche Kosten des Monats bei OpenAI; ohne Schlüssel oder bei einem Fehler null (die Seite schätzt dann).
 async function istKosten(sb){
@@ -395,11 +395,11 @@ const STATUS={ok:'In Ordnung',warnung:'Ansehen',fehler:'Gestört',unbekannt:'Unb
 function pruefungText(p){
   const s=p.status;
   switch(p.bereich){
-    case 'heartbeat':return {titel:'Romys Heartbeat',text:s==='fehler'
+    case 'heartbeat':return {titel:'Heartbeat des Assistenten',text:s==='fehler'
       ?(p.zuletzt_ok?'Kein erfolgreicher Lauf seit '+datum(p.zuletzt_ok)+', '+zeit(p.zuletzt_ok)+' Uhr.':'Kein erfolgreicher Lauf in 48 Stunden.')
       :s==='warnung'?ganz.format(p.fehler_24h||0)+' Fehler und '+ganz.format(p.ok_24h||0)+' erfolgreiche Läufe in 24 Stunden (normal sind 96).'
       :s==='ok'?'Zuletzt um '+zeit(p.zuletzt_ok)+' Uhr; '+ganz.format(p.ok_24h||0)+' erfolgreiche Läufe in 24 Stunden.':''};
-    case 'pflege':return {titel:'Romys nächtliche Pflege',text:p.zuletzt_ok
+    case 'pflege':return {titel:'Nächtliche Pflege des Assistenten',text:p.zuletzt_ok
       ?(s==='ok'?'Zuletzt am ':'Seit mehr als 30 Stunden nicht gelaufen; zuletzt am ')+datum(p.zuletzt_ok)+' um '+zeit(p.zuletzt_ok)+' Uhr.'
       :'Seit mehr als 30 Stunden nicht gelaufen.'};
     case 'zeitplaene':{
