@@ -42,7 +42,7 @@ test('Work shows Threads in the office; Romy answers on the shared engine, the s
   assert.doesNotMatch(send,/persistThreadMessage|from\('conversation_messages'\)\.insert/,'the browser writes nothing in the thread');
   assert.match(work,/const \{data,error\}=await sb\.from\('conversation_messages'\)\n    \.select\('client_key,role,content,created_at,metadata'\)/);
   assert.match(work,/sb\.storage\.from\('minds-artifacts'\)/);
-  assert.match(work,/Private Gespräche mit Romy zu einem Thema\. Nur Sie sehen sie/);
+  assert.match(work,/KI\('Private Gespräche mit \{wem\} zu einem Thema\. Nur du siehst sie; \{wer\} kennt dabei das Projekt '\)/);
   assert.match(work,/Geben Sie dem Thread einen Namen\./);
   const section=work.slice(work.indexOf('async function loadThreads'),work.indexOf('async function sendThreadMessage'));
   for(const es of ['Nuevo Thread','Renombrar','Archivar Thread','Todavía no hay Threads','Preguntar en'])

@@ -7,7 +7,7 @@
    Jede Zahl trägt zwei Texte. Die Fundstelle ist für das Büro und nennt Projekt, Zeile und Stand. Der Beleg steht im
    Dokument an den Auftraggeber und nennt keine anderen Projekte des Büros.
    Gerechnet wird mit dem Rechenkern der Kostenberechnung (R) und dem Datenpool (P); beide werden übergeben.
-   Romy («Zahlen holen») wählt nur unter den Kandidaten, die kandidaten() baut; die Zahlen kommen immer von hier. */
+   Die KI («Zahlen holen») wählt nur unter den Kandidaten, die kandidaten() baut; die Zahlen kommen immer von hier. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -176,7 +176,7 @@ function einheitPasst(option){
   return !k||!m||k===m;
 }
 
-// ---------- Kandidaten für Romy ----------
+// ---------- Kandidaten für die KI ----------
 // Kurze Verweise statt Ids (p1, pr1, g1, k1); auflösen() findet zu jedem Verweis die Zahl mit Fundstelle.
 function kandidaten(optionen,{produkte=[],preise=[],dokumente=[],verwendungen=[],projektId='',pool=[],kobe=null,z,R,P}){
   const out={produkte:[],pool:[],kobe:[]},karte=new Map();
@@ -208,7 +208,7 @@ function kandidaten(optionen,{produkte=[],preise=[],dokumente=[],verwendungen=[]
   }
   return {liste:out,karte};
 }
-// Romys Wahl (nur Verweise) in Zahlen mit Fundstelle; unbekannte Verweise fallen weg.
+// Die Wahl der KI (nur Verweise) in Zahlen mit Fundstelle; unbekannte Verweise fallen weg.
 function aufloesen(wahl,{karte,instanz,R}){
   const raus={};
   const p=karte.get(s(wahl?.produkt));

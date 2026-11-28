@@ -7,7 +7,7 @@ test('Office and Window Tools use the same five-icon navigation rather than swit
   const root=file('index.html'),shell=file('app/shell.js'),app=file('app/app.js');
   assert.equal((root.match(/class="lens-nav-item/g)||[]).length,0);
   assert.equal((shell.match(/class="lens-nav-item[^"]*" data-nav="(assistant|feed|calendar|work|tools)"/g)||[]).length,5);
-  for(const name of ['Romy','Heute','Kalender','Work','Tools'])
+  for(const name of ["${shellKI('{name}')}",'Heute','Kalender','Work','Tools'])
     assert.ok(shell.includes('aria-label="'+name+'"'),'App nav missing '+name);
   assert.ok(file('app/office.css').includes('.office-app #mainNav{grid-template-columns:repeat(5,minmax(0,1fr))}'));
   assert.ok(shell.includes('id="toolsScreen"'));
@@ -15,7 +15,7 @@ test('Office and Window Tools use the same five-icon navigation rather than swit
   assert.ok(shell.includes('data-nav="tools"'));
   assert.ok(!shell.includes('href="../#tools"'));
   assert.ok(app.includes("'calendar','tools','projects','plans','readings'"));
-  assert.ok(shell.includes('aria-label="Romy"'));
+  assert.ok(shell.includes('data-assistant-aria="{name}"'));
 });
 test('All active office members may rename and remove shared files without ownership restriction',()=>{
   const sql=file('supabase/migrations/20261104221830_office_shared_desktop_edit_for_all.sql');

@@ -9,7 +9,7 @@ const loaded=[...appIndex.matchAll(/<script src="\.\/([a-z0-9-]+\.js)\?v=[^"]+">
 const src=f=>read('app/'+f);
 
 test('The app connects only to TBA Office, with the office sign-in',()=>{
-  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME="window";try\{localStorage\.removeItem\("tba_office_chat_backend"\)\}catch\(e\)\{\}<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office1"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office4"><\/script>/);
+  assert.match(appIndex,/<script src="\.\.\/office-config\.js\?v=1"><\/script>\s*<script>window\.APP_PROFILE="office";window\.APP_CHAT_RUNTIME="window";try\{localStorage\.removeItem\("tba_office_chat_backend"\)\}catch\(e\)\{\}<\/script>\s*<script src="\.\/assistant-i18n\.js\?v=office2"><\/script>\s*<script src="\.\.\/shared\/supabase-client\.js\?v=office4"><\/script>/);
   const client=read('shared/supabase-client.js');
   assert.match(client,/const office = window\.TBA_OFFICE_CONFIG;/);
   assert.match(client,/storageKey: office\.storageKey,/,'one session with the start page');
@@ -34,7 +34,9 @@ test('Office browser profile selects German shared assistant labels, never Windo
   assert.equal(root.ASSISTANT_I18N.t('undo'),'Rückgängig');
   assert.equal(root.ASSISTANT_I18N.t('review_confirm'),'Bestätigen');
   assert.equal(root.ASSISTANT_I18N.t('saved'),'Gespeichert.');
-  assert.match(root.ASSISTANT_I18N.t('memory_title'),/Romy/);
+  // Each member names the assistant (28.11.2026); until then «KI-Assistent», with its article inside a sentence.
+  assert.equal(root.ASSISTANT_I18N.t('memory_title'),'Was der KI-Assistent über mich weiß');
+  assert.equal(root.ASSISTANT_I18N.t('assistant_label'),'KI-Assistent');
   assert.ok(loaded.includes('assistant-i18n.js'));
 });
 
@@ -69,12 +71,12 @@ test('Office runs the shared Window chat under Office profile and isolates legac
   assert.match(shell,/id="officeProjectsDrawer" href="#section=projects">Projekte verwalten<\/a>/);
   for(const nav of ['bandeja','readings','thoughts'])
     assert.match(shell,new RegExp(`data-nav="${nav}"[^>]*hidden`),nav+' stays hidden');
-  assert.match(shell,/data-nav="assistant" aria-label="Romy"/);
+  assert.match(shell,/data-nav="assistant" aria-label="\$\{shellKI\('\{name\}'\)\}" data-assistant-aria="\{name\}"/);
   assert.match(shell,/<button data-work-view="desktop">Desktop<\/button>/,'Desktop remains available');
   assert.match(src('office.css'),/\.office-app \[hidden\]\{display:none !important\}/);
   assert.match(src('app.js'),/^const OFFICE=true;$/m);
   assert.match(src('work.js'),/window\.MINDS_WORK=/);
-  assert.match(appIndex,/src="\.\/work\.js\?v=office69"/);
+  assert.match(appIndex,/src="\.\/work\.js\?v=office70"/);
 });
 test('Sync: members only, everyone sees the projects, own calendar, no realtime',()=>{
   const sync=src('sync.js');

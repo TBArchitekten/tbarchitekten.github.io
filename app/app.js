@@ -5,6 +5,10 @@ const OFFICE=true;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const assistantUi=(key,span)=>window.APP_PROFILE==='office'&&window.ASSISTANT_I18N
   ?window.ASSISTANT_I18N.t(key):span;
+// Each member names the assistant (Gari, 28.11.2026); «KI-Assistent» until they do. {name} the bare name, {Wer}/{wer}
+// who, {wem} to whom, {wen} whom: the default keeps its article in a sentence (assistant-i18n.js).
+const KI=t=>{try{if(typeof window.MINDS_ASSISTANT_TEXT==='function')return String(window.MINDS_ASSISTANT_TEXT(t))}catch{}
+  return String(t).replace(/\{(name|Wer|wer|wem|wen)\}/g,(_,k)=>({name:'KI-Assistent',Wer:'Der KI-Assistent',wer:'der KI-Assistent',wem:'dem KI-Assistenten',wen:'den KI-Assistenten'})[k])};
 
 const KEY='tba-office-window-v1';
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
@@ -309,7 +313,7 @@ async function handleReviewDeepLink(){
       confirmProposal({...row.candidate,request_id:requestId});
       return true;
     }
-    modal('Prüfung',`<div class="small">Dieser Vorschlag ist nicht mehr offen oder schon erledigt. Du kannst im Gespräch mit Romy weitermachen.</div>`);
+    modal('Prüfung',`<div class="small">Dieser Vorschlag ist nicht mehr offen oder schon erledigt. Du kannst im Gespräch mit ${esc(KI('{wem}'))} weitermachen.</div>`);
     return true;
   }catch{return false}
 }
@@ -1278,7 +1282,7 @@ function isEventMessage(m){
   return m?.role==='assistant'&&(m.metadata?.author==='system'||!!window.MINDS_TURN_INTEGRITY?.isSystemNotice?.(m.text));
 }
 function replyAuthor(reply){
-  if(window.APP_PROFILE==='office')return reply?.role==='assistant'?(isEventMessage(reply)?'Hinweis':'Romy'):'Du';
+  if(window.APP_PROFILE==='office')return reply?.role==='assistant'?(isEventMessage(reply)?'Hinweis':KI('{name}')):'Du';
   return reply?.role==='assistant'?(isEventMessage(reply)?'Aviso':'Isabella'):'Tú';
 }
 function replySnippet(text){return String(text||'').replace(/\s+/g,' ').trim().slice(0,180)}
@@ -1729,7 +1733,7 @@ function bindMessageReactions(){
 function renderToday(){const d=today(),ev=state.events.filter(x=>x.date===d).sort((a,b)=>a.start.localeCompare(b.start)),ta=state.tasks.filter(x=>(x.date===d||taskSpansDay(x,d))&&activeTask(x)&&x.mine!==false);$('#todaySummary').textContent=`${ev.length} ${ev.length===1?'Termin':'Termine'} · ${ta.length} ${ta.length===1?'Aufgabe':'Aufgaben'}`;$('#todayNext').textContent=ev[0]?`${ev[0].start} · ${ev[0].title}`:'Kein nächster Termin'}
 function orb(mode='idle',label=''){const o=$('#orbButton');if(!o)return;o.classList.remove('listening','thinking');if(mode!=='idle')o.classList.add(mode);const s=$('#orbStatus');if(s)s.textContent=label}
 function setWorking(el,on){if(el)el.classList.toggle('is-working',!!on)}
-function localFallback(text){const n=text.toLowerCase();if(/was habe ich heute|was steht heute|heute an|qué tengo hoy|que tengo hoy/.test(n)){const d=today(),e=state.events.filter(x=>x.date===d),t=state.tasks.filter(x=>x.date===d&&activeTask(x));return `Heute: ${e.length} ${e.length===1?'Termin':'Termine'} und ${t.length} ${t.length===1?'offene Aufgabe':'offene Aufgaben'}.`}if(/kalender|calendario|agenda/.test(n)){show('calendar');return 'Ich öffne den Kalender.'}return 'Romy ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.'}
+function localFallback(text){const n=text.toLowerCase();if(/was habe ich heute|was steht heute|heute an|qué tengo hoy|que tengo hoy/.test(n)){const d=today(),e=state.events.filter(x=>x.date===d),t=state.tasks.filter(x=>x.date===d&&activeTask(x));return `Heute: ${e.length} ${e.length===1?'Termin':'Termine'} und ${t.length} ${t.length===1?'offene Aufgabe':'offene Aufgaben'}.`}if(/kalender|calendario|agenda/.test(n)){show('calendar');return 'Ich öffne den Kalender.'}return KI('{Wer} ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.')}
 function rememberCandidates(items){for(const m of items||[]){if(!m?.content)continue;const exists=(state.memory||[]).some(x=>(typeof x==='object'?x.content:String(x))===m.content);if(!exists)state.memory.push({id:uid(),kind:normalizeMemoryKind(m.kind),content:m.content,confidence:Number(m.confidence??.7),status:'active',source:m.source||'ai_derived',metadata:{...(m.metadata||{}),derived:true,accepted_fact:false}})}save()}
 function proposalLabel(p){
   if(p.kind==='routine'){
@@ -1750,13 +1754,13 @@ function proposalLabel(p){
   }
   if(p.kind==='assistant_preferences'){
     const add=(p.add_rules||[]).length,remove=(p.remove_rules||[]).length;
-    return ['Romy verbessern',add?(add+(add===1?' Regel':' Regeln')+' übernehmen'):'',remove?(remove+' zurücknehmen'):''].filter(Boolean).join(' · ');
+    return [KI('{name} verbessern'),add?(add+(add===1?' Regel':' Regeln')+' übernehmen'):'',remove?(remove+' zurücknehmen'):''].filter(Boolean).join(' · ');
   }
   if(p.kind==='standing_intent')return ['Erinnern, wenn',p.trigger_text,p.project||''].filter(Boolean).join(' · ');
   if(p.kind==='expectation')return ['Erwartet',p.title,p.due_date,p.due_time||''].filter(Boolean).join(' · ');
   if(p.kind==='commitment')return ['Im Blick behalten',p.title,p.project||p.scope||''].filter(Boolean).join(' · ');
   if(p.kind==='work_claim')return ['Wissen speichern',p.project,p.claim_type,p.statement].filter(Boolean).join(' · ');
-  if(p.kind==='skill_proposal')return ['Fähigkeit anlegen',p.agent==='sofia'?'Sofía':'Romy',p.name].filter(Boolean).join(' · ');
+  if(p.kind==='skill_proposal')return ['Fähigkeit anlegen',p.agent==='sofia'?'Sofía':KI('{name}'),p.name].filter(Boolean).join(' · ');
   const action=p.action||'create';
   const actionName=action==='update'?'Ändern':action==='delete'?'Löschen':action==='complete'?'Abschließen':action==='archive'?'Archivieren':'Anlegen';
   const bits=[actionName,p.kind==='event'?'Termin':'Aufgabe',p.title,p.date];
@@ -1771,7 +1775,7 @@ function proposalLabel(p){
 function proposalEditor(p,onDone){
   if(p.kind==='standing_intent'){
     modal('Künftige Erinnerung prüfen',`<div class="form proposal-editor">
-      <div class="small">Das hat keine feste Uhrzeit. Romy erinnert dich daran, sobald diese Situation wieder auftaucht — mit Sperrzeit und begrenzter Anzahl.</div>
+      <div class="small">Das hat keine feste Uhrzeit. ${esc(KI('{Wer}'))} erinnert dich daran, sobald diese Situation wieder auftaucht — mit Sperrzeit und begrenzter Anzahl.</div>
       <label>Wenn das eintritt<textarea id="standingTrigger" rows="3">${esc(p.trigger_text||'')}</textarea></label>
       <label>Daran erinnern<textarea id="standingReminder" rows="3">${esc(p.reminder_text||'')}</textarea></label>
       <label>Projekt (optional)<input id="standingProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label>
@@ -1787,7 +1791,7 @@ function proposalEditor(p,onDone){
   if(p.kind==='expectation'){
     const types=[['reply','Antwort'],['delivery','Lieferung'],['decision','Entscheidung'],['document','Dokument'],['external_event','Externer Termin'],['other','Anderes']];
     modal('Erwartung prüfen',`<div class="form proposal-editor">
-      <div class="small">Das ist keine Aufgabe, sondern etwas, das du erwartest. Kommt das Datum ohne Bestätigung, markiert Romy es als unbestätigt; sie nimmt nicht an, dass es nicht eingetreten ist.</div>
+      <div class="small">Das ist keine Aufgabe, sondern etwas, das du erwartest. Kommt das Datum ohne Bestätigung, markiert ${esc(KI('{wer}'))} es als unbestätigt und nimmt nicht an, dass es nicht eingetreten ist.</div>
       <label>Name<input id="expectationTitle" value="${esc(p.title||'')}" placeholder="Antwort des Beraters"></label>
       <label>Was du erwartest<textarea id="expectationEvent" rows="4">${esc(p.expected_event||'')}</textarea></label>
       <div class="form-grid-2"><label>Art<select id="expectationType">${types.map(([v,l])=>`<option value="${v}" ${v===(p.expectation_type||'other')?'selected':''}>${l}</option>`).join('')}</select></label><label>Projekt (optional)<input id="expectationProject" value="${esc(p.project||'')}" placeholder="Bernried, Schwarz…"></label></div>
@@ -1813,7 +1817,7 @@ function proposalEditor(p,onDone){
     if(p.kind==='commitment'){
     const sourceNote=p.source_open_loop?'<div class="small">Herkunft: offener Punkt, in einem Checkpoint erkannt. Mit der Bestätigung bleibt diese Herkunft erhalten, ohne zur Tatsache zu werden.</div><blockquote>'+esc(p.source_open_loop)+'</blockquote>':'';
     modal('Kontinuität prüfen',`<div class="form proposal-editor">
-      <div class="small">${p.persistent_work?'Mit der Bestätigung hält Romy dieses Ziel präsent und beginnt, im Hintergrund daran zu arbeiten. Die interne Arbeit erhält keine zusätzlichen Rechte, und jede Aktion nach außen braucht weiterhin deine normale Bestätigung.':'Eine Kontinuität hält ein Ziel über Gespräche hinweg präsent. Sie legt von sich aus keine Aufgaben, Routinen oder Aktionen an.'}</div>
+      <div class="small">${p.persistent_work?'Mit der Bestätigung hält '+esc(KI('{wer}'))+' dieses Ziel präsent und beginnt, im Hintergrund daran zu arbeiten. Die interne Arbeit erhält keine zusätzlichen Rechte, und jede Aktion nach außen braucht weiterhin deine normale Bestätigung.':'Eine Kontinuität hält ein Ziel über Gespräche hinweg präsent. Sie legt von sich aus keine Aufgaben, Routinen oder Aktionen an.'}</div>
       ${sourceNote}
       <label>Name<input id="commitmentTitle" value="${esc(p.title||'')}" placeholder="Was präsent bleiben soll"></label>
       <label>Ziel<textarea id="commitmentObjective" rows="5">${esc(p.objective||'')}</textarea></label>
@@ -1844,7 +1848,7 @@ function proposalEditor(p,onDone){
   if(p.kind==='skill_proposal'){
     modal('Neue Fähigkeit prüfen',`<div class="form proposal-editor">
       <div class="small">Die Fähigkeit ist persönlich und versionierbar. Sie wird erst mit dieser Bestätigung aktiv.</div>
-      <label>Agent<select id="skillAgent"><option value="isabella" ${p.agent!=='sofia'?'selected':''}>Romy</option><option value="sofia" ${p.agent==='sofia'?'selected':''}>Sofía</option></select></label>
+      <label>Agent<select id="skillAgent"><option value="isabella" ${p.agent!=='sofia'?'selected':''}>${esc(KI('{name}'))}</option><option value="sofia" ${p.agent==='sofia'?'selected':''}>Sofía</option></select></label>
       <label>Name<input id="skillName" value="${esc(p.name||'')}"></label>
       <label>Slug<input id="skillSlug" value="${esc(p.slug||'')}"></label>
       <label>Beschreibung<textarea id="skillDescription" rows="3">${esc(p.description||'')}</textarea></label>
@@ -1858,8 +1862,8 @@ function proposalEditor(p,onDone){
   }
 
   if(p.kind==='assistant_preferences'){
-    modal('Verbesserung von Romy prüfen',`<div class="form proposal-editor assistant-rule-editor">
-      <div class="small">Diese Regeln betreffen, wie Romy mit dir arbeitet. Sie ändern keinen Code, und du kannst sie später zurücknehmen.</div>
+    modal('Vorgeschlagene Verbesserung prüfen',`<div class="form proposal-editor assistant-rule-editor">
+      <div class="small">Diese Regeln betreffen, wie ${esc(KI('{wer}'))} mit dir arbeitet. Sie ändern keinen Code, und du kannst sie später zurücknehmen.</div>
       <label>Regeln übernehmen<textarea id="assistantRulesAdd" rows="5">${esc((p.add_rules||[]).join('\n'))}</textarea></label>
       <label>Regeln zurücknehmen<textarea id="assistantRulesRemove" rows="3">${esc((p.remove_rules||[]).join('\n'))}</textarea></label>
       <div class="confirm-actions"><button id="proposalEditCancel" class="secondary">Zurück</button><button id="proposalEditSave" class="primary">Diese Regeln verwenden</button></div>
@@ -1900,7 +1904,7 @@ function proposalEditor(p,onDone){
     const isOnce=p.schedule_kind==='once';
     modal(isOnce?'Erinnerung prüfen':'Routine prüfen',`<div class="form proposal-editor routine-editor">
       <label>Name<input id="routineTitle" value="${esc(p.title||(isOnce?'Erinnerung':'Routine'))}"></label>
-      <label>Was Romy tun wird<textarea id="routineInstruction" rows="4">${esc(p.instruction||'')}</textarea></label>
+      <label>${esc(KI('Was {wer} tun wird'))}<textarea id="routineInstruction" rows="4">${esc(p.instruction||'')}</textarea></label>
       <label>Häufigkeit<select id="routineKind"><option value="once" ${isOnce?'selected':''}>Einmal</option><option value="daily" ${!isOnce&&p.schedule_kind!=='weekly'?'selected':''}>Täglich</option><option value="weekly" ${p.schedule_kind==='weekly'?'selected':''}>Wöchentlich</option></select></label>
       <label id="routineDateLabel">Datum<input id="routineDate" type="date" value="${esc(p.date||today())}"></label>
       <label>Uhrzeit<input id="routineTime" type="time" value="${esc(p.time||(isOnce?'09:00':'08:00'))}"></label>
@@ -2043,7 +2047,7 @@ function finalizeInlineReview(proposals,status){
 }
 function confirmProposal(p){
   p={...p,request_id:p.request_id||crypto.randomUUID()};
-  const reviewHint=p.kind==='routine'?'Du kannst so bestätigen oder Inhalt und Zeitplan vorher anpassen.':p.kind==='standing_intent'?'Wird aktiv, wenn das Thema im Gespräch wieder auftaucht. Es wird nichts extern überwacht.':p.kind==='expectation'?'Das verfolgt ein künftiges Ereignis; ein verstrichenes Datum ohne Beleg gilt nicht als Fehler.':p.kind==='commitment'?'Das Ziel bleibt präsent, führt aber von sich aus keine Aktionen aus.':p.kind==='work_claim'?'Bitte besonders Status und Herkunft prüfen: Eine Quelle ist nicht automatisch eine bestätigte Tatsache.':p.kind==='skill_proposal'?'Diese Fähigkeit ist persönlich und wird erst mit der Bestätigung aktiv.':p.kind==='feed_preferences'?'Puedes revisar la constelación y los temas antes de modificar tu Feed.':p.kind==='assistant_preferences'?'Du kannst diese Verbesserung prüfen, bevor Romy sie übernimmt.':'Du kannst so bestätigen oder Name, Datum, Uhrzeit, Kategorie oder Projekt vorher anpassen.';
+  const reviewHint=p.kind==='routine'?'Du kannst so bestätigen oder Inhalt und Zeitplan vorher anpassen.':p.kind==='standing_intent'?'Wird aktiv, wenn das Thema im Gespräch wieder auftaucht. Es wird nichts extern überwacht.':p.kind==='expectation'?'Das verfolgt ein künftiges Ereignis; ein verstrichenes Datum ohne Beleg gilt nicht als Fehler.':p.kind==='commitment'?'Das Ziel bleibt präsent, führt aber von sich aus keine Aktionen aus.':p.kind==='work_claim'?'Bitte besonders Status und Herkunft prüfen: Eine Quelle ist nicht automatisch eine bestätigte Tatsache.':p.kind==='skill_proposal'?'Diese Fähigkeit ist persönlich und wird erst mit der Bestätigung aktiv.':p.kind==='feed_preferences'?'Puedes revisar la constelación y los temas antes de modificar tu Feed.':p.kind==='assistant_preferences'?KI('Du kannst diese Verbesserung prüfen, bevor {wer} sie übernimmt.'):'Du kannst so bestätigen oder Name, Datum, Uhrzeit, Kategorie oder Projekt vorher anpassen.';
   modal('Bestätigen',`<div class="row"><div class="row-main"><b>${esc(proposalLabel(p))}</b><div class="small" style="margin-top:7px">${esc(reviewHint)}</div>${proposalDetails(p)}</div></div><div class="proposal-actions"><button id="proposalCancel" class="secondary">Abbrechen</button><button id="proposalEdit" class="secondary">Anpassen</button><button id="proposalConfirm" class="primary">Bestätigen</button></div>`);
   $('#proposalCancel').onclick=()=>{state.pendingIntent=null;save();proposalFeedback('rejected',p);finalizeInlineReview(p,'rejected');closeModal();sayEvent('Keine Änderung.')};
   $('#proposalEdit').onclick=()=>proposalEditor(p,q=>{if(q)confirmProposal(reviewedProposal(p,q));else confirmProposal(p)});
@@ -2099,8 +2103,8 @@ async function createRoutineProposal(p){
   if(!sb||!p.request_id)throw new Error('Dafür braucht es einen registrierten Vorschlag und eine Anmeldung.');
   const {data:receipt,error}=await sb.rpc('minds_commit_reviewed_routine_v1',{p_request_id:p.request_id,p_reviewed:p});
   if(error)throw new Error(error.message.includes('routine_changed')
-    ?'Die Routine wurde seit dem Vorschlag geändert. Bitte Romy, sie erneut abzurufen.'
-    :error.message.includes('duplicate_routine')?'Es gibt bereits eine gleichwertige Routine. Bitte Romy, die bestehende zu ändern.':error.message);
+    ?KI('Die Routine wurde seit dem Vorschlag geändert. Bitte {wen}, sie erneut abzurufen.')
+    :error.message.includes('duplicate_routine')?KI('Es gibt bereits eine gleichwertige Routine. Bitte {wen}, die bestehende zu ändern.'):error.message);
   if(!receipt?.receipt_id||!['applied','already_applied'].includes(receipt.status))
     throw new Error('Der Server hat die Änderung nicht bestätigt.');
   closeModal();
@@ -2271,7 +2275,7 @@ async function createSkillProposal(p){
   if(!String(p.instructions||'').trim()||!String(p.name||'').trim()){sayEvent('La habilidad necesita un nombre e instrucciones.');return}
   const {data,error}=await sb.rpc('minds_apply_personal_skill',{p_skill:p,p_request_id:p.request_id||crypto.randomUUID(),p_confirmed:true});
   if(error){const b=$('#proposalConfirm');if(b)b.disabled=false;sayEvent('Die Fähigkeit konnte nicht aktiviert werden: '+error.message);return}
-  closeModal();sayEvent(`Die Fähigkeit «${data.name}» ist für ${data.agent==='sofia'?'Sofía':'Romy'} als v${data.version} aktiv.`);
+  closeModal();sayEvent(`Die Fähigkeit «${data.name}» ist für ${data.agent==='sofia'?'Sofía':KI('{wen}')} als v${data.version} aktiv.`);
 }
 function applyFeedPreferencesProposal(p){
   const prefs={...base.feedPreferences,...(state.feedPreferences||{})};
@@ -2688,8 +2692,8 @@ async function syncDurableChatJobs(){
       const resolved=['completed','incomplete','failed'].includes(status);
       const reply=status==='completed'?String(job.reply||''):
         status==='incomplete'?String(job.reply||'')||'Die Antwort wurde unterbrochen.':
-        status==='failed'?'Romy konnte diese Antwort nicht abschließen. Du kannst es erneut versuchen.':
-        'Romy arbeitet noch…';
+        status==='failed'?KI('{Wer} konnte diese Antwort nicht abschließen. Du kannst es erneut versuchen.'):
+        KI('{Wer} arbeitet noch…');
       const desiredMeta={durable_request_id:key,durable_status:status,
         incomplete_response:status==='incomplete',
         incomplete_reason:status==='incomplete'?job.incomplete_reason||'provider_incomplete':null};
@@ -2735,11 +2739,11 @@ async function handle(text,attachments=[],replyTo=null,options={}){
     ?{source_turn_id:pending.source_turn_id,receipt_id:pending.receipt_id}:null;
   const userTurn=say('user',text||'Ich sende dir dieses Bild.',{id:durableRequestId||undefined,attachments:copy,replyTo,
     metadata:durableRequestId?{durable_request_id:durableRequestId}:{} });
-  clearReplyTarget();setChatActivity('Wird an Romy gesendet…');orb('thinking','Romy denkt nach…');setWorking($('#sendButton'),true);
+  clearReplyTarget();setChatActivity(KI('Wird an {wen} gesendet…'));orb('thinking',KI('{Wer} denkt nach…'));setWorking($('#sendButton'),true);
   try{
     if(window.ISABELLA_AI?.ask){
-      setChatActivity('Romy bereitet die Antwort vor…');
-      const result=await window.ISABELLA_AI.ask(text||'Ich sende dir dieses Bild.',state,{attachments:copy,replyTo,durableRequestId,continuation:candidate,onProgress:event=>{if(event?.label){orb('thinking',event.label);setChatActivity(event.label)}},onTextDelta:(delta,full)=>{setChatActivity('Romy antwortet…');streamAssistantDelta(delta,full)},onTextReset:()=>clearAssistantStream()});
+      setChatActivity(KI('{Wer} bereitet die Antwort vor…'));
+      const result=await window.ISABELLA_AI.ask(text||'Ich sende dir dieses Bild.',state,{attachments:copy,replyTo,durableRequestId,continuation:candidate,onProgress:event=>{if(event?.label){orb('thinking',event.label);setChatActivity(event.label)}},onTextDelta:(delta,full)=>{setChatActivity(KI('{Wer} antwortet…'));streamAssistantDelta(delta,full)},onTextReset:()=>clearAssistantStream()});
       state.pendingIntent=null;
       clearAssistantStream();
       if(result?.durable){
@@ -4131,7 +4135,7 @@ async function missionRunControlUI(runId,action,workspaceId){
 }
 async function missionWorkspacePanel(id){
   const sb=window.MINDS_SUPABASE;if(!sb||!id)return;
-  modal('Romys Arbeit','<div class="surface-loading">Lese, was gerade läuft …</div>');
+  modal(KI('Woran {wer} arbeitet'),'<div class="surface-loading">Lese, was gerade läuft …</div>');
   try{
     const [wQ,iQ,rQ]=await Promise.all([
       sb.from('minds_commitment_workspaces').select('id,commitment_id,title,objective_snapshot,completion_criteria_snapshot,status,summary,updated_at').eq('id',id).single(),
@@ -4149,9 +4153,9 @@ async function missionWorkspacePanel(id){
     const waitTechnical=current?.status==='waiting'?`<span>Wartet auf</span><b>${esc(current.wait_kind||'—')}</b>${current.wake_at?`<span>Weiter am</span><b>${new Date(current.wake_at).toLocaleString('de-DE')}</b>`:''}`:'';
     const runTechnical=current?`<div class="human-tech-grid"><span>Mission Run</span><b>${esc(current.status)}</b><span>Phase</span><b>${esc(current.phase||'—')}</b><span>Checkpoint</span><b>${Number(current.iteration||0)} / ${Number(current.max_iterations||0)}</b><span>Neuversuche</span><b>${Number(current.retry_count||0)}</b>${waitTechnical}<span>Aktualisiert</span><b>${new Date(current.updated_at).toLocaleString('de-DE')}</b></div>`:'';
     const runPanel=current?`<div class="mission-run-card">${humanStateHTML(runState,runTechnical)}${current.last_error&&current.status==='failed'?`<div class="human-inline-error">${esc(current.last_error)}</div>`:''}${runControls?`<div class="confirm-actions">${runControls}</div>`:''}</div>`:'';
-    modal('Romys Arbeit',`<div class="continuity-intro"><b>${esc(w.title)}</b><p>${esc(w.objective_snapshot)}</p>${w.completion_criteria_snapshot?`<div class="commitment-criteria"><span>Wann es gelöst ist</span>${esc(w.completion_criteria_snapshot)}</div>`:''}${humanStateHTML(workspaceState,workspaceTechnical)}${w.summary?`<div class="continuity-cause"><span>Was ich bisher weiß</span><p>${esc(w.summary)}</p></div>`:''}${runPanel}<div class="small">Hier bewahre ich die Zwischenarbeit auf, um über Gespräche hinweg weitermachen zu können. Befunde bleiben Arbeitsbelege — weder persönliches Gedächtnis noch bestätigte Tatsachen; Aktionen nach außen oder eine Entscheidung kann ich von mir aus ebenfalls nicht durchführen.</div></div><div class="small section-label">Was ich zusammengetragen habe</div>${itemRows||'<div class="empty-panel">Zu dieser Arbeit habe ich noch keine Fortschritte festgehalten.</div>'}`);
+    modal(KI('Woran {wer} arbeitet'),`<div class="continuity-intro"><b>${esc(w.title)}</b><p>${esc(w.objective_snapshot)}</p>${w.completion_criteria_snapshot?`<div class="commitment-criteria"><span>Wann es gelöst ist</span>${esc(w.completion_criteria_snapshot)}</div>`:''}${humanStateHTML(workspaceState,workspaceTechnical)}${w.summary?`<div class="continuity-cause"><span>Was ich bisher weiß</span><p>${esc(w.summary)}</p></div>`:''}${runPanel}<div class="small">Hier bewahre ich die Zwischenarbeit auf, um über Gespräche hinweg weitermachen zu können. Befunde bleiben Arbeitsbelege — weder persönliches Gedächtnis noch bestätigte Tatsachen; Aktionen nach außen oder eine Entscheidung kann ich von mir aus ebenfalls nicht durchführen.</div></div><div class="small section-label">Was ich zusammengetragen habe</div>${itemRows||'<div class="empty-panel">Zu dieser Arbeit habe ich noch keine Fortschritte festgehalten.</div>'}`);
     document.querySelectorAll('[data-mission-run-action]').forEach(b=>b.onclick=()=>void missionRunControlUI(b.dataset.runId,b.dataset.missionRunAction,id));
-  }catch{modal('Romys Arbeit','<div class="small">Diese Arbeit konnte gerade nicht gelesen werden.</div>')}
+  }catch{modal(KI('Woran {wer} arbeitet'),'<div class="small">Diese Arbeit konnte gerade nicht gelesen werden.</div>')}
 }
 async function previewArtifactIntake(id){
   const sb=window.MINDS_SUPABASE;if(!sb||!id)return;
@@ -4516,7 +4520,7 @@ async function contextualAutonomyPanel(){
     const directCalendar=calendarPref?.create_mode!=='review';
     const directCalendarHTML='<div class="human-permission-case"><div class="human-case-title">Aufgaben und Termine aus dem Chat anlegen</div>'+
       '<div class="human-state tone-complete"><b>'+(directCalendar?'Legt sofort an, mit «Rückgängig»':'Bestätigung vor dem Anlegen')+'</b>'+
-      '<p>'+(directCalendar?'Wenn du Romy bittest, eine eigene Aufgabe oder einen eigenen Termin einzutragen, legt sie ihn sofort an und lässt dir 10 Minuten «Rückgängig». Was sie selbst vorschlägt, kommt weiter als Karte.':'Romy zeigt dir vor jeder Aufgabe und jedem Termin eine Karte.')+
+      '<p>'+esc(directCalendar?KI('Wenn du {wen} bittest, eine eigene Aufgabe oder einen eigenen Termin einzutragen, steht der Eintrag sofort da, und du hast 10 Minuten «Rückgängig». Was {wer} von sich aus vorschlägt, kommt weiter als Karte.'):KI('{Wer} zeigt dir vor jeder Aufgabe und jedem Termin eine Karte.'))+
       ' Ändern, Verschieben und Löschen brauchen weiterhin deine Bestätigung.</p></div>'+
       '<button type="button" id="calendarCreationMode" class="secondary">'+
       (directCalendar?'Wieder vorher bestätigen':'Sofort anlegen mit «Rückgängig»')+'</button></div>';
@@ -4747,7 +4751,7 @@ function assistantPreferencesPanel(){
   const attention=canonicalAttentionPreferences(prefs.attention);
   const rules=[...(prefs.behaviorRules||[])];
   modal('Proactividad de Isabella',`<div class="form assistant-preferences">
-    <label class="settings-check"><input id="curiosityEnabled" type="checkbox" ${prefs.curiosityEnabled!==false?'checked':''}><span>${esc('Romy darf mir zuerst schreiben (höchstens einmal täglich, nur wenn sinnvoll)')}</span></label>
+    <label class="settings-check"><input id="curiosityEnabled" type="checkbox" ${prefs.curiosityEnabled!==false?'checked':''}><span>${esc(KI('{Wer} darf mir zuerst schreiben (höchstens dreimal am Tag, werktags von 7:30 bis 19 Uhr, nur wenn es sich lohnt)'))}</span></label>
     <div class="small">Lo decide cada día a partir de lo que hablasteis y de tu agenda; si no hay nada que valga la pena, no escribe.</div>
     <div class="small section-label">Cuándo quieres que te avise</div>
     <div class="small">Puedo mantener cosas vivas y trabajar en segundo plano sin interrumpirte cada vez. Si me dices explícitamente “avísame cuando termines”, esa petición tiene prioridad sobre estas reglas.</div>
@@ -5104,13 +5108,13 @@ async function memoryPanel(){
       claims=claimRows||[];operating=model||emptyOperatingModel();
     }
   }catch{}
-  const modelHtml=claims.length?claims.map(c=>`<div class="model-claim-row ${esc(c.status)}"><div class="row-main"><div>${esc(c.claim)}</div><div class="small">${c.status==='confirmed'?'Confirmado':'Hipótesis'} · ${esc(c.claim_type)} · ${Math.round(Number(c.confidence||0)*100)}%</div></div><div class="model-claim-actions">${c.status==='hypothesis'?`<button data-model-confirm="${esc(c.id)}">Confirmar</button><button data-model-reject="${esc(c.id)}">No</button>`:''}<button data-model-correct="${esc(c.id)}" data-model-text="${esc(c.claim)}">Corregir</button></div></div>`).join(''):'<div class="small">Noch keine Annahmen über dich.</div>';
+  const modelHtml=claims.length?claims.map(c=>`<div class="model-claim-row ${esc(c.status)}"><div class="row-main"><div>${esc(c.claim)}</div><div class="small">${c.status==='confirmed'?'Bestätigt':'Vermutung'} · ${esc(c.claim_type)} · ${Math.round(Number(c.confidence||0)*100)}%</div></div><div class="model-claim-actions">${c.status==='hypothesis'?`<button data-model-confirm="${esc(c.id)}">Bestätigen</button><button data-model-reject="${esc(c.id)}">Nein</button>`:''}<button data-model-correct="${esc(c.id)}" data-model-text="${esc(c.claim)}">Korrigieren</button></div></div>`).join(''):'<div class="small">Noch keine Annahmen über dich.</div>';
   const accepted=operating.accepted||[],proposed=operating.proposed||[];
-  const acceptedHtml=accepted.length?accepted.map(x=>`<div class="model-claim-row confirmed"><div class="row-main"><div>${esc(x.accepted_statement||x.statement||'')}</div><div class="small">Confirmado · ${esc(operatingDimensionLabels[x.dimension]||x.dimension)}</div></div><div class="model-claim-actions"><button data-operating-retire="${esc(x.id)}">Zurücknehmen</button></div></div>`).join(''):'<div class="small">Noch keine bestätigten Arbeitsregeln.</div>';
-  const proposedHtml=proposed.length?proposed.map(x=>{const evidence=Array.isArray(x.evidence)?x.evidence:[];return `<div class="model-claim-row hypothesis"><div class="row-main"><div>${esc(x.statement||'')}</div><div class="small">Propuesta · ${esc(operatingDimensionLabels[x.dimension]||x.dimension)}</div>${x.rationale?`<p class="small">${esc(x.rationale)}</p>`:''}${evidence.length?`<details class="human-tech"><summary>Warum ich das vorschlage</summary>${evidence.map(e=>`<div class="small">${esc(e.summary||'')} · ${esc(e.provenance_class||'')}</div>`).join('')}</details>`:''}</div><div class="model-claim-actions"><button data-operating-accept="${esc(x.id)}">Ja, übernehmen</button><button data-operating-correct="${esc(x.id)}" data-operating-text="${esc(x.statement||'')}">Corregir</button><button data-operating-reject="${esc(x.id)}">No</button></div></div>`}).join(''):'<div class="small">No hay nuevas reglas por revisar.</div>';
-  const operatingHtml=`<div class="small">Romy kann Arbeitsmuster beobachten, aber keine Vermutung ändert ihre Arbeitsweise, bevor du sie bestätigst.</div><div class="small section-label">Reglas confirmadas</div>${acceptedHtml}<div class="small section-label memory-section-title">Por revisar</div>${proposedHtml}<div class="small">Observaciones disponibles: ${Number(operating.observation_count||0)}</div>`;
+  const acceptedHtml=accepted.length?accepted.map(x=>`<div class="model-claim-row confirmed"><div class="row-main"><div>${esc(x.accepted_statement||x.statement||'')}</div><div class="small">Bestätigt · ${esc(operatingDimensionLabels[x.dimension]||x.dimension)}</div></div><div class="model-claim-actions"><button data-operating-retire="${esc(x.id)}">Zurücknehmen</button></div></div>`).join(''):'<div class="small">Noch keine bestätigten Arbeitsregeln.</div>';
+  const proposedHtml=proposed.length?proposed.map(x=>{const evidence=Array.isArray(x.evidence)?x.evidence:[];return `<div class="model-claim-row hypothesis"><div class="row-main"><div>${esc(x.statement||'')}</div><div class="small">Vorschlag · ${esc(operatingDimensionLabels[x.dimension]||x.dimension)}</div>${x.rationale?`<p class="small">${esc(x.rationale)}</p>`:''}${evidence.length?`<details class="human-tech"><summary>Warum ich das vorschlage</summary>${evidence.map(e=>`<div class="small">${esc(e.summary||'')} · ${esc(e.provenance_class||'')}</div>`).join('')}</details>`:''}</div><div class="model-claim-actions"><button data-operating-accept="${esc(x.id)}">Ja, übernehmen</button><button data-operating-correct="${esc(x.id)}" data-operating-text="${esc(x.statement||'')}">Korrigieren</button><button data-operating-reject="${esc(x.id)}">Nein</button></div></div>`}).join(''):'<div class="small">Keine neuen Regeln zu prüfen.</div>';
+  const operatingHtml=`<div class="small">${esc(KI('{Wer} kann Arbeitsmuster beobachten; die Arbeitsweise ändert sich aber erst, wenn du eine Vermutung bestätigst.'))}</div><div class="small section-label">Bestätigte Regeln</div>${acceptedHtml}<div class="small section-label memory-section-title">Zu prüfen</div>${proposedHtml}<div class="small">Beobachtungen bisher: ${Number(operating.observation_count||0)}</div>`;
   const memoryHtml=items.length?items.map((m,i)=>{const text=typeof m==='object'?m.content:String(m),kind=typeof m==='object'?(m.kind||'context'):'context';const id=typeof m==='object'?(m.id||String(i)):String(i);return `<div class="memory-row"><div class="row-main"><div>${esc(text)}</div><div class="small">${esc(kind)}</div></div><button data-memory-edit="${esc(id)}">Bearbeiten</button><button data-memory-delete="${esc(id)}">×</button></div>`}).join(''):'<div class="small">Noch keine persönlichen Notizen gespeichert.</div>';
-  modal('Was Romy über mich weiß',`<div class="small section-label">Modelo personal</div><div class="personal-model-list">${modelHtml}</div><div class="small section-label memory-section-title">Wie ich arbeite</div><div class="personal-model-list">${operatingHtml}</div><div class="small section-label memory-section-title">Gespeicherte Notizen</div>${memoryHtml}${dreamSectionHtml(dream)}`);
+  modal(KI('Was {wer} über mich weiß'),`<div class="small section-label">Über mich</div><div class="personal-model-list">${modelHtml}</div><div class="small section-label memory-section-title">Wie ich arbeite</div><div class="personal-model-list">${operatingHtml}</div><div class="small section-label memory-section-title">Gespeicherte Notizen</div>${memoryHtml}${dreamSectionHtml(dream)}`);
   const clearState=document.querySelector('[data-dream-clear-state]');
   if(clearState)clearState.onclick=async()=>{
     clearState.disabled=true;
@@ -5132,7 +5136,7 @@ async function memoryPanel(){
   document.querySelectorAll('[data-operating-accept]').forEach(b=>b.onclick=()=>void reviewOperatingHypothesis(b.dataset.operatingAccept,'accept',null));
   document.querySelectorAll('[data-operating-reject]').forEach(b=>b.onclick=()=>void reviewOperatingHypothesis(b.dataset.operatingReject,'reject',null));
   document.querySelectorAll('[data-operating-correct]').forEach(b=>b.onclick=()=>correctOperatingHypothesis(b.dataset.operatingCorrect,b.dataset.operatingText||''));
-  document.querySelectorAll('[data-operating-retire]').forEach(b=>b.onclick=()=>{if(confirm('¿Retirar esta regla de trabajo? Isabella dejará de usarla.'))void reviewOperatingHypothesis(b.dataset.operatingRetire,'retire',null)});
+  document.querySelectorAll('[data-operating-retire]').forEach(b=>b.onclick=()=>{if(confirm(KI('Diese Arbeitsregel zurücknehmen? {Wer} verwendet sie danach nicht mehr.')))void reviewOperatingHypothesis(b.dataset.operatingRetire,'retire',null)});
   $$('[data-memory-edit]').forEach(b=>b.onclick=()=>editMemory(b.dataset.memoryEdit));
   $$('[data-memory-delete]').forEach(b=>b.onclick=()=>deleteMemory(b.dataset.memoryDelete));
 }
@@ -5146,7 +5150,7 @@ async function setModelClaimStatus(id,status){
   memoryPanel();
 }
 function correctModelClaim(id,current){
-  modal('Corregir lo que Isabella cree',`<div class="form"><label>Richtige Formulierung<textarea id="modelClaimCorrection" rows="4">${esc(current)}</textarea></label><button id="saveModelClaimCorrection" class="primary">Guardar corrección</button></div>`);
+  modal(KI('Korrigieren, was {wer} annimmt'),`<div class="form"><label>Richtige Formulierung<textarea id="modelClaimCorrection" rows="4">${esc(current)}</textarea></label><button id="saveModelClaimCorrection" class="primary">Korrektur speichern</button></div>`);
   $('#saveModelClaimCorrection').onclick=async()=>{
     const claim=$('#modelClaimCorrection').value.trim();if(!claim)return;
     const sb=window.MINDS_SUPABASE;
@@ -5164,7 +5168,7 @@ function memoryById(id){
 function editMemory(id){
   const m=memoryById(id);if(!m)return;
   const obj=typeof m==='object'?m:{id,kind:'context',content:String(m),status:'active',confidence:1,source:'manual'};
-  modal('Editar recuerdo',`<div class="form"><label>Contenido<textarea id="memoryText" rows="5">${esc(obj.content||'')}</textarea></label><label>Tipo<select id="memoryKind">${['fact','person','routine','episodic','preference','context'].map(k=>`<option value="${k}" ${k===obj.kind?'selected':''}>${k}</option>`).join('')}</select></label><button id="memorySave" class="primary">Guardar</button><button id="memoryDeleteFromEdit" class="secondary danger-text">Eliminar recuerdo</button></div>`);
+  modal('Notiz bearbeiten',`<div class="form"><label>Inhalt<textarea id="memoryText" rows="5">${esc(obj.content||'')}</textarea></label><label>Art<select id="memoryKind">${['fact','person','routine','episodic','preference','context'].map(k=>`<option value="${k}" ${k===obj.kind?'selected':''}>${k}</option>`).join('')}</select></label><button id="memorySave" class="primary">Speichern</button><button id="memoryDeleteFromEdit" class="secondary danger-text">Notiz löschen</button></div>`);
   $('#memorySave').onclick=()=>{
     if(typeof m!=='object'){const idx=state.memory.indexOf(m);state.memory[idx]=obj}
     obj.content=$('#memoryText').value.trim()||obj.content;obj.kind=$('#memoryKind').value;obj.status='active';obj.source=obj.source||'manual';save();memoryPanel();

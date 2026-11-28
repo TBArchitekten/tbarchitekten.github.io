@@ -9,7 +9,7 @@ test('Shared personal panel only exists for Office profile; Window cannot load i
   const root={APP_PROFILE:'window',MINDS_SUPABASE:{auth:{getSession(){throw new Error('should not query Window')}}}};
   vm.runInNewContext(src,{window:root,document:{getElementById:()=>null}});
   assert.equal(root.TBA_OFFICE_PERSONAL,undefined);
-  assert.match(read('app/index.html'),/office-personal\.js\?v=romy4/);
+  assert.match(read('app/index.html'),/office-personal\.js\?v=romy5/);
 });
 test('Private panel and preference writes require live member authentication and owner-scoped data',()=>{
   const src=read('app/office-personal.js');

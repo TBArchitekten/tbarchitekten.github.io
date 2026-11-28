@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<title>Romy Live · TBA Office</title>
+<title>Live · TBA Office</title>
 <link rel="stylesheet" href="../../shared/minds-design-tokens.css?v=3">
 <link rel="stylesheet" href="./live.css?v=romy7">
 <!-- Im Chat (V2, 28.11.2026): im Rahmen über dem Chat kompakt, ohne Kopf. -->
@@ -14,28 +14,28 @@
 <body>
 <main class="live-shell">
   <header class="live-header">
-    <a href="../" aria-label="Zum Romy-Chat zurückkehren">← Romy-Chat</a>
+    <a href="../" aria-label="Zurück zum Chat">← Chat</a>
     <span class="live-tag">LIVE · SPRACHMODUS</span>
   </header>
   <section class="live-main" aria-labelledby="live-title">
-    <h1 id="live-title">Romy</h1>
+    <h1 id="live-title" data-assistant-name>KI-Assistent</h1>
     <p class="live-subtitle">Sprachgespräch · GPT-Live</p>
     <div class="live-wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
     <p id="liveStatus" class="live-status" role="status" aria-live="polite">Bereit für ein Sprachgespräch.</p>
-    <p id="livePlayback" class="live-playback" role="status" aria-live="polite">Die Lautsprecherwiedergabe startet nach dem Empfang. Falls nötig, Lautsprecher manuell aktivieren.</p>
-    <audio id="liveAudio" class="live-audio" autoplay playsinline controls aria-label="Audioausgabe von Romy"></audio>
+    <p id="livePlayback" class="live-playback" role="status" aria-live="polite">Die Wiedergabe startet, sobald die Antwort ankommt. Falls nötig, aktivier den Lautsprecher selbst.</p>
+    <audio id="liveAudio" class="live-audio" autoplay playsinline controls aria-label="Audioausgabe"></audio>
     <button id="liveUnlock" class="live-unlock hidden" type="button">Lautsprecher aktivieren</button>
     <div class="live-captions" aria-label="Vorläufige Spracherkennung">
-      <div><span>Sie</span><p id="liveInput">—</p>
-        <button id="liveConsult" class="live-consult hidden" type="button">Romy fragen</button>
+      <div><span>Du</span><p id="liveInput">—</p>
+        <button id="liveConsult" class="live-consult hidden" type="button">Im Chat fragen</button>
       </div>
-      <div><span>Romy</span><p id="liveOutput">—</p></div>
+      <div><span data-assistant-name>KI-Assistent</span><p id="liveOutput">—</p></div>
     </div>
-    <section id="liveMindsReview" class="live-minds-review hidden" aria-label="Geprüfte Rückfrage an Romy">
-      <label for="liveMindsText">Bitte prüfen, was Romy verstanden hat. Erst Ihre Freigabe sendet es an den Hauptchat.</label>
+    <section id="liveMindsReview" class="live-minds-review hidden" aria-label="Geprüfte Rückfrage im Chat">
+      <label for="liveMindsText" data-assistant-text="Prüf, was {wer} verstanden hat. Erst wenn du es freigibst, geht es an den Chat.">Prüf, was der KI-Assistent verstanden hat. Erst wenn du es freigibst, geht es an den Chat.</label>
       <textarea id="liveMindsText" rows="2" maxlength="2000" placeholder="Text prüfen oder korrigieren"></textarea>
       <div class="live-minds-actions">
-        <button id="liveMindsSend" type="button">Romy fragen</button>
+        <button id="liveMindsSend" type="button">An den Chat senden</button>
         <button id="liveMindsDismiss" type="button">Abbrechen</button>
       </div>
       <p id="liveMindsStatus" role="status" aria-live="polite">Noch keine Anfrage gesendet.</p>
@@ -45,7 +45,7 @@
   </section>
   <footer class="live-footer">
     <div class="live-voice-picker">
-      <label for="liveVoice">Stimme von Romy</label>
+      <label for="liveVoice" data-assistant-text="Stimme für {wen}">Stimme für den KI-Assistenten</label>
       <select id="liveVoice" name="voice" aria-describedby="liveVoiceHint">
         <option value="nuri" selected>Nuri</option>
         <option value="brise">Brise</option>
@@ -55,24 +55,30 @@
         <option value="cedar">Cedar</option>
         <option value="sage">Sage</option>
       </select>
-      <p id="liveVoiceHint">Die Stimme vor Beginn des Gesprächs wählen.</p>
+      <p id="liveVoiceHint">Wähl die Stimme, bevor das Gespräch beginnt.</p>
       <p id="liveOriginalNote" class="hidden"></p>
     </div>
-    <label><input type="checkbox" id="liveManualReview" checked> Transkript vor der Übergabe an den Hauptchat prüfen</label>
+    <label><input type="checkbox" id="liveManualReview" checked> Transkript prüfen, bevor es an den Chat geht</label>
     <div class="live-actions">
       <button id="liveStart" type="button" class="primary">Gespräch starten</button>
       <button id="liveStop" type="button" class="secondary" disabled>Beenden</button>
     </div>
-    <p class="live-disclaimer">Romy speichert Ihre bestätigten Sprachtranskripte in Ihrem eigenen Office-Chat; der Ton wird nicht gespeichert. Ausgaben der Sprach-KI sind kein verifiziertes Ergebnis; Aktionen und Vorschläge werden im Hauptchat geprüft. Das Gespräch läuft, bis Sie «Beenden» wählen, und endet nach 2 Minuten ohne Gespräch von selbst.</p>
+    <p class="live-disclaimer" data-assistant-text="{Wer} speichert deine bestätigten Sprachtranskripte in deinem eigenen Office-Chat; der Ton wird nicht gespeichert. Was die Sprach-KI sagt, ist kein geprüftes Ergebnis; Aktionen und Vorschläge werden im Chat geprüft. Das Gespräch läuft, bis du «Beenden» wählst, und endet nach 2 Minuten ohne Gespräch von selbst.">Der KI-Assistent speichert deine bestätigten Sprachtranskripte in deinem eigenen Office-Chat; der Ton wird nicht gespeichert. Was die Sprach-KI sagt, ist kein geprüftes Ergebnis; Aktionen und Vorschläge werden im Chat geprüft. Das Gespräch läuft, bis du «Beenden» wählst, und endet nach 2 Minuten ohne Gespräch von selbst.</p>
   </footer>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <script src="../../office-config.js?v=1"></script>
 <script>window.APP_PROFILE="office";</script>
+<script src="../assistant-i18n.js?v=office2"></script>
+<!-- Der Name, den jede Person ihrem Assistenten gibt (28.11.2026), bis dahin «KI-Assistent»: im Rahmen über dem Chat
+     aus dem Chat, auf der eigenen Seite aus der Kopie auf diesem Gerät (assistant-i18n.js). -->
+<script>(()=>{const fill=t=>{for(const w of [window.parent,window]){try{if(typeof w.MINDS_ASSISTANT_TEXT==='function')return String(w.MINDS_ASSISTANT_TEXT(t))}catch{}}return null};
+  for(const e of document.querySelectorAll('[data-assistant-name]')){const v=fill('{name}');if(v)e.textContent=v}
+  for(const e of document.querySelectorAll('[data-assistant-text]')){const v=fill(e.dataset.assistantText);if(v)e.textContent=v}})();</script>
 <script src="../../shared/supabase-client.js?v=office4"></script>
 <script src="../turn-integrity.js?v=romy4"></script>
-<script src="./canonical.js?v=romy6"></script>
+<script src="./canonical.js?v=romy7"></script>
 <script src="./transcript.js?v=romy6"></script>
-<script src="./live.js?v=romy8"></script>
+<script src="./live.js?v=romy9"></script>
 </body>
 </html>

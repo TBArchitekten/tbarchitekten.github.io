@@ -235,8 +235,8 @@ function projektstartvermerk() {
   c.push(table([600, 5638, 1800, 1600], ['Nr', 'Punkt', 'verantwortlich', 'Termin'], [['1', '[ ]', '[ ]', '[ ]'], ['2', '[ ]', '[ ]', '[ ]'], ['3', '[ ]', '[ ]', '[ ]']]));
 
   c.push(H1('7  Nach dem Vermerk'));
-  c.push(check('Vermerk in der Projektablage und im Office abgelegt (Schreibtisch des Projekts) – dort liest Romy ihn mit.'));
-  c.push(check('Projektsteckbrief im Office ausgefüllt, vor allem die beauftragten Leistungsphasen: daran erkennt Romy, ob eine Arbeit innerhalb des Auftrags liegt.'));
+  c.push(check('Vermerk in der Projektablage und im Office abgelegt (Schreibtisch des Projekts) – dort liest die KI ihn mit.'));
+  c.push(check('Projektsteckbrief im Office ausgefüllt, vor allem die beauftragten Leistungsphasen: daran erkennt die KI, ob eine Arbeit innerhalb des Auftrags liegt.'));
   c.push(check('Beteiligte im Office eingetragen (Firma, Rolle) – private Daten gehören nicht hinein.'));
   c.push(check('Projektparameter im Planner gesetzt; Terminplan mit den Meilensteinen angelegt.'));
   c.push(check('Koordinationsmappe (LPH3_3_Koordination.xlsx) angelegt: Blatt «Projekt» ausgefüllt.'));
@@ -319,7 +319,7 @@ function kickoff() {
   c.push(H1('Nach dem Kick-off'));
   c.push(check('Protokoll mit Schnittstellenliste v1 an alle verteilt (L3.A1.ABS-08).'));
   c.push(check('Lieferumfang je Disziplin ins Blatt «Eingang» übertragen; Termine M03 und M07 im Terminplan bestätigt.'));
-  c.push(check('Protokoll im Schreibtisch des Projekts abgelegt – Romy liest es und kann Fristen und offene Punkte daraus vorschlagen.'));
+  c.push(check('Protokoll im Schreibtisch des Projekts abgelegt – die KI liest es und kann Fristen und offene Punkte daraus vorschlagen.'));
   c.push(...quellen(['HOAI-A10', 'HOAI-A14', 'HOAI-A15', 'HOAI-A1', 'ByAK-M13', 'ByAK-SSL', 'ByAK-M08', 'TBA-BIB']));
   return doc(c, 'Kick-off Fachplanung LPH 3');
 }

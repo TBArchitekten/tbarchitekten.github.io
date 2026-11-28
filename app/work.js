@@ -2,7 +2,7 @@
 // TBA Office: Window's Work (gari01234/minds apps/isabella/work.js) for shared office projects.
 // Projects are the office's (all of them, not "mine"); Panorama shows the next 14 days and the project's
 // Terminpläne; «Wissen» is the Projektwissen of the team (office-wissen.js, 26.11.2026); Threads are private
-// conversations with Romy; the Akte parts stay off until the office has them.
+// conversations with the member's own assistant; the Akte parts stay off until the office has them.
 const OFFICE=true;
 const OFFICE_ROOT='__office__';
 // Gari, 07.11.2026: the shared Büro Desktop stays hidden for now; Work shows the project Desktops.
@@ -45,6 +45,10 @@ function restoreBoard(body){
   board.scrollLeft=m.left;board.scrollTop=m.top;body.scrollTop=m.page;
 }
 function isMusterPlanner(){return OFFICE&&new URLSearchParams(String(location.hash||'').replace(/^#/,'')).get('muster')==='LPH3'}
+// Each member names the assistant (Gari, 28.11.2026); «KI-Assistent» until they do (assistant-i18n.js). A member's
+// own threads use that name; what the whole project team reads (Akte-Pflege, Lesart) says «KI».
+const KI=t=>{try{if(typeof window.MINDS_ASSISTANT_TEXT==='function')return String(window.MINDS_ASSISTANT_TEXT(t))}catch{}
+  return String(t).replace(/\{(name|Wer|wer|wem|wen)\}/g,(_,k)=>({name:'KI-Assistent',Wer:'Der KI-Assistent',wer:'der KI-Assistent',wem:'dem KI-Assistenten',wen:'den KI-Assistenten'})[k])};
 
 function setStatus(t=''){const el=$('#workStatus');if(el)el.textContent=t}
 function safeName(name){return String(name||'file').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,150)||'file'}
@@ -308,13 +312,13 @@ function cockpitIn(n){return n===0?'heute':n===1?'morgen':n===-1?'gestern':n>1?'
 function cockpitPflegeLine(state){
   const run=state?.projects?.[project?.id]?.letzter_lauf;if(!run)return '';
   const when=run.am?akteDate(run.am):'';
-  if(run.status==='fehler')return '<p class="cockpit-pflege"><b>Romy:</b> konnte die Akte letzte Nacht nicht prüfen ('+esc(when)+'). Heute Nacht versucht sie es erneut.</p>';
-  if(run.status==='nichts_neu')return '<p class="cockpit-pflege"><b>Romy, '+esc(when)+':</b> nichts Neues seit der letzten Prüfung.</p>';
+  if(run.status==='fehler')return '<p class="cockpit-pflege"><b>KI:</b> konnte die Akte letzte Nacht nicht prüfen ('+esc(when)+'). Heute Nacht versucht sie es erneut.</p>';
+  if(run.status==='nichts_neu')return '<p class="cockpit-pflege"><b>KI, '+esc(when)+':</b> nichts Neues seit der letzten Prüfung.</p>';
   const parts=[run.steckbrief?'Steckbrief actualizado':'',run.fristen?run.fristen+' Frist(en)':'',run.entscheidungen?run.entscheidungen+' Entscheidung(en)':'',run.aufgaben?run.aufgaben+' Aufgabe(n)':'',run.widersprueche?run.widersprueche+' Widerspruch/-sprüche':''].filter(Boolean);
-  return '<p class="cockpit-pflege"><b>Romy, '+esc(when)+':</b> '+esc(run.zusammenfassung||(parts.length?'hat '+parts.join(', ')+' vorgeschlagen.':'nichts Relevantes im Neuen.'))+'</p>';
+  return '<p class="cockpit-pflege"><b>KI, '+esc(when)+':</b> '+esc(run.zusammenfassung||(parts.length?'hat '+parts.join(', ')+' vorgeschlagen.':'nichts Relevantes im Neuen.'))+'</p>';
 }
 function cockpitSource(r){
-  const bits=[r.metadata?.thema,r.metadata?.quelle,r.metadata?.source==='isabella_akte_pflege'?'Vorschlag von Romy':r.metadata?.source==='claude_connector'?'Claude':''].filter(Boolean);
+  const bits=[r.metadata?.thema,r.metadata?.quelle,r.metadata?.source==='isabella_akte_pflege'?'Vorschlag der KI':r.metadata?.source==='claude_connector'?'Claude':''].filter(Boolean);
   return bits.length?'<small>'+esc(bits.join(' · '))+'</small>':'';
 }
 // Why Isabella proposes it: her one-line reason and the exact passage of the source.
@@ -348,7 +352,7 @@ function cockpitParaTi(m){
   const limit=8,shown=paraTiExpanded?cards:cards.slice(0,limit);
   return '<section class="cockpit-section" aria-labelledby="cockpitParaTi"><div class="cockpit-head"><h2 id="cockpitParaTi">Für dich</h2><span>'+esc(head||'Nichts offen')+'</span></div>'+
     (cards.length?'<div class="cockpit-cards">'+shown.join('')+'</div>'+(cards.length>limit?'<button type="button" class="cockpit-more" data-cockpit-more>'+(paraTiExpanded?'Weniger anzeigen':(cards.length-limit)+' weitere anzeigen')+'</button>':'')
-      :'<p class="cockpit-empty">Alles bestätigt und nichts überfällig. Neues von Claude oder Romy erscheint hier.</p>')+'</section>';
+      :'<p class="cockpit-empty">Alles bestätigt und nichts überfällig. Neues von Claude oder der KI erscheint hier.</p>')+'</section>';
 }
 function cockpitTimeline(m){
   const end=cockpitAddDays(m.today,14),byDay=new Map(),add=(day,item)=>{if(!day||day<m.today||day>end)return;if(!byDay.has(day))byDay.set(day,[]);byDay.get(day).push(item)};
@@ -364,7 +368,7 @@ function cockpitTimeline(m){
 }
 function cockpitSteckbrief(m){
   const b=m.brief;
-  if(!b)return '<section class="cockpit-panel cockpit-side" aria-labelledby="cockpitBrief"><div class="cockpit-head"><h2 id="cockpitBrief">Projektsteckbrief</h2></div><p class="cockpit-empty">Noch kein Steckbrief. Bitte Claude oder Romy, ihn anzulegen: Phase, Meilensteine und Beteiligte.</p></section>';
+  if(!b)return '<section class="cockpit-panel cockpit-side" aria-labelledby="cockpitBrief"><div class="cockpit-head"><h2 id="cockpitBrief">Projektsteckbrief</h2></div><p class="cockpit-empty">Noch kein Steckbrief. Bitte Claude oder '+esc(KI('{wen}'))+', ihn anzulegen: Phase, Meilensteine und Beteiligte.</p></section>';
   const f=b.metadata?.felder||{},list=v=>Array.isArray(v)?v:[];
   const block=(label,lines)=>lines.length?'<div class="cockpit-brief-block"><span>'+esc(label)+'</span><p>'+lines.join('<br>')+'</p></div>':'';
   const structured=f&&(f.phase||list(f.beteiligte).length||list(f.meilensteine).length||list(f.prioritaeten).length);
@@ -611,7 +615,7 @@ async function renderKnowledge(){
   paintKnowledge();
 }
 function projectModelPanel(){
-  const m=projectModelSnapshot;if(!m)return '<section class="project-model-panel"><div><b>Romys Lesart</b><p class="small">Das Projektmodell ist gerade nicht verfügbar. Das bestätigte Wissen steht darunter.</p></div></section>';
+  const m=projectModelSnapshot;if(!m)return '<section class="project-model-panel"><div><b>Lesart der KI</b><p class="small">Das Projektmodell ist gerade nicht verfügbar. Das bestätigte Wissen steht darunter.</p></div></section>';
   const revision=m.current_revision||null,claims=Array.isArray(m.claims)?m.claims:[],variants=Array.isArray(m.variants)?m.variants:[],elements=Array.isArray(m.revision_elements)?m.revision_elements:[],perimeter=Array.isArray(m.perimeter)?m.perimeter:[];
   const claimById=new Map(claims.map(x=>[String(x.id),x]));
   const inferred=claims.filter(x=>x.status==='proposed'||x.status==='disputed'||x.author_kind==='isabella'||x.model_kind).slice(0,6);
@@ -619,15 +623,15 @@ function projectModelPanel(){
   const weakPerimeter=perimeter.filter(x=>x.observation_mode==='unobserved'||['missing','unknown'].includes(x.coverage)||['unreadable','unknown'].includes(x.readability)).slice(0,6);
   const revWhen=revision?.published_at||revision?.created_at;
   return `<section class="project-model-panel">
-    <div class="project-model-head"><div><b>Romys Lesart</b><p class="small">Interpretación versionada del proyecto; no sustituye decisiones ni hechos confirmados.</p></div><div class="project-model-revision">${revision?`Rev. ${esc(String(revision.id||'').slice(0,8))}${revWhen?' · '+esc(new Date(revWhen).toLocaleString('de-DE')):''}`:'Keine veröffentlichte Fassung'}</div></div>
+    <div class="project-model-head"><div><b>Lesart der KI</b><p class="small">Versionierte Lesart des Projekts; sie ersetzt weder Entscheidungen noch bestätigte Tatsachen.</p></div><div class="project-model-revision">${revision?`Rev. ${esc(String(revision.id||'').slice(0,8))}${revWhen?' · '+esc(new Date(revWhen).toLocaleString('de-DE')):''}`:'Keine veröffentlichte Fassung'}</div></div>
     <div class="project-model-grid">
-      <article><strong>Qué interpreta ahora</strong>${inferred.map(x=>`<p><span class="model-badge">${esc(x.status==='disputed'?'En disputa':'Inferencia')}</span> ${esc(x.statement)}</p>`).join('')||'<p class="small">Todavía no hay inferencias estructuradas.</p>'}</article>
-      <article><strong>Tensiones / Variantes</strong>${variants.filter(x=>x.status==='open').slice(0,6).map(v=>{const a=claimById.get(String(v.source_claim_id)),b=claimById.get(String(v.target_claim_id));return `<p><span class="model-badge attention">${esc(v.variant_kind)}</span> ${esc(a?.statement||'Nueva formulación')}${b?.statement?' ↔ '+esc(b.statement):''}</p>`}).join('')||'<p class="small">No hay variantes abiertas en la revisión actual.</p>'}</article>
-      <article><strong>Qué no sabe</strong>${gaps.map(g=>`<p>${esc(g.metadata?.source_class||g.metadata?.verdict||g.element_ref)}</p>`).join('')||weakPerimeter.map(p=>`<p>${esc(p.source_class)} · ${esc(p.coverage)} · ${esc(p.observation_mode)}</p>`).join('')||'<p class="small">No hay lagunas estructuradas visibles.</p>'}</article>
+      <article><strong>Was sie gerade annimmt</strong>${inferred.map(x=>`<p><span class="model-badge">${esc(x.status==='disputed'?'Strittig':'Annahme')}</span> ${esc(x.statement)}</p>`).join('')||'<p class="small">Noch keine geordneten Annahmen.</p>'}</article>
+      <article><strong>Spannungen / Varianten</strong>${variants.filter(x=>x.status==='open').slice(0,6).map(v=>{const a=claimById.get(String(v.source_claim_id)),b=claimById.get(String(v.target_claim_id));return `<p><span class="model-badge attention">${esc(v.variant_kind)}</span> ${esc(a?.statement||'Neue Formulierung')}${b?.statement?' ↔ '+esc(b.statement):''}</p>`}).join('')||'<p class="small">In der aktuellen Fassung gibt es keine offenen Varianten.</p>'}</article>
+      <article><strong>Was sie nicht weiß</strong>${gaps.map(g=>`<p>${esc(g.metadata?.source_class||g.metadata?.verdict||g.element_ref)}</p>`).join('')||weakPerimeter.map(p=>`<p>${esc(p.source_class)} · ${esc(p.coverage)} · ${esc(p.observation_mode)}</p>`).join('')||'<p class="small">Keine erkennbaren Lücken.</p>'}</article>
     </div>
-    <details class="project-model-inspect"><summary>Inspeccionar fundamento y cobertura</summary>
-      <div class="small">Trigger: ${esc(revision?.trigger_kind||'—')}${revision?.parent_revision_id?' · deriva de '+esc(String(revision.parent_revision_id).slice(0,8)):''}</div>
-      <div class="project-model-perimeter">${perimeter.map(p=>`<p><b>${esc(p.source_class)}</b> · ${esc(p.observation_mode)} · ${esc(p.coverage)} · ${esc(p.readability)}${p.last_checked_at?' · comprobado '+esc(new Date(p.last_checked_at).toLocaleString('de-DE')):''}</p>`).join('')||'<p class="small">Perimeter todavía sin declarar.</p>'}</div>
+    <details class="project-model-inspect"><summary>Grundlage und Abdeckung ansehen</summary>
+      <div class="small">Trigger: ${esc(revision?.trigger_kind||'—')}${revision?.parent_revision_id?' · abgeleitet von '+esc(String(revision.parent_revision_id).slice(0,8)):''}</div>
+      <div class="project-model-perimeter">${perimeter.map(p=>`<p><b>${esc(p.source_class)}</b> · ${esc(p.observation_mode)} · ${esc(p.coverage)} · ${esc(p.readability)}${p.last_checked_at?' · geprüft '+esc(new Date(p.last_checked_at).toLocaleString('de-DE')):''}</p>`).join('')||'<p class="small">Der Umfang ist noch nicht festgelegt.</p>'}</div>
     </details>
   </section>`;
 }
@@ -653,8 +657,8 @@ function knowledgeSummary(){
   const understood=claims.filter(x=>x.status==='confirmed'||x.author_kind==='isabella'||x.model_kind).slice(0,3).map(x=>x.statement).filter(Boolean);
   const gaps=[...elements.filter(x=>x.element_kind==='gap').map(g=>g.metadata?.source_class||g.metadata?.verdict||''),...perimeter.filter(x=>['missing','unknown'].includes(x.coverage)).map(p=>p.source_class)].filter(Boolean).slice(0,3);
   if(!understood.length&&!gaps.length)return '';
-  return '<section class="kn-summary"><div><h2>Was Romy vom Projekt versteht</h2>'+(understood.length?'<ul>'+understood.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p>Noch keine Lesart des Projekts.</p>')+'</div>'+
-    '<div><h2>Was sie nicht weiß</h2><p>'+esc(gaps.length?gaps.join(' · '):'No hay lagunas registradas.')+'</p><details class="kn-tech"><summary>Technisches Detail</summary>'+projectModelPanel()+'</details></div></section>';
+  return '<section class="kn-summary"><div><h2>Was die KI vom Projekt versteht</h2>'+(understood.length?'<ul>'+understood.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p>Noch keine Lesart des Projekts.</p>')+'</div>'+
+    '<div><h2>Was sie nicht weiß</h2><p>'+esc(gaps.length?gaps.join(' · '):'Keine Lücken erfasst.')+'</p><details class="kn-tech"><summary>Technisches Detail</summary>'+projectModelPanel()+'</details></div></section>';
 }
 function knowledgeRow(c,canAct){
   const f=knowledgeFlags(c),type=KN_TYPES[c.claim_type]||KN_TYPES.other,busy=knowledgeBusy.has(c.id);
@@ -1891,7 +1895,7 @@ async function renderThreads(){
   activeThreadId=null;
   const body=$('#workBody');
   body.innerHTML=`<div class="work-threads">
-    <div class="work-desktop-toolbar"><div><strong>Threads</strong><p class="small">Private Gespräche mit Romy zu einem Thema. Nur Sie sehen sie; Romy kennt dabei das Projekt ${esc(project.name)}.</p></div><div class="work-thread-toolbar-actions">${archived.length?`<button data-work-archived>Archiviert · ${archived.length}</button>`:''}<button data-work-new-thread>＋ Thread</button></div></div>
+    <div class="work-desktop-toolbar"><div><strong>Threads</strong><p class="small">${esc(KI('Private Gespräche mit {wem} zu einem Thema. Nur du siehst sie; {wer} kennt dabei das Projekt '))}${esc(project.name)}.</p></div><div class="work-thread-toolbar-actions">${archived.length?`<button data-work-archived>Archiviert · ${archived.length}</button>`:''}<button data-work-new-thread>＋ Thread</button></div></div>
     <div class="work-thread-list">${active.map(t=>{
       const preview=String(t.preview?.content||t.summary||'').trim();
       const at=t.last_activity_at||t.preview?.created_at||t.updated_at;
@@ -2063,7 +2067,7 @@ async function renderThreadConversation(id){
     body.innerHTML=`<section class="work-thread-conversation">
       <header class="work-thread-head"><button data-thread-back class="text-btn">‹ Threads</button><div><strong>${esc(thread.title)}</strong><span>${esc(project.name)}</span></div>${OFFICE?'':`<a class="work-thread-claude" href="${esc(claudeContinueUrl(thread))}" target="_blank" rel="noopener" title="Abrir este tema en Claude con el conector Window">In Claude fortsetzen</a>`}<button data-thread-actions class="work-thread-head-more" aria-label="Thread-Optionen">•••</button></header>
       ${themenblattMarkup(thread)}<div class="work-thread-log" id="workThreadLog">${messages.map(threadMessageMarkup).join('')||'<div class="work-thread-empty">Dieser Thread ist noch leer. Stellen Sie die erste Frage.</div>'}</div>
-      <div class="work-thread-compose-region"><div id="workThreadProgress" class="chat-activity work-thread-progress" role="status" aria-live="polite" data-phase="${esc(threadProgress.phase)}" ${threadProgress.id===thread.id&&threadProgress.label?'':'hidden'}>${threadProgress.id===thread.id?esc(threadProgress.label):''}</div><form class="work-thread-composer ${threadInFlight.has(thread.id)?'is-busy':''}" id="workThreadForm"><textarea id="workThreadInput" rows="1" placeholder="Romy fragen: ${esc(thread.title)} …"></textarea><button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form></div>
+      <div class="work-thread-compose-region"><div id="workThreadProgress" class="chat-activity work-thread-progress" role="status" aria-live="polite" data-phase="${esc(threadProgress.phase)}" ${threadProgress.id===thread.id&&threadProgress.label?'':'hidden'}>${threadProgress.id===thread.id?esc(threadProgress.label):''}</div><form class="work-thread-composer ${threadInFlight.has(thread.id)?'is-busy':''}" id="workThreadForm"><textarea id="workThreadInput" rows="1" placeholder="${esc(KI('{name} fragen: '))}${esc(thread.title)} …"></textarea><button class="send" aria-label="Senden"><svg class="chat-ui-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form></div>
     </section>`;
     $('[data-thread-back]').onclick=()=>{activeThreadId=null;void renderThreads()};
     $('[data-thread-actions]').onclick=()=>openThreadActions(thread);
@@ -2097,13 +2101,13 @@ async function sendThreadMessage(thread,overrideMessage=null){
       const log=$('#workThreadLog');
       if(log){log.querySelector('.work-thread-empty')?.remove();log.insertAdjacentHTML('beforeend',threadMessageMarkup({role:'user',content:message}));log.scrollTop=log.scrollHeight}
     }
-    setThreadProgress(thread.id,'thinking','Romy sieht sich den Projektkontext an …');
+    setThreadProgress(thread.id,'thinking',KI('{Wer} sieht sich den Projektkontext an …'));
     const state=window.ISABELLA_APP?.getState?.()||{};
     const result=await window.ISABELLA_AI.ask(message,state,{
       workThread:{id:thread.id,project:project.name},
       durableRequestId:crypto.randomUUID(),
       onProgress:event=>{if(event?.label)setThreadProgress(thread.id,'thinking',String(event.label))},
-      onTextDelta:()=>setThreadProgress(thread.id,'thinking','Romy schreibt …')
+      onTextDelta:()=>setThreadProgress(thread.id,'thinking',KI('{Wer} schreibt …'))
     });
     const reply=String(result?.reply||result?.streamed_text||'').trim();
     const proposal=result?.proposal||(Array.isArray(result?.proposals)?result.proposals[0]:null);

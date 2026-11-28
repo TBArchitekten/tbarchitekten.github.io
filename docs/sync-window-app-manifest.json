@@ -1,19 +1,19 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "928a9b82094341cc2b0358f55f934c1fe0b21bfb",
+  "source_sha": "c5e60dc9e55a29b7b4124f48995573c6baf48afd",
   "mode": "app",
   "files": [
     {
       "source": "apps/isabella/ai.js",
       "target": "app/ai.js",
-      "sha": "ee1aa26195464ce2c1e97e3516a558e5e9bf7d23",
-      "bytes": 29580
+      "sha": "f51d51c56fa1c7d6cef55f0ce1b2690919e4541a",
+      "bytes": 30170
     },
     {
       "source": "apps/isabella/assistant-i18n.js",
       "target": "app/assistant-i18n.js",
-      "sha": "c46f2358a31085d389da012e71f37dce397d39e8",
-      "bytes": 6888
+      "sha": "8dd7a9d5e9ba46ff770253437ba3850722335cbd",
+      "bytes": 8590
     },
     {
       "source": "apps/isabella/chat-stream-recovery.js",
@@ -30,8 +30,8 @@
     {
       "source": "apps/isabella/live/canonical.js",
       "target": "app/live/canonical.js",
-      "sha": "d6143ede9052a4530802feb88360655bf12447bb",
-      "bytes": 3493
+      "sha": "61438350e6c7fa055f26a217760a4da419f40b36",
+      "bytes": 3500
     },
     {
       "source": "apps/isabella/live/live.css",
@@ -42,8 +42,8 @@
     {
       "source": "apps/isabella/live/live.js",
       "target": "app/live/live.js",
-      "sha": "45aef3673f62a89a0a8eaeb18d5dd80691dd19b4",
-      "bytes": 25383
+      "sha": "4c173f29720ffe53a192812b09869e0cf6bdcb0a",
+      "bytes": 26307
     },
     {
       "source": "apps/isabella/live/transcript.js",
@@ -54,8 +54,8 @@
     {
       "source": "apps/isabella/office-personal.js",
       "target": "app/office-personal.js",
-      "sha": "7f629a115a2740a6dac9c66c32ec3ca9918601e3",
-      "bytes": 6925
+      "sha": "316f476b5d03066e420042028c01e1ae01830eec",
+      "bytes": 11871
     },
     {
       "source": "apps/isabella/turn-integrity.js",

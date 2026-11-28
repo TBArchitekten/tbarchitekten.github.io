@@ -22,13 +22,15 @@ test('Die Etikette eines Vorschlags im Gespräch ist deutsch',()=>{
   assert.match(app,/const bits=\[actionName,p\.kind==='event'\?'Termin':'Aufgabe',p\.title,p\.date\];/);
   assert.ok(!app.includes("'Modificar':action==='delete'?'Eliminar'"),'alte spanische Aktionsnamen');
   assert.ok(!app.includes("bits.push('recordatorio '"),'spanische Erinnerungszeile');
-  for(const label of ['Wissen speichern','Fähigkeit anlegen','Romy verbessern'])
+  for(const label of ['Wissen speichern','Fähigkeit anlegen'])
     assert.ok(app.includes("['"+label+"'"),'fehlt: '+label);
+  // Der Name, den die Person ihrem Assistenten gibt (28.11.2026).
+  assert.ok(app.includes("[KI('{name} verbessern'),"),'fehlt: … verbessern');
 });
 
 test('Die Formulare zum Prüfen eines Vorschlags sind deutsch',()=>{
   for(const title of ['Künftige Erinnerung prüfen','Erwartung prüfen','Kontinuität prüfen',
-    'Projektwissen prüfen','Neue Fähigkeit prüfen','Verbesserung von Romy prüfen'])
+    'Projektwissen prüfen','Neue Fähigkeit prüfen','Vorgeschlagene Verbesserung prüfen'])
     assert.ok(app.includes("modal('"+title+"'"),'fehlt: '+title);
   for(const gone of ['Revisar memoria futura','Revisar expectativa','Revisar continuidad',
     'Revisar conocimiento de proyecto','Revisar nueva Skill','Revisar mejora de Isabella'])
@@ -49,10 +51,11 @@ test('Die Quittungen nach dem Speichern sind deutsch',()=>{
     assert.ok(!app.includes("sayEvent('"+gone),'noch spanisch: '+gone);
 });
 
-test('Romy spricht im Office von sich als Romy, nicht als Isabella',()=>{
-  assert.ok(app.includes("modal('Romys Arbeit'"),'der Arbeitsraum heißt nicht Romys Arbeit');
+test('Der Assistent heißt im Office, wie die Person ihn nennt, nie Isabella; was das Projektteam liest, sagt «KI»',()=>{
+  assert.ok(app.includes("modal(KI('Woran {wer} arbeitet')"),'der Arbeitsraum trägt den Namen des Assistenten');
   assert.ok(!app.includes("modal('Trabajo de Isabella'"));
-  assert.ok(work.includes("'<p class=\"cockpit-pflege\"><b>Romy, '"),'die Pflegezeile nennt noch Isabella');
+  assert.ok(work.includes("'<p class=\"cockpit-pflege\"><b>KI, '"),'die Pflegezeile des Projekts sagt «KI»');
+  for(const f of [app,work])assert.doesNotMatch(f.replace(/^\s*\/\/.*$/gm,''),/'[^'\n]*\bRomys?\b[^'\n]*'/,'kein «Romy» in Texten');
   assert.ok(!work.includes("'propuesta de Isabella'"));
 });
 

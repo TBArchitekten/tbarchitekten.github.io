@@ -161,11 +161,16 @@ jobs:
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < tests/sql/office-projektwissen-acceptance.sql
-      - name: Verify Romy's iPhone notifications (own devices only, no token or key readable, queue from Romy's own messages, service-only claim)
+      - name: Verify the assistant's iPhone notifications (own devices only, no token or key readable, queue from the assistant's own messages, service-only claim)
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
           docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < tests/sql/office-push-acceptance.sql
+      - name: Verify that notifications carry the name each person gives the assistant (own name only, «KI-Assistent» otherwise)
+        run: |
+          container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)
+          docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < tests/sql/office-push-eigener-name-acceptance.sql
       - name: Verify browser error reports (members only, cleaned, counted, throttled, unreadable through the app)
         run: |
           container=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)

@@ -1,7 +1,7 @@
-// TBA Office · Versand von Romys Mitteilungen auf das iPhone (27.11.2026, Claude, auf Wunsch von Gari).
+// TBA Office · Versand der Mitteilungen des Assistenten auf das iPhone (27.11.2026, Claude, auf Wunsch von Gari).
 // pg_cron ruft die Funktion jede Minute, aber nur wenn eine Mitteilung fällig ist (office_push_v1). Sie prüft ihr
 // eigenes Geheimnis (verify_jwt = false), holt die fälligen Mitteilungen, verschlüsselt jede für jedes angemeldete
-// iPhone der Person mit dessen Schlüssel und schickt sie an APNs. Apple sieht nur «Romy · Neue Mitteilung».
+// iPhone der Person mit dessen Schlüssel und schickt sie an APNs. Apple sieht nur «TBA Office · Neue Mitteilung».
 // Konfiguration: APNS_KEY_P8 und APNS_KEY_ID in Supabase → Edge Functions → Secrets (die Push-Schlüsseldatei von
 // Apple, legt Gari selbst an). Team ID und Bundle ID der App sind öffentlich und stehen in isabella_runtime_secrets
 // (office_push_apns_team, office_push_apns_bundle); APNS_TEAM_ID und APNS_BUNDLE_ID als Secrets gehen vor.

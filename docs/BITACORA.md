@@ -17,6 +17,37 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 
 ---
 
+### 2026-11-28 · Jeder nennt seinen Assistenten; der Assistent duzt · Claude
+- Qué cambió y por qué: Gari (28.11., 12:28): «Propongo ponerle a todos por default KI-Assistent y que cada quien pueda escoger el suyo o dejarlo así». Seiner heißt «Samantha», Spitzname «Sam». Und: «Quiero que tutee, es más natural … acercarlo a Sam», «en todo lo del asistente, para todos».
+  - Motor und gemeinsame Seiten aus Window (gari01234/minds #348): der Name kommt aus der eigenen Einstellung (`assistant_name`: name, spitzname, rufname); «Mein Assistent» im Menü; «du» in Chat, Live und Threads; der Vorgabename trägt im Satz seinen Artikel.
+  - Im Office tragen den Namen: Menü, Eingabefeld, Eingang, Live (Blatt und Seite, jetzt mit «du»), Threads und alle Hinweise des Chats.
+  - Mitteilungen aufs iPhone tragen den Namen (Migration); Apple sieht «TBA Office».
+  - Gemeinsame Werkzeuge und Bürovorlagen sagen «KI»; die Verwaltung sagt «Assistent».
+  - Unterwegs: das Fenster «Was … über mich weiß» und die Lesart des Projekts waren noch spanisch und sind jetzt deutsch. Der Schalter der Präsenz sagt, was sie tut: höchstens dreimal am Tag, werktags von 7:30 bis 19 Uhr.
+- Archivos:
+  - Motor und App aus Window synchronisiert (Manifeste; `assistant-i18n.js`, `office-personal.js`, `ai.js`, `live/live.js`, `live/canonical.js`).
+  - App: `app/shell.js` (office69), `app/app.js` (office64), `app/work.js` (office70), `app/office-engine-chat.js` (romy6), `app/live/index.html` (live romy9, canonical romy7, i18n office2), `app/index.html`.
+  - Werkzeuge: `projektdokumente.js` (office21), `projektdokumente-kern.js` (office6), `projektdokumente-zahlen.js` (office3), `projektdokumente.css` (office18, Marke «KI» statt «R»), `produktbibliothek.js` (office11), `projektstart.html`, `office-uebersicht.js` (6), `oauth-consent.html`.
+  - Funktionen: `supabase/functions/office-push/{core.mjs,index.ts}`, `office-dokumente-ai/{core.mjs,index.ts}`, `office-produkt-ai/{core.mjs,index.ts}`, `office-romy-mission-runner/index.ts`.
+  - Bürovorlagen: `muster/lph3/*`, nur die Sätze mit «Romy», direkt im XML; `scripts/muster-lph3/{build_xlsx.py,build_docx.cjs}`.
+  - Tests: `tests/sql/office-push-eigener-name-acceptance.sql` (neu, in `verify.yml`), `office-push`, `office-live-im-chat` und alle Tests, die «Romy» festhielten.
+- Base de datos: migración `20261128121522_office_push_eigener_name.sql`: neue Hilfsfunktion `private.office_assistent_name`; ersetzt `office_push_test` und `office_push_nach_romy`; Tabellen, Rechte und Auslöser bleiben. Aplicada en Supabase: sí (28.11., über den Connector, vorher angekündigt). Garis Einstellung `assistant_name` (Samantha, Sam) ist gesetzt.
+- Deploy de funciones:
+  - Window: `isabella-chat isabella-live-session isabella-heartbeat isabella-presence isabella-dream isabella-routine-runner window-akte-pflege isabella-delivery-runner isabella-work-ingest-runner`.
+  - Office: `isabella-chat isabella-delivery-runner isabella-dream isabella-heartbeat isabella-live-session isabella-presence isabella-routine-runner isabella-work-ingest-runner office-dokumente-ai office-produkt-ai office-push office-romy-mission-runner window-akte-pflege`.
+- Cómo se probó:
+  - Window: 1300/1300 und `deno check` aller Funktionen.
+  - Hier: `node --test` 599/599; Chromium für Live, App-Start, Chat, Projektdokumente, Mustermappe und Zahlen grün; die SQL-Abnahme läuft im CI.
+  - Die Hilfsfunktion in der Datenbank gibt für Gari «Samantha» und für die anderen «KI-Assistent».
+  - Chromium Produktbibliothek: lokal scheitert das Datenblatt-Lesen wie schon vor dieser Änderung (Seite lädt im Sandkasten nicht); das CI zeigt es.
+- Quedó pendiente o sin probar:
+  - Eine Mitteilung mit «Samantha» auf Garis iPhone.
+  - Die anderen Mitglieder haben noch keinen Namen gewählt und sehen «KI-Assistent».
+  - Die Bürovorlagen sind nicht neu erzeugt: die Aufgabenbibliothek hat sich seit dem 21.11. weiterentwickelt, das gehört zu «Parte 3».
+  - `app/office-assistant.js` (alter Rückweg, läuft nicht mehr) sagt noch «Romy»; er geht mit `office-assistant` am 07.12.
+- Riesgos o decisiones que necesitan a Gari: der Assistent nennt ihn «Edgar» (Vorname im Office), solange er unter «Mein Assistent» bei «Wie soll dein Assistent dich nennen?» nicht «Gari» einträgt.
+- PR: pendiente
+
 ### 2026-11-28 · Ein Motor: Romys Fähigkeiten wieder mit GPT-6.2 Sol · Claude
 - Qué cambió y por qué: zweiter Unterschied zwischen Romys zwei Motoren. Garis Entscheidung vom 27.11. («no solo conmigo, haz el cambio para todos», #208) ließ Romys Fähigkeiten (Dateien, Auswertungen) im alten Motor mit `gpt-6.2-sol` laufen; im Motor aus Window, den Romy im Chat nutzt, stand `gpt-6-astra` fest (fünfmal so teuer). Jetzt entscheidet das Profil: Office `gpt-6.2-sol`, Window weiter `gpt-6-astra`; das Secret `OPENAI_CAPABILITY_MODEL` ginge vor (Window `692dff4`, minds #347).
 - Archivos: Motor aus Window synchronisiert (`supabase/functions/_shared/capability-runtime.ts`, Manifest).

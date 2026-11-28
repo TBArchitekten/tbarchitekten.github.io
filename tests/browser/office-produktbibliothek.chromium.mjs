@@ -103,14 +103,14 @@ test('Bibliothek: Preise mit Herkunft, Suche, Filter und Archiv',async()=>{
   }finally{await ctx.close()}
 });
 
-test('Datenblatt: Romy liest, die Person prüft, gespeichert wird erst danach',async()=>{
+test('Datenblatt: die KI liest, die Person prüft, gespeichert wird erst danach',async()=>{
   const {ctx,page,fehler}=await oeffne('produktbibliothek.html?neu=datenblatt');
   try{
     const lesen=page.locator('[data-lesen]');
     assert.equal(await lesen.isDisabled(),true);
     await page.setInputFiles('#pbLeserDatei',PDF);
     await lesen.click();
-    await page.locator('h1',{hasText:'Romy hat das Dokument gelesen'}).waitFor();
+    await page.locator('h1',{hasText:'Die KI hat das Dokument gelesen'}).waitFor();
     // Noch nichts gespeichert, nur gelesen.
     assert.equal((await db(page)).office_produkte.length,4);
     const anfrage=await page.evaluate(()=>window.__fake.anfragen[0]);
@@ -293,7 +293,7 @@ test('Leser nicht erreichbar: klare Meldung, das Dokument kommt trotzdem von Han
     // Nachträglich lesen lassen: neue Angaben kommen zum Eintrag dazu.
     await page.evaluate(()=>{window.__fake.leser=null});
     await page.click('[data-dok-lesen="'+dok.id+'"]');
-    await page.locator('h1',{hasText:'Romy hat das Dokument gelesen'}).waitFor();
+    await page.locator('h1',{hasText:'Die KI hat das Dokument gelesen'}).waitFor();
     assert.equal(await page.locator('[name="name"]').count(),0,'beim Nachlesen bleibt der Eintrag, wie er ist');
     await page.click('#pbPruefen button[type="submit"]');
     await page.waitForURL(/produktbibliothek\.html\?id=/);
@@ -318,7 +318,7 @@ test('iPhone: Bibliothek, Produktblatt und Prüfen ohne Querscrollen',async()=>{
     await page.goto(adresse('produktbibliothek.html?neu=datenblatt'));
     await page.setInputFiles('#pbLeserDatei',PDF);
     await page.click('[data-lesen]');
-    await page.locator('h1',{hasText:'Romy hat das Dokument gelesen'}).waitFor();
+    await page.locator('h1',{hasText:'Die KI hat das Dokument gelesen'}).waitFor();
     assert.ok(await ohneQuerscrollen(page),'Prüfen scrollt quer');
     await foto(page,'5-iphone-pruefen');
     assert.deepEqual(fehler,[]);

@@ -1,4 +1,4 @@
-// TBA Office · Romy in den Dokumenten des Projekts (24.11.2026, Claude; Entwurf von Gari am 24.11.2026 freigegeben).
+// TBA Office · Die KI in den Dokumenten des Projekts (24.11.2026, Claude; Entwurf von Gari am 24.11.2026 freigegeben).
 // Wie office-produkt-ai: Anmeldung und Office-Mitgliedschaft prüfen, das Dokument unter RLS lesen (wer es nicht sehen
 // darf, bekommt nichts), jede Anfrage vor dem bezahlten Modellaufruf zählen, Antwort nach festem Schema prüfen.
 // Die Funktion schreibt nichts: Vorschläge speichert der Client als Vorschlag, gelten tun sie erst nach «Übernehmen».
@@ -125,7 +125,7 @@ Deno.serve(async req=>{
     }else{schema=SCHEMA_TEXT;pruefe=a=>pruefeText(a)}
     teile=[{type:"input_text",text:JSON.stringify(nutzlast)}];
   }else if(action==="zahlen"){
-    // Zahlen der Varianten: Romy wählt nur Verweise aus den Kandidaten des Clients; die Zeile kommt aus der Datenbank.
+    // Zahlen der Varianten: Die KI wählt nur Verweise aus den Kandidaten des Clients; die Zeile kommt aus der Datenbank.
     if(art!=="entscheidungsliste")return respond(400,{error:"invalid_document"});
     // deno-lint-ignore no-explicit-any
     const z=alle.find((x:any)=>x.id===String(input.zeile_id||""));
@@ -142,7 +142,7 @@ Deno.serve(async req=>{
     // deno-lint-ignore no-explicit-any
     pruefe=a=>pruefeZahlen(a,{kandidaten,ids:optionen.map((o:any)=>o.id)});
   }else if(kuerzen){
-    // «Mit Romy kürzen»: den Text schickt der Client (er kann aus der Produktbibliothek kommen und in der Mappe noch
+    // «Mit der KI kürzen»: den Text schickt der Client (er kann aus der Produktbibliothek kommen und in der Mappe noch
     // nicht stehen), dazu die Länge, die in den Rahmen passt.
     if(alle[0]?.form!=="mustermappe")return respond(400,{error:"rows_required"});
     const alt=text(input.text,KUERZEN.text).trim(),zeichen=Math.floor(Number(input.zeichen));

@@ -128,7 +128,7 @@ test('Chromium Live: German Office UI excludes personal Original voice and route
   const page=await makePage();
   try{
     assert.equal(await page.locator('html').getAttribute('lang'),'de');
-    assert.equal(await page.locator('#live-title').textContent(),'Romy');
+    assert.equal(await page.locator('#live-title').textContent(),'KI-Assistent');
     assert.equal(await page.locator('#liveVoice option[value="isabella-original-v1"]').count(),0);
     assert.match(await page.locator('.live-header a').getAttribute('href'),/^\.\.\/$/);
     const out=await page.evaluate(()=>{

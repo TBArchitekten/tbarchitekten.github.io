@@ -181,7 +181,7 @@ test('KI-Nutzung zeigt Guthaben und Monatslimit; der Balken endet am Limit, die 
   const html = U.kiNutzungHtml({...DATEN, zeilen: DATEN.zeilen.map(z => ({...z, nach_guthaben: !!z.nach_stand})),
     monatslimit: {limit_usd: 50, warnen_ab_prozent: 80, ausgegeben_usd: 7.93, abgelesen_am: '2026-11-25T08:00:00Z'}});
   assert.match(html, /<p class="eyebrow">Guthaben bei OpenAI<\/p>/);
-  assert.match(html, /Bei 0 \$ hält OpenAI alle Anfragen an, auch Romy und Window, solange die automatische Aufladung aus ist\./);
+  assert.match(html, /Bei 0 \$ hält OpenAI alle Anfragen an, auch den Assistenten und Window, solange die automatische Aufladung aus ist\./);
   assert.match(html, /data-ki-guthaben-form/);
   assert.match(html, /<span class="pill ki-stufe-ok">Reicht<\/span> etwa \d+ Tage/);
   // Der Balken: 0 und das Limit an den Enden, «warnen ab» beschriftet, die Hochrechnung als eigene, hellere Fläche.

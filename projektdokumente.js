@@ -7,13 +7,13 @@
    Eine Klärung mit Verantwortlichem und Frist wird eine Aufgabe im Planner; ein Entscheidungspunkt des Auftraggebers
    wird eine Entscheidung; eine Entscheidung kommt in eine Vorlage. «entschieden» setzt nur das Projektteam, mit Datum,
    Entscheider und Entscheidung. Das Muster bleibt projektstart.html mit den Bürovorlagen zum Herunterladen.
-   Romy (office-dokumente-ai, ab #146): Vorschläge aus Protokollen, Mails und Plänen, jeder mit Fundstelle, blau markiert in
-   der Liste; erst «Übernehmen» ändert eine Zeile (Verlauf: «Vorschlag von Romy, übernommen von …»). Dazu Fragen an die
+   Die KI (office-dokumente-ai, ab #146): Vorschläge aus Protokollen, Mails und Plänen, jeder mit Fundstelle, blau markiert in
+   der Liste; erst «Übernehmen» ändert eine Zeile (Verlauf: «Vorschlag von der KI, übernommen von …»). Dazu Fragen an die
    Fachplaner, Fristen gegen den Terminplan, Bestätigung einer Entscheidung als Mail und Abschnitte der Vorlage neu
-   formuliert (grün eingefügt, rot gestrichen). Eine Entscheidung trägt Romy nie ein.
+   formuliert (grün eingefügt, rot gestrichen). Eine Entscheidung trägt die KI nie ein.
    Zahlen der Varianten (zweiter Schritt, 24.11.2026): je Variante «Zahlen aus dem Office» – Produkt aus der
    Produktbibliothek (mit Musterliste des Projekts), Kennwert aus einem Preis, dem Datenpool oder der Kostenberechnung,
-   Menge aus der Kostenberechnung, jede Zahl mit Fundstelle (projektdokumente-zahlen.js). Romy «Zahlen holen» wählt nur
+   Menge aus der Kostenberechnung, jede Zahl mit Fundstelle (projektdokumente-zahlen.js). Die KI «Zahlen holen» wählt nur
    unter diesen Kandidaten und schlägt vor; nach der Entscheidung gibt «In der Produktbibliothek freigeben» das gewählte
    Produkt im Projekt frei.
    Mustermappe als eigenes Werkzeug (25.11.2026, Gari): ?werkzeug=mustermappe zeigt je Projekt die Mappen (Tools ›
@@ -44,7 +44,7 @@ const ZEILE='id,dokument_id,nr,daten,server_revision,created_by,updated_by,creat
 const DOK='id,art,owner_id,meta,server_revision,updated_at';
 const LETZTES='tba.office.projektdokumente.projekt';
 const LISTEN=['klaerungsliste','entscheidungsliste',...K.WEITERE];
-// Romy liest und schlägt vor für diese beiden Listen (office-dokumente-ai).
+// Die KI liest und schlägt vor für diese beiden Listen (office-dokumente-ai).
 const MIT_ROMY=['klaerungsliste','entscheidungsliste'];
 // Kompakte Ansicht wie im Entwurf: 8 Spalten je Liste (die Entscheidungsliste mit der Spalte «Vorlage»). Die weiteren
 // Listen: die im Kern als kompakt markierten Spalten.
@@ -87,7 +87,7 @@ const HINWEIS={
   ausgaben:'Eine Ausgabe wird nachträglich nicht verändert. Datum und Anlass erscheinen über den Spalten «Ausgabe» der Planliste und des Verteilers.',
   verteiler:'Die Spalten sind die Ausgaben 1 bis 8 der Liste «Ausgaben».',
   austausch:'Im Kick-off festlegen (Fragenliste ALLE-05); «vereinbart am», sobald es gilt.',
-  ablage:'«ins Office»: was im Schreibtisch des Projekts liegt, kann Romy lesen. Vertragliches und Honorar gehören nicht hinein.'};
+  ablage:'«ins Office»: was im Schreibtisch des Projekts liegt, kann die KI lesen. Vertragliches und Honorar gehören nicht hinein.'};
 
 let nutzer=null,mitglied=null,mitglieder=[],projekte=[],team=[];
 let projekt=null,dokumente={},zeilen=leer(),aufgaben=new Map(),geladenUm=0;
@@ -462,7 +462,7 @@ function zeigeProjektwahl(hinweis=''){
 // ---------- Übersicht ----------
 // ---------- Abläufe (Gari, 27.11.2026: so umsetzen, wie vorgeschlagen) ----------
 // Ein Ablauf führt durch wiederkehrende Arbeit des Büros und benutzt dabei die vorhandenen Werkzeuge. «Besprechung
-// nachbereiten»: Romy liest das Protokoll einmal für die Klärungsliste und einmal für die Entscheidungsliste; danach
+// nachbereiten»: Die KI liest das Protokoll einmal für die Klärungsliste und einmal für die Entscheidungsliste; danach
 // prüft das Team die Vorschläge (nichts ohne «Übernehmen»), legt für neue Klärungen mit Verantwortlichem und Frist
 // Aufgaben im Planner an, prüft ihre Fristen gegen den Terminplan und teilt das Ergebnis ins Projektwissen. Was zur
 // Besprechung gehört, sind die Zeilen, die aus ihren Vorschlägen übernommen wurden (neu oder geändert; gemerkt beim
@@ -482,14 +482,14 @@ function ablaufNotieren(art,id,v,geaendert=false){
 }
 const ablaufOffen=z=>!['gelöst','entfällt'].includes(z.daten.status);
 function besprechungDialog(){
-  if(!romy.bereit){meldung('Romy ist gerade nicht erreichbar; die Besprechung lässt sich später nachbereiten.','warn');return}
+  if(!romy.bereit){meldung('Die KI ist gerade nicht erreichbar; die Besprechung lässt sich später nachbereiten.','warn');return}
   dialog.innerHTML='<form class="pd-dlg"><h2>Besprechung nachbereiten</h2>'+
-    '<p class="meta">Romy liest das Protokoll und schlägt für die Klärungsliste und die Entscheidungsliste neue Zeilen und Änderungen vor, jede mit Fundstelle. '+
+    '<p class="meta">Die KI liest das Protokoll und schlägt für die Klärungsliste und die Entscheidungsliste neue Zeilen und Änderungen vor, jede mit Fundstelle. '+
     'Danach führt der Ablauf durch Aufgaben, Fristen und das Projektwissen. Nichts ändert sich, bis jemand «Übernehmen» drückt.</p>'+
     '<label class="pd-feld"><span>Besprechung</span><input class="pd-in" name="quelle" placeholder="z. B. Protokoll Jour fixe 05" required maxlength="120" autocomplete="off"></label>'+
     '<label class="pd-feld"><span>Protokoll (PDF oder Bild, bis 8 MB)</span><input class="pd-in" type="file" name="datei" accept="application/pdf,image/png,image/jpeg,image/webp"></label>'+
     '<label class="pd-feld"><span>oder Text einfügen</span><textarea class="pd-in" name="text" rows="6" placeholder="Text des Protokolls oder der Mitschrift"></textarea></label>'+
-    '<label class="pd-feld"><span>Hinweis an Romy (optional)</span><input class="pd-in" name="hinweis" placeholder="z. B. nur TOP 3 bis 7" autocomplete="off"></label>'+
+    '<label class="pd-feld"><span>Hinweis an die KI (optional)</span><input class="pd-in" name="hinweis" placeholder="z. B. nur TOP 3 bis 7" autocomplete="off"></label>'+
     '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Protokoll lesen</button></div></form>';
   const form=dialog.querySelector('form'),f=dialog.querySelector('[data-dlg-fehler]');
   form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
@@ -503,7 +503,7 @@ function besprechungDialog(){
     try{
       const attachments=datei?[{name:datei.name.slice(0,180),mime:datei.type,size:datei.size,data:await alsDataUrl(datei)}]:undefined;
       for(const [i,art] of ['klaerungsliste','entscheidungsliste'].entries()){
-        knopf.textContent='Romy liest ('+(i+1)+' von 2) …';
+        knopf.textContent='Die KI liest ('+(i+1)+' von 2) …';
         const dok=await sichereDokument(art);
         const antwort=await romyAufruf({action:'vorschlaege',dokument_id:dok.id,quelle,text,hinweis:form.hinweis.value.trim(),attachments});
         ablauf.n[art]=await vorschlaegeSpeichern(art,antwort.result.vorschlaege,antwort.quelle||quelle);
@@ -511,7 +511,7 @@ function besprechungDialog(){
         ablauf.hinweise.push(...(antwort.result.hinweise||[]));
       }
       ui.ablauf=ablauf;ablaufMerken();dialog.close();ui.ansicht='uebersicht';render();
-    }catch(err){f.textContent=err?.message||'Romy ist gerade nicht erreichbar.';knopf.disabled=false;knopf.textContent='Protokoll lesen'}
+    }catch(err){f.textContent=err?.message||'Die KI ist gerade nicht erreichbar.';knopf.disabled=false;knopf.textContent='Protokoll lesen'}
   };
   dialog.showModal();
 }
@@ -526,7 +526,7 @@ function ablaufPanel(){
   const liste=art=>'<a href="'+esc(url({projekt:projekt.id,liste:art}))+'" data-nav>'+esc(K.DOKUMENTE[art].kurz)+'</a>';
   return '<section class="card pd-ablauf" aria-label="Besprechung nachbereiten"><div class="pd-ablauf-kopf"><div><p class="kicker">Ablauf · Besprechung nachbereiten</p><h2>'+esc(a.quelle)+'</h2></div>'+
       '<button type="button" class="btn btn-quiet" data-act="ablauf-ende">Ablauf beenden</button></div>'+
-    (a.texte.length?'<p class="pd-ablauf-romy"><strong>Romy:</strong> '+esc(a.texte.join(' '))+'</p>':'')+
+    (a.texte.length?'<p class="pd-ablauf-romy"><strong>KI:</strong> '+esc(a.texte.join(' '))+'</p>':'')+
     (a.hinweise.length?'<ul class="pd-ablauf-hinweise">'+a.hinweise.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul>':'')+
     '<ol class="pd-ablauf-schritte">'+
     schritt(1,'Vorschläge prüfen',vk+ve?'Offen: '+vk+' in der '+liste('klaerungsliste')+', '+ve+' in der '+liste('entscheidungsliste')+'. Jeden übernehmen oder verwerfen.'
@@ -534,8 +534,8 @@ function ablaufPanel(){
     schritt(2,'Aufgaben im Planner',fuerAufgaben.length?fuerAufgaben.length+(fuerAufgaben.length===1?' neue Klärung hat':' neue Klärungen haben')+' Verantwortliche und Frist, aber noch keine Aufgabe.'
       :'Keine neue Klärung mit Verantwortlichem und Frist ohne Aufgabe.',fuerAufgaben.length?'<button type="button" class="btn" data-act="ablauf-aufgaben">Aufgaben anlegen ('+fuerAufgaben.length+')</button>':'',!fuerAufgaben.length&&!(vk+ve))+
     schritt(3,'Fristen gegen den Terminplan',a.fristen?'Geprüft; was nicht passt, steht als Vorschlag in der '+liste('klaerungsliste')+'.':mitFrist.length?mitFrist.length+(mitFrist.length===1?' offene Klärung':' offene Klärungen')+' mit Frist aus dieser Besprechung.'
-      :'Noch keine offene Klärung mit Frist aus dieser Besprechung.',mitFrist.length&&!a.fristen?'<button type="button" class="btn btn-romy" data-act="ablauf-fristen">Mit Romy prüfen</button>':'',a.fristen)+
-    schritt(4,'Ins Projektwissen',a.geteilt?'Geteilt; die KI arbeitet es beim nächsten Mal in die Seiten ein.':'Das Ergebnis der Besprechung (Romys Zusammenfassung und die übernommenen Zeilen) für das Projektteam.',
+      :'Noch keine offene Klärung mit Frist aus dieser Besprechung.',mitFrist.length&&!a.fristen?'<button type="button" class="btn btn-romy" data-act="ablauf-fristen">Mit der KI prüfen</button>':'',a.fristen)+
+    schritt(4,'Ins Projektwissen',a.geteilt?'Geteilt; die KI arbeitet es beim nächsten Mal in die Seiten ein.':'Das Ergebnis der Besprechung (die Zusammenfassung der KI und die übernommenen Zeilen) für das Projektteam.',
       a.geteilt?'':'<button type="button" class="btn" data-act="ablauf-teilen"'+(vk+ve?' title="Erst die Vorschläge prüfen"':'')+'>Ins Projektwissen</button>',a.geteilt)+
     '</ol></section>';
 }
@@ -545,7 +545,7 @@ async function ablaufTeilen(){
   const zeile=(art,z)=>'- '+K.nummer(art,z.nr,z.daten)+' · '+[art==='klaerungsliste'?z.daten.sachverhalt||z.daten.ort:z.daten.thema||z.daten.frage,
     art==='klaerungsliste'?z.daten.verantwortlich:'',z.daten.frist?'bis '+K.datumLang(z.daten.frist):'',z.daten.status].map(x=>String(x||'').trim()).filter(Boolean).join(' · ');
   const kl=ablaufZeilen('klaerungsliste'),en=ablaufZeilen('entscheidungsliste');
-  const inhalt=['Besprechung: '+a.quelle+' (nachbereitet am '+K.datumLang(heute())+').',a.texte.length?'Romy: '+a.texte.join(' '):'',
+  const inhalt=['Besprechung: '+a.quelle+' (nachbereitet am '+K.datumLang(heute())+').',a.texte.length?'KI: '+a.texte.join(' '):'',
     kl.length?'Klärungen:\n'+kl.map(z=>zeile('klaerungsliste',z)).join('\n'):'',en.length?'Entscheidungen (offen, bis der Bauherr entscheidet):\n'+en.map(z=>zeile('entscheidungsliste',z)).join('\n'):''].filter(Boolean).join('\n\n');
   const {error}=await sb.rpc('office_wissen_beitrag_teilen',{p_project:projekt.id,p_titel:('Besprechung: '+a.quelle).slice(0,200),p_inhalt:inhalt,p_art:'notiz',p_quelle:a.quelle.slice(0,300),p_seite:null});
   if(error){meldung('Das konnte nicht ins Projektwissen gehen. Gehört Ihr Konto zum Projektteam?','warn');return}
@@ -562,7 +562,7 @@ function renderUebersicht(){
     const vs=offene(art),quellen=[...new Set(vs.map(v=>v.quelle).filter(Boolean))];
     return '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>'+esc(K.DOKUMENTE[art].kurz)+(art==='klaerungsliste'?' · Koordination':'')+'</h3><span class="pd-code">'+esc(code)+'</span></div>'+
       '<p class="pd-karte-zahl">'+(da&&!ohne?esc(K.zusammenfassung(art,zahlen)):da?'Noch leer.':'Noch nicht angelegt.')+'</p>'+
-      (vs.length?'<p class="pd-romy-hinweis">Romy: '+vs.length+(vs.length===1?' Vorschlag':' Vorschläge')+(quellen.length?' aus '+quellen.map(q=>'«'+esc(q)+'»').join(', '):'')+'</p>':'')+(extra||'')+
+      (vs.length?'<p class="pd-romy-hinweis">KI: '+vs.length+(vs.length===1?' Vorschlag':' Vorschläge')+(quellen.length?' aus '+quellen.map(q=>'«'+esc(q)+'»').join(', '):'')+'</p>':'')+(extra||'')+
       '<div class="pd-karte-aktionen"><a class="btn btn-primary" href="'+esc(url({projekt:projekt.id,liste:art}))+'" data-nav>'+(da?'Öffnen':'Anlegen')+'</a>'+
       (da&&!ohne?'<button type="button" class="btn" data-act="excel" data-art="'+art+'">Excel</button>':'')+'</div></article>';
   };
@@ -585,9 +585,9 @@ function renderUebersicht(){
     aktionen:projektwahl+'<a class="btn" href="./projektstart.html">Muster ansehen</a>'});
   const html='<div class="pd-wrap'+(IM_REITER?' pd-im-reiter':'')+'">'+kopfHtml+ablaufPanel()+
     (ui.ablauf?'':'<section class="pd-abschnitt"><h2>Abläufe</h2><p class="meta">wiederkehrende Arbeit des Büros, Schritt für Schritt mit den Werkzeugen des Office</p><div class="pd-grid">'+
-      '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Besprechung nachbereiten</h3></div><p class="meta">Romy liest das Protokoll und schlägt Klärungen und Entscheidungen vor, '+
+      '<article class="card pd-karte"><div class="pd-karte-kopf"><h3>Besprechung nachbereiten</h3></div><p class="meta">Die KI liest das Protokoll und schlägt Klärungen und Entscheidungen vor, '+
       'jede mit Fundstelle. Danach: Aufgaben im Planner, Fristen gegen den Terminplan, das Ergebnis ins Projektwissen.</p>'+
-      '<div class="pd-karte-aktionen">'+(romy.bereit?'<button type="button" class="btn btn-primary" data-act="ablauf-besprechung">Protokoll lesen …</button>':'<span class="meta">Romy ist gerade nicht erreichbar.</span>')+'</div></article>'+
+      '<div class="pd-karte-aktionen">'+(romy.bereit?'<button type="button" class="btn btn-primary" data-act="ablauf-besprechung">Protokoll lesen …</button>':'<span class="meta">Die KI ist gerade nicht erreichbar.</span>')+'</div></article>'+
       '</div></section>')+
     '<section class="pd-abschnitt"><h2>Listen</h2><p class="meta">bearbeiten wie im Büro-Excel · jede Spalte mit Typ · Ausgabe als Excel</p>'+
     '<h3 class="pd-gruppe-titel">Koordination und Entscheidungen</h3><div class="pd-grid">'+
@@ -604,7 +604,7 @@ function renderUebersicht(){
     '</div></section>'+
     '<section class="pd-abschnitt"><h2>So hängt es zusammen</h2><ol class="pd-kette">'+
     [['Eingang','Protokoll, Mail oder Plan im Schreibtisch des Projekts'],
-     ['Romy schlägt vor','neue Zeilen und Änderungen, jede mit Fundstelle; nichts ohne «Übernehmen»'],
+     ['Die KI schlägt vor','neue Zeilen und Änderungen, jede mit Fundstelle; nichts ohne «Übernehmen»'],
      ['Klärungsliste','verantwortlich und Frist → Aufgabe im Planner'],
      ['Entscheidungsliste','ein Entscheidungspunkt des Auftraggebers wird eine Entscheidung'],
      ['Entscheidungsvorlage','Varianten mit Kosten und Quelle, Folgen, Empfehlung; beim Vorlegen wird der Stand festgehalten'],
@@ -731,7 +731,7 @@ function zellInhalt(art,z,sp){
 function zelle(art,z,sp,vorschlag=false){
   const romy=Array.isArray(z.daten._romy)&&z.daten._romy.includes(sp.key);
   if(ui.edit&&ui.edit.z===z.id&&ui.edit.k===sp.key)return '<td class="pd-c pd-c-edit pd-t-'+sp.typ+'">'+editor(art,z,sp)+'</td>';
-  return '<td class="pd-c pd-t-'+sp.typ+(romy?' pd-romy':'')+(vorschlag?' pd-vs-zelle':'')+'" data-z="'+z.id+'" data-k="'+sp.key+'">'+zellInhalt(art,z,sp)+(romy?'<span class="pd-r" title="von Romy vorgeschlagen und übernommen">R</span>':'')+'</td>';
+  return '<td class="pd-c pd-t-'+sp.typ+(romy?' pd-romy':'')+(vorschlag?' pd-vs-zelle':'')+'" data-z="'+z.id+'" data-k="'+sp.key+'">'+zellInhalt(art,z,sp)+(romy?'<span class="pd-r" title="von der KI vorgeschlagen und übernommen">KI</span>':'')+'</td>';
 }
 function editor(art,z,sp){
   const v=z.daten[sp.key];
@@ -787,7 +787,7 @@ function renderListe(){
   // Die Fragenliste für eine Fachplanung: Excel mit ihren Fragen und denen an alle.
   const excelText=art==='fragenliste'&&ui.disziplin?'Excel für '+ui.disziplin:'Excel';
   const aktionen='<button type="button" class="btn btn-primary" data-act="neu">+ '+esc(NEU_KNOPF[art]||'Zeile')+'</button>'+
-    (mitRomy?'<button type="button" class="btn btn-romy" data-act="romy">Romy fragen</button>':'')+
+    (mitRomy?'<button type="button" class="btn btn-romy" data-act="romy">KI fragen</button>':'')+
     '<button type="button" class="btn" data-act="spalten" aria-pressed="'+ui.alleSpalten+'">'+(ui.alleSpalten?'Kompakt':'Alle Spalten')+'</button>'+
     (alle.length||!weitere?'<button type="button" class="btn" data-act="excel" data-art="'+art+'">'+esc(excelText)+'</button>':'');
   const filter='<div class="pd-filter">'+K.FILTER[art].map(([k,l])=>'<button type="button" class="chip" data-act="filter" data-f="'+esc(k)+'" aria-pressed="'+(ui.filter===k)+'">'+esc(l)+' '+fz[k]+'</button>').join('')+
@@ -812,7 +812,7 @@ function renderListe(){
     :art==='planliste'?'<label class="pd-sel"><span>Index eintragen in</span><select data-act="ausgabe-ziel">'+Array.from({length:K.AUSGABEN_PLANLISTE},(_,i)=>{const a=ausgabeNr(i+1)?.daten;
       return '<option value="'+(i+1)+'"'+((ui.ausgabeZiel||letzteAusgabe())===i+1?' selected':'')+'>Ausgabe '+(i+1)+(a?.anlass?' · '+esc(K.kurz(a.anlass,40)):'')+'</option>'}).join('')+'</select></label><button type="button" class="btn" data-act="index-eintragen">Aktuellen Index eintragen</button>':'';
   const leiste=auswahl.length?'<div class="pd-auswahl" role="region" aria-label="Auswahl"><strong>'+auswahl.length+(auswahl.length===1?' Zeile':' Zeilen')+' ausgewählt</strong>'+eigene+
-    (mitRomy?'<span class="pd-auswahl-romy">Romy:</span>'+(art==='klaerungsliste'?'<button type="button" class="btn" data-act="romy-fachplaner">Frage an die Fachplaner formulieren</button><button type="button" class="btn" data-act="romy-fristen">Fristen mit dem Terminplan prüfen</button>'
+    (mitRomy?'<span class="pd-auswahl-romy">KI:</span>'+(art==='klaerungsliste'?'<button type="button" class="btn" data-act="romy-fachplaner">Frage an die Fachplaner formulieren</button><button type="button" class="btn" data-act="romy-fristen">Fristen mit dem Terminplan prüfen</button>'
       :'<button type="button" class="btn" data-act="romy-bestaetigung">Bestätigung als Mail entwerfen</button>')+'<button type="button" class="btn" data-act="romy-frage">Frage stellen …</button>':'')+
     '<button type="button" class="btn btn-quiet" data-act="auswahl-weg">Auswahl aufheben</button></div>':'';
   const kopfzeile='<tr><th class="pd-check"><input type="checkbox" data-act="alle" aria-label="Alle auswählen"'+(sicht.length&&sicht.every(z=>ui.auswahl.has(z.id))?' checked':'')+'></th>'+
@@ -905,7 +905,7 @@ function feldEingabe(art,z,key,{typ,werte,lang=false,label=null,hinweis=''}={}){
   else input='<input class="pd-in"'+a+' value="'+esc(v)+'" autocomplete="off">';
   const romy=Array.isArray(z.daten._romy)&&z.daten._romy.includes(key);
   const titel=sp?.typ==='ausgabe'&&ausgabeNr(sp.ausgabe)?.daten?.anlass?sp.kopf+' · '+ausgabeNr(sp.ausgabe).daten.anlass:sp?.kopf;
-  return '<div class="pd-feld'+(romy?' pd-romy':'')+'"><label for="f-'+key+'">'+esc(label||titel||K.feldName(art,key))+(romy?' <span class="pd-r">R</span>':'')+'</label>'+input+(hinweis?'<p class="meta">'+esc(hinweis)+'</p>':'')+'</div>';
+  return '<div class="pd-feld'+(romy?' pd-romy':'')+'"><label for="f-'+key+'">'+esc(label||titel||K.feldName(art,key))+(romy?' <span class="pd-r" title="von der KI vorgeschlagen">KI</span>':'')+'</label>'+input+(hinweis?'<p class="meta">'+esc(hinweis)+'</p>':'')+'</div>';
 }
 function optionenEditor(z){
   const opts=K.optionen(z.daten);
@@ -916,7 +916,7 @@ function optionenEditor(z){
     herkunftZeile(o)+(Z&&R&&P?'<button type="button" class="btn" data-act="zahlen" data-z="'+z.id+'" data-i="'+i+'">Zahlen aus dem Office …</button>':'')+
     f(i,'quelle','Weitere Quelle (von Hand)','z. B. Angebot vom …')+'<div class="pd-option-zahlen">'+f(i,'kosten','Kosten')+f(i,'termine','Termine')+f(i,'qualitaet','Qualität · Gestaltung')+f(i,'genehmigung','Genehmigung')+'</div></div>').join('')+
     '<div class="pd-option-aktionen"><button type="button" class="btn" data-act="option-neu" data-z="'+z.id+'">+ Variante</button>'+
-    (romy.bereit&&Z&&R&&P&&opts.some(o=>String(o.text||'').trim())?'<button type="button" class="btn btn-romy" data-act="romy-zahlen" data-z="'+z.id+'">Romy: Zahlen holen</button>':'')+'</div></div>';
+    (romy.bereit&&Z&&R&&P&&opts.some(o=>String(o.text||'').trim())?'<button type="button" class="btn btn-romy" data-act="romy-zahlen" data-z="'+z.id+'">KI: Zahlen holen</button>':'')+'</div></div>';
 }
 function detailPanel(art){
   const z=zeilen[art].find(x=>x.id===ui.detail);if(!z)return '';
@@ -949,7 +949,7 @@ function detailPanel(art){
       (d.status==='entschieden'?'<p>'+esc(d.entscheidung)+' · '+esc(d.entscheider)+' · am '+esc(K.datumLang(d.entschieden_am))+'</p>'+feldEingabe(art,z,'bestaetigt_am',{hinweis:K.ohneBestaetigung(d)?'Die Bestätigung in Textform fehlt noch.':''}):'<p class="meta">Noch nicht entschieden.</p>')+
       '<button type="button" class="btn" data-act="entscheiden" data-z="'+z.id+'">'+(d.status==='entschieden'?'Entscheidung ändern':'Entscheidung eintragen')+'</button>'+
       (d.status==='entschieden'&&K.optionen(d).some(o=>o.produkt_id)?'<button type="button" class="btn" data-act="freigeben" data-z="'+z.id+'">In der Produktbibliothek freigeben</button>':'')+
-      '<p class="meta">«entschieden» setzt nur, wer im Projektteam ist, mit Datum und Entscheider; Romy trägt nie eine Entscheidung ein.</p></div>';
+      '<p class="meta">«entschieden» setzt nur, wer im Projektteam ist, mit Datum und Entscheider; die KI trägt nie eine Entscheidung ein.</p></div>';
   }
   const verknuepft=[];
   if(K.WEITERE.includes(art)){}
@@ -968,8 +968,8 @@ function detailPanel(art){
   if(d.fundstelle)verknuepft.push('<li>Fundstelle: '+esc(d.fundstelle)+'</li>');
   return '<aside class="pd-detail" aria-label="Details"><div class="pd-detail-kopf"><h2>'+esc(K.DOKUMENTE[art].zeile)+' '+esc(K.nummer(art,z.nr,z.daten))+' · Details</h2><button type="button" class="pd-x" data-act="detail-zu" aria-label="Details schließen">×</button></div>'+
     '<div class="pd-detail-inhalt">'+felder+(verknuepft.length?'<h3>Verknüpft</h3><ul class="pd-verknuepft">'+verknuepft.join('')+'</ul>':'')+
-    (romy.bereit&&MIT_ROMY.includes(art)?'<h3>Romy</h3><div class="pd-feld"><label for="r-frage">Frage zu dieser Zeile</label><textarea class="pd-in" id="r-frage" rows="2" placeholder="z. B. Was ändert sich in der Kostenberechnung, wenn der Unterzug deckengleich wird?"></textarea>'+
-      '<button type="button" class="btn btn-romy" data-act="romy-frage-zeile" data-z="'+z.id+'">Romy zu dieser Zeile fragen</button></div>':'')+
+    (romy.bereit&&MIT_ROMY.includes(art)?'<h3>KI</h3><div class="pd-feld"><label for="r-frage">Frage zu dieser Zeile</label><textarea class="pd-in" id="r-frage" rows="2" placeholder="z. B. Was ändert sich in der Kostenberechnung, wenn der Unterzug deckengleich wird?"></textarea>'+
+      '<button type="button" class="btn btn-romy" data-act="romy-frage-zeile" data-z="'+z.id+'">KI zu dieser Zeile fragen</button></div>':'')+
     '<h3>Verlauf</h3><div data-verlauf>'+verlaufHtml(art,z)+'</div>'+
     '<div class="pd-detail-fuss"><button type="button" class="btn btn-danger" data-act="loeschen" data-z="'+z.id+'">'+esc(K.DOKUMENTE[art].zeile)+' löschen</button></div></div></aside>';
 }
@@ -990,7 +990,7 @@ function verlaufHtml(art,z){
   return '<ol class="pd-verlauf">'+e.map(x=>{
     const wer=name(x.user_id)||'jemand',wann=K.datumKurz(String(x.created_at).slice(0,10));
     const q=x.vorschlag_id&&ui.verlauf.quellen?.get(x.vorschlag_id);
-    const romy=x.quelle==='romy'?' · Vorschlag von Romy'+(q?.fundstelle?' ('+esc(q.fundstelle)+')':'')+', übernommen von '+esc(wer):' · '+esc(wer);
+    const romy=x.quelle==='romy'?' · Vorschlag von der KI'+(q?.fundstelle?' ('+esc(q.fundstelle)+')':'')+', übernommen von '+esc(wer):' · '+esc(wer);
     if(x.vorgang==='angelegt')return '<li><span>'+esc(wann)+'</span> angelegt'+romy+'</li>';
     return '<li><span>'+esc(wann)+'</span> '+esc(K.feldName(art,x.feld))+': '+esc(wertText(art,x.feld,x.neu))+' <span class="pd-mute">(vorher '+esc(wertText(art,x.feld,x.alt))+')</span>'+romy+'</li>';
   }).join('')+'</ol>';
@@ -1217,7 +1217,7 @@ async function inMusterliste(z,i){
   nimmZahl(z,i,{produkt:Z.produktText(p,v)});
 }
 
-// Romy «Zahlen holen»: wählt unter den Kandidaten; der Vorschlag trägt die Zahlen aus den Daten, nicht aus dem Modell.
+// Die KI «Zahlen holen»: wählt unter den Kandidaten; der Vorschlag trägt die Zahlen aus den Daten, nicht aus dem Modell.
 async function romyZahlen(z){
   await ladeQuellen();
   const q=quellen.daten;if(!q)throw new Error(quellen.fehler||'Produktbibliothek und Kostenberechnungen sind gerade nicht erreichbar.');
@@ -1243,10 +1243,10 @@ async function romyZahlen(z){
     if(w.begruendung)warum.push(o.id+': '+w.begruendung);
   }
   ui.romyText={art:'entscheidungsliste',quelle:'Zahlen aus dem Office',text:r.text||'',hinweise:r.hinweise||[],n:neu.length};
-  if(!neu.length){meldung('Romy hat keine neuen Zahlen gefunden.'+(r.hinweise?.length?' '+r.hinweise[0]:''),'info');return}
+  if(!neu.length){meldung('Die KI hat keine neuen Zahlen gefunden.'+(r.hinweise?.length?' '+r.hinweise[0]:''),'info');return}
   await vorschlaegeSpeichern('entscheidungsliste',[{art:'aenderung',zeile_id:z.id,daten:{optionen:neu},
     fundstelle:[...belege].join(', ')||'Produktbibliothek, Datenpool, Kostenberechnung',begruendung:warum.join(' · ')}],'Zahlen aus dem Office');
-  meldung('Romy schlägt Zahlen für '+neu.length+(neu.length===1?' Variante':' Varianten')+' vor. Übernehmen oder verwerfen.');
+  meldung('Die KI schlägt Zahlen für '+neu.length+(neu.length===1?' Variante':' Varianten')+' vor. Übernehmen oder verwerfen.');
 }
 
 // Nach der Entscheidung: das gewählte Produkt in der Musterliste des Projekts freigeben.
@@ -1452,16 +1452,16 @@ function renderVorlage(){
       (punkte.length>1?'<button type="button" class="pd-link" data-act="punkt-weg" data-z="'+z.id+'">entfernen</button>':'')+'</span></li>').join('')+'</ul>'+
       (freie.length?'<label class="pd-feld"><span>Entscheidung hinzufügen</span><select class="pd-in" data-act="punkt-neu"><option value="">wählen …</option>'+freie.map(z=>'<option value="'+z.id+'">'+esc(K.nummer('entscheidungsliste',z.nr)+' · '+(z.daten.thema||'ohne Thema'))+'</option>').join('')+'</select></label>':'')+'</section>'+
     '<section class="card"><h2>Zahlen und Quellen</h2>'+(zahlen.length?'<ul class="pd-quellen">'+zahlen.join('')+'</ul>':'<p class="meta">Noch keine Beträge. Unter «Varianten und Details» je Variante «Zahlen aus dem Office» oder Kennwert, Menge und Betrag von Hand.</p>')+
-      vsVarianten.map(v=>{const z=zeileVon(v.zeile_id);return '<div class="pd-vs-karte"><p><strong>Romy schlägt für '+esc(K.nummer('entscheidungsliste',z?.nr))+' vor:</strong> '+esc(K.aenderungText('entscheidungsliste',z?.daten,v.daten))+'</p>'+
+      vsVarianten.map(v=>{const z=zeileVon(v.zeile_id);return '<div class="pd-vs-karte"><p><strong>Die KI schlägt für '+esc(K.nummer('entscheidungsliste',z?.nr))+' vor:</strong> '+esc(K.aenderungText('entscheidungsliste',z?.daten,v.daten))+'</p>'+
         (v.begruendung?'<p class="meta">'+esc(v.begruendung)+'</p>':'')+'<p class="meta">Fundstelle: '+esc(v.fundstelle)+'</p>'+vsKnoepfe(v)+'</div>'}).join('')+
-      (romy.bereit&&Z&&R&&P?punkte.filter(z=>K.optionen(z.daten).some(o=>String(o.text||'').trim())).map(z=>'<button type="button" class="btn btn-romy" data-act="romy-zahlen" data-z="'+z.id+'">Romy: Zahlen für '+esc(K.nummer('entscheidungsliste',z.nr))+' holen</button>').join(''):'')+
+      (romy.bereit&&Z&&R&&P?punkte.filter(z=>K.optionen(z.daten).some(o=>String(o.text||'').trim())).map(z=>'<button type="button" class="btn btn-romy" data-act="romy-zahlen" data-z="'+z.id+'">KI: Zahlen für '+esc(K.nummer('entscheidungsliste',z.nr))+' holen</button>').join(''):'')+
       '<p class="meta">Im Dokument steht je Zahl nur der Beleg; die Fundstellen mit Projekt und Zeile bleiben hier.</p></section>'+
     '<section class="card"><h2>Wenn der Auftraggeber entschieden hat</h2><p class="meta">In der Entscheidungsliste «Entscheidung eintragen»: mit Datum und Entscheider, danach die Bestätigung in Textform. Die Vorlage zeigt dann die Entscheidung statt der Ankreuzfelder.</p></section>'+
-    (romy.bereit&&punkte.length?'<section class="card"><h2>Romy</h2><p class="meta">Romy formuliert einen Abschnitt neu: grün eingefügt, rot gestrichen. Nichts ändert sich ohne «Übernehmen».</p>'+
+    (romy.bereit&&punkte.length?'<section class="card"><h2>KI</h2><p class="meta">Die KI formuliert einen Abschnitt neu: grün eingefügt, rot gestrichen. Nichts ändert sich ohne «Übernehmen».</p>'+
       '<label class="pd-feld"><span>Abschnitt</span><select class="pd-in" id="r-abschnitt">'+punkte.flatMap(z=>[['anlass','Anlass'],['frage','Frage an den Auftraggeber'],['begruendung','Empfehlung des Büros'],['festliegt','Was danach festliegt']]
         .map(([f,l])=>'<option value="'+z.id+'|'+f+'">'+esc((punkte.length>1?K.nummer('entscheidungsliste',z.nr)+' · ':'')+l)+'</option>')).join('')+'</select></label>'+
-      '<label class="pd-feld"><span>Auftrag an Romy</span><input class="pd-in" id="r-auftrag" placeholder="z. B. kürzer und für den Bauherrn verständlich" autocomplete="off"></label>'+
-      '<button type="button" class="btn btn-romy" data-act="romy-abschnitt">Romy fragen</button>'+
+      '<label class="pd-feld"><span>Auftrag an die KI</span><input class="pd-in" id="r-auftrag" placeholder="z. B. kürzer und für den Bauherrn verständlich" autocomplete="off"></label>'+
+      '<button type="button" class="btn btn-romy" data-act="romy-abschnitt">KI fragen</button>'+
       (offene('entscheidungsliste').filter(v=>punkte.some(z=>z.id===v.zeile_id)).length?'<p class="meta pd-romy-hinweis">'+offene('entscheidungsliste').filter(v=>punkte.some(z=>z.id===v.zeile_id)).length+' Vorschlag offen</p>':'')+'</section>':'')+
     '<section class="card"><h2>Stände</h2>'+staende+'</section>'+
     '</aside></div><div class="pd-druck" aria-hidden="true">'+htmlAusBloecken(bl)+'</div>'+(ui.detail?detailPanel('entscheidungsliste'):'')+'</div>';
@@ -1756,8 +1756,8 @@ function mmNachZeichnen(){
 }
 // Übersatz wie in InDesign: ein Rahmen, dessen Inhalt nicht hineinpasst, wird rot markiert und rechts genannt; im PDF
 // wird an der letzten ganzen Zeile abgeschnitten (alle Zeilen stehen auf der Grundlinie). Wie im Entwurf B2 je Rahmen,
-// wie viel zu viel ist, «Rahmen vergrößern» (Rahmen, die sich verschieben lassen) und «Mit Romy kürzen» (ein längerer
-// Text, solange Romy erreichbar ist).
+// wie viel zu viel ist, «Rahmen vergrößern» (Rahmen, die sich verschieben lassen) und «Mit der KI kürzen» (ein längerer
+// Text, solange die KI erreichbar ist).
 const ZAHLWORT=['','eine','zwei','drei','vier','fünf','sechs','sieben','acht','neun','zehn','elf','zwölf'];
 function uebersatzPruefen(){
   cancelAnimationFrame(mm.uebersatzRaf);
@@ -1776,8 +1776,8 @@ function uebersatzPruefen(){
       const knoepfe=[];
       if(r.dataset.mmr)knoepfe.push('<button type="button" class="btn" data-act="mm-groesser" data-k="'+esc(r.dataset.mmr)+'">Rahmen vergrößern</button>');
       if(romy.bereit&&el?.id&&m.zeichen>=20&&m.zeichen<m.len)knoepfe.push(mm.kuerzt===el.id
-        ?'<button type="button" class="btn btn-romy" disabled>Romy kürzt …</button>'
-        :'<button type="button" class="btn btn-romy" data-act="mm-kuerzen" data-ed="'+esc(el.id)+'">Mit Romy kürzen</button>');
+        ?'<button type="button" class="btn btn-romy" disabled>Die KI kürzt …</button>'
+        :'<button type="button" class="btn btn-romy" data-act="mm-kuerzen" data-ed="'+esc(el.id)+'">Mit der KI kürzen</button>');
       eintraege.push('<div class="mm-ue" role="group" aria-label="'+esc(r.dataset.rahmen)+'"><span><b>'+esc(r.dataset.rahmen)+'</b> · '+esc(was)+'</span>'+
         (knoepfe.length?'<div class="mm-knoepfe">'+knoepfe.join('')+'</div>':'')+'</div>');
     }
@@ -1791,7 +1791,7 @@ function uebersatzPruefen(){
     }
   });
 }
-// Der Text eines Rahmens, den Romy kürzen kann: der längste mehrzeilige Text darin (keine Kennwerte), ab 40 Zeichen.
+// Der Text eines Rahmens, den die KI kürzen kann: der längste mehrzeilige Text darin (keine Kennwerte), ab 40 Zeichen.
 function kuerzText(r){
   let best=null,n=0;
   for(const el of r.querySelectorAll('.mm-ed[aria-multiline="true"]')){
@@ -1810,7 +1810,7 @@ function kuerzMass(r,el){
   const len=mmText(el).trim().length,jetzt=Math.max(1,Math.round(el.offsetHeight/lh)),zeilen=jetzt-zuViel;
   return {zuViel,zeilen,zeichen:zeilen>0?Math.floor(len*zeilen/jetzt*.92):0,len};
 }
-// «Mit Romy kürzen» (Entwurf B2): Romy schlägt einen kürzeren Text vor, so lang, wie der Rahmen fasst. Im Dialog lässt
+// «Mit der KI kürzen» (Entwurf B2): Die KI schlägt einen kürzeren Text vor, so lang, wie der Rahmen fasst. Im Dialog lässt
 // er sich noch ändern; «Übernehmen» setzt ihn wie getippt (ein Schritt im Verlauf). Ohne «Übernehmen» ändert sich nichts.
 async function mitRomyKuerzen(id){
   const v=vorlageZeile(),el=id?document.getElementById(id):null,r=el?.closest('.mm-r[data-rahmen]');
@@ -1823,17 +1823,17 @@ async function mitRomyKuerzen(id){
     await alleSpeichern();
     const antwort=await romyAufruf({action:'kuerzen',dokument_id:v.dokument_id,zeile_id:v.id,text:alt,zeichen:m.zeichen,zeilen:m.zeilen,rahmen:name,
       position:String(pz?.daten?.thema||seite?.titel||'')});
-    if(antwort.result.unveraendert){meldung('Romy hat «'+name+'» nicht kürzer bekommen.','warn');return}
+    if(antwort.result.unveraendert){meldung('Die KI hat «'+name+'» nicht kürzer bekommen.','warn');return}
     kuerzDialog({id,name,alt,ziel:m.zeichen,...antwort.result});
   }finally{mm.kuerzt=null;uebersatzPruefen()}
 }
 function kuerzDialog({id,name,alt,ziel,neu,begruendung='',hinweise=[],zu_lang=false}){
   const warn=[...(zu_lang?['Noch etwas zu lang für den Rahmen.']:[]),...hinweise];
-  dialog.innerHTML='<form class="pd-dlg pd-kuerzen"><div class="pd-detail-kopf"><h2>Mit Romy kürzen · «'+esc(name)+'»</h2><button type="button" class="pd-x" data-dlg="zu" aria-label="Schließen">×</button></div>'+
+  dialog.innerHTML='<form class="pd-dlg pd-kuerzen"><div class="pd-detail-kopf"><h2>Mit der KI kürzen · «'+esc(name)+'»</h2><button type="button" class="pd-x" data-dlg="zu" aria-label="Schließen">×</button></div>'+
     '<p class="meta">In den Rahmen passen etwa '+ziel+' Zeichen, bisher sind es '+alt.length+'. Vor dem Übernehmen lesen und anpassen.</p>'+
     (warn.length?'<ul class="pd-kuerzen-warn">'+warn.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul>':'')+
     '<label class="pd-feld"><span>Gekürzt</span><textarea class="pd-in" name="neu" rows="8">'+esc(neu)+'</textarea></label>'+
-    '<p class="meta" data-kuerz-zahl aria-live="polite"></p>'+(begruendung?'<p class="meta">Romy: '+esc(begruendung)+'</p>':'')+
+    '<p class="meta" data-kuerz-zahl aria-live="polite"></p>'+(begruendung?'<p class="meta">KI: '+esc(begruendung)+'</p>':'')+
     '<details class="pd-kuerzen-bisher"><summary>Bisher</summary><p>'+esc(alt)+'</p></details>'+
     '<div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="verwerfen">Verwerfen</button><button type="submit" class="btn btn-primary">Übernehmen</button></div></form>';
   const form=dialog.querySelector('form'),ta=form.elements.neu,zahl=form.querySelector('[data-kuerz-zahl]');
@@ -2965,13 +2965,13 @@ async function alleFreigeben(v){
   meldung('In der Produktbibliothek freigegeben: '+liste.length+(liste.length===1?' Position.':' Positionen.'));render();
 }
 
-// ---------- Romy ----------
+// ---------- Die KI ----------
 const ROMY_FEHLER={no_terminplan:'Für dieses Projekt gibt es keinen Terminplan mit Terminen.',document_or_text_required:'Bitte eine Datei wählen oder Text einfügen.',
-  one_document_required:'Bitte nur eine Datei.',invalid_attachments:'Diese Datei kann Romy nicht lesen: PDF oder Bild bis 8 MB.',ai_not_configured:'Romy ist im Office noch nicht eingerichtet.',
-  no_access:'Kein Zugriff auf dieses Dokument.',ai_timeout_or_network:'Romy hat nicht rechtzeitig geantwortet. Bitte noch einmal versuchen.',rows_required:'Bitte zuerst Zeilen auswählen.',
-  instruction_required:'Bitte sagen, was Romy ändern soll.',question_required:'Bitte eine Frage eingeben.',invalid_task:'Das geht in dieser Liste nicht.',
+  one_document_required:'Bitte nur eine Datei.',invalid_attachments:'Diese Datei kann die KI nicht lesen: PDF oder Bild bis 8 MB.',ai_not_configured:'Die KI ist im Office noch nicht eingerichtet.',
+  no_access:'Kein Zugriff auf dieses Dokument.',ai_timeout_or_network:'Die KI hat nicht rechtzeitig geantwortet. Bitte noch einmal versuchen.',rows_required:'Bitte zuerst Zeilen auswählen.',
+  instruction_required:'Bitte sagen, was die KI ändern soll.',question_required:'Bitte eine Frage eingeben.',invalid_task:'Das geht in dieser Liste nicht.',
   text_required:'Kein Text zum Kürzen.',invalid_length:'Der Rahmen ist zu klein, um den Text sinnvoll zu kürzen: bitte vergrößern.',
-  candidates_required:'Romy braucht Kandidaten: in der Produktbibliothek, im Datenpool oder in der Kostenberechnung ist nichts Passendes.',options_required:'Bitte zuerst die Varianten beschreiben.'};
+  candidates_required:'Die KI braucht Kandidaten: in der Produktbibliothek, im Datenpool oder in der Kostenberechnung ist nichts Passendes.',options_required:'Bitte zuerst die Varianten beschreiben.'};
 async function romyStatus(){
   try{const {data,error}=await sb.functions.invoke('office-dokumente-ai',{body:{action:'status'}});romy.bereit=!error&&data?.ready===true}catch{romy.bereit=false}
   if(romy.bereit&&!ui.edit&&!dialog.open&&projekt)render();
@@ -2980,9 +2980,9 @@ async function romyAufruf(body){
   const {data,error}=await sb.functions.invoke('office-dokumente-ai',{body});
   if(error){
     let code='';try{code=(await error.context?.json?.())?.error||''}catch{}
-    throw new Error(ROMY_FEHLER[code]||'Romy ist gerade nicht erreichbar.');
+    throw new Error(ROMY_FEHLER[code]||'Die KI ist gerade nicht erreichbar.');
   }
-  if(!data?.result)throw new Error('Romy ist gerade nicht erreichbar.');
+  if(!data?.result)throw new Error('Die KI ist gerade nicht erreichbar.');
   return data;
 }
 // Vorschläge speichern: für alle im Projekt sichtbar, bis jemand sie übernimmt oder verwirft. Eine Entscheidung ist
@@ -3032,18 +3032,18 @@ function romyBanner(art){
   const vs=offene(art);let html='';
   if(vs.length){
     const quellen=[...new Set(vs.map(v=>v.quelle).filter(Boolean))];
-    html+='<div class="pd-banner romy">Romy hat '+(quellen.length?'in '+quellen.map(q=>'«'+esc(q)+'»').join(', ')+' ':'')+vs.length+(vs.length===1?' Vorschlag':' Vorschläge')+
+    html+='<div class="pd-banner romy">Die KI hat '+(quellen.length?'in '+quellen.map(q=>'«'+esc(q)+'»').join(', ')+' ':'')+vs.length+(vs.length===1?' Vorschlag':' Vorschläge')+
       ' gemacht. Sie stehen blau markiert in der Liste; jeden einzeln übernehmen oder verwerfen.<div class="pd-banner-actions">'+
       '<button type="button" class="btn btn-romy" data-act="vs-alle-ja">'+(vs.length===1?'Übernehmen':'Alle '+vs.length+' übernehmen')+'</button><button type="button" class="btn btn-quiet" data-act="vs-alle-nein">'+(vs.length===1?'Verwerfen':'Alle verwerfen')+'</button></div></div>';
   }
   const t=ui.romyText;
-  if(t&&t.art===art)html+='<div class="pd-romy-antwort"><button type="button" class="pd-x" data-act="romy-text-zu" aria-label="Schließen">×</button><strong>Romy</strong> · '+esc(t.quelle)+': '+esc(t.text||'')+
+  if(t&&t.art===art)html+='<div class="pd-romy-antwort"><button type="button" class="pd-x" data-act="romy-text-zu" aria-label="Schließen">×</button><strong>KI</strong> · '+esc(t.quelle)+': '+esc(t.text||'')+
     (t.n===0?' Keine neuen Vorschläge.':'')+(t.hinweise.length?'<ul>'+t.hinweise.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul>':'')+'</div>';
   return html;
 }
 function aenderungsZeilen(art,z,breite){
   return offene(art).filter(v=>v.art==='aenderung'&&v.zeile_id===z.id).map(v=>'<tr class="pd-vorschlag pd-vs-aenderung" data-vorschlag="'+esc(v.id)+'"><td class="pd-check"></td>'+
-    '<td class="pd-c" colspan="'+breite+'"><strong>Romy schlägt für '+esc(K.nummer(art,z.nr,z.daten))+' vor:</strong> '+esc(K.aenderungText(art,z.daten,v.daten))+
+    '<td class="pd-c" colspan="'+breite+'"><strong>Die KI schlägt für '+esc(K.nummer(art,z.nr,z.daten))+' vor:</strong> '+esc(K.aenderungText(art,z.daten,v.daten))+
     (v.begruendung?'<span class="pd-unter">'+esc(v.begruendung)+'</span>':'')+'<span class="pd-unter">Fundstelle: '+esc(v.fundstelle)+'</span>'+vsKnoepfe(v)+'</td></tr>').join('');
 }
 function neueVorschlaege(art,spalten){
@@ -3061,17 +3061,17 @@ function neueVorschlaege(art,spalten){
 }
 function diffHtml(alt,neu,v){
   const teile=K.wortDiff(alt||'',neu||'');
-  return '<div class="pd-diff" aria-label="Vorschlag von Romy">'+teile.map(t=>t.typ==='gleich'?esc(t.text):t.typ==='neu'?'<ins>'+esc(t.text)+'</ins>':'<del>'+esc(t.text)+'</del>').join('')+'</div>'+
-    '<p class="pd-vs-zeile"><span>Romy: '+esc(v.begruendung||'neu formuliert')+'</span>'+vsKnoepfe(v)+'</p>';
+  return '<div class="pd-diff" aria-label="Vorschlag von der KI">'+teile.map(t=>t.typ==='gleich'?esc(t.text):t.typ==='neu'?'<ins>'+esc(t.text)+'</ins>':'<del>'+esc(t.text)+'</del>').join('')+'</div>'+
+    '<p class="pd-vs-zeile"><span>KI: '+esc(v.begruendung||'neu formuliert')+'</span>'+vsKnoepfe(v)+'</p>';
 }
 const alsDataUrl=datei=>new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(String(r.result));r.onerror=()=>bad(new Error('Die Datei ist nicht lesbar.'));r.readAsDataURL(datei)});
 function romyDialog(art){
-  dialog.innerHTML='<form class="pd-dlg"><h2>Romy: Vorschläge aus einem Dokument</h2>'+
-    '<p class="meta">Romy liest ein Protokoll, eine Mail oder einen Plan und schlägt für die '+esc(K.DOKUMENTE[art].kurz)+' neue Zeilen und Änderungen vor, jede mit Fundstelle. Nichts ändert sich, bis jemand «Übernehmen» drückt.</p>'+
+  dialog.innerHTML='<form class="pd-dlg"><h2>KI: Vorschläge aus einem Dokument</h2>'+
+    '<p class="meta">Die KI liest ein Protokoll, eine Mail oder einen Plan und schlägt für die '+esc(K.DOKUMENTE[art].kurz)+' neue Zeilen und Änderungen vor, jede mit Fundstelle. Nichts ändert sich, bis jemand «Übernehmen» drückt.</p>'+
     '<label class="pd-feld"><span>Quelle</span><input class="pd-in" name="quelle" placeholder="z. B. Protokoll Koordination 02" required autocomplete="off"></label>'+
     '<label class="pd-feld"><span>Datei (PDF oder Bild, bis 8 MB)</span><input class="pd-in" type="file" name="datei" accept="application/pdf,image/png,image/jpeg,image/webp"></label>'+
     '<label class="pd-feld"><span>oder Text einfügen</span><textarea class="pd-in" name="text" rows="6" placeholder="Text aus der Mail oder dem Protokoll"></textarea></label>'+
-    '<label class="pd-feld"><span>Hinweis an Romy (optional)</span><input class="pd-in" name="hinweis" placeholder="z. B. nur TOP 3 bis 7" autocomplete="off"></label>'+
+    '<label class="pd-feld"><span>Hinweis an die KI (optional)</span><input class="pd-in" name="hinweis" placeholder="z. B. nur TOP 3 bis 7" autocomplete="off"></label>'+
     '<p class="pd-dlg-fehler" data-dlg-fehler></p><div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Vorschläge holen</button></div></form>';
   const form=dialog.querySelector('form'),f=dialog.querySelector('[data-dlg-fehler]');
   form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
@@ -3080,7 +3080,7 @@ function romyDialog(art){
     const datei=form.datei.files[0],text=form.text.value.trim(),quelle=form.quelle.value.trim();
     if(!datei&&!text){f.textContent='Bitte eine Datei wählen oder Text einfügen.';return}
     if(datei&&datei.size>8*1024*1024){f.textContent='Die Datei ist größer als 8 MB.';return}
-    const knopf=form.querySelector('button[type="submit"]');knopf.disabled=true;knopf.textContent='Romy liest …';f.textContent='';
+    const knopf=form.querySelector('button[type="submit"]');knopf.disabled=true;knopf.textContent='Die KI liest …';f.textContent='';
     try{
       const dok=await sichereDokument(art);
       const attachments=datei?[{name:datei.name.slice(0,180),mime:datei.type,size:datei.size,data:await alsDataUrl(datei)}]:undefined;
@@ -3089,14 +3089,14 @@ function romyDialog(art){
       const n=await vorschlaegeSpeichern(art,antwort.result.vorschlaege,q);
       ui.romyText={art,quelle:q,text:antwort.result.text||'',hinweise:antwort.result.hinweise||[],n};
       dialog.close();render();
-    }catch(err){f.textContent=err?.message||'Romy ist gerade nicht erreichbar.';knopf.disabled=false;knopf.textContent='Vorschläge holen'}
+    }catch(err){f.textContent=err?.message||'Die KI ist gerade nicht erreichbar.';knopf.disabled=false;knopf.textContent='Vorschläge holen'}
   };
   dialog.showModal();
 }
 async function romyAuswahl(aufgabe,{frage='',ids=[...ui.auswahl]}={}){
   const art=artVon(zeileVon(ids[0])?.dokument_id)||ui.art,dok=dokumente[art];
   if(!dok||!ids.length){meldung('Bitte zuerst Zeilen auswählen.','warn');return}
-  meldung('Romy arbeitet …');
+  meldung('Die KI arbeitet …');
   await alleSpeichern();
   const antwort=await romyAufruf({action:'auswahl',aufgabe,dokument_id:dok.id,zeilen_ids:ids,frage});
   ui.meldung='';
@@ -3106,11 +3106,11 @@ async function romyAuswahl(aufgabe,{frage='',ids=[...ui.auswahl]}={}){
     render();return;
   }
   zeigeMeldung();
-  textDialog({frage_fachplaner:'Frage an die Fachplaner',bestaetigung:'Bestätigung in Textform',frage:'Romy antwortet'}[aufgabe]||'Romy',antwort.result.text,{mail:aufgabe!=='frage'});
+  textDialog({frage_fachplaner:'Frage an die Fachplaner',bestaetigung:'Bestätigung in Textform',frage:'Die KI antwortet'}[aufgabe]||'KI',antwort.result.text,{mail:aufgabe!=='frage'});
 }
 function textDialog(titel,text,{mail=false}={}){
   dialog.innerHTML='<div class="pd-dlg"><div class="pd-detail-kopf"><h2>'+esc(titel)+'</h2><button type="button" class="pd-x" data-dlg="zu" aria-label="Schließen">×</button></div>'+
-    '<p class="meta">Von Romy formuliert; vor dem Senden lesen und anpassen.</p><textarea class="pd-in pd-romy-ausgabe" rows="14" aria-label="Text von Romy">'+esc(text)+'</textarea>'+
+    '<p class="meta">Von der KI formuliert; vor dem Senden lesen und anpassen.</p><textarea class="pd-in pd-romy-ausgabe" rows="14" aria-label="Text von der KI">'+esc(text)+'</textarea>'+
     '<div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="kopieren">Kopieren</button>'+(mail?'<a class="btn btn-primary" data-dlg="mail" href="mailto:">Als E-Mail öffnen</a>':'')+'</div></div>';
   const ta=dialog.querySelector('textarea');
   dialog.querySelector('[data-dlg="zu"]').onclick=()=>dialog.close();
@@ -3120,7 +3120,7 @@ function textDialog(titel,text,{mail=false}={}){
   dialog.showModal();
 }
 function frageDialog(fn){
-  dialog.innerHTML='<form class="pd-dlg"><h2>Romy fragen</h2><label class="pd-feld"><span>Frage zu den ausgewählten Zeilen</span><textarea class="pd-in" name="frage" rows="3" required placeholder="z. B. Was ändert sich in der Kostenberechnung, wenn der Unterzug deckengleich wird?"></textarea></label>'+
+  dialog.innerHTML='<form class="pd-dlg"><h2>KI fragen</h2><label class="pd-feld"><span>Frage zu den ausgewählten Zeilen</span><textarea class="pd-in" name="frage" rows="3" required placeholder="z. B. Was ändert sich in der Kostenberechnung, wenn der Unterzug deckengleich wird?"></textarea></label>'+
     '<div class="pd-dlg-aktionen"><button type="button" class="btn" data-dlg="abbrechen">Abbrechen</button><button type="submit" class="btn btn-primary">Fragen</button></div></form>';
   const form=dialog.querySelector('form');
   form.querySelector('[data-dlg="abbrechen"]').onclick=()=>dialog.close();
@@ -3129,13 +3129,13 @@ function frageDialog(fn){
 }
 async function romyAbschnitt(zeileId,feld,auftrag){
   const dok=dokumente.entscheidungsliste;if(!dok)return;
-  meldung('Romy arbeitet …');
+  meldung('Die KI arbeitet …');
   await alleSpeichern();
   const antwort=await romyAufruf({action:'text',dokument_id:dok.id,zeile_id:zeileId,feld,auftrag});
-  if(antwort.result.unveraendert){meldung('Romy hat nichts geändert.');return}
+  if(antwort.result.unveraendert){meldung('Die KI hat nichts geändert.');return}
   const n=await vorschlaegeSpeichern('entscheidungsliste',[{art:'aenderung',zeile_id:zeileId,daten:{[feld]:antwort.result.neu},
-    fundstelle:'Auftrag an Romy: «'+auftrag.slice(0,200)+'»',begruendung:antwort.result.begruendung}],'Entscheidungsvorlage');
-  meldung(n?'Romy hat einen Vorschlag gemacht: grün eingefügt, rot gestrichen.':'Romy hat nichts geändert.');
+    fundstelle:'Auftrag an die KI: «'+auftrag.slice(0,200)+'»',begruendung:antwort.result.begruendung}],'Entscheidungsvorlage');
+  meldung(n?'Die KI hat einen Vorschlag gemacht: grün eingefügt, rot gestrichen.':'Die KI hat nichts geändert.');
   render();
 }
 async function alleVorschlaege(art,ja){
@@ -3202,7 +3202,7 @@ root.addEventListener('click',e=>{
   else if(act==='option-weg'){const z=zeileVon(el.dataset.z);const o=K.optionen(z.daten).filter((_,i)=>i!==Number(el.dataset.i));setze('entscheidungsliste',z,'optionen',o);render()}
   else if(act==='entscheiden'){const z=zeileVon(el.dataset.z);if(z)entscheidungDialog(z)}
   else if(act==='zahlen'){const z=zeileVon(el.dataset.z);if(z){uebernimmOffeneFelder();zahlenDialog(z,Number(el.dataset.i))}}
-  else if(act==='romy-zahlen'){const z=zeileVon(el.dataset.z);if(z){el.disabled=true;el.textContent='Romy sucht …';void sicher(async()=>{uebernimmOffeneFelder();await romyZahlen(z);render()})}}
+  else if(act==='romy-zahlen'){const z=zeileVon(el.dataset.z);if(z){el.disabled=true;el.textContent='Die KI sucht …';void sicher(async()=>{uebernimmOffeneFelder();await romyZahlen(z);render()})}}
   else if(act==='freigeben'){const z=zeileVon(el.dataset.z);if(z)freigabeDialog(z)}
   else if(act==='loeschen')void sicher(()=>loeschen(zeileVon(el.dataset.z)));
   else if(act==='word'){const v=vorlageZeile();if(v)void sicher(()=>word(v))}
@@ -3230,7 +3230,7 @@ root.addEventListener('click',e=>{
   else if(act==='romy-frage-zeile'){const f=root.querySelector('#r-frage')?.value.trim();if(!f){meldung('Bitte eine Frage eingeben.','warn');return}void sicher(()=>romyAuswahl('frage',{frage:f,ids:[el.dataset.z]}))}
   else if(act==='romy-abschnitt'){
     const [zid,feld]=String(root.querySelector('#r-abschnitt')?.value||'').split('|'),auftrag=root.querySelector('#r-auftrag')?.value.trim();
-    if(!auftrag){meldung('Bitte sagen, was Romy ändern soll.','warn');return}
+    if(!auftrag){meldung('Bitte sagen, was die KI ändern soll.','warn');return}
     void sicher(()=>romyAbschnitt(zid,feld,auftrag));
   }
 });

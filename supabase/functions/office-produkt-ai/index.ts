@@ -63,7 +63,7 @@ Deno.serve(async req=>{
   try{anhaenge=normalizePlanAttachments(input.attachments)}catch{return respond(400,{error:"invalid_attachments"})}
   if(anhaenge.parts.length!==1)return respond(400,{error:"one_document_required"});
   const kategorie=validKategorie(input.kategorie)?input.kategorie:"";
-  // Die Familien der Bibliothek liest die Funktion selbst (unter RLS), damit Romy eine vorhandene wählt.
+  // Die Familien der Bibliothek liest die Funktion selbst (unter RLS), damit die KI eine vorhandene wählt.
   const {data:familienZeilen,error:familienError}=await sb.from("office_produkte").select("familie")
     .not("familie","is",null).eq("archiviert",false).limit(500);
   if(familienError)return respond(503,{error:"library_unavailable"});
