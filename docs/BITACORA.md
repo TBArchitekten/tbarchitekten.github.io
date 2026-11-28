@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; Chromium mit Fake-Supabase (Anlegen mit der Vorlage, Filter TWP, Antwort, «Excel für TWP», Matrix mit «eindeutig», Eingang mit Stand, «beauftragt», iPhone ohne Querscrollen); in Postgres (temporäre Tabelle, zurückgerollt) geprüft, dass mehrere Zeilen in einer Anweisung ihre Nummern in der Reihenfolge bekommen.
 - Quedó pendiente o sin probar: Teil 2 (Planliste, Dokumente, Ausgaben, Verteiler, Austausch, Ablage) und Teil 3 (Projektstartvermerk und Kick-off als Texte). Fachplanerbedarf → Entscheidungsliste (die Beauftragung entscheidet der Auftraggeber) als Verknüpfung wäre der nächste kleine Schritt.
 - Riesgos o decisiones que necesitan a Gari: keine (OK für die Migration gegeben).
-- PR: pendiente
+- PR: #218
 
 ### 2026-11-28 · Romy: der Schreibtisch ist zurück · Claude
 - Qué cambió y por qué: Gari (28.11., 08:03): «La página de inicio, la que cambiaste que ahora solo aparece el chat, se me hacía mucho más práctica como estaba antes … esa era como la página donde yo podía ver todo como tipo Dashboard y así me ahorraba estar cambiando tanto de páginas.» Am 27.11. (#214) hatte ich seine «vista vieja» als diesen Schreibtisch verstanden und ihn auf das Gespräch allein reduziert; das war ein Missverständnis. `app/dashboard.js` und `app/office-assistant.css` sind wieder wie vor #214 (Romy mit Kalender, Heute und Arbeitsplan), mit einem Kommentar zur Entscheidung und einem Test, der den Schreibtisch mit allen vier Feldern verlangt. Die übrigen Teile von #214 (Administration in der App, Startseite nur Anmeldung) bleiben.
