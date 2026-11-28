@@ -76,13 +76,22 @@ test('Sync drops what the server no longer returns and keeps what was never ther
   }finally{await page.close()}
 });
 
-test('Composer matches Isabella: no extra Live button; Live sits in the dictation overlay',async()=>{
+// Wie bei Claude (Gari, 28.11.2026): im Eingabefeld diktiert das Mikrofon, die Schallwelle daneben öffnet Live über dem Chat.
+test('Composer like Claude: microphone dictates, the sound wave next to it opens Live over the chat',async()=>{
   const {page,errors}=await boot('');
   try{
     await page.click('[data-nav="assistant"]');
-    const ui=await page.evaluate(()=>({composerLive:!!document.querySelector('.composer-wrap a[href="./live/"]'),
-      focusLive:document.getElementById('focusLiveLink')?.getAttribute('href'),speak:!!document.getElementById('focusSpeakReply')}));
-    assert.deepEqual(ui,{composerLive:false,focusLive:'./live/',speak:true});
+    const ui=await page.evaluate(()=>{
+      const mic=document.getElementById('micButton'),live=document.getElementById('liveButton');
+      return {nebeneinander:mic?.nextElementSibling===live,label:live?.getAttribute('aria-label'),
+        focusLive:!!document.getElementById('focusLiveLink'),speak:!!document.getElementById('focusSpeakReply')};
+    });
+    assert.deepEqual(ui,{nebeneinander:true,label:'Live sprechen',focusLive:false,speak:true});
+    await page.click('#liveButton');
+    const blatt=await page.evaluate(()=>({offen:!document.getElementById('liveSheet').classList.contains('hidden'),
+      src:document.getElementById('liveFrame').getAttribute('src')}));
+    assert.deepEqual(blatt,{offen:true,src:'./live/?embed=1'});
+    await page.click('#liveSheetClose');
     assert.deepEqual(errors,[]);
   }finally{await page.close()}
 });
