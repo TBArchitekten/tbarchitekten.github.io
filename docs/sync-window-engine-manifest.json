@@ -1,6 +1,6 @@
 {
   "source_repository": "gari01234/minds",
-  "source_sha": "d45775c5d3a286d3b415645df088d24f97234887",
+  "source_sha": "321ea6a886afc3d2a36f74dc216e9461a0b036ed",
   "mode": "engine",
   "files": [
     {
@@ -168,14 +168,14 @@
     {
       "source": "supabase/functions/_shared/isabella-presence.mjs",
       "target": "supabase/functions/_shared/isabella-presence.mjs",
-      "sha": "d0f6151d2bd169136afb61687a3f6c1e414e83e4",
-      "bytes": 24543
+      "sha": "f36d7f48a35a14122a57ae97f29f7e47f8d6a91d",
+      "bytes": 33062
     },
     {
       "source": "supabase/functions/_shared/isabella-radar.mjs",
       "target": "supabase/functions/_shared/isabella-radar.mjs",
-      "sha": "50a6723834dcf654aa0fa5986cf61e4b74c54ec8",
-      "bytes": 5508
+      "sha": "823cca6dc1f362c0827ca3155bfe543490801c56",
+      "bytes": 5950
     },
     {
       "source": "supabase/functions/_shared/isabella-tools.mjs",
@@ -534,8 +534,8 @@
     {
       "source": "supabase/functions/isabella-heartbeat/index.ts",
       "target": "supabase/functions/isabella-heartbeat/index.ts",
-      "sha": "5efce02ef84bda856dbebceda07f9be1903c2494",
-      "bytes": 20403
+      "sha": "22aa2b24bef2bfac4c4f273ebf7536de4e0cafca",
+      "bytes": 20705
     },
     {
       "source": "supabase/functions/isabella-live-session/index.ts",
