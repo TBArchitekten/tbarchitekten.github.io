@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` grün; Chromium mit Fake-Supabase: Romy mit Kalender, Heute und Arbeitsplan.
 - Quedó pendiente o sin probar: —
 - Riesgos o decisiones que necesitan a Gari: ninguna.
-- PR: pendiente
+- PR: #217
 
 ### 2026-11-27 · Work: Reiter «Listen» · Claude
 - Qué cambió y por qué: Gari (27.11., 15:50, Punkt 14, und 18:23: «1. listen», «hazlo»): die Listen und Texte des Projekts gehören in Work, wie der Terminplan; das Muster bleibt unter Werkzeuge. Neuer Reiter «Listen» neben dem Planner, eine Seite je Projekt (`projektdokumente.html?projekt=` im Rahmen, Werkzeug `listen` in `WORK_TOOLS`, immer da wie das Controlling, Symbol in der Seitenleiste). Im Rahmen zeigt die Seite keinen eigenen Kopf, keine Projektwahl und keinen Rückweg; Unterseiten führen «‹ Listen» zurück. «Besprechung nachbereiten» im Panorama öffnet jetzt im Reiter (vorher ein neues Browserfenster) mit seinem Dialog; ist die Seite schon offen, wird vorher gespeichert, was aussteht. Karten für noch Fehlendes sagen «Noch nicht gebaut» statt «folgt nach dem ersten Schritt».
