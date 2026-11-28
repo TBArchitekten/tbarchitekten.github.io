@@ -46,7 +46,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
   - Die Bürovorlagen sind nicht neu erzeugt: die Aufgabenbibliothek hat sich seit dem 21.11. weiterentwickelt, das gehört zu «Parte 3».
   - `app/office-assistant.js` (alter Rückweg, läuft nicht mehr) sagt noch «Romy»; er geht mit `office-assistant` am 07.12.
 - Riesgos o decisiones que necesitan a Gari: der Assistent nennt ihn «Edgar» (Vorname im Office), solange er unter «Mein Assistent» bei «Wie soll dein Assistent dich nennen?» nicht «Gari» einträgt.
-- PR: pendiente
+- PR: #225
 
 ### 2026-11-28 · Ein Motor: Romys Fähigkeiten wieder mit GPT-6.2 Sol · Claude
 - Qué cambió y por qué: zweiter Unterschied zwischen Romys zwei Motoren. Garis Entscheidung vom 27.11. («no solo conmigo, haz el cambio para todos», #208) ließ Romys Fähigkeiten (Dateien, Auswertungen) im alten Motor mit `gpt-6.2-sol` laufen; im Motor aus Window, den Romy im Chat nutzt, stand `gpt-6-astra` fest (fünfmal so teuer). Jetzt entscheidet das Profil: Office `gpt-6.2-sol`, Window weiter `gpt-6-astra`; das Secret `OPENAI_CAPABILITY_MODEL` ginge vor (Window `692dff4`, minds #347).
