@@ -45,6 +45,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
   - Die anderen Mitglieder haben noch keinen Namen gewählt und sehen «KI-Assistent».
   - Die Bürovorlagen sind nicht neu erzeugt: die Aufgabenbibliothek hat sich seit dem 21.11. weiterentwickelt, das gehört zu «Parte 3».
   - `app/office-assistant.js` (alter Rückweg, läuft nicht mehr) sagt noch «Romy»; er geht mit `office-assistant` am 07.12.
+  - Zwei Texte in der Datenbank nennen noch «Romy», beide nur im Ausnahmefall sichtbar: der Ersatztitel von `minds_publish_attention` («Actualización de Romy», wenn ein Hinweis keinen Titel hat) und die Fehlermeldung von `office_projektdokument_zeile_vorher` («Romy trägt keine Entscheidung ein»). Bei der nächsten Migration mitnehmen.
 - Riesgos o decisiones que necesitan a Gari: der Assistent nennt ihn «Edgar» (Vorname im Office), solange er unter «Mein Assistent» bei «Wie soll dein Assistent dich nennen?» nicht «Gari» einträgt.
 - PR: #225
 
