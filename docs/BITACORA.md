@@ -25,7 +25,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
 - Cómo se probó: `node --test` 598/598; Chromium `office-app-boot` 6/6; Bildschirmfotos Schreibtisch und iPhone: zwei Knöpfe nebeneinander, die Schallwelle öffnet das Blatt, keine Fehler.
 - Quedó pendiente o sin probar: das Gespräch selbst mit Mikrofon und Lautsprecher (Montag, V1). Auf dem iPhone bricht der Platzhalter «Nachricht an Romy …» jetzt in zwei Zeilen um, weil das Feld schmaler ist.
 - Riesgos o decisiones que necesitan a Gari: ninguna.
-- PR: pendiente
+- PR: #221
 
 ### 2026-11-28 · Live im Chat (V2): das Sprachgespräch mit Romy öffnet über dem Chat · Claude
 - Qué cambió y por qué: Gari (28.11., 08:03): «V2: sí, como tú propones» (Live dentro del chat, sin página aparte) und «V3: sí» (die Transkripte bleiben im Chat). «Live sprechen» (in der Oberfläche des Diktats) öffnet die Live-Seite jetzt in einem Blatt über dem Chat (`#liveSheet`, Rahmen mit `allow="microphone; autoplay"`); der Chat bleibt sichtbar. Jeder gespeicherte Zug und das Ende des Gesprächs melden sich beim Chat (`postMessage`, nur an die eigene Seite, ein Zug erst nach dem geprüften Beleg von `save_transcript`), der Chat lädt dann neu (`TBA_OFFICE_ENGINE_CHAT.reconcile`). Im Rahmen ist die Live-Seite kompakt (ohne Kopf und Titel); Links zum Prüfen öffnen den ganzen Chat; Schließen beendet das Gespräch. Wie bisher speichert Live im Office nur das Gesagte der Person, nie die ungeprüfte Sprachausgabe als Antwort von Romy (V3 bleibt so). Gebaut in Window (gari01234/minds #343, Merge `6ca4bc2`); `app/live/live.js` und `live.css` mit dem Manifest übernommen.
