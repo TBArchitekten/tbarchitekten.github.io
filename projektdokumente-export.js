@@ -4,7 +4,8 @@
    Excel im Aufbau der Bürovorlage (Titel, Projektzeile, Kopf in Zeile 6, Daten ab Zeile 7, «überfällig» als Formel mit
    dem Wert von heute, Auswahllisten, Filter, fixierte Spalten). Word im Aufbau der Entscheidungsvorlage, A4, Arial 11 pt.
    Weitere Listen (28.11.2026): ein Termin steht wie in der Vorlage als Meilenstein mit der Spalte «Datum» daneben, das
-   Datum aus dem Terminplan des Projekts; die Schnittstellenmatrix mit den Gruppenzeilen und der Legende. */
+   Datum aus dem Terminplan des Projekts; die Schnittstellenmatrix mit den Gruppenzeilen und der Legende. Planliste und
+   Verteiler mit Datum und Anlass der Ausgaben über den Spalten «Ausgabe n» (Zeilen 4 und 5, wie in der Vorlage). */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -105,6 +106,8 @@ function xlsx(blatt,jetzt=new Date()){
   reihen.push('<row r="1" ht="20" customHeight="1">'+zelle('A1',blatt.titel,S.titel)+'</row>');
   if(blatt.untertitel)reihen.push('<row r="2">'+zelle('A2',blatt.untertitel,S.unter)+'</row>');
   reihen.push('<row r="3">'+zelle('A3',blatt.projekt||'',S.projekt)+(blatt.hinweis?zelle('G3',blatt.hinweis,S.projekt):'')+'</row>');
+  // Zeilen 4 und 5 über dem Kopf (Planliste, Verteiler): [Spalte, Wert] je Zelle.
+  for(const z of [4,5]){const zellen=(blatt.ueberKopf||{})[z]||[];if(zellen.length)reihen.push('<row r="'+z+'">'+zellen.map(([i,w])=>zelle(spalte(i)+z,w,typeof w==='string'?S.projekt:undefined)).join('')+'</row>')}
   reihen.push('<row r="'+kopfZeile+'" ht="40" customHeight="1">'+blatt.koepfe.map((k,i)=>zelle(spalte(i)+kopfZeile,k,S.kopf)).join('')+'</row>');
   blatt.zeilen.forEach((z,j)=>{
     const r=erste+j;
@@ -238,9 +241,10 @@ function docx({titel,bloecke,fusszeile=''},jetzt=new Date()){
 
 // ---------- Listen der Bürovorlage ----------
 // Aus Spalten und Zeilen eines Projektdokuments (TBA_PROJEKTDOKUMENTE) das Blatt wie in LPH3_3_Koordination.xlsx.
-const FIXIERT={klaerungsliste:6,entscheidungsliste:3,fachplanerbedarf:2,schnittstellen:2,fragenliste:4,eingang:1};
-function listenBlatt(K,art,zeilen,{projekt='',heute=K.heuteIso()}={}){
-  if(K.WEITERE&&K.WEITERE.includes(art))return weitereListe(K,art,zeilen,{projekt,heute});
+const FIXIERT={klaerungsliste:6,entscheidungsliste:3,fachplanerbedarf:2,schnittstellen:2,fragenliste:4,eingang:1,
+  planliste:6,dokumente:2,ausgaben:2,verteiler:2,austausch:1,ablage:0};
+function listenBlatt(K,art,zeilen,{projekt='',heute=K.heuteIso(),ausgaben=[]}={}){
+  if(K.WEITERE&&K.WEITERE.includes(art))return weitereListe(K,art,zeilen,{projekt,heute,ausgaben});
   const spalten=K.SPALTEN[art],doc=K.DOKUMENTE[art];
   const ref=key=>K.SPALTEN[art].findIndex(x=>x.key===key);
   const sortiert=[...zeilen].sort((a,b)=>a.nr-b.nr);
@@ -271,16 +275,17 @@ function listenBlatt(K,art,zeilen,{projekt='',heute=K.heuteIso()}={}){
 }
 // Fachplanerbedarf, Schnittstellen, Fragenliste und Eingang: Spalten der Vorlage; ein Termin mit «datumSpalte» wird zu
 // zwei Spalten (Meilenstein und Datum), sonst steht das Datum selbst. Berechnete Spalten mit ihrem Wert von heute.
-function weitereListe(K,art,zeilen,{projekt,heute}){
+function weitereListe(K,art,zeilen,{projekt,heute,ausgaben=[]}){
   const doc=K.DOKUMENTE[art],spalten=[];
   for(const sp of K.SPALTEN[art]){
     spalten.push({sp,teil:'wert',kopf:sp.kopf,breite:sp.breite});
     if(sp.typ==='meilenstein'&&sp.datumSpalte)spalten.push({sp,teil:'datum',kopf:'Datum',breite:11});
   }
-  const zahlNr=['fachplanerbedarf','schnittstellen'].includes(art);
+  const zahlNr=['fachplanerbedarf','schnittstellen','planliste','ausgaben'].includes(art);
   const wert=(c,z)=>{
     const sp=c.sp,d=z.daten||{},v=String(d[sp.key]??'').trim();
     if(sp.key==='nr')return zahlNr?z.nr:K.nummer(art,z.nr,d);
+    if(sp.typ==='plannummer')return K.plannummer(d);
     if(sp.typ==='datum')return {datum:K.excelTag(d[sp.key])};
     if(sp.typ==='meilenstein'){
       const code=K.istMeilenstein(v)?v:'',iso=K.terminVon(v);
@@ -305,15 +310,28 @@ function weitereListe(K,art,zeilen,{projekt,heute}){
   const auswahl=[];
   spalten.forEach((c,i)=>{
     if(c.teil!=='wert')return;
-    if(['auswahl','zustaendigkeit'].includes(c.sp.typ)&&Array.isArray(c.sp.werte))auswahl.push({spalte:spalte(i),werte:c.sp.werte});
+    if(['auswahl','zustaendigkeit','ausgabe'].includes(c.sp.typ)&&Array.isArray(c.sp.werte))auswahl.push({spalte:spalte(i),werte:c.sp.werte});
     // Meilenstein mit eigener Datumsspalte: Auswahl der Codes wie in der Vorlage.
     if(c.sp.typ==='meilenstein'&&c.sp.datumSpalte)auswahl.push({spalte:spalte(i),werte:K.MEILENSTEINE.map(m=>m[0])});
   });
   const z=K.zaehle(art,zeilen,heute);
   const legende=art==='schnittstellen'?' · '+K.LEGENDE.map(([k,t])=>k+' '+t).join(' · '):'';
+  // Über den Spalten «Ausgabe n»: Datum und Anlass der Ausgabe Nr n (Planliste beides, Verteiler den Anlass).
+  const ueberKopf={4:[],5:[]};
+  const erste=spalten.findIndex(c=>c.sp.typ==='ausgabe');
+  if(erste>0){
+    const ausgabe=n=>(ausgaben||[]).find(a=>Number(a.nr)===n)?.daten||null;
+    if(art==='planliste'){ueberKopf[4].push([erste-1,'Datum der Ausgabe →']);ueberKopf[5].push([erste-1,'Anlass →'])}
+    spalten.forEach((c,i)=>{
+      if(c.sp.typ!=='ausgabe')return;
+      const a=ausgabe(c.sp.ausgabe);if(!a)return;
+      if(art==='planliste'&&K.gueltigIso(a.datum))ueberKopf[4].push([i,{datum:K.excelTag(a.datum)}]);
+      if(String(a.anlass||'').trim())ueberKopf[5].push([i,String(a.anlass).trim()]);
+    });
+  }
   return {name:doc.kurz,titel:doc.titel,untertitel:doc.untertitel,projekt,
     hinweis:'Stand '+K.datumLang(heute)+': '+K.zusammenfassung(art,z)+legende,
-    koepfe:spalten.map(c=>c.kopf),breiten:spalten.map(c=>c.breite),zeilen:werte,
+    koepfe:spalten.map(c=>c.kopf),breiten:spalten.map(c=>c.breite),zeilen:werte,ueberKopf,
     fixiert:{spalten:FIXIERT[art]||0,zeilen:6},auswahl,bedingt:[]};
 }
 

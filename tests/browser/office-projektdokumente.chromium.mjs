@@ -488,7 +488,7 @@ test('Weitere Listen: mit der Bürovorlage anlegen, Termine aus dem Terminplan, 
   await page.locator('h1',{hasText:'Projektstart'}).waitFor();
   const karte=page.locator('.pd-karte',{has:page.locator('h3',{hasText:/^Fragenliste$/})});
   assert.match(await karte.textContent(),/Noch nicht angelegt\.[\s\S]*mit M01 04\.12\. · beantwortet bis M02 11\.12\./);
-  assert.equal(await page.locator('.pd-folgt-text').count(),3,'nur Planliste und die beiden Texte folgen noch');
+  assert.equal(await page.locator('.pd-folgt-text').count(),2,'nur die beiden Texte folgen noch');
   // Fragenliste: die 85 Fragen der Vorlage, nummeriert in ihrer Reihenfolge.
   await karte.locator('a',{hasText:'Anlegen'}).click();
   await page.locator('h1',{hasText:'Fragenliste je Disziplin'}).waitFor();
@@ -557,13 +557,69 @@ test('Weitere Listen: mit der Bürovorlage anlegen, Termine aus dem Terminplan, 
   await ctx.close();
 });
 
+// Zweiter Teil (28.11.2026): Planliste mit Plannummer aus dem Kürzel, Index je Ausgabe; Ausgaben und Verteiler hängen daran.
+test('Planliste: Kürzel, Index je Ausgabe; Ausgaben und Verteiler mit Datum und Anlass',async()=>{
+  const {ctx,page,fehler}=await oeffne();
+  const PID='22222222-2222-4222-8222-222222222222';
+  for(const art of ['ausgaben','planliste','verteiler']){
+    await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste='+art));
+    await page.locator('[data-act="anlegen-vorlage"]').click();
+    await page.locator('tr.pd-zeile').first().waitFor();
+  }
+  // Ausgabe 1 geht am 04.12. hinaus.
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste=ausgaben'));
+  const aus=(await zeilenVon(page,'ausgaben'))[0];
+  await page.locator('td[data-z="'+aus.id+'"][data-k="datum"]').click();
+  await page.locator('[data-edit][data-k="datum"]').fill('04.12.2026');
+  await page.locator('[data-edit][data-k="datum"]').press('Enter');
+  await gespeichert(page);
+  await page.keyboard.press('Escape');
+  // Planliste: Kürzel des Projekts, dann Index A für zwei Pläne und «Aktuellen Index eintragen» in Ausgabe 1.
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste=planliste'));
+  await page.locator('[data-act="kuerzel"]').fill('TST');
+  await page.locator('[data-act="kuerzel"]').press('Tab');
+  await page.waitForFunction(()=>window.__fake.db.office_projektdokumente.find(d=>d.art==='planliste')?.meta?.kuerzel==='TST');
+  const plaene=await zeilenVon(page,'planliste');
+  assert.equal(await page.locator('td[data-z="'+plaene[2].id+'"][data-k="plannummer"]').textContent(),'TST-3-GR-EG-01');
+  assert.match(await page.locator('th.pd-t-ausgabe').first().textContent(),/^Ausgabe 104\.12\.$/);
+  for(const z of plaene.slice(1,3)){
+    await page.locator('td[data-z="'+z.id+'"][data-k="index"]').click();
+    await page.locator('[data-edit][data-k="index"]').fill('A');
+    await page.locator('[data-edit][data-k="index"]').press('Enter');
+    await gespeichert(page);
+    await page.keyboard.press('Escape');
+  }
+  for(const z of plaene.slice(1,4))await page.locator('input[data-act="waehle"][data-z="'+z.id+'"]').check();
+  assert.equal(await page.locator('[data-act="ausgabe-ziel"]').inputValue(),'1','die zuletzt ausgegebene Ausgabe');
+  await page.locator('[data-act="index-eintragen"]').click();
+  await gespeichert(page);
+  assert.match(await page.locator('[data-meldung]').textContent(),/^2 Pläne in Ausgabe 1 eingetragen\. Ohne Index: TST-3-GR-1OG-01\.$/);
+  const nachher=await zeilenVon(page,'planliste');
+  assert.deepEqual(nachher.slice(1,4).map(z=>z.daten.a1||''),['A','A','']);
+  assert.match(nachher[1].daten.indexdatum,/^\d{4}-\d{2}-\d{2}$/,'ein neuer Index bekommt das Datum');
+  // Die Ausgabe nennt ohne eigenen Eintrag die Pläne, die laut Planliste mit ihr hinausgingen.
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste=ausgaben'));
+  assert.equal(await page.locator('td[data-z="'+aus.id+'"][data-k="inhalt"]').textContent(),'TST-3-GR-UG-01 A, TST-3-GR-EG-01 A');
+  // Verteiler: die Spalten tragen Datum und Anlass der Ausgaben.
+  await page.goto(adresse('projektdokumente.html?projekt='+PID+'&liste=verteiler'));
+  assert.equal(await page.locator('th.pd-t-ausgabe').count(),8);
+  assert.equal(await page.locator('th.pd-t-ausgabe span[title]').first().getAttribute('title'),'Planungsgrundlagen an die Fachplaner (vorläufig)');
+  const [dl]=await Promise.all([page.waitForEvent('download'),page.locator('.pd-actions [data-act="excel"]').click()]);
+  const sheet=entpacke(fs.readFileSync(await dl.path()))['xl/worksheets/sheet1.xml'];
+  assert.ok(sheet.includes('<row r="5"><c r="C5" s="7" t="inlineStr"><is><t xml:space="preserve">Planungsgrundlagen an die Fachplaner (vorläufig)</t>'),'Anlass über den Spalten');
+  await foto(page,'8-verteiler');
+  assert.deepEqual(fehler,[]);
+  await ctx.close();
+});
+
 test('iPhone: Übersicht, Liste und Vorlage ohne Querscrollen der Seite',async()=>{
   const {ctx,page,fehler}=await oeffne();
   await page.setViewportSize({width:390,height:844});
   for(const ziel of ['projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222',
     'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=klaerungsliste',
     'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=entscheidungsliste',
-    'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=schnittstellen']){
+    'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=schnittstellen',
+    'projektdokumente.html?projekt=22222222-2222-4222-8222-222222222222&liste=planliste']){
     await page.goto(adresse(ziel));
     await page.locator('h1').waitFor();
     await page.waitForTimeout(150);

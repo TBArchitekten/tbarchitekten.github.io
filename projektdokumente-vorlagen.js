@@ -1,5 +1,6 @@
 /* TBA Office · Vorbelegung der Projektlisten aus den Bürovorlagen LPH 3. Erzeugt von
-   scripts/projektdokumente-vorlagen.py aus muster/lph3/LPH3_3_Koordination.xlsx; nicht von Hand ändern.
+   scripts/projektdokumente-vorlagen.py aus muster/lph3/LPH3_3_Koordination.xlsx und LPH3_2_Planliste.xlsx;
+   nicht von Hand ändern.
    Eine Liste im Projekt wird auf Wunsch mit diesen Zeilen angelegt; danach gehört sie dem Projekt. */
 (function(root,daten){if(typeof module==='object'&&module.exports)module.exports=daten;else root.TBA_PD_VORLAGEN=daten})(typeof self!=='undefined'?self:this,{
 "fragenliste":[
@@ -137,5 +138,95 @@
 {"disziplin":"BPH","buero":"","umfang01":"Bauteilkatalog Arbeitsstand 01 auf Grundlage der Aufbauvorgaben (Vorgang t060)","erwartet01":"M03","umfang_end":"Bauteilkatalog Endstand nach Bemusterung (t061), Kennwerte, Erläuterungsbericht","erwartet_end":"M07"},
 {"disziplin":"BRS","buero":"","umfang01":"Brandschutzkonzept, Entwurf – sofern beauftragt (t018)","erwartet01":"M03","umfang_end":"Abgestimmtes Brandschutzkonzept (t032)","erwartet_end":"M07"},
 {"disziplin":"FRA","buero":"","umfang01":"Freianlagenkonzept, Höhen, Flächen","erwartet01":"M03","umfang_end":"Entwurf, Kostenberechnung KG 500, Textbeitrag","erwartet_end":"M07"}
+],
+"planliste":[
+{"planart":"LP","geschoss":"–","lfd":"1","titel":"Lageplan","massstab":"1:500","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"GR","geschoss":"UG","lfd":"1","titel":"Grundriss Untergeschoss","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":"Geschosse je Projekt anpassen"},
+{"planart":"GR","geschoss":"EG","lfd":"1","titel":"Grundriss Erdgeschoss","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"GR","geschoss":"1OG","lfd":"1","titel":"Grundriss 1. Obergeschoss","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"GR","geschoss":"DG","lfd":"1","titel":"Grundriss Dachgeschoss","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"GR","geschoss":"DA","lfd":"1","titel":"Dachaufsicht","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"SC","geschoss":"AA","lfd":"1","titel":"Schnitt A-A","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"SC","geschoss":"BB","lfd":"1","titel":"Schnitt B-B","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"AN","geschoss":"N","lfd":"1","titel":"Ansicht Nord","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"AN","geschoss":"O","lfd":"1","titel":"Ansicht Ost","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"AN","geschoss":"S","lfd":"1","titel":"Ansicht Süd","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"AN","geschoss":"W","lfd":"1","titel":"Ansicht West","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":""},
+{"planart":"DT","geschoss":"FAS","lfd":"1","titel":"Fassade · Prinzipschnitt (L3.FAS.1)","massstab":"1:20","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":"bedingt: Themenpaket FAS"},
+{"planart":"TH","geschoss":"BAD","lfd":"1","titel":"Themenplan Bäder (L3.BAD.1)","massstab":"1:50","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":"bedingt: Themenpaket BAD"},
+{"planart":"TH","geschoss":"TRE","lfd":"1","titel":"Themenplan Treppen (L3.TRE.1)","massstab":"1:50","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":"bedingt: Themenpaket TRE"},
+{"planart":"TH","geschoss":"LIC","lfd":"1","titel":"Lichtkonzept (L3.LIC.1)","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":"bedingt: Themenpaket LIC"},
+{"planart":"TH","geschoss":"BOD","lfd":"1","titel":"Belagsplan (L3.BOD.1)","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":"bedingt: Themenpaket BOD"},
+{"planart":"TH","geschoss":"MAP","lfd":"1","titel":"Material- und Ausstattungsübersicht (L3.MAP.1)","massstab":"1:100","format":"","zustaendig":"","status":"in Bearbeitung","index":"","aenderung":"","bemerkung":"Bemusterung"}
+],
+"dokumente":[
+{"code":"PSV","ergebnis":"Projektstartvermerk LPH 3","zustaende":"1: Vermerk mit Projektparametern","erzeugt":"L3.PSV.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"PLI","ergebnis":"Planliste und Dokumentenstruktur","zustaende":"1: angelegt; wird bis zum Abgabeverzeichnis fortgeschrieben","erzeugt":"L3.PLI.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"FPB","ergebnis":"Fachplanerbedarf und Beauftragungsempfehlung","zustaende":"1: Entscheidungshilfe für den Auftraggeber","erzeugt":"L3.FPB.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"SSM","ergebnis":"Schnittstellen- und Liefermatrix","zustaende":"1: v0 (Vorschlag des Büros) · 2: v1 (mit Fachplanern abgestimmt, mit Kick-off-Protokoll)","erzeugt":"L3.SSM.1, L3.A1.ABS","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"PGF","ergebnis":"Planungsgrundlagen-Paket für Fachplaner","zustaende":"1: Teilstand mit Austauschdaten und Fragenliste","erzeugt":"L3.PGF.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"BTK","ergebnis":"Bauteilkatalog (Regelaufbauten)","zustaende":"1: Aufbauvorgaben der Architektur für die Bauphysik · 2: Bauteilkatalog der Bauphysik geprüft und übernommen (Stand 02) · 3: Endstand der Bauphysik nach Qualitätsentscheidungen, geprüft","erzeugt":"L3.BTK.1, L3.BTK.2, L3.KLA.3","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"FLA","ergebnis":"Flächen- und Rauminhaltsaufstellung","zustaende":"1: Arbeitsstand 01 · 2: Stand 02 · 3: Endstand LPH 3","erzeugt":"L3.FLA.1, L3.GRU.2, L3.PLA.3","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"GEN","ergebnis":"Baurechts-Check (Genehmigungsfähigkeit)","zustaende":"1: Erstprüfung mit Vermerken · 2: Stand 02 mit Übergabeliste LPH 4","erzeugt":"L3.GEN.1, L3.GEN.2","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"OBJ","ergebnis":"Objektbeschreibung","zustaende":"1: Arbeitsstand 01 · 2: Stand 02 (mit Fachplanungsbeiträgen) · 3: Endstand LPH 3","erzeugt":"L3.OBJ.1, L3.OBJ.2, L3.OBJ.3","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"RML","ergebnis":"Rückmelde- und Änderungsliste Auftraggeber","zustaende":"1: zum Arbeitsstand 01 · 2: zum Stand 02","erzeugt":"L3.A2.ABS, L3.A4.ABS","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"KLA","ergebnis":"Klärungsliste Koordination mit Protokollen","zustaende":"1: Runde 01 · 2: Runde 02 (Bestätigung je Disziplin) · 3: geschlossen nach Endbeiträgen M07","erzeugt":"L3.KLA.1, L3.KLA.2, L3.KLA.3","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"ENV","ergebnis":"Entscheidungsvorlage","zustaende":"1: Vorlage M04","erzeugt":"L3.ENV.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"ENP","ergebnis":"Entscheidungsprotokoll","zustaende":"1: Entscheidungen M05","erzeugt":"L3.A3.ABS","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"QUA","ergebnis":"Qualitäts- und Ausstattungsliste","zustaende":"1: Vorschlag (Konzept) · 2: konsolidiert nach Bemusterung (Status je Position)","erzeugt":"L3.QUA.1, L3.A5.ABS","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"MAT","ergebnis":"Material- und Produktvergleich","zustaende":"1: Vergleichsmatrix mit Empfehlung","erzeugt":"L3.MAT.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"MUS","ergebnis":"Muster (Musterliste und Musterbewertung)","zustaende":"1: geprüft und dokumentiert","erzeugt":"L3.MUS.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"MEN","ergebnis":"Mengenermittlung","zustaende":"1: auf maßgeblichem Planstand","erzeugt":"L3.MEN.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"KOB","ergebnis":"Kostenberechnung mit Vergleich zur Kostenschätzung","zustaende":"1: vorgelegter Stand (M08) · 2: Endstand nach Kostenentscheidung (M08A)","erzeugt":"L3.KOB.1, L3.A6.ABS","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"DOK","ergebnis":"Entwurfsdokumentation LPH 3","zustaende":"1: zusammengestellt","erzeugt":"L3.DOK.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"UEP","ergebnis":"Übergabeprotokoll LPH 3","zustaende":"1: Abschlussbesprechung M10","erzeugt":"L3.A7.AUS","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"FRG","ergebnis":"Freigabe des Auftraggebers","zustaende":"1: in Textform dokumentiert (M11)","erzeugt":"L3.A7.ABS","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"PAB","ergebnis":"Phasenabschlussblatt","zustaende":"1: Nachkalkulation und Vorschläge","erzeugt":"L3.PAB.1","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""},
+{"code":"TPL","ergebnis":"Terminplan und Entscheidungsliste","zustaende":"–","erzeugt":"–","format":"","zustaendig":"","stand":"","index":"","ablageort":"","bemerkung":""}
+],
+"ausgaben":[
+{"anlass":"Planungsgrundlagen an die Fachplaner (vorläufig)","meilenstein":"M01 · 01.07","empfaenger":"alle beauftragten Fachplaner","formate":"PDF + DWG","inhalt":"","versandweg":"","nachweis":"","bemerkung":""},
+{"anlass":"Planpaket Arbeitsstand 01 an den Auftraggeber","meilenstein":"01.03","empfaenger":"Auftraggeber","formate":"PDF","inhalt":"","versandweg":"","nachweis":"","bemerkung":""},
+{"anlass":"Planpaket Vorabzug 02 an den Auftraggeber","meilenstein":"01.08","empfaenger":"Auftraggeber","formate":"PDF","inhalt":"","versandweg":"","nachweis":"","bemerkung":""},
+{"anlass":"Bemusterungsunterlagen","meilenstein":"04.04","empfaenger":"Auftraggeber","formate":"PDF","inhalt":"","versandweg":"","nachweis":"","bemerkung":""},
+{"anlass":"Entscheidungsvorlage","meilenstein":"M04 · 03.04","empfaenger":"Auftraggeber","formate":"PDF","inhalt":"","versandweg":"","nachweis":"","bemerkung":""},
+{"anlass":"Maßgeblicher Planstand für die Endbeiträge der Fachplaner","meilenstein":"L3.KLA.2-05","empfaenger":"alle Fachplaner","formate":"PDF + DWG","inhalt":"","versandweg":"","nachweis":"","bemerkung":""},
+{"anlass":"Kostenberechnung","meilenstein":"M08 · 06.03","empfaenger":"Auftraggeber","formate":"PDF","inhalt":"","versandweg":"","nachweis":"","bemerkung":""},
+{"anlass":"Entwurfsdokumentation LPH 3","meilenstein":"M10 · 09.02","empfaenger":"Auftraggeber","formate":"PDF","inhalt":"","versandweg":"","nachweis":"","bemerkung":""}
+],
+"verteiler":[
+{"empfaenger":"Auftraggeber","buero":"","a1":"–","a2":"PDF","a3":"PDF","a4":"PDF","a5":"PDF","a6":"–","a7":"PDF","a8":"PDF"},
+{"empfaenger":"Tragwerksplanung (TWP)","buero":"","a1":"PDF + DWG","a2":"–","a3":"PDF","a4":"–","a5":"–","a6":"PDF + DWG","a7":"–","a8":"PDF"},
+{"empfaenger":"HLS","buero":"","a1":"PDF + DWG","a2":"–","a3":"PDF","a4":"–","a5":"–","a6":"PDF + DWG","a7":"–","a8":"PDF"},
+{"empfaenger":"ELT","buero":"","a1":"PDF + DWG","a2":"–","a3":"PDF","a4":"–","a5":"–","a6":"PDF + DWG","a7":"–","a8":"PDF"},
+{"empfaenger":"Bauphysik (BPH)","buero":"","a1":"PDF + DWG","a2":"–","a3":"PDF","a4":"PDF","a5":"–","a6":"PDF + DWG","a7":"–","a8":"PDF"},
+{"empfaenger":"Brandschutz (BRS)","buero":"","a1":"PDF","a2":"–","a3":"PDF","a4":"–","a5":"–","a6":"PDF","a7":"–","a8":"PDF"},
+{"empfaenger":"Freianlagen (FRA)","buero":"","a1":"PDF + DWG","a2":"–","a3":"PDF","a4":"–","a5":"–","a6":"PDF + DWG","a7":"–","a8":"PDF"},
+{"empfaenger":"Behörde (Vorabstimmung)","buero":"","a1":"–","a2":"–","a3":"–","a4":"–","a5":"–","a6":"–","a7":"–","a8":"–"},
+{"empfaenger":"Intern (Ablage)","buero":"","a1":"PDF + DWG","a2":"PDF + DWG","a3":"PDF + DWG","a4":"PDF + DWG","a5":"PDF + DWG","a6":"PDF + DWG","a7":"PDF + DWG","a8":"PDF + DWG"}
+],
+"austausch":[
+{"fachplanung":"Architektur (Bezug für alle)","dateiformat":"DWG und PDF; IFC bei Modellarbeit","version":"","nullpunkt":"Projektnullpunkt in Gebäudeachse A/1; Landeskoordinaten aus dem Lageplan","hoehe":"±0,00 = OK Fertigfußboden EG","struktur":"","einheiten":"m (Lageplan), cm (Pläne)","weg":"","bemerkung":""},
+{"fachplanung":"Tragwerksplanung (TWP)","dateiformat":"","version":"","nullpunkt":"","hoehe":"","struktur":"","einheiten":"","weg":"","bemerkung":""},
+{"fachplanung":"HLS","dateiformat":"","version":"","nullpunkt":"","hoehe":"","struktur":"","einheiten":"","weg":"","bemerkung":""},
+{"fachplanung":"ELT","dateiformat":"","version":"","nullpunkt":"","hoehe":"","struktur":"","einheiten":"","weg":"","bemerkung":""},
+{"fachplanung":"Bauphysik (BPH)","dateiformat":"","version":"","nullpunkt":"","hoehe":"","struktur":"","einheiten":"","weg":"","bemerkung":""},
+{"fachplanung":"Brandschutz (BRS)","dateiformat":"","version":"","nullpunkt":"","hoehe":"","struktur":"","einheiten":"","weg":"","bemerkung":""},
+{"fachplanung":"Freianlagen (FRA)","dateiformat":"","version":"","nullpunkt":"","hoehe":"","struktur":"","einheiten":"","weg":"","bemerkung":""},
+{"fachplanung":"Vermessung (VER)","dateiformat":"","version":"","nullpunkt":"","hoehe":"","struktur":"","einheiten":"","weg":"","bemerkung":""}
+],
+"ablage":[
+{"ordner":"01_Grundlagen","inhalt":"Was von außen kommt: Vermessung, Baugrund, Bestand, Bebauungsplan, Satzungen, Raumprogramm","regel":"Original unverändert ablegen; Eingangsdatum im Dateinamen","office":"ja","bemerkung":""},
+{"ordner":"02_Planung_Architektur/Arbeitsstand","inhalt":"Laufende Planung (CAD, Arbeitsdateien)","regel":"Nur intern; nicht versenden","office":"nein","bemerkung":""},
+{"ordner":"02_Planung_Architektur/Ausgang/JJMMTT_Anlass","inhalt":"Je Ausgabe ein Ordner: Pläne als PDF und Austauschdatei, Anschreiben","regel":"Nachträglich nicht verändern; Eintrag im Blatt Ausgaben","office":"ja","bemerkung":""},
+{"ordner":"03_Fachplaner/<Disziplin>/Eingang","inhalt":"Beiträge der Fachplaner je Disziplin","regel":"Eingangsdatum und Index im Dateinamen; Eintrag im Blatt Eingang der Koordinationsmappe","office":"ja","bemerkung":""},
+{"ordner":"03_Fachplaner/<Disziplin>/Ausgang","inhalt":"Was an die Fachplaner ging","regel":"Verweis auf die Ausgabe statt Kopie","office":"ja","bemerkung":""},
+{"ordner":"04_Behörden","inhalt":"Vorabstimmungen, Stellungnahmen, Bescheide","regel":"Ein Dokument je Vorgang mit Datum","office":"ja","bemerkung":""},
+{"ordner":"05_Protokolle","inhalt":"Ein Protokoll je Termin: Projektauftakt, Kick-off, Koordination, Entscheidungsbesprechung","regel":"Dateiname JJMMTT_Termin","office":"ja","bemerkung":""},
+{"ordner":"06_Schriftverkehr","inhalt":"Projektbezogener Schriftverkehr, nach Beteiligten","regel":"Entscheidungen und Fristen daraus in die Klärungs- bzw. Entscheidungsliste","office":"ja","bemerkung":""},
+{"ordner":"07_Kosten","inhalt":"Kostenschätzung, Mengen, Kostenberechnung","regel":"Stand und Datum im Dateinamen","office":"ja","bemerkung":""},
+{"ordner":"08_Termine","inhalt":"Terminplan-Stände","regel":"Der laufende Terminplan liegt im Office (Werkzeuge · Terminplan)","office":"ja","bemerkung":""},
+{"ordner":"09_Bemusterung","inhalt":"Qualitäten, Produktvergleiche, Muster","regel":"","office":"ja","bemerkung":""},
+{"ordner":"10_Vertrag_Honorar","inhalt":"Verträge, Honorar, Nachträge","regel":"Gehört nicht ins Office","office":"nein","bemerkung":""}
 ]
 });

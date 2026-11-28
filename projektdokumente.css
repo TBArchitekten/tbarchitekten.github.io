@@ -657,6 +657,7 @@ html.mm-praes-offen{overflow:hidden}
 .pd-anlegen{padding:18px 20px;margin:0 0 14px;max-width:860px}
 .pd-anlegen h2{margin:0 0 6px}
 .pd-anlegen p{margin:0 0 6px;font-size:14px;color:var(--pd-muted);line-height:1.5}
+.pd-anlegen .btn{white-space:normal;max-width:100%}
 .pd-tabelle-leer{min-height:0}
 th.pd-t-meilenstein,td.pd-t-meilenstein{width:118px;white-space:nowrap}
 th.pd-t-zustaendigkeit,td.pd-t-zustaendigkeit{width:46px;min-width:46px;text-align:center;padding-left:4px;padding-right:4px}
@@ -675,3 +676,10 @@ th.pd-t-berechnet,td.pd-t-berechnet{min-width:120px}
 .pd-berechnet{margin:0;font-size:14px;color:var(--m-ink)}
 .pd-matrix-felder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 @media (max-width:760px){.pd-matrix-felder{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Planliste und die übrigen Listen aus LPH3_2_Planliste (28.11.2026): gerechnete Plannummer grau, Spalten der Ausgaben schmal
+   mit Datum darunter, Gruppen der Übersicht. */
+.pd-planr{color:var(--m-ink-soft);font-variant-numeric:tabular-nums}
+th.pd-t-ausgabe,td.pd-t-ausgabe{width:84px;min-width:84px;white-space:nowrap}
+th.pd-t-plannummer,td.pd-t-plannummer{min-width:150px;white-space:nowrap}
+.pd-kuerzel{width:96px;min-height:36px}
+.pd-gruppe-titel{font-size:13px!important;font-weight:600;color:var(--pd-meta);letter-spacing:.02em;margin:16px 0 8px!important}

@@ -12,7 +12,10 @@
    Entscheidungsliste, statt ein Excel herunterzuladen): Fachplanerbedarf, Schnittstellen- und Liefermatrix, Fragenliste und
    Eingang der Beiträge, mit den Spalten und Auswahllisten der Bürovorlage. Termine stehen als Meilenstein (M00 … M11) oder
    als Datum; das Datum eines Meilensteins kommt aus dem Terminplan des Projekts (setzeTermine), wie in der Vorlage aus dem
-   Blatt «Projekt». Was die Vorlage mit Formeln rechnet, rechnet der Kern («Zuständigkeit eindeutig?», «Stand»). */
+   Blatt «Projekt». Was die Vorlage mit Formeln rechnet, rechnet der Kern («Zuständigkeit eindeutig?», «Stand»).
+   Zweiter Teil (28.11.2026) aus LPH3_2_Planliste.xlsx: Planliste (Plannummer aus dem Planschlüssel des Projekts, je
+   Ausgabe der ausgegebene Index), Dokumente, Ausgaben, Verteiler (je Ausgabe das Format), Austausch und Ablage. Die
+   Spalten «Ausgabe n» von Planliste und Verteiler gehören zur Ausgabe Nr n der Liste «Ausgaben». */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -40,6 +43,13 @@ const STATUS_SCHNITTSTELLE=['v0 Vorschlag','offen – Kick-off','v1 abgestimmt',
 const STATUS_FRAGE=['offen','beantwortet','Termin vereinbart','entfällt'];
 const WER_FRAGT=['Architektur → Fachplanung','Fachplanung → Architektur'];
 const BESTAETIGUNG=['stimmt überein','Vorbehalt','ausstehend'];
+// Auswahllisten der Planliste (Blatt «Listen» von LPH3_2_Planliste.xlsx).
+const PLANARTEN=[['LP','Lageplan'],['GR','Grundriss'],['SC','Schnitt'],['AN','Ansicht'],['DT','Detail'],['TH','Themenplan'],['SO','Sonstiges']];
+const STATUS_PLAN=['in Bearbeitung','Teilstand (vorläufig)','Arbeitsstand 01','Stand 02','Endstand LPH 3','ersetzt','entfällt'];
+const FORMATE=['A0','A1','A2','A3','A4','Sonderformat'];
+const UEBERGABE=['PDF','PDF + DWG','PDF + IFC','PDF + DWG + IFC','–'];
+// Ausgaben als Spalten: die Planliste zeigt zehn, der Verteiler acht (wie in der Vorlage).
+const AUSGABEN_PLANLISTE=10,AUSGABEN_VERTEILER=8;
 // Meilensteine des Muster-Terminplans LPH 3 (Blatt «Projekt» der Bürovorlage). Das Datum steht im Terminplan des Projekts.
 const MEILENSTEINE=[['M00','Projektauftakt mit Auftraggeber'],['M00A','Erforderliche Fachplaner beauftragt'],
   ['M01','Vorläufige Planungsgrundlagen an beauftragte Fachplaner übermittelt'],['M02','Kick-off Fachplaner'],
@@ -144,6 +154,71 @@ const SPALTEN={
     {key:'uebernommen',kopf:'übernommen in',typ:'text',breite:18},
     {key:'bemerkung',kopf:'Bemerkung',typ:'lang',breite:26}
   ],
+  planliste:[
+    {key:'nr',kopf:'Nr',typ:'nr',kompakt:true,breite:5},
+    {key:'plannummer',kopf:'Plannummer',typ:'plannummer',kompakt:true,breite:18},
+    {key:'planart',kopf:'Planart',typ:'auswahl',werte:PLANARTEN.map(p=>p[0]),breite:7},
+    {key:'geschoss',kopf:'Geschoss · Bereich',typ:'text',breite:9},
+    {key:'lfd',kopf:'lfd. Nr',typ:'text',breite:6},
+    {key:'titel',kopf:'Plantitel',typ:'text',kompakt:true,breite:34},
+    {key:'massstab',kopf:'Maßstab',typ:'text',kompakt:true,breite:8},
+    {key:'format',kopf:'Format',typ:'auswahl',werte:FORMATE,breite:8},
+    {key:'zustaendig',kopf:'zuständig',typ:'text',kompakt:true,breite:12},
+    {key:'status',kopf:'Status',typ:'auswahl',werte:STATUS_PLAN,kompakt:true,breite:16},
+    {key:'index',kopf:'Index',typ:'text',kompakt:true,breite:6},
+    {key:'indexdatum',kopf:'Indexdatum',typ:'datum',kompakt:true,breite:11},
+    {key:'aenderung',kopf:'Änderung zum letzten Index',kurz:'Änderung',typ:'lang',breite:30},
+    {key:'bemerkung',kopf:'Bemerkung',typ:'lang',breite:22},
+    ...Array.from({length:AUSGABEN_PLANLISTE},(_,i)=>({key:'a'+(i+1),kopf:'Ausgabe '+(i+1),typ:'ausgabe',ausgabe:i+1,breite:9}))
+  ],
+  dokumente:[
+    {key:'nr',kopf:'Code',typ:'nr',kompakt:true,breite:7},
+    {key:'ergebnis',kopf:'Ergebnis',typ:'text',kompakt:true,breite:36},
+    {key:'zustaende',kopf:'Zustände laut Bibliothek',typ:'lang',breite:46},
+    {key:'erzeugt',kopf:'erzeugt durch',typ:'text',kompakt:true,breite:22},
+    {key:'format',kopf:'Format',typ:'text',breite:12},
+    {key:'zustaendig',kopf:'zuständig',typ:'text',kompakt:true,breite:14},
+    {key:'stand',kopf:'aktueller Stand',typ:'text',vorschlaege:'zustaende',kompakt:true,breite:22},
+    {key:'index',kopf:'Index · Datum',typ:'text',kompakt:true,breite:14},
+    {key:'ablageort',kopf:'Ablageort',typ:'text',kompakt:true,breite:26},
+    {key:'bemerkung',kopf:'Bemerkung',typ:'lang',breite:24}
+  ],
+  ausgaben:[
+    {key:'nr',kopf:'Nr',typ:'nr',kompakt:true,breite:5},
+    {key:'datum',kopf:'Datum',typ:'datum',kompakt:true,breite:11},
+    {key:'anlass',kopf:'Anlass',typ:'text',kompakt:true,breite:36},
+    {key:'meilenstein',kopf:'Meilenstein · PSP',typ:'text',kompakt:true,breite:14},
+    {key:'empfaenger',kopf:'Empfänger',typ:'text',kompakt:true,breite:30},
+    {key:'formate',kopf:'Formate',typ:'auswahl',werte:UEBERGABE,kompakt:true,breite:14},
+    {key:'inhalt',kopf:'Pläne und Dokumente (mit Index)',kurz:'Pläne und Dokumente',typ:'lang',kompakt:true,breite:40},
+    {key:'versandweg',kopf:'Versandweg',typ:'text',breite:16},
+    {key:'nachweis',kopf:'Nachweis (Ablageort)',kurz:'Nachweis',typ:'text',kompakt:true,breite:26},
+    {key:'bemerkung',kopf:'Bemerkung',typ:'lang',breite:26}
+  ],
+  verteiler:[
+    {key:'nr',kopf:'Empfänger',typ:'nr',kompakt:true,breite:22},
+    {key:'buero',kopf:'Büro · Rolle',typ:'text',kompakt:true,breite:26},
+    ...Array.from({length:AUSGABEN_VERTEILER},(_,i)=>({key:'a'+(i+1),kopf:'Ausgabe '+(i+1),typ:'ausgabe',ausgabe:i+1,werte:UEBERGABE,kompakt:true,breite:16}))
+  ],
+  austausch:[
+    {key:'nr',kopf:'Fachplanung',typ:'nr',kompakt:true,breite:18},
+    {key:'dateiformat',kopf:'Dateiformat',typ:'text',kompakt:true,breite:14},
+    {key:'version',kopf:'Version · Software',typ:'text',kompakt:true,breite:18},
+    {key:'nullpunkt',kopf:'Koordinaten · Nullpunkt (Lage)',kurz:'Nullpunkt (Lage)',typ:'lang',kompakt:true,breite:28},
+    {key:'hoehe',kopf:'Höhenbezug ±0,00 = … m ü. NHN',kurz:'Höhenbezug',typ:'text',kompakt:true,breite:22},
+    {key:'struktur',kopf:'Layer- · Modellstruktur',typ:'lang',kompakt:true,breite:28},
+    {key:'einheiten',kopf:'Einheiten',typ:'text',kompakt:true,breite:10},
+    {key:'weg',kopf:'Übergabeweg (Plattform)',kurz:'Übergabeweg',typ:'text',kompakt:true,breite:22},
+    {key:'vereinbart_am',kopf:'vereinbart am',typ:'datum',kompakt:true,breite:11},
+    {key:'bemerkung',kopf:'Bemerkung',typ:'lang',breite:26}
+  ],
+  ablage:[
+    {key:'nr',kopf:'Ordner',typ:'nr',kompakt:true,breite:30},
+    {key:'inhalt',kopf:'Inhalt',typ:'lang',kompakt:true,breite:46},
+    {key:'regel',kopf:'Regel',typ:'lang',kompakt:true,breite:46},
+    {key:'office',kopf:'ins Office (Romy liest mit)?',kurz:'ins Office?',typ:'auswahl',werte:JA_NEIN,kompakt:true,breite:16},
+    {key:'bemerkung',kopf:'Bemerkung',typ:'lang',kompakt:true,breite:30}
+  ],
   eingang:[
     {key:'nr',kopf:'Disziplin',typ:'nr',kompakt:true,breite:9},
     {key:'buero',kopf:'Büro',typ:'text',kompakt:true,breite:18},
@@ -175,12 +250,24 @@ const DOKUMENTE={
   fragenliste:{titel:'Fragenliste je Disziplin · Rückfragenliste',kurz:'Fragenliste',code:'L3.PGF.1 · L3.A1.ABS',zeile:'Frage',zeilen:'Fragen',
     untertitel:'L3.PGF.1-06 (Fragen je Disziplin im Planungsgrundlagen-Paket, M01) · L3.A1.ABS-06 (Rückfragen im Kick-off beantwortet oder terminiert, M02). Fragen ohne Bezug zum Projekt auf «entfällt» setzen, nicht löschen.'},
   eingang:{titel:'Eingang der Fachplanungsbeiträge',kurz:'Eingang',code:'L3.KLA.1-01 · L3.KLA.2-02',zeile:'Disziplin',zeilen:'Disziplinen',
-    untertitel:'L3.KLA.1-01 (Eingang Arbeitsstand 01 gegen den vereinbarten Lieferumfang, M03) · L3.KLA.2-02 (Rückmeldung je Disziplin zum integrierten Stand) · Endstand M07'}
+    untertitel:'L3.KLA.1-01 (Eingang Arbeitsstand 01 gegen den vereinbarten Lieferumfang, M03) · L3.KLA.2-02 (Rückmeldung je Disziplin zum integrierten Stand) · Endstand M07'},
+  planliste:{titel:'Planliste',kurz:'Planliste',code:'L3.PLI.1',zeile:'Plan',zeilen:'Pläne',
+    untertitel:'L3.PLI.1 · alle vorgesehenen Pläne der LPH 3 · Plannummer aus dem Planschlüssel (Anleitung) · je Ausgabe der ausgegebene Index'},
+  dokumente:{titel:'Dokumente der LPH 3',kurz:'Dokumente',code:'L3.PLI.1 · L3.DOK.1',zeile:'Ergebnis',zeilen:'Ergebnisse',
+    untertitel:'Ergebnisregister der Aufgabenbibliothek LPH 3 v0.3.4 ohne Pläne – je Ergebnis Stand, Index und Ablageort'},
+  ausgaben:{titel:'Ausgaben · Versandnachweis',kurz:'Ausgaben',code:'L3.A1.AUS-04',zeile:'Ausgabe',zeilen:'Ausgaben',
+    untertitel:'L3.A1.AUS-04 (Versand dokumentiert: Datum, Verteiler, Index) · je Ausgabe eine Zeile; die Planliste liest Datum und Anlass von hier'},
+  verteiler:{titel:'Verteiler',kurz:'Verteiler',code:'L3.PLI.1-05',zeile:'Empfänger',zeilen:'Empfänger',
+    untertitel:'L3.PLI.1-05 · wer erhält was in welchem Format · Spalten = Ausgaben aus dem Blatt Ausgaben'},
+  austausch:{titel:'Austauschformate',kurz:'Austausch',code:'L3.PLI.1-06',zeile:'Fachplanung',zeilen:'Fachplanungen',
+    untertitel:'L3.PLI.1-06 · Dateiformat, Nullpunkt, Layer- bzw. Modellstruktur je Fachplanung · im Kick-off festlegen (Fragenliste ALLE-05)'},
+  ablage:{titel:'Ablagestruktur des Projekts',kurz:'Ablage',code:'L3.PLI.1-04',zeile:'Ordner',zeilen:'Ordner',
+    untertitel:'L3.PLI.1-04 · Eingang und Ausgang, Fachplaner, Behörden, Protokolle · Vorschlag, bis der Bürostandard ihn ersetzt'}
 };
 // Listen, die die Bürovorlage mit Zeilen vorbelegt (projektdokumente-vorlagen.js); in der Reihenfolge des Ablaufs.
-const WEITERE=['fachplanerbedarf','schnittstellen','fragenliste','eingang'];
-// Listen mit dem Filter «Disziplin».
-const MIT_DISZIPLIN=['klaerungsliste','schnittstellen','fragenliste'];
+const WEITERE=['fachplanerbedarf','schnittstellen','fragenliste','eingang','planliste','dokumente','ausgaben','verteiler','austausch','ablage'];
+// Listen mit dem Filter «Disziplin» (in der Planliste: «Planart»).
+const MIT_DISZIPLIN=['klaerungsliste','schnittstellen','fragenliste','planliste'];
 const ARTEN=Object.keys(DOKUMENTE);
 
 // ---------- Text, Datum, Zahlen ----------
@@ -276,6 +363,20 @@ function terminText(v,heute=heuteIso(),{lang=false}={}){
   return gueltigIso(t)?zeige(t):t;
 }
 
+// ---------- Planschlüssel ----------
+// Plannummer wie die Formel der Vorlage: Projektkürzel – Leistungsphase – Planart – Geschoss/Bereich – laufende Nummer
+// (ohne Geschoss, wenn dort «–» steht). Kürzel, Leistungsphase und Trennzeichen stehen beim Dokument «Planliste» (meta);
+// die Seite setzt sie. Eine eigene Plannummer in der Zeile (Bürostandard) gilt vor der gerechneten.
+let PLANSCHLUESSEL={kuerzel:'',lph:'3',trenn:'-'};
+function setzePlanschluessel(m){PLANSCHLUESSEL={kuerzel:s(m?.kuerzel).trim(),lph:s(m?.lph).trim()||'3',trenn:m?.trenn===undefined||m?.trenn===null||m?.trenn===''?'-':s(m.trenn)}}
+function planschluessel(){return {...PLANSCHLUESSEL}}
+function plannummerAus(d){
+  if(!s(d?.titel).trim())return '';
+  const {kuerzel,lph,trenn}=PLANSCHLUESSEL,g=s(d?.geschoss).trim(),n=s(d?.lfd).trim();
+  return (kuerzel||'(Kürzel)')+trenn+lph+trenn+s(d?.planart).trim()+(!g||g==='–'?'':trenn+g)+trenn+(/^\d$/.test(n)?'0'+n:n);
+}
+function plannummer(d){return s(d?.plannummer).trim()||plannummerAus(d)}
+
 // ---------- Zeilen ----------
 const FELDER={klaerungsliste:['runde','erfasst_am','disziplinen','ort','plan','sachverhalt','loesung','verantwortlich','frist','status','ag','folgen','erledigt_am','protokoll','aufgabe_id','entscheidung_id','fundstelle'],
   entscheidungsliste:['herkunft','herkunft_ref','thema','frage','anlass','gesichert','angenommen','optionen','empfehlung','begruendung','festliegt','wenn_spaeter','kostenbezug','bis','vorgelegt_am','entschieden_am','entscheidung','entscheider','annahme','bestaetigt_am','status','vorlage_id','fundstelle'],
@@ -283,7 +384,13 @@ const FELDER={klaerungsliste:['runde','erfasst_am','disziplinen','ort','plan','s
   fachplanerbedarf:['disziplin','kuerzel','leistungsbild','regel','erforderlich','begruendung','beauftragt','buero','lph','umfang','abgrenzung','angebot_am','bewertung','bis','status'],
   schnittstellen:['gruppe','thema','kg',...MATRIX.map(m=>m[0]),'eindeutig','liefert','format','lieferung1','lieferung2','zweck','grundlage','status','bemerkung'],
   fragenliste:['code','disziplin','wer','thema','frage','zweck','grundlage','bis','antwort','beantwortet_von','beantwortet_am','status','uebernommen','bemerkung'],
-  eingang:['disziplin','buero','umfang01','erwartet01','eingang01','index01','vollstaendig','fehlt','umfang_end','erwartet_end','eingang_end','index_end','rueckmeldung','vorbehalt']};
+  eingang:['disziplin','buero','umfang01','erwartet01','eingang01','index01','vollstaendig','fehlt','umfang_end','erwartet_end','eingang_end','index_end','rueckmeldung','vorbehalt'],
+  planliste:['plannummer','planart','geschoss','lfd','titel','massstab','format','zustaendig','status','index','indexdatum','aenderung','bemerkung',...Array.from({length:AUSGABEN_PLANLISTE},(_,i)=>'a'+(i+1))],
+  dokumente:['code','ergebnis','zustaende','erzeugt','format','zustaendig','stand','index','ablageort','bemerkung'],
+  ausgaben:['datum','anlass','meilenstein','empfaenger','formate','inhalt','versandweg','nachweis','bemerkung'],
+  verteiler:['empfaenger','buero',...Array.from({length:AUSGABEN_VERTEILER},(_,i)=>'a'+(i+1))],
+  austausch:['fachplanung','dateiformat','version','nullpunkt','hoehe','struktur','einheiten','weg','vereinbart_am','bemerkung'],
+  ablage:['ordner','inhalt','regel','office','bemerkung']};
 // Je Variante: Beschreibung, Zahlen und Folgen. Zu Kennwert und Menge gehören die Fundstelle (für das Büro) und der Beleg
 // (für das Dokument an den Auftraggeber, ohne andere Projekte); produkt_id und kobe_ref verweisen auf Produktbibliothek
 // und Kostenberechnung (projektdokumente-zahlen.js). «quelle» bleibt für eine Angabe von Hand.
@@ -296,6 +403,12 @@ function leereZeile(art,{heute=heuteIso(),runde=''}={}){
   if(art==='schnittstellen')return {gruppe:'',thema:'',kg:'',...Object.fromEntries(MATRIX.map(m=>[m[0],''])),liefert:'',format:'',lieferung1:'',lieferung2:'',status:'v0 Vorschlag'};
   if(art==='fragenliste')return {code:'',disziplin:'',wer:WER_FRAGT[0],thema:'',frage:'',zweck:'',grundlage:'',bis:'',antwort:'',status:'offen'};
   if(art==='eingang')return {disziplin:'',buero:'',umfang01:'',erwartet01:'M03',umfang_end:'',erwartet_end:'M07'};
+  if(art==='planliste')return {planart:'',geschoss:'',lfd:'',titel:'',massstab:'',format:'',zustaendig:'',status:'in Bearbeitung',index:''};
+  if(art==='dokumente')return {code:'',ergebnis:'',zustaende:'',erzeugt:'',stand:'',index:'',ablageort:''};
+  if(art==='ausgaben')return {datum:'',anlass:'',meilenstein:'',empfaenger:'',formate:'',inhalt:'',nachweis:''};
+  if(art==='verteiler')return {empfaenger:'',buero:''};
+  if(art==='austausch')return {fachplanung:'',dateiformat:'',version:'',nullpunkt:'',hoehe:'',struktur:'',einheiten:'',weg:''};
+  if(art==='ablage')return {ordner:'',inhalt:'',regel:'',office:'ja'};
   return {titel:'',punkte:[],status:'Entwurf'};
 }
 function optionen(d){return Array.isArray(d?.optionen)?d.optionen.filter(o=>o&&typeof o==='object'):[]}
@@ -365,6 +478,9 @@ function nummer(art,nr,d){
   if(art==='entscheidungsvorlagen')return String(n).padStart(2,'0');
   if(art==='fragenliste'&&s(d?.code).trim())return s(d.code).trim();
   if(art==='eingang'&&s(d?.disziplin).trim())return s(d.disziplin).trim();
+  // Listen ohne Nummer in der Vorlage: die erste Spalte nennt die Zeile.
+  const name={dokumente:'code',verteiler:'empfaenger',austausch:'fachplanung',ablage:'ordner'}[art];
+  if(name&&s(d?.[name]).trim())return s(d[name]).trim();
   return String(n);
 }
 // Nächster Code einer Frage für eine Disziplin: «TWP-07» nach «TWP-06».
@@ -403,6 +519,7 @@ function betrifft(art,d,code){
   if(art==='schnittstellen'){const m=MATRIX.find(x=>x[2]===code);const v=m?s(d?.[m[0]]).trim():'';return !!v&&v!=='–'}
   if(art==='eingang')return d?.disziplin===code;
   if(art==='fachplanerbedarf')return d?.kuerzel===code;
+  if(art==='planliste')return d?.planart===code;
   return (Array.isArray(d?.disziplinen)&&d.disziplinen.includes(code))||d?.verantwortlich===code;
 }
 // Wert einer Spalte als Text, wie er in Excel und im Verlauf steht.
@@ -411,6 +528,7 @@ function zellText(art,key,d,{nr,heute=heuteIso()}={}){
   if(key==='ueberfaellig')return ueberfaellig(art,d,heute)?'überfällig':'';
   if(art==='schnittstellen'&&key==='eindeutig')return zustaendigkeit(d);
   if(art==='eingang'&&key==='stand')return eingangStand(d,heute);
+  if(art==='planliste'&&key==='plannummer')return plannummer(d);
   if(art==='entscheidungsliste'&&key==='optionen')return optionenText(d);
   if(art==='entscheidungsliste'&&key==='folgen')return folgenText(d);
   if(art==='entscheidungsliste'&&key==='empfehlung')return empfehlungText(d);
@@ -428,7 +546,7 @@ function feldName(art,key){
     kostenbezug:'Kostenstand · Kostengruppe',vorlage_id:'Vorlage',aufgabe_id:'Aufgabe im Planner',entscheidung_id:'Entscheidungsliste',herkunft_ref:'Herkunft',
     fundstelle:'Fundstelle',titel:'Titel',punkte:'Entscheidungen',auftraggeber:'Auftraggeber',besprechung:'Besprechung',besprechung_am:'Datum der Besprechung',
     verfasser:'Verfasser',freigabe:'Freigabe Büroleitung',weitergegeben:'Weitergegeben an',gruppe:'Gruppe',code:'Code der Frage',disziplin:'Disziplin',
-    eindeutig:'Zuständigkeit eindeutig?'})[key]||key;
+    eindeutig:'Zuständigkeit eindeutig?',empfaenger:'Empfänger',fachplanung:'Fachplanung',ordner:'Ordner'})[key]||key;
 }
 
 // Zählen für Kopf und Übersicht.
@@ -464,8 +582,17 @@ const FILTER={
     ['beauftragt','Beauftragt'],['ueberfaellig','Überfällig']],
   schnittstellen:[['alle','Alle'],['klaeren','Zuständigkeit klären'],['v0 Vorschlag','Vorschlag v0'],['offen – Kick-off','Offen bis Kick-off'],['v1 abgestimmt','Abgestimmt v1'],['geändert','Geändert']],
   fragenliste:[['alle','Alle'],['offen','Offen'],['ueberfaellig','Überfällig'],['Termin vereinbart','Termin vereinbart'],['beantwortet','Beantwortet'],['entfällt','Entfällt']],
-  eingang:[['alle','Alle'],['ausstehend','Ausstehend'],['ueberfaellig','Überfällig'],['vorbehalt','Vorbehalt'],['bestaetigt','Bestätigt']]
+  eingang:[['alle','Alle'],['ausstehend','Ausstehend'],['ueberfaellig','Überfällig'],['vorbehalt','Vorbehalt'],['bestaetigt','Bestätigt']],
+  planliste:[['alle','Alle'],['in Bearbeitung','In Bearbeitung'],['Teilstand (vorläufig)','Teilstand'],['Arbeitsstand 01','Arbeitsstand 01'],['Stand 02','Stand 02'],
+    ['Endstand LPH 3','Endstand'],['nie_ausgegeben','Noch nie ausgegeben'],['weg','Ersetzt oder entfällt']],
+  dokumente:[['alle','Alle'],['ohne_stand','Ohne Stand'],['mit_stand','Mit Stand']],
+  ausgaben:[['alle','Alle'],['geplant','Geplant'],['ausgegeben','Ausgegeben']],
+  verteiler:[['alle','Alle']],
+  austausch:[['alle','Alle'],['offen','Noch nicht vereinbart'],['vereinbart','Vereinbart']],
+  ablage:[['alle','Alle'],['ins_office','Ins Office'],['nicht_ins_office','Nicht ins Office']]
 };
+// Wurde ein Plan schon einmal ausgegeben (ein Index in einer Spalte «Ausgabe n»)?
+const ausgegeben=d=>Array.from({length:AUSGABEN_PLANLISTE},(_,i)=>s(d?.['a'+(i+1)]).trim()).some(Boolean);
 // Regeln der weiteren Listen: erledigt, fällig (das Datum, ab dem eine Zeile überfällig wird), zählen, Text für Kopf und
 // Übersicht, Filter. Wie in der Vorlage: eine offene Frage nach ihrem Termin, ein Fachplaner, der erforderlich sein kann
 // und nicht beauftragt ist, nach «Entscheidung AG bis», ein Beitrag nach seinem erwarteten Termin.
@@ -505,6 +632,52 @@ const REGELN={
     text:z=>[plural(z.gesamt,'Disziplin','Disziplinen'),'Arbeitsstand 01 von '+z.erster+' eingegangen','Endstand von '+z.ende+' eingegangen',z.bestaetigt+' bestätigt',
       z.vorbehalt?z.vorbehalt+' mit Vorbehalt':'',z.ueberfaellig+' überfällig'],
     passt:(d,f,heute)=>{const st=eingangStand(d,heute);return ({ausstehend:!!st&&!['bestätigt','Vorbehalt'].includes(st),vorbehalt:st==='Vorbehalt',bestaetigt:st==='bestätigt'})[f]}
+  },
+  // Pläne, die ersetzt sind oder entfallen, zählen nicht mehr mit (grau, wie in der Vorlage).
+  planliste:{
+    erledigt:d=>['ersetzt','entfällt'].includes(d.status),
+    faellig:()=>'',
+    zaehle:n=>({aktiv:n(x=>!['ersetzt','entfällt'].includes(x.status)),bearbeitung:n(x=>x.status==='in Bearbeitung'),
+      teilstand:n(x=>x.status==='Teilstand (vorläufig)'),a01:n(x=>x.status==='Arbeitsstand 01'),s02:n(x=>x.status==='Stand 02'),
+      ende:n(x=>x.status==='Endstand LPH 3'),ausgegeben:n(x=>ausgegeben(x)&&!['ersetzt','entfällt'].includes(x.status)),weg:n(x=>['ersetzt','entfällt'].includes(x.status))}),
+    text:z=>[plural(z.aktiv,'Plan','Pläne'),z.bearbeitung?z.bearbeitung+' in Bearbeitung':'',z.teilstand?z.teilstand+' Teilstand':'',z.a01?z.a01+' Arbeitsstand 01':'',
+      z.s02?z.s02+' Stand 02':'',z.ende?z.ende+' Endstand':'',z.ausgegeben+' schon ausgegeben',z.weg?z.weg+' ersetzt oder entfallen':''],
+    passt:(d,f)=>({nie_ausgegeben:!ausgegeben(d)&&!['ersetzt','entfällt'].includes(d.status),weg:['ersetzt','entfällt'].includes(d.status)})[f]
+  },
+  dokumente:{
+    erledigt:()=>false,
+    faellig:()=>'',
+    zaehle:n=>({mitStand:n(x=>!!s(x.stand).trim())}),
+    text:z=>[plural(z.gesamt,'Ergebnis','Ergebnisse'),z.mitStand+' mit Stand',(z.gesamt-z.mitStand)+' noch ohne'],
+    passt:(d,f)=>({ohne_stand:!s(d.stand).trim(),mit_stand:!!s(d.stand).trim()})[f]
+  },
+  // Eine Ausgabe mit Datum bis heute ist ausgegeben; ohne Datum oder mit späterem Datum geplant.
+  ausgaben:{
+    erledigt:()=>false,
+    faellig:()=>'',
+    zaehle:(n,heute)=>({ausgegeben:n(x=>gueltigIso(x.datum)&&x.datum<=heute)}),
+    text:z=>[plural(z.gesamt,'Ausgabe','Ausgaben'),z.ausgegeben+' ausgegeben',(z.gesamt-z.ausgegeben)+' geplant'],
+    passt:(d,f,heute)=>{const aus=gueltigIso(d.datum)&&d.datum<=heute;return ({ausgegeben:aus,geplant:!aus})[f]}
+  },
+  verteiler:{
+    erledigt:()=>false,
+    faellig:()=>'',
+    zaehle:()=>({}),
+    text:z=>[plural(z.gesamt,'Empfänger','Empfänger')+' · '+AUSGABEN_VERTEILER+' Ausgaben als Spalten']
+  },
+  austausch:{
+    erledigt:()=>false,
+    faellig:()=>'',
+    zaehle:n=>({vereinbart:n(x=>gueltigIso(x.vereinbart_am))}),
+    text:z=>[plural(z.gesamt,'Fachplanung','Fachplanungen'),z.vereinbart+' vereinbart',(z.gesamt-z.vereinbart)+' noch offen'],
+    passt:(d,f)=>({offen:!gueltigIso(d.vereinbart_am),vereinbart:gueltigIso(d.vereinbart_am)})[f]
+  },
+  ablage:{
+    erledigt:()=>false,
+    faellig:()=>'',
+    zaehle:n=>({office:n(x=>x.office==='ja')}),
+    text:z=>[plural(z.gesamt,'Ordner','Ordner'),z.office+' ins Office',(z.gesamt-z.office)+' nicht ins Office'],
+    passt:(d,f)=>({ins_office:d.office==='ja',nicht_ins_office:d.office==='nein'})[f]
   }
 };
 function passt(art,d,filter,heute=heuteIso()){
@@ -748,7 +921,8 @@ function vorlageBloecke(inhalt){
 
 return Object.freeze({DISZIPLINEN,RUNDEN,STATUS_KLAERUNG,STATUS_ENTSCHEIDUNG,JA_NEIN,NUR_VON_HAND,SPALTEN,DOKUMENTE,ARTEN,FELDER,OPTION_FELDER,FILTER,
   ZUSTAENDIGKEIT,LEGENDE,JA_NEIN_PRUEFEN,BEAUFTRAGT,STATUS_FACHPLANER,STATUS_SCHNITTSTELLE,STATUS_FRAGE,WER_FRAGT,BESTAETIGUNG,MEILENSTEINE,MATRIX,
-  WEITERE,MIT_DISZIPLIN,setzeTermine,termine,istMeilenstein,meilensteinName,terminVon,leseTermin,terminFehlt,terminText,naechsterCode,
+  WEITERE,MIT_DISZIPLIN,PLANARTEN,STATUS_PLAN,FORMATE,UEBERGABE,AUSGABEN_PLANLISTE,AUSGABEN_VERTEILER,setzePlanschluessel,planschluessel,
+  plannummer,plannummerAus,ausgegeben,setzeTermine,termine,istMeilenstein,meilensteinName,terminVon,leseTermin,terminFehlt,terminText,naechsterCode,
   zustaendigkeit,eingangStand,betrifft,faelligAm,
   kurz,gueltigIso,heuteIso,leseDatum,datumKurz,datumLang,excelTag,leseZahl,euro,leereZeile,optionen,naechsteOptionId,erledigt,ueberfaellig,
   istEntscheidungspunkt,ohneBestaetigung,optionenText,folgenText,empfehlungText,nummer,zellText,feldName,zaehle,zusammenfassung,passt,filtere,
