@@ -26,7 +26,7 @@ Una entrada por cambio, **la más nueva arriba**. Cada agente (ChatGPT, Claude u
   - Unterwegs: das Fenster «Was … über mich weiß» und die Lesart des Projekts waren noch spanisch und sind jetzt deutsch. Der Schalter der Präsenz sagt, was sie tut: höchstens dreimal am Tag, werktags von 7:30 bis 19 Uhr.
 - Archivos:
   - Motor und App aus Window synchronisiert (Manifeste; `assistant-i18n.js`, `office-personal.js`, `ai.js`, `live/live.js`, `live/canonical.js`).
-  - App: `app/shell.js` (office69), `app/app.js` (office64), `app/work.js` (office70), `app/office-engine-chat.js` (romy6), `app/live/index.html` (live romy9, canonical romy7, i18n office2), `app/index.html`.
+  - App: `app/shell.js` (office69), `app/app.js` (office64), `app/work.js` (office70), `app/office-engine-chat.js` (romy6), `app/dashboard.js` (office45, die Karte des Gesprächs heißt wie der Assistent), `app/live/index.html` (live romy9, canonical romy7, i18n office2), `app/index.html`.
   - Werkzeuge: `projektdokumente.js` (office21), `projektdokumente-kern.js` (office6), `projektdokumente-zahlen.js` (office3), `projektdokumente.css` (office18, Marke «KI» statt «R»), `produktbibliothek.js` (office11), `projektstart.html`, `office-uebersicht.js` (6), `oauth-consent.html`.
   - Funktionen: `supabase/functions/office-push/{core.mjs,index.ts}`, `office-dokumente-ai/{core.mjs,index.ts}`, `office-produkt-ai/{core.mjs,index.ts}`, `office-romy-mission-runner/index.ts`.
   - Bürovorlagen: `muster/lph3/*`, nur die Sätze mit «Romy», direkt im XML; `scripts/muster-lph3/{build_xlsx.py,build_docx.cjs}`.

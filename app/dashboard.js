@@ -13,7 +13,9 @@
   // Im Office bleibt der Schreibtisch: Romy mit Kalender, Heute und Arbeitsplan daneben (Gari, 28.11.2026: «se me hacía
   // mucho más práctica … como tipo Dashboard y así me ahorraba estar cambiando tanto de páginas»). Am 27.11. war er
   // für einen Abend auf das Gespräch allein reduziert, aus einem Missverständnis.
-  const LABELS = {chat:'Assistent',calendar:'Kalender',today:'Heute',plan:'Arbeitsplan'};
+  // Das Gespräch trägt den Namen, den die Person ihrem Assistenten gibt (28.11.2026), bis dahin «KI-Assistent».
+  const assistantLabel = () => { try { if (typeof window.MINDS_ASSISTANT_TEXT === 'function') return String(window.MINDS_ASSISTANT_TEXT('{name}')); } catch {} return 'KI-Assistent'; };
+  const LABELS = {get chat(){ return assistantLabel(); },calendar:'Kalender',today:'Heute',plan:'Arbeitsplan'};
   const ICONS = {chat:'◇',calendar:'▦',today:'☷',plan:'▤'};
 
   const DESK_ICONS={
@@ -97,7 +99,7 @@
     node.setAttribute('aria-label',LABELS[key]);
     const head = elt('header','desk-panel-head',
       '<span class="desk-panel-grip" title="Zum Sortieren ziehen" aria-hidden="true">⠿</span>' +
-      '<span class="desk-panel-title">' + LABELS[key] + '</span>' +
+      '<span class="desk-panel-title"' + (key === 'chat' ? ' data-assistant-name' : '') + '>' + LABELS[key] + '</span>' +
       '<span class="desk-panel-actions">' +
       '<button type="button" data-desk-focus="' + key + '" aria-label="Vergrößern ' + LABELS[key] + '" title="Vergrößern">'+deskIcon('expand')+'</button>' +
       '<button type="button" data-desk-minimize="' + key + '" aria-label="Minimieren ' + LABELS[key] + '" title="Minimieren">'+deskIcon('minimize')+'</button></span>');
